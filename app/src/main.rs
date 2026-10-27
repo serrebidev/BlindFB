@@ -22,10 +22,10 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
 use blindfb_core::fb::{
-    self, Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args,
-    groups_eval_args, groups_open_args, notifs_args, parse_groups_json, parse_records, post_args,
-    posts_args, profile_args, profile_url_from_post_url, react_args, read_args, search_args,
-    send_args, thread_url_from_profile_url, unsend_args, view_args, web_url,
+    Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, groups_eval_args,
+    groups_open_args, notifs_args, parse_groups_json, parse_records, post_args, posts_args,
+    profile_args, profile_url_from_post_url, react_args, read_args, search_args, send_args,
+    thread_url_from_profile_url, unsend_args, view_args, web_url,
 };
 use blindfb_core::update;
 use wx_utils::{AboutBoxBuilder, confirm, prompt_text, show_error, show_warning};
@@ -145,7 +145,7 @@ fn run() {
         .with_title("BlindFB")
         .with_size(Size::new(1100, 760))
         .build();
-    frame.create_status_bar(1, 0, ID_ANY, "status");
+    frame.create_status_bar(1, 0, -1, "status");
     frame.set_status_text(
         if fb.is_some() {
             "Ready. Pick a view to start."
@@ -212,7 +212,7 @@ fn run() {
     root.add(&details, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
     root.add_sizer(&actions, 0, SizerFlag::Expand, 2);
     root.add_sizer(&compose, 0, SizerFlag::Expand, 2);
-    panel.set_sizer(root);
+    panel.set_sizer(root, true);
 
     build_menus(&frame);
 
