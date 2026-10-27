@@ -63,7 +63,8 @@ pub fn asset_name() -> Option<&'static str> {
 }
 
 fn get(url: &str) -> Result<Vec<u8>, String> {
-    let mut response = ureq::get(url)
+    let mut response = crate::http::agent()
+        .get(url)
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
         .call()
         .map_err(|e| format!("download failed: {e}"))?;

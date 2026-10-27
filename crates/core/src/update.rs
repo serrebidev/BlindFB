@@ -16,7 +16,8 @@ pub struct Release {
 
 /// Fetch the latest published release. Blocking; call from a worker thread.
 pub fn latest_release() -> Result<Release, String> {
-    let mut response = ureq::get(RELEASES_LATEST_URL)
+    let mut response = crate::http::agent()
+        .get(RELEASES_LATEST_URL)
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
         .header("Accept", "application/vnd.github+json")
         .call()

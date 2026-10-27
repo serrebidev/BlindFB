@@ -8,6 +8,7 @@
 
 pub mod backend;
 pub mod fb;
+pub mod http;
 pub mod update;
 
 pub use fb::{Fb, Record, parse_groups_json, parse_records};
