@@ -159,7 +159,7 @@ fn which(name: &str) -> Result<PathBuf, ()> {
 
 // --- Command builders: one per `fb` subcommand BlindFB exposes. ---
 
-pub fn feed_args(count: u32, refresh: bool, full: bool) -> Vec<String> {
+pub fn feed_args(count: u32, refresh: bool, full: bool, urls: bool) -> Vec<String> {
     let mut args = vec!["feed".to_owned(), "-n".to_owned(), count.to_string()];
     if refresh {
         args.push("--refresh".to_owned());
@@ -167,11 +167,18 @@ pub fn feed_args(count: u32, refresh: bool, full: bool) -> Vec<String> {
     if full {
         args.push("--full".to_owned());
     }
+    if urls {
+        args.push("--urls".to_owned());
+    }
     args
 }
 
-pub fn posts_args(who: &str, count: u32) -> Vec<String> {
-    vec!["posts".to_owned(), who.to_owned(), "-n".to_owned(), count.to_string()]
+pub fn posts_args(who: &str, count: u32, urls: bool) -> Vec<String> {
+    let mut args = vec!["posts".to_owned(), who.to_owned(), "-n".to_owned(), count.to_string()];
+    if urls {
+        args.push("--urls".to_owned());
+    }
+    args
 }
 
 pub fn view_args(post: &str, comments: u32) -> Vec<String> {
@@ -262,6 +269,125 @@ pub fn delete_args(post: &str) -> Vec<String> {
     vec!["delete".to_owned(), post.to_owned()]
 }
 
+// --- Web link-outs -------------------------------------------------------
+// Features the CLI cannot do (voice/video calls, adding/removing friends,
+// posting into a group) live on the web. These helpers turn the URLs and
+// paths `fb` reports into browser links for exactly those places.
+
+/// Make a full https://www.facebook.com URL from a path or URL `fb` printed.
+pub fn web_url(path_or_url: &str) -> String {
+    if path_or_url.starts_with("http://") || path_or_url.starts_with("https://") {
+        path_or_url.to_owned()
+    } else if let Some(rest) = path_or_url.strip_prefix('/') {
+        format!("https://www.facebook.com/{rest}")
+    } else {
+        format!("https://www.facebook.com/{path_or_url}")
+    }
+}
+
+/// The profile URL of a post's author, derived from the post URL that
+/// `feed --urls` / `posts --urls` print. Group posts return None (their
+/// first path segment is the group, not the author).
+pub fn profile_url_from_post_url(post_url: &str) -> Option<String> {
+    let url = web_url(post_url);
+    let rest = url.strip_prefix("https://www.facebook.com/")?;
+    if rest.starts_with("groups/") {
+        return None;
+    }
+    if let Some(query) = rest.strip_prefix("permalink.php?") {
+        for pair in query.split('&') {
+            if let Some(id) = pair.strip_prefix("id=") {
+                return Some(format!("https://www.facebook.com/profile.php?id={id}"));
+            }
+        }
+        return None;
+    }
+    if let Some(query) = rest.strip_prefix("profile.php?") {
+        for pair in query.split('&') {
+            if let Some(id) = pair.strip_prefix("id=") {
+                return Some(format!("https://www.facebook.com/profile.php?id={id}"));
+            }
+        }
+        return None;
+    }
+    let vanity = rest.split('/').next()?;
+    if vanity.is_empty() {
+        return None;
+    }
+    Some(format!("https://www.facebook.com/{vanity}"))
+}
+
+/// The Messenger web thread URL for a 1:1 chat with the person behind a
+/// profile URL. Voice and video calls live on that page.
+pub fn thread_url_from_profile_url(profile_url: &str) -> Option<String> {
+    let url = web_url(profile_url);
+    let rest = url.strip_prefix("https://www.facebook.com/")?;
+    if let Some(query) = rest.strip_prefix("profile.php?") {
+        for pair in query.split('&') {
+            if let Some(id) = pair.strip_prefix("id=") {
+                return Some(format!("https://www.facebook.com/messages/t/{id}"));
+            }
+        }
+        return None;
+    }
+    let vanity = rest.split('/').next()?;
+    if vanity.is_empty() || vanity == "messages" || vanity == "groups" {
+        return None;
+    }
+    Some(format!("https://www.facebook.com/messages/t/{vanity}"))
+}
+
+// --- Groups ---------------------------------------------------------------
+// `fb` has no joined-groups command, but its named-page browser primitives
+// are part of the backend: open facebook.com/groups in a named page and
+// read the group links out of it with eval. Group posts then load through
+// the ordinary `posts <group url>` command, and every post action works.
+
+pub const GROUPS_PAGE_NAME: &str = "blindfb-groups";
+pub const GROUPS_HOME: &str = "https://www.facebook.com/groups/";
+
+const GROUPS_JS: &str = "JSON.stringify([...document.querySelectorAll('a[href*=\"/groups/\"]')].map(a=>[(a.textContent||'').trim(),a.getAttribute('href')]).filter(([t,h])=>t&&h&&/^\\/groups\\/[^\\/?#]+\\/?$/.test(h.split(/[?#]/)[0])&&!/^\\/groups\\/(feed|discover|joins|create|search)/.test(h)).filter((v,i,a)=>a.findIndex(x=>x[1].split(/[?#]/)[0]===v[1].split(/[?#]/)[0])===i).slice(0,120))";
+
+pub fn groups_open_args() -> Vec<String> {
+    vec![
+        "page".to_owned(),
+        GROUPS_PAGE_NAME.to_owned(),
+        "open".to_owned(),
+        GROUPS_HOME.to_owned(),
+    ]
+}
+
+pub fn groups_eval_args() -> Vec<String> {
+    vec![
+        "page".to_owned(),
+        GROUPS_PAGE_NAME.to_owned(),
+        "eval".to_owned(),
+        GROUPS_JS.to_owned(),
+    ]
+}
+
+/// Parse the JSON `[[name, href], ...]` the groups eval returns into
+/// records with fields [name, group URL].
+pub fn parse_groups_json(output: &str) -> Vec<Record> {
+    let text = output.trim();
+    let Ok(serde_json::Value::Array(rows)) = serde_json::from_str::<serde_json::Value>(text)
+    else {
+        return Vec::new();
+    };
+    rows.iter()
+        .filter_map(|row| {
+            let pair = row.as_array()?;
+            let name = pair.first()?.as_str()?.trim().to_owned();
+            let href = pair.get(1)?.as_str()?;
+            if name.is_empty() {
+                return None;
+            }
+            let url = web_url(href);
+            Some(Record { fields: vec![name.clone(), url], raw: name })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,7 +410,37 @@ mod tests {
 
     #[test]
     fn builds_feed_refresh_full() {
-        let args = feed_args(30, true, true);
-        assert_eq!(args, ["feed", "-n", "30", "--refresh", "--full"]);
+        let args = feed_args(30, true, true, true);
+        assert_eq!(args, ["feed", "-n", "30", "--refresh", "--full", "--urls"]);
+    }
+
+    #[test]
+    fn profile_and_thread_urls() {
+        assert_eq!(
+            profile_url_from_post_url("https://www.facebook.com/jane.doe/posts/123").as_deref(),
+            Some("https://www.facebook.com/jane.doe")
+        );
+        assert_eq!(
+            profile_url_from_post_url("/permalink.php?story_fbid=9&id=42").as_deref(),
+            Some("https://www.facebook.com/profile.php?id=42")
+        );
+        assert_eq!(profile_url_from_post_url("/groups/777/posts/1"), None);
+        assert_eq!(
+            thread_url_from_profile_url("https://www.facebook.com/jane.doe").as_deref(),
+            Some("https://www.facebook.com/messages/t/jane.doe")
+        );
+        assert_eq!(
+            thread_url_from_profile_url("https://www.facebook.com/profile.php?id=42").as_deref(),
+            Some("https://www.facebook.com/messages/t/42")
+        );
+    }
+
+    #[test]
+    fn parses_groups_json() {
+        let out = r#"[["Hikers","/groups/111"],["Bakers","https://www.facebook.com/groups/bakers"]]"#;
+        let records = parse_groups_json(out);
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].field(1), "https://www.facebook.com/groups/111");
+        assert_eq!(parse_groups_json("not json").len(), 0);
     }
 }

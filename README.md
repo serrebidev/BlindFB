@@ -19,7 +19,14 @@ everything and presents its output in a keyboard-first window.
 - Browse **notifications**.
 - Browse and search your **friends list**; open any friend's profile, read
   their posts, or jump straight into a Messenger chat with them. (Adding and
-  removing friends is not something the `fb` backend can do.)
+  removing friends is not something the `fb` backend can do — the Post menu
+  links out to the person's real profile on the web, where that lives.)
+- **Groups**: the Groups view lists the groups you belong to (read out of
+  facebook.com/groups through the backend's named-page browser support).
+  Open a group to read its posts and take part with the usual view, comment
+  and react actions; group posts also appear in your news feed as usual.
+  Posting *into* a group and group settings live on the group's web page,
+  one menu item away.
 - Read your own profile posts and **delete** your own posts.
 - **Post** to your profile, with an audience (public, friends, only me) and
   optional images.
@@ -34,11 +41,14 @@ everything and presents its output in a keyboard-first window.
 - **Check for updates** from the Help menu; releases are packaged and
   versioned with [shipfitter](https://github.com/trypsynth/shipfitter).
 
-### Not supported
+### Not supported in-app (linked out instead)
 
-Voice and video **calls** are not supported: the `fb` backend has no call
-commands, and Messenger calls use a separate calling stack that no part of
-this project drives. Everything else the backend exposes is in the app.
+Voice and video **calls**: the `fb` backend has no call commands, and
+Messenger calls use a separate calling stack. The Chat menu's "Open chat in
+Messenger (web)" takes you to that very conversation in your browser, where
+the call buttons are. The same pattern covers adding/removing friends
+(profile on the web) and posting into a group (the group's web page).
+Everything else the backend exposes is in the app.
 
 ## Requirements
 

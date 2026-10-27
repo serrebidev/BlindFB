@@ -9,4 +9,4 @@
 pub mod fb;
 pub mod update;
 
-pub use fb::{Fb, Record, parse_records};
+pub use fb::{Fb, Record, parse_groups_json, parse_records};

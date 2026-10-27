@@ -7,20 +7,25 @@
 //! on one worker thread; results come back over a channel that a timer
 //! drains, so the UI never blocks on the network or on Chrome.
 //!
-//! Not supported, because the backend has no such commands: voice and video
-//! calls, and adding/removing friends. The friends list can be browsed and
-//! searched, and any friend can be profiled, read and messaged.
+//! Not supported in-app, because the backend has no such commands: voice
+//! and video calls, adding/removing friends, and posting into a group. For
+//! those, the menus link out to the exact person, post, group or Messenger
+//! thread on the web. Groups you belong to are listed through the backend's
+//! named-page browser primitives, and a group's posts read and behave like
+//! any other posts here.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
 use blindfb_core::fb::{
-    self, Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, notifs_args,
-    parse_records, post_args, posts_args, profile_args, react_args, read_args, search_args,
-    send_args, unsend_args, view_args,
+    self, Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args,
+    groups_eval_args, groups_open_args, notifs_args, parse_groups_json, parse_records, post_args,
+    posts_args, profile_args, profile_url_from_post_url, react_args, read_args, search_args,
+    send_args, thread_url_from_profile_url, unsend_args, view_args, web_url,
 };
 use blindfb_core::update;
 use wx_utils::{AboutBoxBuilder, confirm, prompt_text, show_error, show_warning};
@@ -33,6 +38,10 @@ const ID_MYPOSTS: i32 = 10004;
 const ID_CHATS: i32 = 10005;
 const ID_REFRESH: i32 = 10006;
 const ID_UNREAD_CHATS: i32 = 10007;
+const ID_GROUPS_VIEW: i32 = 10008;
+const ID_WEB_POST: i32 = 10080;
+const ID_WEB_PERSON: i32 = 10081;
+const ID_WEB_CHAT: i32 = 10082;
 const ID_NEW_POST: i32 = 10010;
 const ID_NEW_POST_IMAGES: i32 = 10011;
 const ID_SEARCH: i32 = 10012;
@@ -65,6 +74,7 @@ enum View {
     Friends,
     MyPosts,
     Chats,
+    Groups,
     SearchResults,
     PostsOf(String),
     CommentsOf(String),
@@ -80,6 +90,7 @@ impl View {
             View::Friends => "Friends".to_owned(),
             View::MyPosts => "My posts".to_owned(),
             View::Chats => "Chats".to_owned(),
+            View::Groups => "My groups".to_owned(),
             View::SearchResults => "Search results".to_owned(),
             View::PostsOf(who) => format!("Posts by {who}"),
             View::CommentsOf(_) => "Post and comments".to_owned(),
@@ -94,6 +105,7 @@ enum Tag {
     Text,
     ReloadChat(String),
     UpdateCheck,
+    GroupsOpened,
 }
 
 struct Job {
@@ -112,6 +124,9 @@ struct State {
     records: Vec<Record>,
     who: Option<String>,
     attachments: Vec<String>,
+    /// Author name -> profile URL, learned from post URLs as views load.
+    /// Powers the "open on Facebook" link-outs (profiles, Messenger web).
+    author_urls: HashMap<String, String>,
 }
 
 fn main() {
@@ -145,7 +160,7 @@ fn run() {
 
     let views_label = StaticText::builder(&panel).with_label("Views").build();
     let views = ListBox::builder(&panel).build();
-    for name in ["News feed", "Notifications", "Friends", "My posts", "Chats"] {
+    for name in ["News feed", "Notifications", "Friends", "My posts", "Chats", "Groups"] {
         views.append(name);
     }
     views.set_selection(0, true);
@@ -206,6 +221,7 @@ fn run() {
         records: Vec::new(),
         who: None,
         attachments: Vec::new(),
+        author_urls: HashMap::new(),
     }));
     let ui = Ui {
         frame,
@@ -230,6 +246,7 @@ fn run() {
                 1 => View::Notifications,
                 2 => View::Friends,
                 3 => View::MyPosts,
+                5 => View::Groups,
                 _ => View::Chats,
             };
             load_view(&ui_views, view);
@@ -348,6 +365,7 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_FRIENDS, "Fr&iends\tCtrl+3", "Your friends list")
         .append_item(ID_MYPOSTS, "&My posts\tCtrl+4", "Posts on your own profile")
         .append_item(ID_CHATS, "&Chats\tCtrl+5", "Messenger chats")
+        .append_item(ID_GROUPS_VIEW, "&Groups\tCtrl+6", "Groups you belong to")
         .append_item(ID_UNREAD_CHATS, "&Unread chats only", "Chats with unread messages")
         .append_separator()
         .append_item(ID_REFRESH, "&Refresh\tF5", "Reload the current view")
@@ -359,6 +377,8 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_PROFILE, "Author &profile", "Show the profile of the selected item's author or owner")
         .append_item(ID_AUTHOR_POSTS, "Author's p&osts", "Posts by the selected item's author")
         .append_item(ID_MESSAGE, "&Message author / friend", "Open a Messenger chat with this person")
+        .append_item(ID_WEB_POST, "Open post on &Facebook (web)", "Open the selected post in your browser")
+        .append_item(ID_WEB_PERSON, "Open person or group on Fa&cebook (web)", "Open the selected person's profile (or the group) in your browser, where friend management lives")
         .append_separator()
         .append_item(ID_DELETE, "&Delete post…", "Delete the selected post (your own posts only)");
     for (i, reaction) in REACTIONS.iter().enumerate() {
@@ -372,6 +392,7 @@ fn build_menus(frame: &Frame) {
 
     let chat_menu = Menu::builder()
         .append_item(ID_OPEN, "&Open chat", "Open the selected chat")
+        .append_item(ID_WEB_CHAT, "Open chat in &Messenger (web)", "Open this chat in your browser — voice and video calls live there")
         .append_item(ID_UNSEND, "&Unsend my last message…", "Remove your newest message in the open chat for everyone")
         .append_item(ID_UNLOCK, "Unloc&k encrypted chats…", "Enter your Messenger PIN to read end-to-end encrypted chats")
         .build();
@@ -406,14 +427,18 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
 }
 
 fn load_view(ui: &Ui, view: View) {
+    if view == View::Groups {
+        load_groups(ui);
+        return;
+    }
     let args = match &view {
-        View::Feed => feed_args(PAGE, false, false),
+        View::Feed => feed_args(PAGE, false, false, true),
         View::Notifications => notifs_args(PAGE),
         View::Friends => friends_args(None, 100),
-        View::MyPosts => posts_args("me", PAGE),
+        View::MyPosts => posts_args("me", PAGE, true),
         View::Chats => chats_args(PAGE, false),
-        View::SearchResults => return,
-        View::PostsOf(who) => posts_args(who, PAGE),
+        View::Groups | View::SearchResults => return,
+        View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
         View::ProfileOf(who) => profile_args(who),
         View::ChatWith(name) => read_args(name, 50),
@@ -421,10 +446,20 @@ fn load_view(ui: &Ui, view: View) {
     load_args(ui, view, args);
 }
 
+/// Groups load in two steps: open the groups home page in the backend's
+/// named browser page, then eval the group links out of it. The open result
+/// is ignored on purpose: the page may already be open from an earlier load,
+/// and the eval is what counts.
+fn load_groups(ui: &Ui) {
+    ui.state.borrow_mut().view = View::Groups;
+    ui.status("Loading my groups…");
+    ui.send(Job { args: groups_open_args(), stdin: None, tag: Tag::GroupsOpened });
+}
+
 fn refresh(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
     if view == View::Feed {
-        load_args(ui, view, feed_args(PAGE, true, false));
+        load_args(ui, view, feed_args(PAGE, true, false, true));
     } else {
         load_view(ui, view);
     }
@@ -518,6 +553,11 @@ fn details_for(view: &View, record: &Record) -> String {
             record.field(1),
             record.fields[4..].join("\t")
         ),
+        View::Groups => format!(
+            "Group: {}\nOn the web: {}\n\nOpen the group to read and take part in its posts here. Posting to a group, and group settings, live on the web page.",
+            record.field(0),
+            record.field(1)
+        ),
         _ => record.raw.clone(),
     }
 }
@@ -556,6 +596,20 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::List(view) => match done.result {
             Ok(raw) => {
                 let (records, body) = parse_for(&view, &raw);
+                if matches!(view, View::Feed | View::MyPosts | View::PostsOf(_)) {
+                    let mut state = ui.state.borrow_mut();
+                    for record in &records {
+                        let author = record.field(1);
+                        if !author.is_empty() {
+                            if let Some(profile) =
+                                profile_url_from_post_url(record.field(0))
+                            {
+                                state.author_urls.insert(author.to_owned(), profile);
+                            }
+                        }
+                    }
+                    drop(state);
+                }
                 ui.items.clear();
                 for record in &records {
                     ui.items.append(&display_for(&view, record));
@@ -603,6 +657,9 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
+        Tag::GroupsOpened => {
+            ui.send(Job { args: groups_eval_args(), stdin: None, tag: Tag::List(View::Groups) });
+        }
         Tag::UpdateCheck => match done.result {
             Ok(payload) => {
                 let mut parts = payload.splitn(2, '\n');
@@ -665,6 +722,7 @@ fn parse_for(view: &View, raw: &str) -> (Vec<Record>, Option<String>) {
                 .collect(),
             Some(raw.trim().to_owned()),
         ),
+        View::Groups => (parse_groups_json(raw), None),
         _ => (parse_records(raw), None),
     }
 }
@@ -686,6 +744,12 @@ fn open_selected(ui: &Ui) {
             }
         }
         View::Friends => profile_selected(ui),
+        View::Groups => {
+            let url = record.field(1).to_owned();
+            if !url.is_empty() {
+                load_view(ui, View::PostsOf(url));
+            }
+        }
         _ => {}
     }
 }
@@ -763,6 +827,81 @@ fn message_selected(ui: &Ui) {
     }
 }
 
+/// Link out to the selected post on the web. Feed and post views load with
+/// --urls, so a post record's first field is its web address.
+fn open_post_web(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else { return };
+    let target = record.field(0);
+    if target.starts_with("http") || target.starts_with('/') {
+        open_url(&web_url(target));
+    } else {
+        show_warning(
+            &ui.frame,
+            "This row has no web link (it is a suggestion or ad row).",
+            "Open on Facebook",
+        );
+    }
+}
+
+/// Link out to the selected person on the web: their profile, where friend
+/// management and everything else the backend cannot do lives. Uses the
+/// profile URL learned from their posts when known, else a people search.
+fn open_person_web(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else { return };
+    if ui.state.borrow().view == View::Groups {
+        let url = record.field(1).to_owned();
+        if !url.is_empty() {
+            open_url(&url);
+        }
+        return;
+    }
+    let view = ui.state.borrow().view.clone();
+    let name = match view {
+        View::Friends => record.field(0).to_owned(),
+        View::Chats => record.field(3).to_owned(),
+        _ => record.field(1).to_owned(),
+    };
+    if name.is_empty() {
+        return;
+    }
+    let known = ui.state.borrow().author_urls.get(&name).cloned();
+    match known {
+        Some(url) => open_url(&url),
+        None => {
+            let query = name.replace(' ', "%20");
+            open_url(&format!("https://www.facebook.com/search/people/?q={query}"));
+        }
+    }
+}
+
+/// Link out to the selected chat in Messenger on the web, which is where
+/// voice and video calls live. Deep-links the thread when the person's
+/// profile URL is known, else opens the Messenger inbox.
+fn open_chat_web(ui: &Ui) {
+    let view = ui.state.borrow().view.clone();
+    let name = match &view {
+        View::ChatWith(name) => name.clone(),
+        View::Chats => match selected(ui) {
+            Some((_, record)) => record.field(3).to_owned(),
+            None => return,
+        },
+        _ => {
+            show_warning(&ui.frame, "Select or open a chat first.", "Open in Messenger");
+            return;
+        }
+    };
+    let thread = ui
+        .state
+        .borrow()
+        .author_urls
+        .get(&name)
+        .and_then(|profile| thread_url_from_profile_url(profile));
+    match thread {
+        Some(url) => open_url(&url),
+        None => open_url("https://www.facebook.com/messages/"),
+    }
+}
+
 fn delete_selected(ui: &Ui) {
     let Some(post) = selected_post_ref(ui) else {
         show_warning(&ui.frame, "Select one of your posts first.", "Delete post");
@@ -814,6 +953,10 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_FRIENDS => load_view(ui, View::Friends),
         ID_MYPOSTS => load_view(ui, View::MyPosts),
         ID_CHATS => load_view(ui, View::Chats),
+        ID_GROUPS_VIEW => load_view(ui, View::Groups),
+        ID_WEB_POST => open_post_web(ui),
+        ID_WEB_PERSON => open_person_web(ui),
+        ID_WEB_CHAT => open_chat_web(ui),
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
         ID_REFRESH => refresh(ui),
         ID_OPEN => open_selected(ui),
