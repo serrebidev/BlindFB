@@ -59,6 +59,7 @@ const ID_UNSEND: i32 = 10050;
 const ID_UNLOCK: i32 = 10051;
 const ID_STATUS: i32 = 10060;
 const ID_LOGIN: i32 = 10061;
+const ID_INSTALL_BACKEND: i32 = 10083;
 const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
@@ -106,11 +107,23 @@ enum Tag {
     ReloadChat(String),
     UpdateCheck,
     GroupsOpened,
+    SetupStatus,
+    SetupInstall,
+    SetupLogin,
+}
+
+enum Task {
+    /// Run the backend with these args (and optional stdin, for the PIN).
+    Fb(Vec<String>, Option<String>),
+    /// Download and install/update the managed backend binary.
+    InstallBackend,
+    /// Guided browser sign-in: import from Chrome, fall back to a visible
+    /// browser window, then report the resulting status.
+    LoginFlow,
 }
 
 struct Job {
-    args: Vec<String>,
-    stdin: Option<String>,
+    task: Task,
     tag: Tag,
 }
 
@@ -149,7 +162,7 @@ fn run() {
         if fb.is_some() {
             "Ready. Pick a view to start."
         } else {
-            "The fb backend was not found. See the README for install steps, or set BLINDFB_FB."
+            "Setting up the Facebook backend…"
         },
         0,
     );
@@ -231,10 +244,12 @@ fn run() {
         done_tx,
     };
 
-    // Feed is the home view; load it up front when the backend exists.
-    if fb.is_some() {
-        load_view(&ui, View::Feed);
-    }
+    // First-run setup: check the backend status. If the backend is missing
+    // entirely, the SetupStatus result sends the installer; if it is there
+    // but signed out, setup offers the browser sign-in. Signed in already:
+    // straight to the feed.
+    ui.status("Checking the Facebook backend…");
+    ui.send(Job { task: Task::Fb(vec!["status".into()], None), tag: Tag::SetupStatus });
 
     let ui_views = ui.clone();
     views.on_selection_changed(move |event| {
@@ -324,22 +339,60 @@ impl Ui {
 
 fn spawn_worker(fb: Option<Fb>, jobs: Receiver<Job>, done: Sender<Done>) {
     thread::spawn(move || {
+        let mut fb = fb;
         while let Ok(job) = jobs.recv() {
-            let result = match &fb {
-                None => Err(
-                    "the fb backend was not found; install facebook-cli or set BLINDFB_FB"
-                        .to_owned(),
-                ),
-                Some(fb) => match &job.stdin {
-                    Some(input) => fb.run_stdin(&refs(&job.args), input),
-                    None => fb.run(&refs(&job.args)),
-                },
+            let result = match job.task {
+                Task::InstallBackend => {
+                    let installed = blindfb_core::backend::install_or_update();
+                    if installed.is_ok() {
+                        fb = Fb::discover();
+                    }
+                    installed
+                }
+                Task::LoginFlow => {
+                    if fb.is_none() {
+                        fb = Fb::discover();
+                    }
+                    match &fb {
+                        None => Err("the backend is not installed yet".to_owned()),
+                        Some(fb) => login_flow(fb),
+                    }
+                }
+                Task::Fb(args, stdin) => {
+                    if fb.is_none() {
+                        fb = Fb::discover();
+                    }
+                    match &fb {
+                        None => Err(
+                            "the fb backend is not installed — use Backend → Install or update backend"
+                                .to_owned(),
+                        ),
+                        Some(fb) => match &stdin {
+                            Some(input) => fb.run_stdin(&refs(&args), input),
+                            None => fb.run(&refs(&args)),
+                        },
+                    }
+                }
             };
             if done.send(Done { tag: job.tag, result }).is_err() {
                 break;
             }
         }
     });
+}
+
+/// Sign in through the browser: first try importing the session from the
+/// user's normal Chrome (one "Allow" click there). If that does not end
+/// signed in, fall back to `login --visible`, which opens a browser window
+/// of the backend's own profile for signing in directly.
+fn login_flow(fb: &Fb) -> Result<String, String> {
+    let _ = fb.run(&["login"]);
+    let status = fb.run(&["status"])?;
+    if status.contains("logged in") && !status.contains("not logged in") {
+        return Ok(status);
+    }
+    let _ = fb.run(&["login", "--visible"]);
+    fb.run(&["status"])
 }
 
 fn refs(args: &[String]) -> Vec<&str> {
@@ -396,8 +449,9 @@ fn build_menus(frame: &Frame) {
         .build();
 
     let backend_menu = Menu::builder()
+        .append_item(ID_INSTALL_BACKEND, "&Install or update backend…", "Download the newest facebook-cli backend from GitHub")
         .append_item(ID_STATUS, "Backend &status", "Show fb daemon status")
-        .append_item(ID_LOGIN, "&Log in…", "Import your Facebook session from Chrome")
+        .append_item(ID_LOGIN, "&Sign in…", "Sign in through your browser")
         .append_item(ID_STOP_DAEMON, "S&top daemon", "Stop the fb daemon")
         .append_item(ID_QUIT_DAEMON, "&Quit daemon and Chrome", "Stop the daemon and close its hidden Chrome")
         .build();
@@ -421,7 +475,7 @@ fn build_menus(frame: &Frame) {
 fn load_args(ui: &Ui, view: View, args: Vec<String>) {
     ui.state.borrow_mut().view = view.clone();
     ui.status(&format!("Loading {}…", view.title()));
-    ui.send(Job { args, stdin: None, tag: Tag::List(view) });
+    ui.send(Job { task: Task::Fb(args, None), tag: Tag::List(view) });
 }
 
 fn load_view(ui: &Ui, view: View) {
@@ -451,7 +505,24 @@ fn load_view(ui: &Ui, view: View) {
 fn load_groups(ui: &Ui) {
     ui.state.borrow_mut().view = View::Groups;
     ui.status("Loading my groups…");
-    ui.send(Job { args: groups_open_args(), stdin: None, tag: Tag::GroupsOpened });
+    ui.send(Job { task: Task::Fb(groups_open_args(), None), tag: Tag::GroupsOpened });
+}
+
+/// Ask, in plain words, whether to start the browser sign-in now.
+fn ask_sign_in(ui: &Ui) -> bool {
+    confirm(
+        &ui.frame,
+        "Sign in through your browser now? BlindFB asks the backend to import your session from Chrome: keep Chrome open, signed in to Facebook, and click Allow if Chrome asks about remote debugging. If you are not signed in to Facebook in Chrome, a browser window opens so you can sign in there instead.",
+        "Sign in",
+    )
+}
+
+/// Menu entry point for the same guided sign-in.
+fn start_sign_in(ui: &Ui, tag: Tag) {
+    if ask_sign_in(ui) {
+        ui.status("Signing in through your browser…");
+        ui.send(Job { task: Task::LoginFlow, tag });
+    }
 }
 
 fn refresh(ui: &Ui) {
@@ -655,8 +726,58 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
+        Tag::SetupStatus => match done.result {
+            Ok(out) if out.contains("logged in") && !out.contains("not logged in") => {
+                load_view(ui, View::Feed);
+            }
+            Ok(_) => {
+                // Installed but signed out: offer the browser sign-in once.
+                ui.status("The backend is installed but not signed in.");
+                if ask_sign_in(ui) {
+                    ui.send(Job { task: Task::LoginFlow, tag: Tag::SetupLogin });
+                } else {
+                    load_view(ui, View::Feed);
+                }
+            }
+            Err(_) => {
+                ui.status("Installing the Facebook backend…");
+                ui.send(Job { task: Task::InstallBackend, tag: Tag::SetupInstall });
+            }
+        },
+        Tag::SetupInstall => match done.result {
+            Ok(summary) => {
+                ui.status(&summary);
+                if ask_sign_in(ui) {
+                    ui.send(Job { task: Task::LoginFlow, tag: Tag::SetupLogin });
+                } else {
+                    load_view(ui, View::Feed);
+                }
+            }
+            Err(error) => {
+                show_error(
+                    &ui.frame,
+                    format!("The backend could not be installed automatically: {error}\nYou can retry from Backend → Install or update backend."),
+                    "Backend install failed",
+                );
+            }
+        },
+        Tag::SetupLogin => match done.result {
+            Ok(out) if out.contains("logged in") && !out.contains("not logged in") => {
+                ui.status("Signed in.");
+                load_view(ui, View::Feed);
+            }
+            Ok(out) => {
+                ui.details.set_value(out.trim());
+                ui.status("Sign-in did not finish — see the details, or try Backend → Sign in.");
+                load_view(ui, View::Feed);
+            }
+            Err(error) => {
+                show_error(&ui.frame, error, "Sign in");
+                load_view(ui, View::Feed);
+            }
+        },
         Tag::GroupsOpened => {
-            ui.send(Job { args: groups_eval_args(), stdin: None, tag: Tag::List(View::Groups) });
+            ui.send(Job { task: Task::Fb(groups_eval_args(), None), tag: Tag::List(View::Groups) });
         }
         Tag::UpdateCheck => match done.result {
             Ok(payload) => {
@@ -764,8 +885,7 @@ fn react_popup(ui: &Ui) {
         if index >= 0 {
             let reaction = REACTIONS[index as usize];
             ui.send(Job {
-                args: react_args(&post, reaction),
-                stdin: None,
+                task: Task::Fb(react_args(&post, reaction), None),
                 tag: Tag::Text,
             });
         }
@@ -779,7 +899,7 @@ fn comment_selected(ui: &Ui) {
     };
     if let Some(text) = prompt_text(&ui.frame, "Your comment:", "Comment") {
         if !text.trim().is_empty() {
-            ui.send(Job { args: comment_args(&post, &text), stdin: None, tag: Tag::Text });
+            ui.send(Job { task: Task::Fb(comment_args(&post, &text), None), tag: Tag::Text });
         }
     }
 }
@@ -910,7 +1030,7 @@ fn delete_selected(ui: &Ui) {
         "Delete this post? Facebook moves it to the trash (permanent removal after 30 days).",
         "Delete post",
     ) {
-        ui.send(Job { args: delete_args(&post), stdin: None, tag: Tag::Text });
+        ui.send(Job { task: Task::Fb(delete_args(&post), None), tag: Tag::Text });
     }
 }
 
@@ -937,8 +1057,7 @@ fn send_composed(ui: &Ui) {
         return;
     }
     ui.send(Job {
-        args: send_args(&chat, &text, &files),
-        stdin: None,
+        task: Task::Fb(send_args(&chat, &text, &files), None),
         tag: Tag::ReloadChat(chat),
     });
 }
@@ -968,18 +1087,14 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SEARCH => search_dialog(ui),
         ID_OCR => ocr_dialog(ui),
         ID_UPDATE => check_updates(ui),
-        ID_STATUS => ui.send(Job { args: vec!["status".into()], stdin: None, tag: Tag::Text }),
-        ID_STOP_DAEMON => ui.send(Job { args: vec!["stop".into()], stdin: None, tag: Tag::Text }),
-        ID_QUIT_DAEMON => ui.send(Job { args: vec!["quit".into()], stdin: None, tag: Tag::Text }),
-        ID_LOGIN => {
-            if confirm(
-                &ui.frame,
-                "Log in imports your Facebook session from your normal Chrome. If Chrome asks \"Allow remote debugging?\", click Allow. Continue?",
-                "Log in",
-            ) {
-                ui.send(Job { args: vec!["login".into()], stdin: None, tag: Tag::Text });
-            }
+        ID_STATUS => ui.send(Job { task: Task::Fb(vec!["status".into()], None), tag: Tag::Text }),
+        ID_STOP_DAEMON => ui.send(Job { task: Task::Fb(vec!["stop".into()], None), tag: Tag::Text }),
+        ID_QUIT_DAEMON => ui.send(Job { task: Task::Fb(vec!["quit".into()], None), tag: Tag::Text }),
+        ID_INSTALL_BACKEND => {
+            ui.status("Downloading the Facebook backend…");
+            ui.send(Job { task: Task::InstallBackend, tag: Tag::Text });
         }
+        ID_LOGIN => start_sign_in(ui, Tag::Text),
         ID_UNLOCK => {
             let dialog = TextEntryDialog::builder(&ui.frame, "Messenger PIN:", "Unlock encrypted chats")
                 .password()
@@ -987,8 +1102,10 @@ fn handle_menu(ui: &Ui, id: i32) {
             if dialog.show_modal() == ID_OK {
                 if let Some(pin) = dialog.get_value() {
                     ui.send(Job {
-                        args: vec!["unlock".into(), "-".into()],
-                        stdin: Some(format!("{pin}\n")),
+                        task: Task::Fb(
+                            vec!["unlock".into(), "-".into()],
+                            Some(format!("{pin}\n")),
+                        ),
                         tag: Tag::Text,
                     });
                 }
@@ -1003,8 +1120,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                     "Unsend",
                 ) {
                     ui.send(Job {
-                        args: unsend_args(&chat, None),
-                        stdin: None,
+                        task: Task::Fb(unsend_args(&chat, None), None),
                         tag: Tag::ReloadChat(chat),
                     });
                 }
@@ -1032,8 +1148,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 if let Some(post) = selected_post_ref(ui) {
                     let reaction = REACTIONS[(id - ID_REACT_BASE) as usize];
                     ui.send(Job {
-                        args: react_args(&post, reaction),
-                        stdin: None,
+                        task: Task::Fb(react_args(&post, reaction), None),
                         tag: Tag::Text,
                     });
                 }
@@ -1067,7 +1182,7 @@ fn new_post(ui: &Ui, with_images: bool) {
             _ => None,
         };
     }
-    ui.send(Job { args: post_args(&text, audience, &images), stdin: None, tag: Tag::Text });
+    ui.send(Job { task: Task::Fb(post_args(&text, audience, &images), None), tag: Tag::Text });
 }
 
 fn search_dialog(ui: &Ui) {

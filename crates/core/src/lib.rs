@@ -6,6 +6,7 @@
 //! back. Everything here is plain process spawning and line parsing so it can
 //! be unit tested without a display.
 
+pub mod backend;
 pub mod fb;
 pub mod update;
 

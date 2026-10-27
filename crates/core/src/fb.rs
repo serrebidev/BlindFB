@@ -62,11 +62,7 @@ impl Fb {
                 return Some(Self { program: candidate });
             }
         }
-        if let Ok(found) = which("fb") {
-            return Some(Self { program: found });
-        }
-        if let Some(home) = std::env::var_os("HOME") {
-            let candidate = PathBuf::from(home).join(".local").join("bin").join("fb");
+        if let Some(candidate) = crate::backend::managed_bin() {
             if candidate.is_file() {
                 return Some(Self { program: candidate });
             }
@@ -79,6 +75,15 @@ impl Fb {
                         return Some(Self { program: candidate });
                     }
                 }
+            }
+        }
+        if let Ok(found) = which("fb") {
+            return Some(Self { program: found });
+        }
+        if let Some(home) = std::env::var_os("HOME") {
+            let candidate = PathBuf::from(home).join(".local").join("bin").join("fb");
+            if candidate.is_file() {
+                return Some(Self { program: candidate });
             }
         }
         None

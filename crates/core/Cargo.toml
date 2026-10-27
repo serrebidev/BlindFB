@@ -9,3 +9,7 @@ description = "Backend for BlindFB: drives the facebook-cli (fb) binary and pars
 [dependencies]
 serde_json = "1"
 ureq = { version = "3", default-features = false, features = ["rustls"] }
+sha2 = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = "0.4"

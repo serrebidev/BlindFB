@@ -1,0 +1,207 @@
+//! Automatic backend install: download the matching `fb` (facebook-cli)
+//! release from GitHub, verify its SHA-256 against the release's
+//! SHA256SUMS, and unpack it into BlindFB's managed bin directory.
+//!
+//! The user never needs a terminal or a Rust toolchain: the app installs
+//! the backend on first run and can update it from the Backend menu.
+
+use std::fs;
+use std::io::{Cursor, Read};
+use std::path::PathBuf;
+
+use sha2::{Digest, Sha256};
+
+const LATEST_URL: &str = "https://api.github.com/repos/hieu-lee/facebook-cli/releases/latest";
+
+fn exe_name() -> &'static str {
+    if cfg!(windows) { "fb.exe" } else { "fb" }
+}
+
+/// BlindFB's per-user data directory: %LOCALAPPDATA%\BlindFB on Windows,
+/// ~/Library/Application Support/BlindFB on macOS, $XDG_DATA_HOME/BlindFB
+/// (or ~/.local/share/BlindFB) on Linux.
+pub fn data_dir() -> Option<PathBuf> {
+    if cfg!(windows) {
+        std::env::var_os("LOCALAPPDATA").map(|base| PathBuf::from(base).join("BlindFB"))
+    } else if cfg!(target_os = "macos") {
+        std::env::var_os("HOME")
+            .map(|home| PathBuf::from(home).join("Library").join("Application Support").join("BlindFB"))
+    } else {
+        match std::env::var_os("XDG_DATA_HOME") {
+            Some(base) if !base.is_empty() => Some(PathBuf::from(base).join("BlindFB")),
+            _ => std::env::var_os("HOME")
+                .map(|home| PathBuf::from(home).join(".local").join("share").join("BlindFB")),
+        }
+    }
+}
+
+/// Where the app-managed `fb` binary lives (whether or not it exists yet).
+pub fn managed_bin() -> Option<PathBuf> {
+    data_dir().map(|dir| dir.join("bin").join(exe_name()))
+}
+
+/// The release asset for this OS and CPU, as named by facebook-cli.
+/// Windows on ARM runs the x86_64 build under emulation.
+pub fn asset_name() -> Option<&'static str> {
+    let arch = std::env::consts::ARCH;
+    if cfg!(windows) {
+        Some("fb-x86_64-windows.zip")
+    } else if cfg!(target_os = "macos") {
+        match arch {
+            "aarch64" => Some("fb-aarch64-darwin.tar.gz"),
+            _ => Some("fb-x86_64-darwin.tar.gz"),
+        }
+    } else if cfg!(target_os = "linux") {
+        match arch {
+            "aarch64" => Some("fb-aarch64-linux.tar.gz"),
+            "x86_64" => Some("fb-x86_64-linux.tar.gz"),
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
+fn get(url: &str) -> Result<Vec<u8>, String> {
+    let mut response = ureq::get(url)
+        .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
+        .call()
+        .map_err(|e| format!("download failed: {e}"))?;
+    response
+        .body_mut()
+        .read_to_vec()
+        .map_err(|e| format!("download failed: {e}"))
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    digest.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Find the expected hash for `asset` in SHA256SUMS content.
+pub fn expected_hash(sums: &str, asset: &str) -> Option<String> {
+    sums.lines().find_map(|line| {
+        let mut parts = line.split_whitespace();
+        let hash = parts.next()?;
+        let name = parts.next()?.trim_start_matches('*');
+        (name == asset).then(|| hash.to_lowercase())
+    })
+}
+
+fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
+    let want = exe_name();
+    if asset.ends_with(".zip") {
+        let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+            .map_err(|e| format!("could not open the backend download: {e}"))?;
+        for i in 0..zip.len() {
+            let mut entry = zip
+                .by_index(i)
+                .map_err(|e| format!("could not read the backend download: {e}"))?;
+            let name = entry.name().replace('\\', "/");
+            if name == want || name.ends_with(&format!("/{want}")) {
+                let mut out = Vec::new();
+                entry
+                    .read_to_end(&mut out)
+                    .map_err(|e| format!("could not unpack the backend: {e}"))?;
+                return Ok(out);
+            }
+        }
+        Err(format!("the backend download did not contain {want}"))
+    } else {
+        let decoder = flate2::read::GzDecoder::new(Cursor::new(bytes));
+        let mut tar = tar::Archive::new(decoder);
+        for entry in tar
+            .entries()
+            .map_err(|e| format!("could not open the backend download: {e}"))?
+        {
+            let mut entry =
+                entry.map_err(|e| format!("could not read the backend download: {e}"))?;
+            let path = entry.path().map_err(|e| format!("bad backend download: {e}"))?;
+            let name = path.to_string_lossy().replace('\\', "/");
+            if name == want || name.ends_with(&format!("/{want}")) {
+                let mut out = Vec::new();
+                entry
+                    .read_to_end(&mut out)
+                    .map_err(|e| format!("could not unpack the backend: {e}"))?;
+                return Ok(out);
+            }
+        }
+        Err(format!("the backend download did not contain {want}"))
+    }
+}
+
+/// Download the latest facebook-cli release and install it as the managed
+/// backend. Stops a running managed daemon first so the binary can be
+/// replaced. Blocking; call from a worker thread. Returns a summary line.
+pub fn install_or_update() -> Result<String, String> {
+    let asset = asset_name().ok_or("no prebuilt backend for this platform")?;
+    let target = managed_bin().ok_or("could not find a place to install the backend")?;
+
+    let json: serde_json::Value = serde_json::from_slice(&get(LATEST_URL)?)
+        .map_err(|e| format!("download failed: {e}"))?;
+    let tag = json
+        .get("tag_name")
+        .and_then(|v| v.as_str())
+        .ok_or("download failed: no tag in the release response")?
+        .to_owned();
+    let assets = json
+        .get("assets")
+        .and_then(|v| v.as_array())
+        .ok_or("download failed: no assets in the release response")?;
+    let url_of = |name: &str| -> Option<String> {
+        assets.iter().find_map(|a| {
+            (a.get("name").and_then(|v| v.as_str()) == Some(name))
+                .then(|| a.get("browser_download_url").and_then(|v| v.as_str()).map(str::to_owned))
+                .flatten()
+        })
+    };
+    let asset_url = url_of(asset).ok_or("download failed: release has no build for this platform")?;
+    let sums_url = url_of("SHA256SUMS").ok_or("download failed: release has no checksums file")?;
+
+    let bytes = get(&asset_url)?;
+    let sums = String::from_utf8_lossy(&get(&sums_url)?).into_owned();
+    let expected = expected_hash(&sums, asset).ok_or("download failed: no checksum for this build")?;
+    if sha256_hex(&bytes) != expected {
+        return Err("the backend download failed its checksum — not installing it".to_owned());
+    }
+    let binary = extract(asset, &bytes)?;
+
+    if target.exists() {
+        // Replacing a running daemon's binary fails on Windows; stop it first.
+        if let Some(fb) = crate::fb::Fb::discover() {
+            let _ = fb.run(&["quit"]);
+        }
+    }
+    let dir = target.parent().ok_or("bad install path")?;
+    fs::create_dir_all(dir).map_err(|e| format!("could not create the install folder: {e}"))?;
+    let tmp = dir.join(format!("{}.new", exe_name()));
+    fs::write(&tmp, &binary).map_err(|e| format!("could not write the backend: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755));
+    }
+    fs::rename(&tmp, &target).map_err(|e| format!("could not install the backend: {e}"))?;
+    Ok(format!(
+        "Installed the Facebook backend {tag} to {}",
+        target.display()
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_expected_hash() {
+        let sums = "abc123  fb-x86_64-linux.tar.gz\ndef456 *fb-x86_64-windows.zip\n";
+        assert_eq!(expected_hash(sums, "fb-x86_64-windows.zip").as_deref(), Some("def456"));
+        assert_eq!(expected_hash(sums, "fb-aarch64-linux.tar.gz"), None);
+    }
+
+    #[test]
+    fn has_an_asset_and_a_managed_path() {
+        assert!(asset_name().is_some());
+        assert!(managed_bin().is_some());
+    }
+}

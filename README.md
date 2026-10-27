@@ -52,23 +52,27 @@ Everything else the backend exposes is in the app.
 
 ## Requirements
 
-- Google Chrome, logged in to Facebook (the backend imports that session).
-- The `fb` binary: install it first —
-  Linux/macOS/WSL: `curl -fsSL https://raw.githubusercontent.com/hieu-lee/facebook-cli/main/install.sh | sh`
-  Windows (PowerShell): `irm https://raw.githubusercontent.com/hieu-lee/facebook-cli/main/install.ps1 | iex`
-  BlindFB looks for `fb` on your `PATH`, in `~/.local/bin`, next to the
-  BlindFB executable, or at the path in the `BLINDFB_FB` environment
-  variable.
-- First run: use **Backend → Log in** and click **Allow** if Chrome asks
-  about remote debugging. Encrypted chats additionally need **Chat → Unlock
-  encrypted chats** once per daemon lifetime.
+- Google Chrome (the backend imports your Facebook session from it).
+- Nothing else to install: **BlindFB installs the `fb` backend itself** on
+  first run — it downloads the matching facebook-cli release from GitHub,
+  verifies its SHA-256 checksum, and keeps it in BlindFB's own app-data
+  folder. **Backend → Install or update backend** refreshes it any time.
+  (BlindFB also finds an `fb` you installed yourself: the managed copy
+  first, then next to the BlindFB executable, then your `PATH`, then
+  `~/.local/bin`; the `BLINDFB_FB` environment variable overrides all.)
+- First run, sign-in happens **in your browser**: BlindFB asks and then
+  imports your session from Chrome — keep Chrome open, signed in to
+  Facebook, and click **Allow** if Chrome asks about remote debugging. If
+  you are not signed in to Facebook in Chrome, a browser window opens so
+  you can sign in there instead. Encrypted chats additionally need
+  **Chat → Unlock encrypted chats** once per daemon lifetime.
 
 ## Layout of the window
 
 A Views list (News feed, Notifications, Friends, My posts, Chats), an Items
 list for the current view, a Details pane for the selected item, an actions
 row, and a message compose row for chats. Menus mirror every action with
-keyboard shortcuts: Ctrl+1…5 switch views, F5 refreshes, Ctrl+N writes a
+keyboard shortcuts: Ctrl+1…6 switch views, F5 refreshes, Ctrl+N writes a
 post, Ctrl+F searches.
 
 The lists follow the quiet-list design rule (from
