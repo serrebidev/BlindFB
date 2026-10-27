@@ -122,7 +122,6 @@ struct Done {
 struct State {
     view: View,
     records: Vec<Record>,
-    who: Option<String>,
     attachments: Vec<String>,
     /// Author name -> profile URL, learned from post URLs as views load.
     /// Powers the "open on Facebook" link-outs (profiles, Messenger web).
@@ -219,7 +218,6 @@ fn run() {
     let state = Rc::new(RefCell::new(State {
         view: View::Feed,
         records: Vec::new(),
-        who: None,
         attachments: Vec::new(),
         author_urls: HashMap::new(),
     }));
@@ -681,7 +679,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.status("BlindFB is up to date");
                     show_warning(
                         &ui.frame,
-                        &format!("You have the latest BlindFB ({}).", env!("CARGO_PKG_VERSION")),
+                        format!("You have the latest BlindFB ({}).", env!("CARGO_PKG_VERSION")),
                         "Check for updates",
                     );
                 }
