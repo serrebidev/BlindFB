@@ -1,0 +1,11 @@
+[package]
+name = "blindfb-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Backend for BlindFB: drives the facebook-cli (fb) binary and parses its output"
+
+[dependencies]
+serde_json = "1"
+ureq = { version = "3", default-features = false, features = ["rustls"] }

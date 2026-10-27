@@ -1,0 +1,21 @@
+[package]
+name = "blindfb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "BlindFB: an accessible Facebook and Messenger client for screen reader users"
+
+[[bin]]
+name = "blindfb"
+path = "src/main.rs"
+
+[dependencies]
+blindfb-core = { path = "../crates/core" }
+wxdragon = { version = "0.9.24", default-features = false }
+wx-utils = "0.4.4"
+native-ocr = "0.2.1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[build-dependencies]
+shipfitter = { version = "0.2.4", features = ["windows-resources"] }
