@@ -45,6 +45,13 @@ struct ReaderState {
     loaded: bool,
     /// Audience Facebook's share dialog reported; the reader's timer asks next.
     share_audience: Option<String>,
+    share_requested: bool,
+}
+
+impl ReaderState {
+    fn take_share_request(&mut self) -> bool {
+        self.loaded && !self.busy && std::mem::take(&mut self.share_requested)
+    }
 }
 
 impl PostReader {
@@ -229,7 +236,7 @@ impl PostReader {
     }
 }
 
-pub(super) fn open(ui: &Ui, target: &str) {
+pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     if ui.post_reader.borrow().is_some() {
         return;
     }
@@ -296,6 +303,7 @@ pub(super) fn open(ui: &Ui, target: &str) {
             busy: true,
             loaded: false,
             share_audience: None,
+            share_requested,
         })),
     };
     reader.controls();
@@ -374,6 +382,7 @@ pub(super) fn open(ui: &Ui, target: &str) {
         };
         let mut menu = Menu::builder()
             .append_item(ID_POST_COMMENT, "&Comment…", "Write a comment on this post")
+            .append_item(ID_SHARE, "S&hare…", "Share with Facebook's own share dialog")
             .build();
         let react = Menu::builder().build();
         for (i, reaction) in REACTIONS.iter().enumerate() {
@@ -385,12 +394,6 @@ pub(super) fn open(ui: &Ui, target: &str) {
             react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
         }
         menu.append_submenu(react, "&React", "");
-        menu.append(
-            ID_SHARE,
-            "S&hare…",
-            "Share with Facebook's own share dialog",
-            ItemKind::Normal,
-        );
         menu.append_separator();
         menu.append(ID_COPY_POST, "Cop&y post text", "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, "Copy &link", "", ItemKind::Normal);
@@ -418,6 +421,10 @@ pub(super) fn open(ui: &Ui, target: &str) {
     let share_timer = Timer::new(&dialog);
     let (r, u) = (reader.clone(), ui.clone());
     share_timer.on_tick(move |_| {
+        let requested = r.state.borrow_mut().take_share_request();
+        if requested {
+            r.share_start(&u);
+        }
         let audience = r.state.borrow_mut().share_audience.take();
         if let Some(audience) = audience {
             r.share_prompt(&u, &dialog, &audience);
@@ -534,6 +541,23 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn requested_share_waits_for_load_and_starts_once() {
+        let mut state = ReaderState {
+            comments: Vec::new(), parent: None, busy: true, loaded: false,
+            share_audience: None, share_requested: true,
+        };
+        assert!(!state.take_share_request());
+        state.busy = false;
+        assert!(!state.take_share_request());
+        state.loaded = true;
+        state.busy = true;
+        assert!(!state.take_share_request());
+        state.busy = false;
+        assert!(state.take_share_request());
+        assert!(!state.take_share_request());
+    }
 
     #[test]
     fn refresh_restores_identity_instead_of_row_number() {

@@ -25,7 +25,14 @@ everything and presents its output in a keyboard-first window.
   it on the web. **Share** (Alt+H) uses Facebook's own share dialog, tells
   you the audience first, and takes optional text.
 - Every item in the Items list has a context menu (Applications or
-  Shift+F10) with the actions that fit it.
+  Shift+F10) with the actions that fit it. **Share** is the second item
+  for posts, including the news feed, Feeds, profile and group posts,
+  search results and notifications. It opens the reader and share prompt.
+- **Load more** (Ctrl+L, the button, or View menu) appends more items
+  without moving your selection or repeating existing rows. It works in
+  feeds, post lists, search results, notifications, friends and chat lists.
+  Other sections do not support loading more. Facebook may return fewer
+  items or none when it has no further results available.
 - Browse **notifications** and open the posts they point to.
 - Browse and search your **friends list**; open any friend's profile, read
   their posts, or jump straight into a Messenger chat with them. (Adding and
@@ -60,10 +67,11 @@ the call buttons are. The same pattern covers adding/removing friends
 (profile on the web) and posting into a group (the group's web page).
 Everything else the backend exposes is in the app.
 
-Facebook hides the link of many feed posts (often friends' text posts and
-group posts), and the backend cannot recover it yet, so BlindFB cannot open,
-react to or comment on those rows; it says so when you try. Reels and photo
-albums open in your browser instead of the reader.
+Facebook hides the link of many feed posts until they get focus. BlindFB's
+backend build reveals most of them, including group posts, but a few rows
+(often ads and suggestions) still have none; BlindFB cannot open, react to
+or comment on those and says so when you try. Reels and photo albums open
+in your browser instead of the reader.
 
 ## Requirements
 
@@ -77,7 +85,12 @@ albums open in your browser instead of the reader.
 - Nothing else to install: **BlindFB installs the `fb` backend itself** on
   first run — it downloads the matching facebook-cli release from GitHub,
   verifies its SHA-256 checksum, and keeps it in BlindFB's own app-data
-  folder. **Backend → Install or update backend** refreshes it any time.
+  folder, replacing an older copy at startup. Until two fixes are merged
+  upstream (hidden feed post links, hieu-lee/facebook-cli#1; the Messenger
+  restore prompt, #2), that release is
+  [serrebidev/facebook-cli `v0.1.5-blindfb.1`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.1):
+  upstream 0.1.5 plus those fixes. **Backend → Install or update backend**
+  reinstalls it any time.
   (BlindFB also finds an `fb` you installed yourself: the managed copy
   first, then next to the BlindFB executable, then your `PATH`, then
   `~/.local/bin`; the `BLINDFB_FB` environment variable overrides all.)
@@ -106,13 +119,13 @@ A Views list (News feed, Notifications, Friends, My posts, Chats, Groups,
 Feeds), an Items list for the current view, a Details pane for the selected
 item, an actions row, and a message compose row for chats. Menus mirror every
 action with keyboard shortcuts: Ctrl+1…7 switch views, Enter opens the
-selected item, F5 refreshes, Ctrl+N writes a post, Ctrl+F searches.
+selected item, F5 refreshes, Ctrl+L loads more, Ctrl+N writes a post, Ctrl+F searches.
 
 Facebook is read live, so a section's first load takes several seconds.
 Once the News feed is up, BlindFB loads the other main sections in the
 background, so switching sections is instant. A section you return to is
 shown at once and quietly refreshed if it is over a minute old; the News
-feed keeps your place until you press F5.
+feed keeps your place until you press F5; Ctrl+L appends its next posts.
 
 The lists follow the quiet-list design rule (from
 [quiet-list](https://github.com/trypsynth/quiet-list)): rows are plain

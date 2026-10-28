@@ -17,7 +17,7 @@
 mod post_dialog;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -47,6 +47,7 @@ const ID_REFRESH: i32 = 10006;
 const ID_UNREAD_CHATS: i32 = 10007;
 const ID_GROUPS_VIEW: i32 = 10008;
 const ID_RECENT_FEED: i32 = 10009;
+const ID_MORE: i32 = 10016;
 const ID_WEB_POST: i32 = 10080;
 const ID_WEB_PERSON: i32 = 10081;
 const ID_WEB_CHAT: i32 = 10082;
@@ -65,6 +66,7 @@ const ID_MESSAGE: i32 = 10043;
 const ID_DELETE: i32 = 10044;
 const ID_COPY_TEXT: i32 = 10045;
 const ID_COPY_LINK: i32 = 10046;
+const ID_SHARE: i32 = 10047;
 const ID_UNSEND: i32 = 10050;
 const ID_UNLOCK: i32 = 10051;
 const ID_STATUS: i32 = 10060;
@@ -122,6 +124,7 @@ enum Tag {
         request: u64,
         args: Vec<String>,
         unlock_attempted: bool,
+        append: bool,
     },
     /// Background read that only fills the section cache.
     Prefetch(View),
@@ -133,6 +136,7 @@ enum Tag {
         view: View,
         request: u64,
         args: Vec<String>,
+        append: bool,
     },
     PostLoaded(u64),
     PostSent(u64),
@@ -223,8 +227,9 @@ struct State {
     /// Author name -> profile URL, learned from post URLs as views load.
     /// Powers the "open on Facebook" link-outs (profiles, Messenger web).
     author_urls: HashMap<String, String>,
-    /// Last raw backend output per section, so switching back is instant.
-    cache: HashMap<View, (String, Instant)>,
+    /// Last parsed backend output and request per section, so switching back is instant.
+    cache: HashMap<View, (Vec<Record>, Instant, Vec<String>)>,
+    loading_more: bool,
     prefetched: bool,
     /// The list request refreshing a cached section the user is already reading.
     background: Option<u64>,
@@ -234,6 +239,7 @@ struct RetryList {
     view: View,
     request: u64,
     args: Vec<String>,
+    append: bool,
 }
 
 /// Append one line to startup.log in BlindFB's data folder. Support
@@ -311,6 +317,7 @@ fn run() {
 
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     let refresh_btn = Button::builder(&panel).with_label("Refresh (F5)").build();
+    let more_btn = Button::builder(&panel).with_label("Load more (Ctrl+L)").build();
     let open_btn = Button::builder(&panel).with_label("Open").build();
     let react_btn = Button::builder(&panel).with_label("React").build();
     let comment_btn = Button::builder(&panel).with_label("Comment").build();
@@ -320,6 +327,7 @@ fn run() {
     let delete_btn = Button::builder(&panel).with_label("Delete post").build();
     for b in [
         &refresh_btn,
+        &more_btn,
         &open_btn,
         &react_btn,
         &comment_btn,
@@ -365,6 +373,7 @@ fn run() {
         attachments: Vec::new(),
         author_urls: HashMap::new(),
         cache: HashMap::new(),
+        loading_more: false,
         prefetched: false,
         background: None,
     }));
@@ -436,6 +445,8 @@ fn run() {
 
     let ui_refresh = ui.clone();
     refresh_btn.on_click(move |_| refresh(&ui_refresh));
+    let ui_more = ui.clone();
+    more_btn.on_click(move |_| load_more(&ui_more));
     let ui_open2 = ui.clone();
     open_btn.on_click(move |_| open_selected(&ui_open2));
     let ui_react = ui.clone();
@@ -530,6 +541,15 @@ fn spawn_worker(
 ) {
     thread::spawn(move || {
         let mut fb = fb;
+        // Before the first backend command, so an old daemon never serves this session.
+        if blindfb_core::backend::managed_outdated() {
+            startup_log("setup: updating the Facebook backend");
+            match blindfb_core::backend::install_or_update() {
+                Ok(summary) => startup_log(&format!("setup: {summary}")),
+                Err(error) => startup_log(&format!("setup: backend update failed: {error}")),
+            }
+            fb = Fb::discover();
+        }
         while let Ok(job) = jobs.recv() {
             // Arrowing through Views queues a load per section; run only the one still wanted.
             if let Tag::List { request, .. } | Tag::GroupsOpened(request) = &job.tag {
@@ -708,10 +728,12 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_UNREAD_CHATS, "&Unread chats only", "Chats with unread messages")
         .append_separator()
         .append_item(ID_REFRESH, "&Refresh\tF5", "Reload the current view")
+        .append_item(ID_MORE, "&Load more\tCtrl+L", "Append more items and keep your reading position")
         .build();
 
     let mut post_menu = Menu::builder()
         .append_item(ID_OPEN, "&Open post / comments", "Open the selected item; Enter in the items list")
+        .append_item(ID_SHARE, "S&hare…", "Share the selected post")
         .append_item(ID_COMMENT, "&Comment…", "Comment on the selected post")
         .append_item(ID_PROFILE, "Author &profile", "Show the profile of the selected item's author or owner")
         .append_item(ID_AUTHOR_POSTS, "Author's p&osts", "Posts by the selected item's author")
@@ -752,7 +774,7 @@ fn build_menus(frame: &Frame) {
         .append_item(
             ID_INSTALL_BACKEND,
             "&Install or update backend…",
-            "Download the newest facebook-cli backend from GitHub",
+            "Download BlindFB's supported facebook-cli backend from GitHub",
         )
         .append_item(ID_STATUS, "Backend &status", "Show fb daemon status")
         .append_item(ID_LOGIN, "&Sign in…", "Sign in through your browser")
@@ -792,6 +814,7 @@ fn begin_list(ui: &Ui, view: &View) -> u64 {
         state.records.clear();
     }
     state.view = view.clone();
+    state.loading_more = false;
     state.list_request = state.list_request.wrapping_add(1);
     let request = state.list_request;
     ui.latest_list.store(request, Ordering::Relaxed);
@@ -813,16 +836,17 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
     ui.state.borrow_mut().last_args = args.clone();
     ui.send(Job {
         task: Task::Fb(args.clone(), None),
-        tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false },
+        tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false, append: false },
     });
     ui.status(&format!("Loading {}…", view.title()));
 }
 
 fn load_view(ui: &Ui, view: View) {
     let cached = ui.state.borrow().cache.get(&view).cloned();
-    if let Some((raw, at)) = &cached {
+    if let Some((records, at, args)) = &cached {
         begin_list(ui, &view);
-        show_list(ui, &view, raw);
+        ui.state.borrow_mut().last_args = args.clone();
+        show_records(ui, &view, records.clone(), None);
         // The News feed pages forward on every load, so it waits for F5.
         if view == View::Feed || at.elapsed() < FRESH {
             return;
@@ -830,7 +854,8 @@ fn load_view(ui: &Ui, view: View) {
     }
     if view == View::Groups {
         load_groups(ui);
-    } else if let Some(args) = default_args(&view) {
+    } else if let Some(args) = cached.as_ref().map(|(_, _, args)| args.clone())
+        .or_else(|| default_args(&view)) {
         load_args(ui, view, args);
     }
     if cached.is_some() {
@@ -1015,6 +1040,63 @@ fn refresh(ui: &Ui) {
     }
 }
 
+fn more_args(view: &View, previous: &[String], loaded: usize) -> Option<Vec<String>> {
+    if previous.is_empty() {
+        return None;
+    }
+    match view {
+        View::Feed => Some(feed_args(PAGE, false, true, true)),
+        View::Notifications => Some(notifs_args(u32::try_from(loaded).ok()?.checked_add(PAGE)?)),
+        View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::Friends
+        | View::Chats | View::SearchResults => {
+            let mut args = previous.to_vec();
+            let index = args.iter().position(|arg| arg == "-n")? + 1;
+            let count: u32 = args.get(index)?.parse().ok()?;
+            args[index] = count.checked_add(PAGE)?.to_string();
+            Some(args)
+        }
+        _ => None,
+    }
+}
+
+fn load_more(ui: &Ui) {
+    let (view, args) = {
+        let state = ui.state.borrow();
+        if state.loading_more {
+            ui.status("More items are already loading…");
+            return;
+        }
+        if state.records_view != state.view || state.records.is_empty() {
+            ui.status("Wait for this section to load before requesting more items.");
+            return;
+        }
+        let Some(args) = more_args(&state.view, &state.last_args, state.records.len()) else {
+            ui.status("Load more is available for feeds, posts, search results, notifications, friends and chat lists.");
+            return;
+        };
+        (state.view.clone(), args)
+    };
+    let request = begin_list(ui, &view);
+    ui.state.borrow_mut().loading_more = true;
+    ui.send(Job {
+        task: Task::Fb(args.clone(), None),
+        tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false, append: true },
+    });
+    ui.status(&format!("Loading more {}…", view.title()));
+}
+
+fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) -> Vec<Record> {
+    let key = |record: &Record| match view {
+        View::Friends | View::Groups => record.field(1).to_owned(),
+        View::Chats => record.field(0).to_owned(),
+        View::Notifications => format!("{}\t{}", record.field(2), record.field(3)),
+        _ => post_target(view, record).map(str::to_owned).unwrap_or_else(|| record.raw.clone()),
+    };
+    let mut seen: HashSet<String> = existing.iter().map(&key).collect();
+    existing.extend(incoming.into_iter().filter(|record| seen.insert(key(record))));
+    existing
+}
+
 fn display_for(view: &View, record: &Record) -> String {
     match view {
         View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
@@ -1146,6 +1228,7 @@ fn record_key(view: &View, record: &Record) -> String {
     post_target(view, record)
         .unwrap_or_else(|| match view {
             View::Friends | View::Groups => record.field(1),
+            View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => &record.raw,
             _ => record.field(0),
         })
         .to_owned()
@@ -1185,6 +1268,11 @@ fn show_list(ui: &Ui, view: &View, raw: &str) -> bool {
             return false;
         }
     };
+    show_records(ui, view, records, body);
+    true
+}
+
+fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>) {
     if matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)) {
         let mut state = ui.state.borrow_mut();
         for record in &records {
@@ -1240,26 +1328,46 @@ fn show_list(ui: &Ui, view: &View, raw: &str) -> bool {
         ui.details.set_value("(nothing here)");
     }
     ui.status(&format!("{} — {} item(s)", view.title(), ui.items.get_count()));
-    true
 }
 
 fn apply_done(ui: &Ui, done: Done) {
     match done.tag {
-        Tag::List { view, request, args, unlock_attempted } => {
+        Tag::List { view, request, args, unlock_attempted, append } => {
             let current = current_list(ui, &view, request);
-            match done.result {
-                Ok(raw) => {
-                    if cacheable(&view, &args) && parse_for(&view, &raw).is_ok() {
+            if !current && ui.state.borrow().view == view {
+                return;
+            }
+            if current {
+                ui.state.borrow_mut().loading_more = false;
+            }
+            match done.result.and_then(|raw| parse_for(&view, &raw)) {
+                Ok((records, body)) => {
+                    let previous = {
+                        let state = ui.state.borrow();
+                        if current { state.records.clone() } else {
+                            state.cache.get(&view).map(|(rows, _, _)| rows.clone()).unwrap_or_default()
+                        }
+                    };
+                    let before = previous.len();
+                    let records = if append {
+                        merge_records(&view, previous, records)
+                    } else { records };
+                    let added = records.len().saturating_sub(before);
+                    if cacheable(&view, &args) {
                         ui.state
                             .borrow_mut()
                             .cache
-                            .insert(view.clone(), (raw.clone(), Instant::now()));
+                            .insert(view.clone(), (records.clone(), Instant::now(), args.clone()));
                     }
                     if !current {
                         return;
                     }
-                    if show_list(ui, &view, &raw)
-                        && view == View::Feed
+                    ui.state.borrow_mut().last_args = args;
+                    show_records(ui, &view, records, body);
+                    if append {
+                        ui.status(&format!("{added} new item(s) loaded. {} item(s) total.", ui.items.get_count()));
+                    }
+                    if view == View::Feed
                         && !ui.state.borrow().prefetched
                     {
                         ui.state.borrow_mut().prefetched = true;
@@ -1275,7 +1383,7 @@ fn apply_done(ui: &Ui, done: Done) {
                         let mut state = ui.state.borrow_mut();
                         if !unlock_attempted && !state.unlocking {
                             state.unlocking = true;
-                            state.pending_unlock = Some(RetryList { view, request, args });
+                            state.pending_unlock = Some(RetryList { view, request, args, append });
                             drop(state);
                             ui.status("Messenger needs its history restored. Enter your PIN in the unlock dialog.");
                         } else {
@@ -1305,16 +1413,18 @@ fn apply_done(ui: &Ui, done: Done) {
         }
         Tag::Prefetch(view) => {
             let Ok(raw) = done.result else { return };
-            if parse_for(&view, &raw).is_err() {
-                return;
-            }
-            ui.state.borrow_mut().cache.insert(view.clone(), (raw.clone(), Instant::now()));
+            let Ok((records, _)) = parse_for(&view, &raw) else { return };
+            // A late prefetch must not replace a list the user has already extended.
+            ui.state.borrow_mut().cache.entry(view.clone()).or_insert_with(|| (
+                records.clone(), Instant::now(), default_args(&view).unwrap_or_default(),
+            ));
             // The user opened this section before its prefetch finished: show it now.
             let waiting = {
                 let state = ui.state.borrow();
                 state.view == view && state.records_view != view
             };
             if waiting {
+                ui.state.borrow_mut().last_args = default_args(&view).unwrap_or_default();
                 show_list(ui, &view, &raw);
             }
         }
@@ -1344,13 +1454,13 @@ fn apply_done(ui: &Ui, done: Done) {
             post_dialog::note(ui, session, done.result.map(|_| "Reaction set.".to_owned()), false)
         }
         Tag::Silent => {}
-        Tag::UnlockRetry { view, request, args } => {
+        Tag::UnlockRetry { view, request, args, append } => {
             ui.state.borrow_mut().unlocking = false;
             match done.result {
                 Ok(_) if !args.is_empty() && current_list(ui, &view, request) => {
                     ui.send(Job {
                         task: Task::Fb(args.clone(), None),
-                        tag: Tag::List { view, request, args, unlock_attempted: true },
+                        tag: Tag::List { view, request, args, unlock_attempted: true, append },
                     });
                     ui.status("Messenger unlocked. Loading your chats…");
                 }
@@ -1466,7 +1576,7 @@ fn apply_done(ui: &Ui, done: Done) {
                 let args = groups_eval_args();
                 ui.send(Job {
                     task: Task::Fb(args.clone(), None),
-                    tag: Tag::List { view: View::Groups, request, args, unlock_attempted: false },
+                    tag: Tag::List { view: View::Groups, request, args, unlock_attempted: false, append: false },
                 });
             }
         }
@@ -1561,12 +1671,13 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
         view: ui.state.borrow().view.clone(),
         request: 0,
         args: Vec::new(),
+        append: false,
     });
     ui.state.borrow_mut().unlocking = true;
     ui.status("Unlocking Messenger…");
     ui.send(Job {
         task: Task::Fb(vec!["unlock".into(), "-".into()], Some(format!("{pin}\n"))),
-        tag: Tag::UnlockRetry { view: retry.view, request: retry.request, args: retry.args },
+        tag: Tag::UnlockRetry { view: retry.view, request: retry.request, args: retry.args, append: retry.append },
     });
 }
 
@@ -1596,7 +1707,7 @@ fn open_selected(ui: &Ui) {
                 return;
             }
             match blindfb_core::posts::reader_url(target) {
-                Some(url) => post_dialog::open(ui, &url),
+                Some(url) => post_dialog::open(ui, &url, false),
                 None => {
                     // Reels, photo albums and other pages the reader cannot parse yet.
                     if confirm(
@@ -1852,8 +1963,21 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_WEB_CHAT => open_chat_web(ui),
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
         ID_REFRESH => refresh(ui),
+        ID_MORE => load_more(ui),
         ID_OPEN => open_selected(ui),
         ID_COMMENT => comment_selected(ui),
+        ID_SHARE => {
+            if let Some(post) = post_or_warn(ui, "Share") {
+                match blindfb_core::posts::reader_url(&post) {
+                    Some(url) => post_dialog::open(ui, &url, true),
+                    None => show_warning(
+                        &ui.frame,
+                        "BlindFB cannot share this kind of item yet. Open it on Facebook to share it.",
+                        "Share post",
+                    ),
+                }
+            }
+        }
         ID_PROFILE => profile_selected(ui),
         ID_AUTHOR_POSTS => posts_selected(ui),
         ID_MESSAGE => message_selected(ui),
@@ -1975,7 +2099,11 @@ fn show_item_menu(ui: &Ui) {
     };
     match view {
         View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
-            add(&menu, &[(ID_OPEN, "&Open post and comments"), (ID_COMMENT, "&Comment…")]);
+            add(&menu, &[
+                (ID_OPEN, "&Open post and comments"),
+                (ID_SHARE, "S&hare…"),
+                (ID_COMMENT, "&Comment…"),
+            ]);
             let react = Menu::builder().build();
             for (i, reaction) in REACTIONS.iter().enumerate() {
                 let label = if *reaction == "none" {
@@ -2008,6 +2136,7 @@ fn show_item_menu(ui: &Ui) {
             &menu,
             &[
                 (ID_OPEN, "&Open"),
+                (ID_SHARE, "S&hare…"),
                 (ID_COPY_TEXT, "Cop&y text"),
                 (ID_COPY_LINK, "Copy &link"),
                 (ID_WEB_POST, "Open on &Facebook (web)"),
@@ -2153,6 +2282,32 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn more_uses_feed_cursor_and_preserves_section_filters() {
+        assert_eq!(more_args(&View::Feed, &feed_args(PAGE, true, true, true), PAGE as usize),
+            Some(feed_args(PAGE, false, true, true)));
+        assert_eq!(more_args(&View::Chats, &chats_args(PAGE, true), 38),
+            Some(chats_args(PAGE * 2, true)));
+        assert_eq!(more_args(&View::SearchResults, &search_args("rust", Some("posts"), PAGE), 40),
+            Some(search_args("rust", Some("posts"), PAGE * 2)));
+        assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40),
+            Some(notifs_args(PAGE * 2)));
+        assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40), None);
+        assert_eq!(more_args(&View::Feed, &[], 0), None);
+    }
+
+    #[test]
+    fn more_appends_new_posts_without_reordering_existing_rows() {
+        let old = parse_feed("/a/posts/1\tA\tnow\t0/0/0\tFirst\n-\tAd\tnow\t0/0/0\tAd text");
+        let new = parse_feed("/a/posts/1\tA\tlater\t1/0/0\tFirst\n-\tAd\tnow\t0/0/0\tAd text\n/a/posts/2\tA\tnow\t0/0/0\tSecond");
+        let merged = merge_records(&View::Feed, old, new);
+        assert_eq!(merged.len(), 3);
+        assert_eq!(merged[0].field(0), "/a/posts/1");
+        assert_eq!(merged[1].field(0), "-");
+        assert_eq!(record_key(&View::Feed, &merged[1]), merged[1].raw);
+        assert_eq!(merged[2].field(0), "/a/posts/2");
+    }
 
     #[test]
     fn routes_only_post_targets_and_detects_messenger_lock() {

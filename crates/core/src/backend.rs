@@ -11,7 +11,30 @@ use std::path::PathBuf;
 
 use sha2::{Digest, Sha256};
 
-const LATEST_URL: &str = "https://api.github.com/repos/hieu-lee/facebook-cli/releases/latest";
+/// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
+/// (hieu-lee/facebook-cli#1 hidden feed links, #2 Messenger restore prompt). Back to upstream
+/// once those merge.
+pub const BACKEND_VERSION: &str = "0.1.5-blindfb.1";
+const RELEASE_URL: &str =
+    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.1";
+
+/// The managed backend exists but is not the build this BlindFB ships.
+pub fn managed_outdated() -> bool {
+    let Some(bin) = managed_bin().filter(|b| b.is_file()) else { return false };
+    let mut command = std::process::Command::new(bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    command.arg("--version").output().map_or(true, |out| {
+        version_outdated(out.status.success(), &out.stdout)
+    })
+}
+
+fn version_outdated(success: bool, stdout: &[u8]) -> bool {
+    !success || String::from_utf8_lossy(stdout).trim() != format!("fb {BACKEND_VERSION}")
+}
 
 fn exe_name() -> &'static str {
     if cfg!(windows) { "fb.exe" } else { "fb" }
@@ -131,14 +154,14 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
     }
 }
 
-/// Download the latest facebook-cli release and install it as the managed
+/// Download BlindFB's pinned facebook-cli release and install it as the managed
 /// backend. Stops a running managed daemon first so the binary can be
 /// replaced. Blocking; call from a worker thread. Returns a summary line.
 pub fn install_or_update() -> Result<String, String> {
     let asset = asset_name().ok_or("no prebuilt backend for this platform")?;
     let target = managed_bin().ok_or("could not find a place to install the backend")?;
 
-    let json: serde_json::Value = serde_json::from_slice(&get(LATEST_URL)?)
+    let json: serde_json::Value = serde_json::from_slice(&get(RELEASE_URL)?)
         .map_err(|e| format!("download failed: {e}"))?;
     let tag = json
         .get("tag_name")
@@ -169,9 +192,7 @@ pub fn install_or_update() -> Result<String, String> {
 
     if target.exists() {
         // Replacing a running daemon's binary fails on Windows; stop it first.
-        if let Some(fb) = crate::fb::Fb::discover() {
-            let _ = fb.run(&["quit"]);
-        }
+        let _ = crate::fb::Fb::with_program(target.clone()).run(&["quit"]);
     }
     let dir = target.parent().ok_or("bad install path")?;
     fs::create_dir_all(dir).map_err(|e| format!("could not create the install folder: {e}"))?;
@@ -192,6 +213,15 @@ pub fn install_or_update() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_successful_shipped_version_is_current() {
+        let current = format!("fb {BACKEND_VERSION}\r\n");
+        assert!(!version_outdated(true, current.as_bytes()));
+        assert!(version_outdated(false, current.as_bytes()));
+        assert!(version_outdated(true, b"fb 0.1.5\n"));
+        assert!(version_outdated(true, b""));
+    }
 
     #[test]
     fn finds_expected_hash() {
