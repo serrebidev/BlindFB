@@ -112,17 +112,18 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
             record.raw = record.fields.join("\t");
         }
         // The same post can come back under different photo links, so text wins over the link.
-        let text = squash(record.field(4).trim_end_matches("… See more"));
-        let key = if text.is_empty() {
-            record.raw.clone()
-        } else {
-            format!("{}\t{text}", record.field(1))
-        };
+        let key = feed_record_key(&record);
         if seen.insert(key) {
             rows.push(record);
         }
     }
     rows
+}
+
+/// Stable identity for a normalized feed row, including alternate photo links.
+pub fn feed_record_key(record: &Record) -> String {
+    let text = record.field(4).trim_end_matches("… See more").split_whitespace().collect::<String>();
+    if text.is_empty() { record.raw.clone() } else { format!("{}\t{text}", record.field(1)) }
 }
 
 /// Keep notification post URLs instead of replacing them with daemon-local references.

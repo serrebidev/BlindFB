@@ -20,8 +20,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -218,7 +217,6 @@ struct Done {
 struct State {
     view: View,
     records_view: View,
-    list_request: u64,
     last_args: Vec<String>,
     pending_unlock: Option<RetryList>,
     unlocking: bool,
@@ -229,10 +227,37 @@ struct State {
     author_urls: HashMap<String, String>,
     /// Last parsed backend output and request per section, so switching back is instant.
     cache: HashMap<View, (Vec<Record>, Instant, Vec<String>)>,
-    loading_more: bool,
     prefetched: bool,
     /// The list request refreshing a cached section the user is already reading.
     background: Option<u64>,
+}
+
+#[derive(Default)]
+struct ListRequests {
+    next: u64,
+    latest: HashMap<View, u64>,
+    pending: HashSet<View>,
+}
+
+impl ListRequests {
+    fn begin(&mut self, view: &View) -> u64 {
+        self.next = self.next.wrapping_add(1);
+        self.latest.insert(view.clone(), self.next);
+        self.pending.insert(view.clone());
+        self.next
+    }
+
+    fn current(&self, view: &View, request: u64) -> bool {
+        self.latest.get(view) == Some(&request)
+    }
+
+    fn finish(&mut self, view: &View, request: u64) -> bool {
+        if !self.current(view, request) {
+            return false;
+        }
+        self.pending.remove(view);
+        true
+    }
 }
 
 struct RetryList {
@@ -274,7 +299,7 @@ fn run() {
     let fb = Fb::discover();
     let (job_tx, job_rx) = channel::<Job>();
     let (done_tx, done_rx) = channel::<Done>();
-    let latest_list = Arc::new(AtomicU64::new(0));
+    let latest_list = Arc::new(Mutex::new(ListRequests::default()));
     spawn_worker(fb.clone(), job_rx, done_tx.clone(), latest_list.clone());
 
     let frame = Frame::builder().with_title("BlindFB").with_size(Size::new(1100, 760)).build();
@@ -365,7 +390,6 @@ fn run() {
     let state = Rc::new(RefCell::new(State {
         view: View::Feed,
         records_view: View::Feed,
-        list_request: 0,
         last_args: Vec::new(),
         pending_unlock: None,
         unlocking: false,
@@ -373,7 +397,6 @@ fn run() {
         attachments: Vec::new(),
         author_urls: HashMap::new(),
         cache: HashMap::new(),
-        loading_more: false,
         prefetched: false,
         background: None,
     }));
@@ -520,7 +543,7 @@ struct Ui {
     done_tx: Sender<Done>,
     post_reader: Rc<RefCell<Option<post_dialog::PostReader>>>,
     /// The list request the user is waiting for; the worker skips older ones.
-    latest_list: Arc<AtomicU64>,
+    latest_list: Arc<Mutex<ListRequests>>,
 }
 
 impl Ui {
@@ -537,7 +560,7 @@ fn spawn_worker(
     fb: Option<Fb>,
     jobs: Receiver<Job>,
     done: Sender<Done>,
-    latest_list: Arc<AtomicU64>,
+    latest_list: Arc<Mutex<ListRequests>>,
 ) {
     thread::spawn(move || {
         let mut fb = fb;
@@ -551,9 +574,14 @@ fn spawn_worker(
             fb = Fb::discover();
         }
         while let Ok(job) = jobs.recv() {
-            // Arrowing through Views queues a load per section; run only the one still wanted.
-            if let Tag::List { request, .. } | Tag::GroupsOpened(request) = &job.tag {
-                if *request != latest_list.load(Ordering::Relaxed) {
+            // Arrowing through Views queues a load per section; run only the one still wanted for that section.
+            let list = match &job.tag {
+                Tag::List { view, request, .. } => Some((view, *request)),
+                Tag::GroupsOpened(request) => Some((&View::Groups, *request)),
+                _ => None,
+            };
+            if let Some((view, request)) = list {
+                if !latest_list.lock().unwrap().current(view, request) {
                     continue;
                 }
             }
@@ -807,28 +835,28 @@ fn build_menus(frame: &Frame) {
     frame.set_menu_bar(menu_bar);
 }
 
-fn begin_list(ui: &Ui, view: &View) -> u64 {
+fn activate_view(ui: &Ui, view: &View) {
     let mut state = ui.state.borrow_mut();
     let clear = state.records_view != *view;
     if clear {
         state.records.clear();
     }
     state.view = view.clone();
-    state.loading_more = false;
-    state.list_request = state.list_request.wrapping_add(1);
-    let request = state.list_request;
-    ui.latest_list.store(request, Ordering::Relaxed);
     drop(state);
     if clear {
         ui.items.clear();
         ui.details.clear();
     }
-    request
+}
+
+fn begin_list(ui: &Ui, view: &View) -> u64 {
+    activate_view(ui, view);
+    ui.latest_list.lock().unwrap().begin(view)
 }
 
 fn current_list(ui: &Ui, view: &View, request: u64) -> bool {
     let state = ui.state.borrow();
-    state.list_request == request && state.view == *view
+    state.view == *view && ui.latest_list.lock().unwrap().current(view, request)
 }
 
 fn load_args(ui: &Ui, view: View, args: Vec<String>) {
@@ -843,10 +871,16 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
 
 fn load_view(ui: &Ui, view: View) {
     let cached = ui.state.borrow().cache.get(&view).cloned();
-    if let Some((records, at, args)) = &cached {
-        begin_list(ui, &view);
+    activate_view(ui, &view);
+    if let Some((records, _, args)) = &cached {
         ui.state.borrow_mut().last_args = args.clone();
         show_records(ui, &view, records.clone(), None);
+    }
+    if ui.latest_list.lock().unwrap().pending.contains(&view) {
+        ui.status(&format!("Loading {}…", view.title()));
+        return;
+    }
+    if let Some((_, at, _)) = &cached {
         // The News feed pages forward on every load, so it waits for F5.
         if view == View::Feed || at.elapsed() < FRESH {
             return;
@@ -860,7 +894,7 @@ fn load_view(ui: &Ui, view: View) {
     }
     if cached.is_some() {
         let mut state = ui.state.borrow_mut();
-        state.background = Some(state.list_request);
+        state.background = ui.latest_list.lock().unwrap().latest.get(&state.view).copied();
     }
 }
 
@@ -1029,6 +1063,10 @@ fn install_browser_menu(ui: &Ui) {
 
 fn refresh(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
+    if view == View::Feed && ui.latest_list.lock().unwrap().pending.contains(&view) {
+        ui.status("Wait for the News feed to finish loading before refreshing.");
+        return;
+    }
     match view {
         View::Feed => load_args(ui, view, feed_args(PAGE, true, true, true)),
         View::Groups => load_groups(ui),
@@ -1040,8 +1078,8 @@ fn refresh(ui: &Ui) {
     }
 }
 
-fn more_args(view: &View, previous: &[String], loaded: usize) -> Option<Vec<String>> {
-    if previous.is_empty() {
+fn more_args(view: &View, previous: &[String], loaded: usize, loading: bool) -> Option<Vec<String>> {
+    if loading || previous.is_empty() {
         return None;
     }
     match view {
@@ -1062,22 +1100,20 @@ fn more_args(view: &View, previous: &[String], loaded: usize) -> Option<Vec<Stri
 fn load_more(ui: &Ui) {
     let (view, args) = {
         let state = ui.state.borrow();
-        if state.loading_more {
-            ui.status("More items are already loading…");
-            return;
-        }
         if state.records_view != state.view || state.records.is_empty() {
             ui.status("Wait for this section to load before requesting more items.");
             return;
         }
-        let Some(args) = more_args(&state.view, &state.last_args, state.records.len()) else {
-            ui.status("Load more is available for feeds, posts, search results, notifications, friends and chat lists.");
+        let loading = ui.latest_list.lock().unwrap().pending.contains(&state.view);
+        let Some(args) = more_args(&state.view, &state.last_args, state.records.len(), loading) else {
+            ui.status(if loading { "Items are already loading…" } else {
+                "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
+            });
             return;
         };
         (state.view.clone(), args)
     };
     let request = begin_list(ui, &view);
-    ui.state.borrow_mut().loading_more = true;
     ui.send(Job {
         task: Task::Fb(args.clone(), None),
         tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false, append: true },
@@ -1093,7 +1129,11 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
         _ => post_target(view, record).map(str::to_owned).unwrap_or_else(|| record.raw.clone()),
     };
     let mut seen: HashSet<String> = existing.iter().map(&key).collect();
-    existing.extend(incoming.into_iter().filter(|record| seen.insert(key(record))));
+    let feed = matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_));
+    let mut seen_posts: HashSet<String> = existing.iter().map(blindfb_core::fb::feed_record_key).collect();
+    existing.extend(incoming.into_iter().filter(|record| {
+        seen.insert(key(record)) && (!feed || seen_posts.insert(blindfb_core::fb::feed_record_key(record)))
+    }));
     existing
 }
 
@@ -1334,11 +1374,8 @@ fn apply_done(ui: &Ui, done: Done) {
     match done.tag {
         Tag::List { view, request, args, unlock_attempted, append } => {
             let current = current_list(ui, &view, request);
-            if !current && ui.state.borrow().view == view {
+            if !ui.latest_list.lock().unwrap().finish(&view, request) {
                 return;
-            }
-            if current {
-                ui.state.borrow_mut().loading_more = false;
             }
             match done.result.and_then(|raw| parse_for(&view, &raw)) {
                 Ok((records, body)) => {
@@ -1458,6 +1495,7 @@ fn apply_done(ui: &Ui, done: Done) {
             ui.state.borrow_mut().unlocking = false;
             match done.result {
                 Ok(_) if !args.is_empty() && current_list(ui, &view, request) => {
+                    ui.latest_list.lock().unwrap().pending.insert(view.clone());
                     ui.send(Job {
                         task: Task::Fb(args.clone(), None),
                         tag: Tag::List { view, request, args, unlock_attempted: true, append },
@@ -2284,17 +2322,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn section_requests_survive_navigation_and_reject_superseded_results() {
+        let mut requests = ListRequests::default();
+        let append = requests.begin(&View::Feed);
+        requests.begin(&View::Notifications);
+        // Returning to a cached feed submits no replacement request.
+        assert!(requests.current(&View::Feed, append));
+        assert!(requests.pending.contains(&View::Feed));
+        assert!(requests.finish(&View::Feed, append));
+        assert!(!requests.pending.contains(&View::Feed));
+
+        let old = requests.begin(&View::Feed);
+        let fresh = requests.begin(&View::Feed);
+        requests.begin(&View::Notifications);
+        assert!(!requests.finish(&View::Feed, old));
+        assert!(requests.pending.contains(&View::Feed));
+        assert!(requests.finish(&View::Feed, fresh));
+        assert!(!requests.finish(&View::Feed, old));
+        assert!(requests.current(&View::Feed, fresh));
+    }
+
+    #[test]
     fn more_uses_feed_cursor_and_preserves_section_filters() {
-        assert_eq!(more_args(&View::Feed, &feed_args(PAGE, true, true, true), PAGE as usize),
+        assert_eq!(more_args(&View::Feed, &feed_args(PAGE, true, true, true), PAGE as usize, false),
             Some(feed_args(PAGE, false, true, true)));
-        assert_eq!(more_args(&View::Chats, &chats_args(PAGE, true), 38),
+        assert_eq!(more_args(&View::Chats, &chats_args(PAGE, true), 38, false),
             Some(chats_args(PAGE * 2, true)));
-        assert_eq!(more_args(&View::SearchResults, &search_args("rust", Some("posts"), PAGE), 40),
+        assert_eq!(more_args(&View::SearchResults, &search_args("rust", Some("posts"), PAGE), 40, false),
             Some(search_args("rust", Some("posts"), PAGE * 2)));
-        assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40),
+        assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40, false),
             Some(notifs_args(PAGE * 2)));
-        assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40), None);
-        assert_eq!(more_args(&View::Feed, &[], 0), None);
+        assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40, false), None);
+        assert_eq!(more_args(&View::Feed, &[], 0, false), None);
+        assert_eq!(more_args(&View::SearchResults, &search_args("new query", Some("posts"), PAGE), 40, true), None);
     }
 
     #[test]
@@ -2307,6 +2367,13 @@ mod tests {
         assert_eq!(merged[1].field(0), "-");
         assert_eq!(record_key(&View::Feed, &merged[1]), merged[1].raw);
         assert_eq!(merged[2].field(0), "/a/posts/2");
+    }
+
+    #[test]
+    fn more_deduplicates_alternate_photo_links_across_pages() {
+        let old = parse_feed("/photo/?fbid=1&set=a.9\tJeremy Smith\tnow\t0/0/0\tSame photo post");
+        let new = parse_feed("/photo/?fbid=2&set=a.9\tJeremy Smith\tnow\t0/0/0\tSame photo post");
+        assert_eq!(merge_records(&View::Feed, old, new).len(), 1);
     }
 
     #[test]
