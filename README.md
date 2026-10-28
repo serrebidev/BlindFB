@@ -52,7 +52,12 @@ Everything else the backend exposes is in the app.
 
 ## Requirements
 
-- Google Chrome (the backend imports your Facebook session from it).
+- A browser you are signed in to Facebook in: Google Chrome, Chromium,
+  Brave, Microsoft Edge or Firefox. The backend itself drives a
+  Chrome-family browser, so Chrome or Chromium must exist for it to run —
+  if nothing suitable is installed, BlindFB offers to install Google
+  Chrome, and **Backend → Install a browser** installs any of them from
+  the vendor at any time.
 - Nothing else to install: **BlindFB installs the `fb` backend itself** on
   first run — it downloads the matching facebook-cli release from GitHub,
   verifies its SHA-256 checksum, and keeps it in BlindFB's own app-data
@@ -60,12 +65,14 @@ Everything else the backend exposes is in the app.
   (BlindFB also finds an `fb` you installed yourself: the managed copy
   first, then next to the BlindFB executable, then your `PATH`, then
   `~/.local/bin`; the `BLINDFB_FB` environment variable overrides all.)
-- First run, sign-in happens **in your browser**: BlindFB asks and then
-  imports your session from Chrome — keep Chrome open, signed in to
-  Facebook, and click **Allow** if Chrome asks about remote debugging. If
-  you are not signed in to Facebook in Chrome, a browser window opens so
-  you can sign in there instead. Encrypted chats additionally need
-  **Chat → Unlock encrypted chats** once per daemon lifetime.
+- First run, sign-in happens **in your browser**: BlindFB asks which
+  browser to copy your Facebook session from (your default browser is
+  marked). In Chrome, Brave and Edge, tick **Allow remote debugging** if
+  the browser asks; from Firefox, BlindFB copies the session cookies out
+  of your Firefox profile. If you are not signed in to Facebook in any
+  browser, a browser window opens so you can sign in there instead.
+  Encrypted chats additionally need **Chat → Unlock encrypted chats**
+  once per daemon lifetime.
 
 ## Layout of the window
 

@@ -7,6 +7,7 @@
 //! be unit tested without a display.
 
 pub mod backend;
+pub mod browsers;
 pub mod fb;
 pub mod http;
 pub mod update;
