@@ -158,13 +158,31 @@ struct State {
     author_urls: HashMap<String, String>,
 }
 
+/// Append one line to startup.log in BlindFB's data folder. Support
+/// lifeline: when the window never appears, this log says how far startup
+/// got, and a blind user can read it and report the last line.
+fn startup_log(line: &str) {
+    let Some(dir) = blindfb_core::backend::data_dir() else { return };
+    let _ = std::fs::create_dir_all(&dir);
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("startup.log")) {
+        use std::io::Write;
+        let _ = writeln!(file, "{line}");
+    }
+}
+
 fn main() {
+    startup_log("main: starting");
+    std::panic::set_hook(Box::new(|info| {
+        startup_log(&format!("panic: {info}"));
+    }));
     let _ = wxdragon::main(|_| {
         run();
     });
+    startup_log("main: exited");
 }
 
 fn run() {
+    startup_log("run: building the window");
     let fb = Fb::discover();
     let (job_tx, job_rx) = channel::<Job>();
     let (done_tx, done_rx) = channel::<Done>();
@@ -244,6 +262,7 @@ fn run() {
     panel.set_sizer(root, true);
 
     build_menus(&frame);
+    startup_log("run: menus built");
 
     let state = Rc::new(RefCell::new(State {
         view: View::Feed,
@@ -322,7 +341,12 @@ fn run() {
     // so it is intentionally leaked rather than dropped with this stack frame.
     let timer = Box::leak(Box::new(Timer::new(&ui.frame)));
     let ui_tick = ui.clone();
+    let ticked = std::cell::Cell::new(false);
     timer.on_tick(move |_| {
+        if !ticked.get() {
+            ticked.set(true);
+            startup_log("tick: event loop alive, results flowing");
+        }
         while let Ok(done) = done_rx.try_recv() {
             apply_done(&ui_tick, done);
         }
@@ -330,7 +354,10 @@ fn run() {
     timer.start(120, false);
 
     frame.centre();
+    startup_log("run: showing the window");
     frame.show(true);
+    frame.raise();
+    startup_log("run: window shown");
 }
 
 #[derive(Clone)]
@@ -866,16 +893,19 @@ fn apply_done(ui: &Ui, done: Done) {
         },
         Tag::SetupStatus => match done.result {
             Ok(out) if out.contains("logged in") && !out.contains("not logged in") => {
+                startup_log("setup: backend present and signed in");
                 load_view(ui, View::Feed);
             }
             Ok(_) => {
                 // Installed but signed out: offer the browser sign-in once.
+                startup_log("setup: backend present, signed out — offering sign-in");
                 ui.status("The backend is installed but not signed in.");
                 if !offer_sign_in(ui, Tag::SetupLogin) {
                     load_view(ui, View::Feed);
                 }
             }
             Err(_) => {
+                startup_log("setup: backend missing — installing");
                 ui.status("Installing the Facebook backend…");
                 ui.send(Job { task: Task::InstallBackend, tag: Tag::SetupInstall });
             }
