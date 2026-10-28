@@ -91,9 +91,7 @@ fn get(url: &str) -> Result<Vec<u8>, String> {
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
         .call()
         .map_err(|e| format!("download failed: {e}"))?;
-    response
-        .body_mut()
-        .read_to_vec()
+    crate::http::download_body(response.body_mut())
         .map_err(|e| format!("download failed: {e}"))
 }
 
@@ -121,7 +119,9 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
             let mut entry = zip
                 .by_index(i)
                 .map_err(|e| format!("could not read the backend download: {e}"))?;
-            let name = entry.name().replace('\\', "/");
+            let name = entry.name()
+                .map_err(|e| format!("bad backend download: {e}"))?
+                .replace('\\', "/");
             if name == want || name.ends_with(&format!("/{want}")) {
                 let mut out = Vec::new();
                 entry
@@ -213,6 +213,27 @@ pub fn install_or_update() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extracts_only_the_backend_binary_from_both_archive_formats() {
+        use std::io::Write;
+        let contents = b"backend executable";
+        let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        zip.start_file(format!("release/{}", exe_name()), zip::write::SimpleFileOptions::default()).unwrap();
+        zip.write_all(contents).unwrap();
+        let bytes = zip.finish().unwrap().into_inner();
+        assert_eq!(extract("backend.zip", &bytes).unwrap(), contents);
+
+        let gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        let mut tar = tar::Builder::new(gzip);
+        let mut header = tar::Header::new_gnu();
+        header.set_size(contents.len() as u64);
+        header.set_mode(0o755);
+        header.set_cksum();
+        tar.append_data(&mut header, format!("release/{}", exe_name()), &contents[..]).unwrap();
+        let bytes = tar.into_inner().unwrap().finish().unwrap();
+        assert_eq!(extract("backend.tar.gz", &bytes).unwrap(), contents);
+    }
 
     #[test]
     fn only_a_successful_shipped_version_is_current() {

@@ -2,7 +2,7 @@
 
 use crate::Fb;
 use serde_json::{Value, json};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Comment {
@@ -65,18 +65,23 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
             url,
         });
     }
+    let by_id: HashMap<_, _> = comments.iter().map(|comment| (comment.id.as_str(), comment)).collect();
+    let mut validated = HashSet::new();
     for comment in &comments {
         let mut seen = HashSet::new();
         let mut current = comment;
         while let Some(parent) = &current.parent_id {
+            if validated.contains(current.id.as_str()) {
+                break;
+            }
             if !seen.insert(current.id.as_str()) {
                 return Err("Invalid post detail: cyclic comment thread".to_owned());
             }
-            current = comments
-                .iter()
-                .find(|row| &row.id == parent)
+            current = by_id
+                .get(parent.as_str())
                 .ok_or("Invalid post detail: missing parent comment")?;
         }
+        validated.extend(seen);
     }
     Ok(PostDetail {
         url,
@@ -274,6 +279,23 @@ mod tests {
         assert_eq!(reader_url("/photo/?fbid=1&set=a.5"), None);
         assert_eq!(reader_url("/2284937812074776/x"), None);
         assert!(reader_url("/alice/posts/pfbid0x").is_some());
+    }
+
+    #[test]
+    fn validates_long_threads_and_shared_ancestors() {
+        let comments: Vec<_> = (0..1000).map(|i| serde_json::json!({
+            "id": i.to_string(), "author": "A", "time": "now", "text": "reply",
+            "parent_id": (i > 0).then(|| (i - 1).to_string()), "url": null
+        })).collect();
+        let mut data = serde_json::json!({
+            "url": "https://www.facebook.com/a/posts/1", "author": "A",
+            "time": "now", "text": "post", "comments": comments
+        });
+        assert_eq!(parse_detail(&data.to_string()).unwrap().comments.len(), 1000);
+        data["comments"][0]["parent_id"] = "999".into();
+        assert!(parse_detail(&data.to_string()).unwrap_err().contains("cyclic"));
+        data["comments"][0]["parent_id"] = "missing".into();
+        assert!(parse_detail(&data.to_string()).unwrap_err().contains("missing parent"));
     }
 
     #[test]

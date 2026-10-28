@@ -809,7 +809,7 @@ pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
         let mut current: Option<String> = None;
         let mut current_default = false;
         let mut fallback: Option<PathBuf> = None;
-        for line in text.lines().chain(std::iter::once("")) {
+        for line in text.lines().chain(std::iter::once("[end]")) {
             let line = line.trim();
             if line.starts_with('[') {
                 if current_default {
@@ -843,30 +843,13 @@ pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
     entries.into_iter().next()
 }
 
-/// Read the Facebook cookies out of a Firefox profile. The database is
-/// copied first: Firefox keeps it locked (WAL) while running.
+/// Read a consistent Facebook cookie snapshot through SQLite, including Firefox's WAL.
 pub fn extract_firefox_cookies(profile: &Path) -> Result<Vec<FfCookie>, String> {
     let source = profile.join("cookies.sqlite");
     if !source.is_file() {
         return Err("this Firefox profile has no cookie database — sign in to Facebook in Firefox first".to_owned());
     }
-    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.subsec_nanos());
-    let copy = std::env::temp_dir().join(format!("blindfb-cookies-{stamp}.sqlite"));
-    let cleanup = |copy: &Path| {
-        for suffix in ["", "-wal", "-shm"] {
-            let _ = std::fs::remove_file(format!("{}{suffix}", copy.display()));
-        }
-    };
-    std::fs::copy(&source, &copy).map_err(|e| format!("cannot read the Firefox cookie database: {e}"))?;
-    for suffix in ["-wal", "-shm"] {
-        let side = profile.join(format!("cookies.sqlite{suffix}"));
-        if side.is_file() {
-            let _ = std::fs::copy(&side, format!("{}{suffix}", copy.display()));
-        }
-    }
-    let result = read_cookie_db(&copy);
-    cleanup(&copy);
-    result
+    read_cookie_db(&source)
 }
 
 fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
@@ -989,13 +972,6 @@ pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
     let profile = firefox_profile(&root).ok_or("no Firefox profile found — sign in to Facebook in Firefox first")?;
     let cookies = extract_firefox_cookies(&profile)?;
 
-    // Any fb command starts the daemon (and its browser).
-    status(fb)?;
-
-    // Route 1: through fb's named-page CDP escape hatch.
-    // This former route is intentionally skipped: its JSON argument exposed cookies in process lists.
-
-    // Route 2: straight to the backend browser's own endpoint.
     import_cookies(fb, &cookies)
 }
 
@@ -1009,7 +985,7 @@ fn download(url: &str) -> Result<Vec<u8>, String> {
         .get(url)
         .call()
         .map_err(|e| format!("download of {url} failed: {e}"))?;
-    response.body_mut().read_to_vec().map_err(|e| format!("download of {url} failed: {e}"))
+    crate::http::download_body(response.body_mut()).map_err(|e| format!("download of {url} failed: {e}"))
 }
 
 #[cfg(windows)]
@@ -1038,11 +1014,22 @@ fn winget_install(id: &str) -> Result<String, String> {
 }
 
 #[cfg(windows)]
+fn installer_command(path: &Path) -> Command {
+    if path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("msi")) {
+        let mut command = Command::new("msiexec.exe");
+        command.arg("/i").arg(path);
+        command
+    } else {
+        Command::new(path)
+    }
+}
+
+#[cfg(windows)]
 fn download_and_run(url: &str, file_name: &str) -> Result<String, String> {
     let bytes = download(url)?;
     let path = std::env::temp_dir().join(file_name);
     std::fs::write(&path, &bytes).map_err(|e| format!("cannot save the installer: {e}"))?;
-    Command::new(&path)
+    installer_command(&path)
         .stdin(Stdio::null())
         .spawn()
         .map(|_| "installer downloaded and started — follow its prompts, then try again".to_owned())
@@ -1143,6 +1130,18 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn msi_installers_use_windows_installer() {
+        let path = Path::new("C:/temporary folder/google-chrome.msi");
+        let command = installer_command(path);
+        assert_eq!(command.get_program(), "msiexec.exe");
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args, [std::ffi::OsStr::new("/i"), path.as_os_str()]);
+        let exe = Path::new("C:/temporary folder/firefox-setup.exe");
+        assert_eq!(installer_command(exe).get_program(), exe.as_os_str());
+    }
 
     #[test]
     fn session_requires_live_facebook_authentication_cookies() {
@@ -1266,6 +1265,19 @@ mod tests {
     }
 
     #[test]
+    fn firefox_profile_uses_default_in_last_section() {
+        let root = std::env::temp_dir().join(format!("blindfb-ff-last-{}", std::process::id()));
+        let old = root.join("old.default");
+        let selected = root.join("selected.default-release");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::create_dir_all(&selected).unwrap();
+        std::fs::write(root.join("profiles.ini"),
+            "[Profile0]\nPath=old.default\n\n[Profile1]\nPath=selected.default-release\nDefault=1\n").unwrap();
+        assert_eq!(firefox_profile(&root), Some(selected));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn firefox_cookies_round_trip() {
         let dir = std::env::temp_dir().join(format!("blindfb-ffdb-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
@@ -1290,6 +1302,25 @@ mod tests {
         let json = cookies_param_json(&cookies);
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed["cookies"].as_array().unwrap().len(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn firefox_cookies_read_committed_wal_while_browser_is_running() {
+        let dir = std::env::temp_dir().join(format!("blindfb-ffwal-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let conn = rusqlite::Connection::open(dir.join("cookies.sqlite")).unwrap();
+        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;
+            CREATE TABLE moz_cookies (originAttributes TEXT NOT NULL DEFAULT '',
+                name TEXT, value TEXT, host TEXT, path TEXT, expiry INTEGER, isSecure INTEGER, isHttpOnly INTEGER);
+            INSERT INTO moz_cookies VALUES ('','c_user','account','.facebook.com','/',0,1,1);
+            INSERT INTO moz_cookies VALUES ('','xs','committed','.facebook.com','/',0,1,1);
+            BEGIN IMMEDIATE;
+            UPDATE moz_cookies SET value='uncommitted' WHERE name='xs';").unwrap();
+        let cookies = extract_firefox_cookies(&dir).unwrap();
+        assert!(cookies.iter().any(|cookie| cookie.name == "xs" && cookie.value == "committed"));
+        conn.execute_batch("ROLLBACK;").unwrap();
+        drop(conn);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

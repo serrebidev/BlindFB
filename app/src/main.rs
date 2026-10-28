@@ -125,10 +125,9 @@ enum Tag {
         unlock_attempted: bool,
         append: bool,
     },
-    /// Background read that only fills the section cache.
-    Prefetch(View),
     Text,
-    ReloadChat(String),
+    ReloadChat(String, u64),
+    ChatSent(u64),
     UpdateCheck,
     GroupsOpened(u64),
     UnlockRetry {
@@ -222,6 +221,8 @@ struct State {
     unlocking: bool,
     records: Vec<Record>,
     attachments: Vec<String>,
+    sending: Option<ChatSubmission>,
+    account: u64,
     /// Author name -> profile URL, learned from post URLs as views load.
     /// Powers the "open on Facebook" link-outs (profiles, Messenger web).
     author_urls: HashMap<String, String>,
@@ -258,6 +259,11 @@ impl ListRequests {
         self.pending.remove(view);
         true
     }
+
+    fn invalidate(&mut self) {
+        self.latest.clear();
+        self.pending.clear();
+    }
 }
 
 struct RetryList {
@@ -265,6 +271,40 @@ struct RetryList {
     request: u64,
     args: Vec<String>,
     append: bool,
+}
+
+#[derive(Clone)]
+struct ChatSubmission {
+    account: u64,
+    chat: String,
+    text: String,
+    files: Vec<String>,
+}
+
+impl ChatSubmission {
+    fn begin(pending: &mut Option<Self>, message: Self) -> bool {
+        if pending.is_some() {
+            return false;
+        }
+        *pending = Some(message);
+        true
+    }
+
+    fn clear_sent(&self, view: &View, text: &str, files: &mut Vec<String>) -> bool {
+        // Files attached after Send belong to the next draft.
+        if files.starts_with(&self.files) {
+            files.drain(..self.files.len());
+        }
+        *view == View::ChatWith(self.chat.clone()) && text == self.text
+    }
+
+    fn finish(pending: &mut Option<Self>, account: u64) -> Option<Self> {
+        if pending.as_ref().is_some_and(|message| message.account == account) {
+            pending.take()
+        } else {
+            None
+        }
+    }
 }
 
 /// Append one line to startup.log in BlindFB's data folder. Support
@@ -395,6 +435,8 @@ fn run() {
         unlocking: false,
         records: Vec::new(),
         attachments: Vec::new(),
+        sending: None,
+        account: 0,
         author_urls: HashMap::new(),
         cache: HashMap::new(),
         prefetched: false,
@@ -585,7 +627,7 @@ fn spawn_worker(
                     continue;
                 }
             }
-            let read = matches!(job.tag, Tag::List { .. } | Tag::Prefetch(_))
+            let read = matches!(job.tag, Tag::List { .. })
                 && matches!(job.task, Task::Fb(_, None));
             if read && fb.is_none() {
                 fb = Fb::discover();
@@ -902,7 +944,17 @@ fn load_view(ui: &Ui, view: View) {
 fn prefetch(ui: &Ui) {
     for view in [View::RecentFeed, View::Notifications, View::Friends, View::MyPosts, View::Chats] {
         if let Some(args) = default_args(&view) {
-            let _ = ui.jobs.send(Job { task: Task::Fb(args, None), tag: Tag::Prefetch(view) });
+            let request = {
+                let mut requests = ui.latest_list.lock().unwrap();
+                if requests.pending.contains(&view) || ui.state.borrow().cache.contains_key(&view) {
+                    continue;
+                }
+                requests.begin(&view)
+            };
+            let _ = ui.jobs.send(Job {
+                task: Task::Fb(args.clone(), None),
+                tag: Tag::List { view, request, args, unlock_attempted: false, append: false },
+            });
         }
     }
 }
@@ -1003,12 +1055,31 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
 /// Present the sign-in choice and start what the user picked. Returns
 /// whether a job was sent (setup callers load the feed when it was not).
 fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
+    let sign = choose_sign_in(ui);
+    if sign.is_none() {
+        return false;
+    }
+    ui.latest_list.lock().unwrap().invalidate();
     {
         let mut state = ui.state.borrow_mut();
+        state.account = state.account.wrapping_add(1);
+        state.sending = None;
+        state.view = View::Feed;
+        state.records_view = View::Feed;
+        state.attachments.clear();
         state.cache.clear();
         state.prefetched = false;
+        state.background = None;
+        state.author_urls.clear();
+        state.records.clear();
+        state.last_args.clear();
+        state.pending_unlock = None;
+        state.unlocking = false;
     }
-    match choose_sign_in(ui) {
+    ui.items.clear();
+    ui.details.clear();
+    ui.compose_box.clear();
+    match sign {
         Some(SignIn::Install(kind)) => {
             ui.status(&format!("Installing {}…", kind.name()));
             ui.send(Job { task: Task::InstallBrowser(kind), tag: Tag::BrowserInstalled });
@@ -1071,10 +1142,19 @@ fn refresh(ui: &Ui) {
         View::Feed => load_args(ui, view, feed_args(PAGE, true, true, true)),
         View::Groups => load_groups(ui),
         _ => {
-            if let Some(args) = default_args(&view) {
+            let previous = ui.state.borrow().last_args.clone();
+            if let Some(args) = refresh_args(&view, &previous) {
                 load_args(ui, view, args);
             }
         }
+    }
+}
+
+fn refresh_args(view: &View, previous: &[String]) -> Option<Vec<String>> {
+    if *view == View::SearchResults {
+        (!previous.is_empty()).then(|| previous.to_vec())
+    } else {
+        default_args(view)
     }
 }
 
@@ -1135,6 +1215,26 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
         seen.insert(key(record)) && (!feed || seen_posts.insert(blindfb_core::fb::feed_record_key(record)))
     }));
     existing
+}
+
+/// A row's list label, marked when the row has no link to open. Without the
+/// marker the only way to find out is pressing Enter and getting a dialog.
+fn list_label(view: &View, record: &Record) -> String {
+    let label = display_for(view, record);
+    let has_posts = matches!(
+        view,
+        View::Feed
+            | View::RecentFeed
+            | View::Notifications
+            | View::MyPosts
+            | View::PostsOf(_)
+            | View::SearchResults
+    );
+    if has_posts && post_target(view, record).is_none() {
+        format!("{label} (no link)")
+    } else {
+        label
+    }
 }
 
 fn display_for(view: &View, record: &Record) -> String {
@@ -1299,19 +1399,6 @@ fn selected_post_ref(ui: &Ui) -> Option<String> {
 
 /// Show a section's backend output in the Items list, updated in place so the
 /// selection and the screen reader's position survive.
-fn show_list(ui: &Ui, view: &View, raw: &str) -> bool {
-    let (records, body) = match parse_for(view, raw) {
-        Ok(parsed) => parsed,
-        Err(error) => {
-            ui.status("Could not read this section.");
-            show_error(&ui.frame, error, "BlindFB");
-            return false;
-        }
-    };
-    show_records(ui, view, records, body);
-    true
-}
-
 fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>) {
     if matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)) {
         let mut state = ui.state.borrow_mut();
@@ -1329,14 +1416,14 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     let (old_labels, selected_key) = {
         let state = ui.state.borrow();
         let labels: Vec<_> =
-            state.records.iter().map(|r| display_for(&state.records_view, r)).collect();
+            state.records.iter().map(|r| list_label(&state.records_view, r)).collect();
         let key = old_index
             .and_then(|i| state.records.get(i as usize))
             .map(|r| record_key(&state.records_view, r))
             .filter(|k| !k.is_empty() && k != "-");
         (labels, key)
     };
-    let labels: Vec<_> = records.iter().map(|r| display_for(view, r)).collect();
+    let labels: Vec<_> = records.iter().map(|r| list_label(view, r)).collect();
     let selected = selected_key
         .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
         .or_else(|| (!records.is_empty()).then_some(0));
@@ -1448,23 +1535,6 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
         }
-        Tag::Prefetch(view) => {
-            let Ok(raw) = done.result else { return };
-            let Ok((records, _)) = parse_for(&view, &raw) else { return };
-            // A late prefetch must not replace a list the user has already extended.
-            ui.state.borrow_mut().cache.entry(view.clone()).or_insert_with(|| (
-                records.clone(), Instant::now(), default_args(&view).unwrap_or_default(),
-            ));
-            // The user opened this section before its prefetch finished: show it now.
-            let waiting = {
-                let state = ui.state.borrow();
-                state.view == view && state.records_view != view
-            };
-            if waiting {
-                ui.state.borrow_mut().last_args = default_args(&view).unwrap_or_default();
-                show_list(ui, &view, &raw);
-            }
-        }
         Tag::PostLoaded(session) => {
             post_dialog::apply(ui, session, done.result, "Post ready.", false)
         }
@@ -1525,18 +1595,50 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
-        Tag::ReloadChat(chat) => match done.result {
-            Ok(_) => {
-                ui.compose_box.clear();
-                ui.state.borrow_mut().attachments.clear();
-                ui.status("Sent");
-                load_view(ui, View::ChatWith(chat));
+        Tag::ChatSent(account) => {
+            let submitted = ChatSubmission::finish(&mut ui.state.borrow_mut().sending, account);
+            let Some(submitted) = submitted else { return };
+            match done.result {
+                Ok(_) => {
+                    let (clear, current) = {
+                        let mut state = ui.state.borrow_mut();
+                        let view = state.view.clone();
+                        let clear = submitted.clear_sent(
+                            &view, &ui.compose_box.get_value(), &mut state.attachments,
+                        );
+                        (clear, view == View::ChatWith(submitted.chat.clone()))
+                    };
+                    if clear {
+                        ui.compose_box.clear();
+                    }
+                    ui.status("Sent");
+                    if current {
+                        load_view(ui, View::ChatWith(submitted.chat));
+                    }
+                }
+                Err(e) => {
+                    ui.status("Message could not be sent. Your draft has been kept.");
+                    show_error(&ui.frame, &e, "Send message");
+                }
             }
-            Err(e) => {
-                ui.status("Error");
-                show_error(&ui.frame, &e, "BlindFB");
+        }
+        Tag::ReloadChat(chat, account) => {
+            if ui.state.borrow().account != account {
+                return;
             }
-        },
+            match done.result {
+                Ok(_) => {
+                    ui.status("Message removed");
+                    if ui.state.borrow().view == View::ChatWith(chat.clone()) {
+                        load_view(ui, View::ChatWith(chat));
+                    }
+                }
+                Err(e) => {
+                    ui.status("Error");
+                    show_error(&ui.frame, &e, "BlindFB");
+                }
+            }
+        }
         Tag::SetupStatus => match done.result {
             Ok(out) if out.contains("logged in") && !out.contains("not logged in") => {
                 startup_log("setup: backend present and signed in");
@@ -1734,7 +1836,7 @@ fn open_selected(ui: &Ui) {
             let Some(target) = post_target(&view, &record) else {
                 show_warning(
                     &ui.frame,
-                    "Facebook hides this post's link, so BlindFB cannot open it yet. Ads and suggestions often have none.",
+                    "This row has no link, so there is no post to open. Sponsored and suggested rows usually have none.",
                     "Open post",
                 );
                 return;
@@ -1780,7 +1882,7 @@ fn post_or_warn(ui: &Ui, title: &str) -> Option<String> {
     let post = selected_post_ref(ui);
     if post.is_none() {
         let why = if selected(ui).is_some() {
-            "Facebook hides this post's link, so BlindFB cannot open, react to or comment on it yet."
+            "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
         } else {
             "Select a post first."
         };
@@ -1980,9 +2082,15 @@ fn send_composed(ui: &Ui) {
     if text.trim().is_empty() && files.is_empty() {
         return;
     }
+    let account = ui.state.borrow().account;
+    let submitted = ChatSubmission { account, chat: chat.clone(), text: text.clone(), files: files.clone() };
+    if !ChatSubmission::begin(&mut ui.state.borrow_mut().sending, submitted) {
+        ui.status("Wait for your message to finish sending.");
+        return;
+    }
     ui.send(Job {
         task: Task::Fb(send_args(&chat, &text, &files), None),
-        tag: Tag::ReloadChat(chat),
+        tag: Tag::ChatSent(account),
     });
 }
 
@@ -2046,7 +2154,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             ui.status("Downloading the Facebook backend…");
             ui.send(Job { task: Task::InstallBackend, tag: Tag::Text });
         }
-        ID_LOGIN => start_sign_in(ui, Tag::Text),
+        ID_LOGIN => start_sign_in(ui, Tag::SetupLogin),
         ID_INSTALL_BROWSER => install_browser_menu(ui),
         ID_UNLOCK => {
             if !ui.state.borrow().unlocking {
@@ -2063,7 +2171,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 ) {
                     ui.send(Job {
                         task: Task::Fb(unsend_args(&chat, None), None),
-                        tag: Tag::ReloadChat(chat),
+                        tag: Tag::ReloadChat(chat, ui.state.borrow().account),
                     });
                 }
             } else {
@@ -2223,24 +2331,24 @@ fn new_post(ui: &Ui, with_images: bool) {
     let mut images: Vec<String> = Vec::new();
     if with_images {
         let dialog = FileDialog::builder(&ui.frame).build();
-        if dialog.show_modal() == ID_OK {
-            if let Some(path) = dialog.get_path() {
-                images.push(path);
-            }
+        if dialog.show_modal() != ID_OK {
+            return;
         }
+        let Some(path) = dialog.get_path() else { return };
+        images.push(path);
     }
     let labels = ["Public", "Friends", "Only me"];
     let dialog =
         SingleChoiceDialog::builder(&ui.frame, "Who can see this?", "Audience", &labels).build();
-    let mut audience = None;
-    if dialog.show_modal() == ID_OK {
-        audience = match dialog.get_selection() {
-            0 => Some("public"),
-            1 => Some("friends"),
-            2 => Some("me"),
-            _ => None,
-        };
+    if dialog.show_modal() != ID_OK {
+        return;
     }
+    let audience = match dialog.get_selection() {
+        0 => Some("public"),
+        1 => Some("friends"),
+        2 => Some("me"),
+        _ => return,
+    };
     ui.send(Job { task: Task::Fb(post_args(&text, audience, &images), None), tag: Tag::Text });
 }
 
@@ -2254,17 +2362,18 @@ fn search_dialog(ui: &Ui) {
     let labels = ["Everything", "People", "Pages", "Groups", "Posts", "Events"];
     let dialog =
         SingleChoiceDialog::builder(&ui.frame, "Search in:", "Search Facebook", &labels).build();
-    let mut kind = None;
-    if dialog.show_modal() == ID_OK {
-        kind = match dialog.get_selection() {
-            1 => Some("people"),
-            2 => Some("pages"),
-            3 => Some("groups"),
-            4 => Some("posts"),
-            5 => Some("events"),
-            _ => None,
-        };
+    if dialog.show_modal() != ID_OK {
+        return;
     }
+    let kind = match dialog.get_selection() {
+        0 => None,
+        1 => Some("people"),
+        2 => Some("pages"),
+        3 => Some("groups"),
+        4 => Some("posts"),
+        5 => Some("events"),
+        _ => return,
+    };
     load_args(ui, View::SearchResults, search_args(&query, kind, PAGE));
 }
 
@@ -2310,7 +2419,7 @@ fn check_updates(ui: &Ui) {
 
 fn open_url(url: &str) {
     #[cfg(target_os = "windows")]
-    let _ = std::process::Command::new("cmd").args(["/C", "start", "", url]).spawn();
+    let _ = std::process::Command::new("explorer.exe").arg(url).spawn();
     #[cfg(target_os = "macos")]
     let _ = std::process::Command::new("open").arg(url).spawn();
     #[cfg(all(unix, not(target_os = "macos")))]
@@ -2320,6 +2429,75 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_reset_rejects_old_reads_without_reusing_request_numbers() {
+        let mut requests = ListRequests::default();
+        let old = requests.begin(&View::Chats);
+        requests.invalidate();
+        assert!(!requests.current(&View::Chats, old));
+        assert!(!requests.finish(&View::Chats, old));
+        assert!(requests.pending.is_empty());
+        let new = requests.begin(&View::Chats);
+        assert_ne!(old, new);
+        assert!(!requests.finish(&View::Chats, old));
+        assert!(requests.pending.contains(&View::Chats));
+        assert!(requests.finish(&View::Chats, new));
+    }
+
+    #[test]
+    fn prefetch_is_a_pending_section_request_until_it_finishes() {
+        let mut requests = ListRequests::default();
+        let prefetch = requests.begin(&View::Friends);
+        assert!(requests.pending.contains(&View::Friends));
+        requests.begin(&View::Feed);
+        assert!(requests.current(&View::Friends, prefetch));
+        assert!(requests.finish(&View::Friends, prefetch));
+        assert!(!requests.pending.contains(&View::Friends));
+    }
+
+    #[test]
+    fn refreshing_search_preserves_query_kind_and_count() {
+        let args = search_args("a specific query", Some("posts"), PAGE * 2);
+        assert_eq!(refresh_args(&View::SearchResults, &args), Some(args));
+        assert_eq!(refresh_args(&View::SearchResults, &[]), None);
+        assert_eq!(refresh_args(&View::Chats, &[]), default_args(&View::Chats));
+    }
+
+    #[test]
+    fn sending_blocks_duplicates_until_completion() {
+        let message = ChatSubmission { account: 0, chat: "Alice".into(), text: "Hi".into(), files: vec![] };
+        let mut pending = None;
+        assert!(ChatSubmission::begin(&mut pending, message.clone()));
+        assert!(!ChatSubmission::begin(&mut pending, message.clone()));
+        pending.take();
+        assert!(ChatSubmission::begin(&mut pending, message));
+    }
+
+    #[test]
+    fn old_account_completion_cannot_take_new_accounts_pending_message() {
+        let mut pending = Some(ChatSubmission {
+            account: 1, chat: "Bob".into(), text: "New account draft".into(), files: vec![],
+        });
+        assert!(ChatSubmission::finish(&mut pending, 0).is_none());
+        assert_eq!(pending.as_ref().unwrap().text, "New account draft");
+        assert!(ChatSubmission::finish(&mut pending, 1).is_some());
+        assert!(pending.is_none());
+    }
+
+    #[test]
+    fn sent_message_preserves_new_text_files_and_other_chat_drafts() {
+        let message = ChatSubmission {
+            account: 0, chat: "Alice".into(), text: "First".into(), files: vec!["first.png".into()],
+        };
+        let mut files = vec!["first.png".into(), "next.png".into()];
+        assert!(!message.clear_sent(&View::ChatWith("Bob".into()), "First", &mut files));
+        assert_eq!(files, ["next.png"]);
+        assert!(!message.clear_sent(&View::ChatWith("Alice".into()), "Next draft", &mut files));
+        assert_eq!(files, ["next.png"]);
+        assert!(message.clear_sent(&View::ChatWith("Alice".into()), "First", &mut files));
+        assert_eq!(files, ["next.png"]);
+    }
 
     #[test]
     fn section_requests_survive_navigation_and_reject_superseded_results() {
@@ -2374,6 +2552,24 @@ mod tests {
         let old = parse_feed("/photo/?fbid=1&set=a.9\tJeremy Smith\tnow\t0/0/0\tSame photo post");
         let new = parse_feed("/photo/?fbid=2&set=a.9\tJeremy Smith\tnow\t0/0/0\tSame photo post");
         assert_eq!(merge_records(&View::Feed, old, new).len(), 1);
+    }
+
+    #[test]
+    fn linkless_rows_say_so_without_touching_copied_text() {
+        let row = |fields: &[&str]| Record {
+            fields: fields.iter().map(|f| f.to_string()).collect(),
+            raw: String::new(),
+        };
+        let linked = row(&["/a/posts/1", "Alice", "5 min", "1/2/3", "Hello"]);
+        let ad = row(&["-", "Sponsor", "", "0/0/0", "Buy things"]);
+        assert!(list_label(&View::Feed, &linked).contains("Hello"));
+        assert!(!list_label(&View::Feed, &linked).contains("(no link)"));
+        assert!(list_label(&View::Feed, &ad).ends_with("(no link)"));
+        assert!(list_label(&View::RecentFeed, &ad).ends_with("(no link)"));
+        // Copy text keeps the plain label: the marker is a list affordance only.
+        assert!(!display_for(&View::Feed, &ad).contains("(no link)"));
+        // Chats are not post rows, so they never get the marker.
+        assert!(!list_label(&View::Chats, &row(&["c1", "-", "5m", "Bea", "hi"])).contains("no link"));
     }
 
     #[test]

@@ -6,10 +6,11 @@
 
 use std::env;
 use std::error::Error;
+use std::fs::File;
 use std::path::PathBuf;
+use std::process::Command;
 
 use shipfitter::macos::MacApp;
-use shipfitter::package::{TarGz, Zip, cargo_build_release, crate_version};
 
 fn main() -> Result<(), Box<dyn Error>> {
     match env::args().nth(1).as_deref() {
@@ -26,8 +27,12 @@ fn package() -> Result<(), Box<dyn Error>> {
         .parent()
         .expect("xtask lives in the workspace root")
         .to_path_buf();
-    cargo_build_release(&root, &["blindfb"])?;
-    let version = crate_version(&root, "blindfb")?;
+    let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    if !Command::new(cargo).current_dir(&root)
+        .args(["build", "--release", "--locked", "-p", "blindfb"]).status()?.success() {
+        return Err("cargo build failed for blindfb".into());
+    }
+    let version = env!("CARGO_PKG_VERSION");
     let target_dir = root.join("target").join("release");
     let dist = root.join("dist");
     std::fs::create_dir_all(&dist)?;
@@ -38,8 +43,12 @@ fn package() -> Result<(), Box<dyn Error>> {
 
     if cfg!(windows) {
         let out = dist.join(format!("BlindFB-{version}-{suffix}.zip"));
-        let mut zip = Zip::create(&out)?;
-        zip.file(&binary, "blindfb.exe")?.file(&readme, "README.md")?;
+        let mut zip = zip::ZipWriter::new(File::create(&out)?);
+        for (path, name) in [(&binary, "blindfb.exe"), (&readme, "README.md")] {
+            zip.start_file(name, zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated))?;
+            std::io::copy(&mut File::open(path)?, &mut zip)?;
+        }
         zip.finish()?;
         println!("wrote {}", out.display());
     } else if cfg!(target_os = "macos") {
@@ -47,21 +56,25 @@ fn package() -> Result<(), Box<dyn Error>> {
             name: "BlindFB",
             identifier: "com.serrebidev.blindfb",
             executable: "blindfb",
-            version: &version,
+            version,
             icon: None,
             extra: "",
         };
         let bundle = app.bundle(&dist, &binary, &[], &[])?;
         let out = dist.join(format!("BlindFB-{version}-{suffix}.tar.gz"));
-        let mut tar = TarGz::create(&out)?;
-        tar.dir(&bundle, "BlindFB.app")?.file(&readme, "README.md")?;
-        tar.finish()?;
+        let gzip = flate2::write::GzEncoder::new(File::create(&out)?, flate2::Compression::default());
+        let mut tar = tar::Builder::new(gzip);
+        tar.append_dir_all("BlindFB.app", &bundle)?;
+        tar.append_path_with_name(&readme, "README.md")?;
+        tar.into_inner()?.finish()?;
         println!("wrote {}", out.display());
     } else {
         let out = dist.join(format!("BlindFB-{version}-{suffix}.tar.gz"));
-        let mut tar = TarGz::create(&out)?;
-        tar.file(&binary, "blindfb")?.file(&readme, "README.md")?;
-        tar.finish()?;
+        let gzip = flate2::write::GzEncoder::new(File::create(&out)?, flate2::Compression::default());
+        let mut tar = tar::Builder::new(gzip);
+        tar.append_path_with_name(&binary, "blindfb")?;
+        tar.append_path_with_name(&readme, "README.md")?;
+        tar.into_inner()?.finish()?;
         println!("wrote {}", out.display());
     }
     Ok(())

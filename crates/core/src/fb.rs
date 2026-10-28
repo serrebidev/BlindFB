@@ -261,6 +261,11 @@ impl Fb {
 
     fn command(&self, args: &[&str]) -> Result<Command, String> {
         let mut command = Command::new(&self.program);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        }
         if let Some(browser) = &self.engine {
             if !matches!(args.first(), Some(&"stop" | &"quit" | &"help" | &"--version")) {
                 let ((port, path), started) = crate::engine::ensure(browser, false)?;

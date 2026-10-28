@@ -70,7 +70,7 @@ Everything else the backend exposes is in the app.
 Facebook hides the link of many feed posts until they get focus. BlindFB's
 backend build reveals most of them, including group posts, but a few rows
 (often ads and suggestions) still have none; BlindFB cannot open, react to
-or comment on those and says so when you try. Reels and photo albums open
+or comment on those and marks them “(no link)” in the list. Reels and photo albums open
 in your browser instead of the reader.
 
 ## Requirements
@@ -144,8 +144,8 @@ cargo xtask package   # writes dist/BlindFB-<version>-<os>-<arch>.zip / .tar.gz
 ```
 
 Linux build dependencies for wxWidgets are the usual GTK set (see
-`.github/workflows/ci.yml`). Releases are built by GitHub Actions on
-`v*` tags for Windows, Linux and macOS.
+`.github/workflows/ci.yml`). Windows releases are packaged locally, Linux on
+the release build host, and macOS by GitHub Actions on `v*` tags.
 
 ## License
 
