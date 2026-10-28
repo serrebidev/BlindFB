@@ -21,10 +21,17 @@
 //! Missing browsers are installable: [`install`] downloads the vendor's
 //! official installer (Windows, macOS). That also covers the backend's own
 //! hard requirement — fb cannot run at all without a Chrome/Chromium.
+//!
+//! Windows now imports Chromium cookies with rookie-cookies, avoiding the
+//! debugging-consent flow described above. When Chrome/Chromium is absent,
+//! BlindFB can run another installed Chromium browser in its own profile.
+//! Firefox cookies are now sent directly over CDP, never on a command line.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(not(windows))]
+use std::time::Instant;
 
 use crate::fb::Fb;
 
@@ -53,6 +60,7 @@ impl BrowserKind {
     }
 
     /// The browser's own inspect page, for ticking "Allow remote debugging".
+    #[cfg(not(windows))]
     fn inspect_url(self) -> &'static str {
         match self {
             BrowserKind::Brave => "brave://inspect/#remote-debugging",
@@ -63,6 +71,7 @@ impl BrowserKind {
 
     /// Process image names (Windows) / `pgrep -x` names (Unix) for "is it
     /// running" checks.
+    #[cfg(not(windows))]
     fn process_names(self) -> &'static [&'static str] {
         match self {
             BrowserKind::Chrome => &["chrome.exe", "chrome"],
@@ -413,13 +422,23 @@ pub fn detect_browsers() -> Vec<Browser> {
                 dir.join("Local State").is_file()
             }
         });
-        if exe.is_some() || data_dir.is_some() {
+        if exe.is_some() {
             let is_default = !default_claimed && default == Some(spec.kind);
             default_claimed |= is_default;
             found.push(Browser { is_default, kind: spec.kind, label: spec.label, data_dir, exe });
         }
     }
     found
+}
+
+pub(crate) fn fallback_engine(browsers: &[Browser]) -> Option<Browser> {
+    if browsers.iter().any(|b| b.uses_fb_login() && b.exe.is_some()) {
+        return None;
+    }
+    browsers.iter()
+        .filter(|b| b.kind.is_chromium() && b.exe.is_some())
+        .min_by_key(|b| !b.is_default)
+        .cloned()
 }
 
 /// Map a Windows https-handler ProgId to a browser kind.
@@ -529,6 +548,7 @@ pub fn devtools_endpoint(data_dir: &Path) -> Option<(u16, String)> {
     parse_active_port(&text)
 }
 
+#[cfg(not(windows))]
 fn browser_running(kind: BrowserKind) -> bool {
     for name in kind.process_names() {
         #[cfg(windows)]
@@ -571,6 +591,7 @@ pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     })
 }
 
+#[cfg(not(windows))]
 fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
     let exe = browser.exe.clone().ok_or_else(|| format!("{} is not installed", browser.name()))?;
     Command::new(&exe)
@@ -583,6 +604,7 @@ fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
         .map_err(|e| format!("cannot start {}: {e}", browser.name()))
 }
 
+#[cfg(not(windows))]
 fn wait_endpoint(data_dir: &Path, secs: u64) -> Option<(u16, String)> {
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(secs) {
@@ -607,6 +629,16 @@ fn status(fb: &Fb) -> Result<String, String> {
 /// Nightly, Chrome Beta, …), each with its own user-data dir. Mirrors
 /// fb's guided Chrome flow, then `fb login --from <port>`.
 pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        import_chromium_cookies(fb, browser)
+    }
+    #[cfg(not(windows))]
+    import_chromium_debugging(fb, browser)
+}
+
+#[cfg(not(windows))]
+fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, String> {
     let kind = browser.kind;
     let data_dir = browser
         .data_dir
@@ -636,12 +668,99 @@ pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
         )
     })?;
     let port = port.to_string();
-    let _ = fb.run(&["login", "--from", &port]);
+    fb.run(&["login", "--from", &port])?;
     let status = status(fb)?;
     if signed_in(&status) {
         Ok(status)
     } else {
         Err(format!("{} is not signed in to Facebook — sign in there first, then try again", browser.name()))
+    }
+}
+
+#[cfg(windows)]
+fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String> {
+    let root = browser.data_dir.as_ref().ok_or("this browser has no profile yet; sign in to Facebook there first")?;
+    let mut profiles = Vec::new();
+    if let Ok(text) = std::fs::read_to_string(root.join("Local State")) {
+        if let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(last) = state["profile"]["last_used"].as_str() {
+                if Path::new(last).components().count() == 1 && !last.contains(['/', '\\']) && last != ".." {
+                    profiles.push(root.join(last));
+                }
+            }
+        }
+    }
+    profiles.push(root.join("Default"));
+    if let Ok(entries) = std::fs::read_dir(root) {
+        let mut others: Vec<_> = entries.filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().starts_with("Profile "))
+            .map(|e| e.path()).collect();
+        others.sort();
+        profiles.extend(others);
+    }
+    let mut tried = Vec::new();
+    let mut last_error = "no signed-in Facebook profile found".to_owned();
+    for profile in profiles {
+        if tried.contains(&profile) { continue; }
+        tried.push(profile.clone());
+        let database = [profile.join("Network/Cookies"), profile.join("Cookies")]
+            .into_iter().find(|p| p.is_file());
+        let Some(database) = database else { continue };
+        let request = rookie_cookies::direct_path::PathExtractRequest::windows_local_state(
+            database, root.join("Local State"))
+            .domains(Some(vec!["facebook.com".to_owned()]))
+            .timeout(Duration::from_secs(30));
+        match rookie_cookies::direct_path::extract_from_path(request) {
+            Ok(cookies) => {
+                let cookies: Vec<_> = cookies.into_iter().map(|c| FfCookie {
+                    name: c.name, value: c.value, host: c.domain, path: c.path,
+                    expiry: c.expires.map_or(0, |e| e.min(i64::MAX as u64) as i64),
+                    secure: c.secure, http_only: c.http_only,
+                }).filter(valid_facebook_cookie).collect();
+                if has_facebook_session(&cookies) {
+                    return import_cookies(fb, &cookies);
+                }
+            }
+            Err(error) => last_error = if error.code() == "source_inspection_failed" {
+                "the cookie database could not be read; close this browser normally and retry".to_owned()
+            } else {
+                format!("cookie extraction failed ({}): {error}", error.code())
+            },
+        }
+    }
+    Err(format!("Could not import {}: {last_error}. Sign in to Facebook there, or choose a new browser window.", browser.name()))
+}
+
+fn valid_facebook_cookie(cookie: &FfCookie) -> bool {
+    let host = cookie.host.trim_start_matches('.');
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    (host == "facebook.com" || host.ends_with(".facebook.com"))
+        && (cookie.expiry == 0 || cookie.expiry > now)
+}
+
+fn has_facebook_session(cookies: &[FfCookie]) -> bool {
+    ["c_user", "xs"].iter().all(|name| cookies.iter()
+        .any(|c| c.name == *name && !c.value.is_empty() && valid_facebook_cookie(c)))
+}
+
+fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
+    if !has_facebook_session(cookies) || cookies.iter().any(|c| !valid_facebook_cookie(c)) {
+        return Err("The selected profile has no valid Facebook session. Sign in to Facebook in that browser first.".to_owned());
+    }
+    status(fb)?;
+    let endpoint = fb.browser_endpoint()?;
+    // Restart the daemon after import so account-specific caches cannot survive a switch.
+    fb.run(&["stop"])?;
+    let params: serde_json::Value = serde_json::from_str(&cookies_param_json(cookies)).map_err(|e| e.to_string())?;
+    cdp_call(&endpoint, "Storage.clearCookies", &serde_json::json!({}))?;
+    cdp_call(&endpoint, "Storage.setCookies", &params)?;
+    let current = status(fb)?;
+    if signed_in(&current) {
+        fb.run(&["profile", "me"])?;
+        Ok(current)
+    } else {
+        Err("Facebook did not accept the imported session. Choose a new browser window to sign in directly.".to_owned())
     }
 }
 
@@ -781,6 +900,9 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
     let mut groups: Vec<(String, Vec<FfCookie>)> = Vec::new();
     for row in rows {
         let (cookie, attributes) = row.map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
+        if !valid_facebook_cookie(&cookie) {
+            continue;
+        }
         match groups.iter_mut().find(|(key, _)| *key == attributes) {
             Some((_, list)) => list.push(cookie),
             None => groups.push((attributes, vec![cookie])),
@@ -837,7 +959,7 @@ pub fn fb_browser_endpoint() -> Option<(u16, String)> {
 }
 
 /// Send one CDP command to a browser endpoint and return its `result`.
-fn cdp_call(endpoint: &(u16, String), method: &str, params: &serde_json::Value) -> Result<serde_json::Value, String> {
+pub(crate) fn cdp_call(endpoint: &(u16, String), method: &str, params: &serde_json::Value) -> Result<serde_json::Value, String> {
     let (port, path) = endpoint;
     let url = format!("ws://127.0.0.1:{port}{path}");
     let (mut socket, _) = tungstenite::connect(url.as_str()).map_err(|e| format!("cannot reach the backend browser: {e}"))?;
@@ -862,40 +984,19 @@ fn cdp_call(endpoint: &(u16, String), method: &str, params: &serde_json::Value) 
 
 /// Import the Facebook session from Firefox: extract its cookies, set
 /// them in the backend's browser, and verify with `fb status`.
-pub fn import_firefox(fb: &Fb) -> Result<String, String> {
-    let browsers = detect_browsers();
-    let firefox = browsers
-        .iter()
-        .find(|b| b.kind == BrowserKind::Firefox)
-        .ok_or("Firefox is not installed")?;
+pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
     let root = firefox.data_dir.clone().ok_or("Firefox has not run yet — open it once, sign in to Facebook there, then try again")?;
     let profile = firefox_profile(&root).ok_or("no Firefox profile found — sign in to Facebook in Firefox first")?;
     let cookies = extract_firefox_cookies(&profile)?;
-    let params = cookies_param_json(&cookies);
-    let params_value: serde_json::Value = serde_json::from_str(&params).unwrap_or_default();
 
     // Any fb command starts the daemon (and its browser).
-    let _ = status(fb);
+    status(fb)?;
 
     // Route 1: through fb's named-page CDP escape hatch.
-    let _ = fb.run(&["page", "blindfb-login", "open", "https://www.facebook.com"]);
-    let _ = fb.run(&["page", "blindfb-login", "cdp", "Storage.setCookies", &params]);
-    let _ = fb.run(&["page", "blindfb-login", "close"]);
-    if let Ok(current) = status(fb) {
-        if signed_in(&current) {
-            return Ok(current);
-        }
-    }
+    // This former route is intentionally skipped: its JSON argument exposed cookies in process lists.
 
     // Route 2: straight to the backend browser's own endpoint.
-    let endpoint = fb_browser_endpoint().ok_or("the backend browser is not running")?;
-    cdp_call(&endpoint, "Storage.setCookies", &params_value)?;
-    let current = status(fb)?;
-    if signed_in(&current) {
-        Ok(current)
-    } else {
-        Err("Facebook did not accept the session copied from Firefox — it may have been signed out there; sign in to Facebook in Firefox again, then retry".to_owned())
-    }
+    import_cookies(fb, &cookies)
 }
 
 // ---------------------------------------------------------------- install
@@ -1044,6 +1145,49 @@ mod tests {
     use super::*;
 
     #[test]
+    fn session_requires_live_facebook_authentication_cookies() {
+        let user = FfCookie { name: "c_user".to_owned(), value: "account".to_owned(),
+            host: ".facebook.com".to_owned(), path: "/".to_owned(), expiry: 0,
+            secure: true, http_only: true };
+        let mut xs = FfCookie { name: "xs".to_owned(), ..user.clone() };
+        assert!(has_facebook_session(&[user.clone(), xs.clone()]));
+        assert!(!has_facebook_session(std::slice::from_ref(&user)));
+        xs.host = ".notfacebook.com".to_owned();
+        assert!(!has_facebook_session(&[user.clone(), xs.clone()]));
+        xs.host = ".www.facebook.com".to_owned();
+        xs.expiry = 1;
+        assert!(!has_facebook_session(&[user.clone(), xs.clone()]));
+        xs.expiry = 0;
+        xs.value.clear();
+        assert!(!has_facebook_session(&[user, xs]));
+    }
+
+    #[test]
+    fn backend_engine_supports_channels_and_requires_an_executable() {
+        let mut brave = Browser {
+            kind: BrowserKind::Brave, label: "Brave Nightly",
+            data_dir: Some(PathBuf::from("everyday-profile")),
+            exe: Some(PathBuf::from("brave.exe")), is_default: true,
+        };
+        assert_eq!(fallback_engine(&[brave.clone()]).unwrap().exe, brave.exe);
+        brave.exe = None;
+        assert!(fallback_engine(&[brave]).is_none());
+    }
+
+    #[test]
+    fn backend_engine_prefers_default_chromium_but_keeps_native_chrome() {
+        let edge = Browser { kind: BrowserKind::Edge, label: "", data_dir: None,
+            exe: Some(PathBuf::from("edge")), is_default: false };
+        let brave = Browser { kind: BrowserKind::Brave, label: "Brave Nightly", data_dir: None,
+            exe: Some(PathBuf::from("brave")), is_default: true };
+        assert_eq!(fallback_engine(&[edge.clone(), brave.clone()]).unwrap().kind, BrowserKind::Brave);
+        let firefox = Browser { kind: BrowserKind::Firefox, ..brave.clone() };
+        assert!(fallback_engine(&[firefox]).is_none());
+        let chrome = Browser { kind: BrowserKind::Chrome, label: "", ..edge.clone() };
+        assert!(fallback_engine(&[brave, edge, chrome]).is_none());
+    }
+
+    #[test]
     fn channel_browsers_have_specs() {
         // Brandon runs Brave Nightly: every platform's spec table must
         // carry the Brave channel builds, or sign-in cannot find them.
@@ -1138,6 +1282,7 @@ mod tests {
             conn.execute(insert, rusqlite::params!["", "c_user", "12345", ".facebook.com"]).unwrap();
             conn.execute(insert, rusqlite::params!["", "xs", "secret", ".facebook.com"]).unwrap();
             conn.execute(insert, rusqlite::params!["", "fr", "x", ".example.com"]).unwrap();
+            conn.execute(insert, rusqlite::params!["", "fake", "x", ".notfacebook.com"]).unwrap();
         }
         let cookies = extract_firefox_cookies(&dir).unwrap();
         assert_eq!(cookies.len(), 2);

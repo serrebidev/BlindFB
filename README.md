@@ -53,11 +53,12 @@ Everything else the backend exposes is in the app.
 ## Requirements
 
 - A browser you are signed in to Facebook in: Google Chrome, Chromium,
-  Brave, Microsoft Edge or Firefox. The backend itself drives a
-  Chrome-family browser, so Chrome or Chromium must exist for it to run —
-  if nothing suitable is installed, BlindFB offers to install Google
-  Chrome, and **Backend → Install a browser** installs any of them from
-  the vendor at any time.
+  Brave, Microsoft Edge or Firefox. Chrome, Chromium, Brave and Edge can
+  run the backend. When stable Chrome/Chromium is unavailable, BlindFB
+  starts another installed Chromium browser in a separate profile; your
+  everyday browser stays separate. Firefox can supply a session but needs
+  one of those Chromium browsers as the engine. **Backend → Install a
+  browser** installs a browser from its vendor.
 - Nothing else to install: **BlindFB installs the `fb` backend itself** on
   first run — it downloads the matching facebook-cli release from GitHub,
   verifies its SHA-256 checksum, and keeps it in BlindFB's own app-data
@@ -67,12 +68,22 @@ Everything else the backend exposes is in the app.
   `~/.local/bin`; the `BLINDFB_FB` environment variable overrides all.)
 - First run, sign-in happens **in your browser**: BlindFB asks which
   browser to copy your Facebook session from (your default browser is
-  marked). In Chrome, Brave and Edge, tick **Allow remote debugging** if
-  the browser asks; from Firefox, BlindFB copies the session cookies out
-  of your Firefox profile. If you are not signed in to Facebook in any
-  browser, a browser window opens so you can sign in there instead.
+  marked). On Windows, BlindFB uses [rookie-cookies](https://github.com/teng-lin/rookie-cookies)
+  to read Facebook cookies from the selected Chromium profile. Close that
+  browser first if its cookie database is locked. Encrypted-cookie import
+  depends on the installed browser's Windows encryption service; Stable
+  Brave is tested, while Beta/Nightly may require direct sign-in instead.
+  On macOS/Linux, tick **Allow remote debugging** if the browser asks.
+  Firefox sessions are read from its cookie database. You can also choose
+  **Sign in in a new browser window** and sign in directly in BlindFB's
+  separate browser profile. A completed import is checked against Facebook.
   Encrypted chats additionally need **Chat → Unlock encrypted chats**
   once per daemon lifetime.
+
+  On Windows, rookie-cookies may use an unprivileged browser-process
+  injection method for app-bound encrypted cookies. BlindFB does not request
+  its elevated SYSTEM fallback. Direct sign-in avoids cookie extraction.
+  Cookie values are never passed on the command line or written to logs.
 
 ## Layout of the window
 

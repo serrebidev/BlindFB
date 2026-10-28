@@ -402,7 +402,13 @@ fn spawn_worker(fb: Option<Fb>, jobs: Receiver<Job>, done: Sender<Done>) {
                         Some(fb) => login_flow(fb, sign),
                     }
                 }
-                Task::InstallBrowser(kind) => browsers::install(kind),
+                Task::InstallBrowser(kind) => {
+                    let installed = browsers::install(kind);
+                    if installed.is_ok() {
+                        fb = Fb::discover();
+                    }
+                    installed
+                }
                 Task::Fb(args, stdin) => {
                     if fb.is_none() {
                         fb = Fb::discover();
@@ -432,16 +438,8 @@ fn spawn_worker(fb: Option<Fb>, jobs: Receiver<Job>, done: Sender<Done>) {
 /// back to `login --visible`, a window of the backend's own browser.
 fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
     match sign {
-        SignIn::Browser(browser) if browser.uses_fb_login() => {
-            let _ = fb.run(&["login"]);
-            let status = fb.run(&["status"])?;
-            if browsers::signed_in(&status) {
-                return Ok(status);
-            }
-            visible_fallback(fb, status)
-        }
         SignIn::Browser(browser) if browser.kind == BrowserKind::Firefox => {
-            match browsers::import_firefox(fb) {
+            match browsers::import_firefox(fb, &browser) {
                 Ok(status) => Ok(status),
                 Err(why) => visible_fallback(fb, why),
             }
@@ -451,7 +449,7 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
             Err(why) => visible_fallback(fb, why),
         },
         SignIn::Visible => {
-            let _ = fb.run(&["login", "--visible"]);
+            fb.run(&["login", "--visible"])?;
             fb.run(&["status"])
         }
         SignIn::Install(_) => Err("install the browser first".to_owned()),
@@ -461,7 +459,8 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
 /// Last resort for every import path: a visible sign-in window. Reports
 /// the earlier failure when even that does not sign in.
 fn visible_fallback(fb: &Fb, why: String) -> Result<String, String> {
-    let _ = fb.run(&["login", "--visible"]);
+    fb.run(&["login", "--visible"])
+        .map_err(|error| format!("Session import failed: {why}\n\nDirect sign-in failed: {error}"))?;
     let status = fb.run(&["status"])?;
     if browsers::signed_in(&status) {
         Ok(status)
@@ -591,10 +590,10 @@ fn load_groups(ui: &Ui) {
 /// Chrome-family browser to run at all.
 fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
     let detected = browsers::detect_browsers();
-    if detected.is_empty() {
+    if !detected.iter().any(|browser| browser.kind.is_chromium() && browser.exe.is_some()) {
         if confirm(
             &ui.frame,
-            "No supported browser was found. BlindFB's backend needs Google Chrome to run, and sign-in copies your Facebook session from a browser (Chrome, Brave, Edge or Firefox). Install Google Chrome now?",
+            "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?",
             "Sign in",
         ) {
             return Some(SignIn::Install(BrowserKind::Chrome));
@@ -616,7 +615,11 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
     let dialog = SingleChoiceDialog::builder(
         &ui.frame,
         "Sign in",
-        "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks.",
+        if cfg!(windows) {
+            "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly."
+        } else {
+            "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks."
+        },
         &label_refs,
     )
     .build();
@@ -644,8 +647,8 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
             true
         }
         Some(sign) => {
-            ui.status("Signing in through your browser…");
             ui.send(Job { task: Task::LoginFlow(sign), tag });
+            ui.status("Signing in through your browser…");
             true
         }
         None => false,
@@ -676,7 +679,7 @@ fn install_browser_menu(ui: &Ui) {
     let dialog = SingleChoiceDialog::builder(
         &ui.frame,
         "Install a browser",
-        "Install which browser? Downloads come from the vendor. The backend needs Google Chrome or Chromium to run; sign-in can copy your session from any of these browsers.",
+        "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session.",
         &label_refs,
     )
     .build();
@@ -901,20 +904,25 @@ fn apply_done(ui: &Ui, done: Done) {
                 startup_log("setup: backend present, signed out — offering sign-in");
                 ui.status("The backend is installed but not signed in.");
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    load_view(ui, View::Feed);
+                    ui.status("Signed out. Use Backend → Sign in when ready.");
                 }
             }
-            Err(_) => {
+            Err(_) if Fb::discover().is_none() => {
                 startup_log("setup: backend missing — installing");
                 ui.status("Installing the Facebook backend…");
                 ui.send(Job { task: Task::InstallBackend, tag: Tag::SetupInstall });
+            }
+            Err(error) => {
+                ui.status("The Facebook backend could not start.");
+                show_error(&ui.frame, error, "Backend startup");
+                offer_sign_in(ui, Tag::SetupLogin);
             }
         },
         Tag::SetupInstall => match done.result {
             Ok(summary) => {
                 ui.status(&summary);
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    load_view(ui, View::Feed);
+                    ui.status("Signed out. Use Backend → Sign in when ready.");
                 }
             }
             Err(error) => {
@@ -933,23 +941,23 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(out) => {
                 ui.details.set_value(out.trim());
                 ui.status("Sign-in did not finish — see the details, or try Backend → Sign in.");
-                load_view(ui, View::Feed);
+                show_warning(&ui.frame, out.trim(), "Sign-in did not finish");
             }
             Err(error) => {
                 show_error(&ui.frame, error, "Sign in");
-                load_view(ui, View::Feed);
+                ui.status("Sign-in failed. Use Backend → Sign in to retry.");
             }
         },
         Tag::BrowserInstalled => match done.result {
             Ok(summary) => {
                 ui.status(&summary);
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    load_view(ui, View::Feed);
+                    ui.status("Signed out. Use Backend → Sign in when ready.");
                 }
             }
             Err(error) => {
                 show_error(&ui.frame, error, "Browser install");
-                load_view(ui, View::Feed);
+                ui.status("Browser installation failed.");
             }
         },
         Tag::BrowserInstalledMenu => match done.result {

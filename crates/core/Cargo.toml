@@ -13,5 +13,8 @@ sha2 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 tar = "0.4"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
 tungstenite = "0.24"
+
+[target.'cfg(windows)'.dependencies]
+rookie-cookies = "=0.6.0"

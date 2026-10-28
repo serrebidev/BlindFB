@@ -50,6 +50,7 @@ pub fn parse_records(output: &str) -> Vec<Record> {
 #[derive(Debug, Clone)]
 pub struct Fb {
     program: PathBuf,
+    engine: Option<crate::browsers::Browser>,
 }
 
 impl Fb {
@@ -59,12 +60,12 @@ impl Fb {
         if let Ok(path) = std::env::var("BLINDFB_FB") {
             let candidate = PathBuf::from(path);
             if candidate.is_file() {
-                return Some(Self { program: candidate });
+                return Some(Self::with_program(candidate));
             }
         }
         if let Some(candidate) = crate::backend::managed_bin() {
             if candidate.is_file() {
-                return Some(Self { program: candidate });
+                return Some(Self::with_program(candidate));
             }
         }
         if let Ok(exe) = std::env::current_exe() {
@@ -72,46 +73,124 @@ impl Fb {
                 for name in ["fb", "fb.exe"] {
                     let candidate = dir.join(name);
                     if candidate.is_file() {
-                        return Some(Self { program: candidate });
+                        return Some(Self::with_program(candidate));
                     }
                 }
             }
         }
         if let Ok(found) = which("fb") {
-            return Some(Self { program: found });
+            return Some(Self::with_program(found));
         }
         if let Some(home) = std::env::var_os("HOME") {
             let candidate = PathBuf::from(home).join(".local").join("bin").join("fb");
             if candidate.is_file() {
-                return Some(Self { program: candidate });
+                return Some(Self::with_program(candidate));
             }
         }
         None
     }
 
     pub fn with_program(program: PathBuf) -> Self {
-        Self { program }
+        let engine = if std::env::var_os("FB_CDP").is_some() {
+            None
+        } else {
+            crate::browsers::fallback_engine(&crate::browsers::detect_browsers())
+        };
+        Self { program, engine }
     }
 
     pub fn program(&self) -> &PathBuf {
         &self.program
     }
 
+    pub(crate) fn browser_endpoint(&self) -> Result<(u16, String), String> {
+        if std::env::var_os("FB_CDP").is_some() {
+            return Err("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead.".to_owned());
+        }
+        if self.engine.is_some() {
+            crate::engine::endpoint()
+        } else {
+            crate::browsers::fb_browser_endpoint()
+        }.ok_or_else(|| "the backend browser is not running".to_owned())
+    }
+
     /// Run `fb` with `args` and return stdout. On non-zero exit the error is
     /// the CLI's own stderr/stdout text (its messages are short and meant to
     /// be relayed, e.g. "not logged in").
     pub fn run(&self, args: &[&str]) -> Result<String, String> {
-        let output = Command::new(&self.program)
+        if self.engine.is_some() && args == ["login", "--visible"] {
+            return self.login_visible();
+        }
+        let output = self.command(args)?
             .args(args)
             .output()
             .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
-        collect(output)
+        let result = collect(output);
+        if self.engine.is_some() && args == ["quit"] {
+            crate::engine::close()?;
+        }
+        result
+    }
+
+    fn command(&self, args: &[&str]) -> Result<Command, String> {
+        let mut command = Command::new(&self.program);
+        if let Some(browser) = &self.engine {
+            if !matches!(args.first(), Some(&"stop" | &"quit" | &"help" | &"--version")) {
+                let ((port, path), started) = crate::engine::ensure(browser, false)?;
+                if started {
+                    self.run(&["stop"])?;
+                }
+                command.env("FB_CDP", format!("ws://127.0.0.1:{port}{path}"));
+            }
+        }
+        Ok(command)
+    }
+
+    fn login_visible(&self) -> Result<String, String> {
+        let browser = self.engine.as_ref().ok_or("no dedicated browser selected")?;
+        self.run(&["stop"])?;
+        crate::engine::close()?;
+        let (endpoint, _) = crate::engine::ensure(browser, true)?;
+        let result = self.wait_for_login(&endpoint);
+        self.run(&["stop"])?;
+        crate::engine::close()?;
+        result?;
+        // Keep the saved session, then return to a browser window the user cannot close accidentally.
+        self.run(&["status"])
+    }
+
+    fn wait_for_login(&self, endpoint: &(u16, String)) -> Result<(), String> {
+        use crate::browsers::cdp_call;
+        // Revoked cookies must not satisfy status before the user signs in again.
+        cdp_call(endpoint, "Storage.clearCookies", &serde_json::json!({}))?;
+        let target = cdp_call(endpoint, "Target.createTarget", &serde_json::json!({"url": "https://www.facebook.com/"}))?;
+        cdp_call(endpoint, "Target.activateTarget", &serde_json::json!({"targetId": target["targetId"]}))?;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(900);
+        let mut last_error = String::new();
+        while std::time::Instant::now() < deadline {
+            if crate::engine::endpoint().is_none() {
+                return Err("Sign-in was cancelled: the browser window was closed".to_owned());
+            }
+            let status = self.run(&["status"])?;
+            if crate::browsers::signed_in(&status) {
+                match self.run(&["profile", "me"]) {
+                    Ok(_) => return Ok(()),
+                    Err(error) => {
+                        last_error = error;
+                        // A checkpoint can leave the daemon's expired-session flag set until restart.
+                        self.run(&["stop"])?;
+                    }
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        }
+        Err(format!("Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {last_error}"))
     }
 
     /// Run `fb` feeding `input` on stdin (used for `unlock -`, so a Messenger
     /// PIN never appears in a process list).
     pub fn run_stdin(&self, args: &[&str], input: &str) -> Result<String, String> {
-        let mut child = Command::new(&self.program)
+        let mut child = self.command(args)?
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

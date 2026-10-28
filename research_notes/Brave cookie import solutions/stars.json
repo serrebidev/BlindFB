@@ -1,0 +1,448 @@
+{
+  "retrieved_utc": "2026-10-28T04:53:45.762267+00:00",
+  "query": "brave cookies",
+  "sort": "stars",
+  "order": "desc",
+  "per_page": 20,
+  "total_count": 101,
+  "incomplete_results": false,
+  "items": [
+    {
+      "full_name": "xaitax/Chrome-App-Bound-Encryption-Decryption",
+      "html_url": "https://github.com/xaitax/Chrome-App-Bound-Encryption-Decryption",
+      "stargazers_count": 1828,
+      "updated_at": "2026-10-27T22:40:42Z",
+      "pushed_at": "2026-02-09T18:52:43Z",
+      "default_branch": "main",
+      "description": "Bypass Chromium's App-Bound Encryption via Direct Syscall-based Reflective Process Hollowing. Extract cookies, passwords, payment methods & tokens from Chrome, Edge, Brave & Avast - fileless, user-mode,   no admin required.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "src/payload/browser_config.hpp",
+        "src/com/elevator.cpp"
+      ],
+      "source_tree_sha": "63b719f2ab3dbf8573fd9228a9c028526e9eb1db",
+      "review_verdict": "Research reference only; unsuitable integration"
+    },
+    {
+      "full_name": "ksdodk/ChromiumStealer",
+      "html_url": "https://github.com/ksdodk/ChromiumStealer",
+      "stargazers_count": 65,
+      "updated_at": "2026-10-02T19:56:46Z",
+      "pushed_at": "2022-06-18T15:38:58Z",
+      "default_branch": "main",
+      "description": "steals every password and cookie on the PC created by a Chromium browser and transfers it to a Discord webhook and/or a telegram bot chat",
+      "license": null,
+      "archived": true,
+      "inspected_paths": [
+        "README.md",
+        "main.py"
+      ],
+      "source_tree_sha": "d636025408360306bb1274ccfb26e965808bba46",
+      "review_verdict": "Unsuitable credential stealer"
+    },
+    {
+      "full_name": "Filza2/DBreaker",
+      "html_url": "https://github.com/Filza2/DBreaker",
+      "stargazers_count": 32,
+      "updated_at": "2025-04-07T21:46:40Z",
+      "pushed_at": "2023-03-14T19:13:38Z",
+      "default_branch": "main",
+      "description": "DBreaker ; Get Browsers Data passwords,username,cookies, etc ..",
+      "license": null,
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "DBreaker.py"
+      ],
+      "source_tree_sha": "ff7d40aa6abbb79197addf21ec29885f3f4d7b30",
+      "review_verdict": "Unsuitable legacy broad-data extractor"
+    },
+    {
+      "full_name": "sh4den/Hawkish-Eyes-NoDualHook",
+      "html_url": "https://github.com/sh4den/Hawkish-Eyes-NoDualHook",
+      "stargazers_count": 30,
+      "updated_at": "2026-10-26T10:01:22Z",
+      "pushed_at": "2026-07-06T09:33:52Z",
+      "default_branch": "main",
+      "description": "Ethical Hacking Tool | Powerfull Tokens Grabber / Stealer Discord, Steal: Browsers Passwords & Cookies, Window Info, Files Sniper, Wallet, Minecraft Account, Bypass Firewall & Antivirus, Discord Injection JS, Chromium Injection JS (Brave, Chrome, OperaGX, Opera, Vivaldi, Edge, yandex).",
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.MD",
+        "main.py"
+      ],
+      "source_tree_sha": "e462df515c6e9526cf0c3b0b81e0bdc53cf99ab7",
+      "review_verdict": "Unsuitable credential stealer"
+    },
+    {
+      "full_name": "phoqe/havelock",
+      "html_url": "https://github.com/phoqe/havelock",
+      "stargazers_count": 27,
+      "updated_at": "2026-10-14T12:37:00Z",
+      "pushed_at": "2022-12-10T22:04:10Z",
+      "default_branch": "develop",
+      "description": "Extract accounts, cookies, and history from Chromium-based web browsers.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "readme.md",
+        "crypto/win32.js",
+        "browsers/brave.js"
+      ],
+      "source_tree_sha": "fe2ebbcaccb822e4d858510d13ba84c42f7395e8",
+      "review_verdict": "Unsuitable; Windows decryption incomplete"
+    },
+    {
+      "full_name": "00nx/Chrome-App-Bound-Encryption-Bypass",
+      "html_url": "https://github.com/00nx/Chrome-App-Bound-Encryption-Bypass",
+      "stargazers_count": 25,
+      "updated_at": "2026-10-19T16:28:17Z",
+      "pushed_at": "2026-02-27T17:14:02Z",
+      "default_branch": "main",
+      "description": "Bypasses App-Bound Encryption to extract cookies, passwords, browsing history, autofill data, and payment info from Chromium-based browsers (Chrome, Brave, Edge) in user mode, without admin privileges.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "src/chrome_decrypt.cpp"
+      ],
+      "source_tree_sha": "d78039ebddfe9086078b10f985cfc34de53c95e5",
+      "review_verdict": "Unsuitable evasion-oriented fork"
+    },
+    {
+      "full_name": "Majanito/ABE-Decryption",
+      "html_url": "https://github.com/Majanito/ABE-Decryption",
+      "stargazers_count": 21,
+      "updated_at": "2026-10-21T19:12:33Z",
+      "pushed_at": "2026-02-02T15:10:45Z",
+      "default_branch": "main",
+      "description": "Decrypts cookies for Chromium based browser which have implemented App-Bound-Encryption",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "src/dllmain.cpp",
+        "src/injector_template.py"
+      ],
+      "source_tree_sha": "e409a6e612d6f96dbf667b77eead19585ce8ffb5",
+      "review_verdict": "Research reference only; unsuitable automatic importer"
+    },
+    {
+      "full_name": "teng-lin/rookie-cookies",
+      "html_url": "https://github.com/teng-lin/rookie-cookies",
+      "stargazers_count": 10,
+      "updated_at": "2026-10-22T12:06:42Z",
+      "pushed_at": "2026-10-25T10:36:10Z",
+      "default_branch": "main",
+      "description": "Cross-platform browser cookie extraction and decryption for Chrome, Edge, Brave, Chromium, Firefox, and Safari. Extract cookies from browser profiles and decrypt browser cookies into cookie jars using Rust, Python, Node.js, or CLI on Windows, macOS, and Linux\u2014including Chrome App-Bound Encryption v20 and IElevator2.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "rookie-rs/src/windows/appbound/native/com_iid.c",
+        "rookie-rs/src/windows/appbound/browser_path.rs",
+        "rookie-rs/browser_registry.json"
+      ],
+      "source_tree_sha": "21ce5462955860a019b03507f9813407e2fd615c",
+      "review_verdict": "Strongest maintainable extraction library candidate, but current Nightly blocker remains"
+    },
+    {
+      "full_name": "marichu-kt/PrivScore",
+      "html_url": "https://github.com/marichu-kt/PrivScore",
+      "stargazers_count": 8,
+      "updated_at": "2026-09-21T18:36:20Z",
+      "pushed_at": "2026-04-26T22:11:40Z",
+      "default_branch": "main",
+      "description": "Extensi\u00f3n de navegador (Chrome/Brave/Edge) que eval\u00faa la \u201csalud\u201d de privacidad de una web con una nota A\u2013E basada en cookies, se\u00f1ales de tracking y el an\u00e1lisis de su pol\u00edtica de privacidad (IA opcional).",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "extension/src/background/cookies_summary.js",
+        "extension/manifest.json"
+      ],
+      "source_tree_sha": "ab732915a590a7646c611952294b6c9a830e55dd",
+      "review_verdict": "Legitimate but irrelevant privacy analysis extension"
+    },
+    {
+      "full_name": "JustWatch31/KRY-Stealer",
+      "html_url": "https://github.com/JustWatch31/KRY-Stealer",
+      "stargazers_count": 7,
+      "updated_at": "2026-10-26T00:27:23Z",
+      "pushed_at": "2025-11-25T20:27:17Z",
+      "default_branch": "main",
+      "description": "A new stealer includes App-Bound Encrypted Chromium browsers. (UAC Needed)",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "main.py"
+      ],
+      "source_tree_sha": "bbf074e8068a07128800575205ba7566e54d4667",
+      "review_verdict": "Unsuitable credential stealer"
+    },
+    {
+      "full_name": "zeusvuln/echoleak",
+      "html_url": "https://github.com/zeusvuln/echoleak",
+      "stargazers_count": 5,
+      "updated_at": "2026-07-17T18:14:48Z",
+      "pushed_at": "2026-06-24T17:54:26Z",
+      "default_branch": "main",
+      "description": "Windows browser secrets extraction tool - cookies, passwords, credit cards, history, bookmarks, tokens from Chrome, Edge, Brave, Opera, Vivaldi, Firefox",
+      "license": null,
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "exe/src/browsers.rs",
+        "dll/src/lib.rs"
+      ],
+      "source_tree_sha": "6a089f001a315148c05feba8b9f44d45341848dc",
+      "review_verdict": "Unsuitable broad secrets/injection research tool"
+    },
+    {
+      "full_name": "rr-uchchash360/No-Cookie-YouTube",
+      "html_url": "https://github.com/rr-uchchash360/No-Cookie-YouTube",
+      "stargazers_count": 5,
+      "updated_at": "2026-10-28T04:27:03Z",
+      "pushed_at": "2026-07-21T19:27:23Z",
+      "default_branch": "main",
+      "description": "A privacy-focused Chrome extension that allows you to watch YouTube without cookies, trackers, and annoying ads. Redirects YouTube videos to Google's official 'youtube-nocookie.com' domain for enhanced privacy and performance.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "manifest.json",
+        "background.js"
+      ],
+      "source_tree_sha": "a33ad5e4e46b67834d259cdd33a13c3866fcebaf",
+      "review_verdict": "Irrelevant YouTube playback extension"
+    },
+    {
+      "full_name": "ciacou001/Browser-Data-Grabber",
+      "html_url": "https://github.com/ciacou001/Browser-Data-Grabber",
+      "stargazers_count": 4,
+      "updated_at": "2026-10-12T04:27:13Z",
+      "pushed_at": "2026-10-12T04:27:10Z",
+      "default_branch": "main",
+      "description": "\ud83d\udee0\ufe0f Build and customize advanced data extraction tools for Windows, enhancing your red team operations and penetration testing with anti-detection features.",
+      "license": {
+        "key": "other",
+        "name": "Other",
+        "spdx_id": "NOASSERTION",
+        "url": null,
+        "node_id": "MDc6TGljZW5zZTA="
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "src/generator/stubgenerator.cpp"
+      ],
+      "source_tree_sha": "9f7a33e50d45bca1e36302926df3042d6fb6927e",
+      "review_verdict": "Unsuitable credential stealer generator"
+    },
+    {
+      "full_name": "Malicord-Analysis/Malicord-Analysis",
+      "html_url": "https://github.com/Malicord-Analysis/Malicord-Analysis",
+      "stargazers_count": 3,
+      "updated_at": "2026-06-03T23:29:21Z",
+      "pushed_at": "2024-04-06T22:45:59Z",
+      "default_branch": "main",
+      "description": "About Ethical Hacking Tool | Powerfull Tokens Grabber / Stealer Discord, Steal: Browsers Passwords & Cookies, Window Info, Files Sniper, Wallet, Minecraft Account, Bypass Firewall & Antivirus, Discord Injection JS, Chromium Injection JS (Brave, Chrome, OperaGX, Opera, Vivaldi, Edge, yandex).",
+      "license": {
+        "key": "apache-2.0",
+        "name": "Apache License 2.0",
+        "spdx_id": "Apache-2.0",
+        "url": "https://api.github.com/licenses/apache-2.0",
+        "node_id": "MDc6TGljZW5zZTI="
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.MD",
+        "main.py"
+      ],
+      "source_tree_sha": "3a7371c811b9c32a740eb9726a83cf03c240ef2e",
+      "review_verdict": "Unsuitable credential stealer"
+    },
+    {
+      "full_name": "DomenicoCentrone/cookie-monster",
+      "html_url": "https://github.com/DomenicoCentrone/cookie-monster",
+      "stargazers_count": 3,
+      "updated_at": "2026-08-15T22:36:09Z",
+      "pushed_at": "2026-08-15T22:35:55Z",
+      "default_branch": "main",
+      "description": "Erases the cookies and session of every site you visit, except the ones you save. Privacy-first, no telemetry.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "src/core/transfer.ts",
+        "src/platform/cookies.ts",
+        "public/manifest.json"
+      ],
+      "source_tree_sha": "0603832fe0779b7d684a366098341017bafc5000",
+      "review_verdict": "Legitimate but wrong tool; do not recommend installation for importing"
+    },
+    {
+      "full_name": "CRB-CyberSec-Dev/SessionHijack",
+      "html_url": "https://github.com/CRB-CyberSec-Dev/SessionHijack",
+      "stargazers_count": 3,
+      "updated_at": "2024-12-25T15:15:02Z",
+      "pushed_at": "2024-06-23T06:00:38Z",
+      "default_branch": "master",
+      "description": "A session hijacking demo with client and server components. The client decrypts cookies from modern browsers (Chrome, Edge, Brave) and securely shares them with the server using JWT authentication. The server processes these cookies, leveraging Boost.Asio for efficient traffic management and preventing socket overflow.",
+      "license": null,
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "SessionHijackW/SessionHijackW.cpp"
+      ],
+      "source_tree_sha": "63c525437f824193997afac9847d61276a5927c6",
+      "review_verdict": "Unsuitable session-hijacking/client-server tool"
+    },
+    {
+      "full_name": "0xGval/openclaw-headless-setup",
+      "html_url": "https://github.com/0xGval/openclaw-headless-setup",
+      "stargazers_count": 3,
+      "updated_at": "2026-05-21T01:14:44Z",
+      "pushed_at": "2026-02-08T14:51:13Z",
+      "default_branch": "main",
+      "description": "Security-first OpenClaw setup on headless Ubuntu \u2014 multi-agent isolation, hardened SSH, Brave headless with cookie injection for X/Twitter, Discord + WhatsApp routing",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "openclaw-minisforum-security-setup.md"
+      ],
+      "source_tree_sha": "7ab81c8cc6267871d3560629651ea8dfb4554108",
+      "review_verdict": "Documentation-only adjacent CDP example"
+    },
+    {
+      "full_name": "N0namii/Husein-Cookie-Stealer",
+      "html_url": "https://github.com/N0namii/Husein-Cookie-Stealer",
+      "stargazers_count": 3,
+      "updated_at": "2026-03-27T01:55:59Z",
+      "pushed_at": "2025-01-26T10:30:28Z",
+      "default_branch": "main",
+      "description": "This script is designed to extract and collect sensitive browser data such as saved passwords and cookies from multiple browsers (Chrome, Firefox, Edge, Opera, Vivaldi, Brave), package the information into a ZIP archive, and send it to a Telegram bot.",
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "Husein.py"
+      ],
+      "source_tree_sha": "073b3ab29c60e5f80c268688f4ac6b43d1879d88",
+      "review_verdict": "Unsuitable credential stealer"
+    },
+    {
+      "full_name": "RaniGaytri/Stop-Google-location",
+      "html_url": "https://github.com/RaniGaytri/Stop-Google-location",
+      "stargazers_count": 3,
+      "updated_at": "2024-03-31T01:02:09Z",
+      "pushed_at": "2022-01-28T06:16:25Z",
+      "default_branch": "main",
+      "description": "Hello Community,  Description of the issue: I am stumped, but all my attempts to hide my location from Google in Brave have failed. I am behind a VPN (paid NordVPN, and on occasion free ProtonVPN), and as far as I can tell I have disabled all options in the Settings that could lead to this. Since I don\u2019t know exactly what to turn/off, I ended up trying a lot of options:  Shields > Trackers & ads blocking > Aggressive. Security and Privacy > Clear browsing data > On exit > Cookies and other site data, Cached images and files, Autofill form data, Hosted app data. Security and Privacy > Cookies and other site data > Block third-party cookies, Clear cookies and site data when you close all windows, Send a \u201cDo Not Track\u201d request with your browsing traffic, Always clear cookies when windows are closed (I added google.com). Security and Privacy > Security > Use secure DNS > Cloudflare (1.1.1.1). Regardless, every time I start Brave (on Linux desktop or laptop, same behavior), if I visit Google or Google Maps, it shows me my real area with great accuracy. However, when I visit IP location websites such as https://www.iplocation.net/, it does show me the location chosen through the VPN.  I tried disabling all extensions (I have a few for security, like uBlock Origin, minerBlock, Privacy Badger, HTTPS Everywhere), but the problem remains: Google knows my location after a clean restart. Even in a private tab this is the case, even though this is meant to use Tor (Extensions > Private Window with Tor is On).",
+      "license": null,
+      "archived": false,
+      "inspected_paths": [],
+      "source_tree_sha": null,
+      "review_verdict": "Irrelevant empty repository"
+    },
+    {
+      "full_name": "logly-uk/logly-wordpress",
+      "html_url": "https://github.com/logly-uk/logly-wordpress",
+      "stargazers_count": 2,
+      "updated_at": "2026-07-12T11:53:51Z",
+      "pushed_at": "2026-06-09T09:00:35Z",
+      "default_branch": "main",
+      "description": "Privacy-first analytics under 1 KB. No cookies, no consent banner, works with Brave and uBlock Origin.  == Description ==  **Logly.uk** is a lightweight web analytics tool that tracks your visitors without cookies, without storing personal data, and without requiring a consent banner.",
+      "license": {
+        "key": "gpl-2.0",
+        "name": "GNU General Public License v2.0",
+        "spdx_id": "GPL-2.0",
+        "url": "https://api.github.com/licenses/gpl-2.0",
+        "node_id": "MDc6TGljZW5zZTg="
+      },
+      "archived": false,
+      "inspected_paths": [
+        "README.md",
+        "loglyuk-privacy-analytics/loglyuk-privacy-analytics.php"
+      ],
+      "source_tree_sha": "6f31b68e126e85896ce4cd97d3f4d3e876a17452",
+      "review_verdict": "Irrelevant analytics plugin"
+    }
+  ]
+}
