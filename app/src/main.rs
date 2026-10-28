@@ -21,7 +21,7 @@ use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
-use blindfb_core::browsers::{self, BrowserKind};
+use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
     Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, groups_eval_args,
     groups_open_args, notifs_args, parse_groups_json, parse_records, post_args, posts_args,
@@ -118,9 +118,9 @@ enum Tag {
 
 /// How to sign in: copy the session from one of the user's browsers, or
 /// sign in directly in a new window of the backend's own browser.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum SignIn {
-    Browser(BrowserKind),
+    Browser(Browser),
     Visible,
     /// No usable browser exists: install this one first.
     Install(BrowserKind),
@@ -432,7 +432,7 @@ fn spawn_worker(fb: Option<Fb>, jobs: Receiver<Job>, done: Sender<Done>) {
 /// back to `login --visible`, a window of the backend's own browser.
 fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
     match sign {
-        SignIn::Browser(BrowserKind::Chrome | BrowserKind::Chromium) => {
+        SignIn::Browser(browser) if browser.uses_fb_login() => {
             let _ = fb.run(&["login"]);
             let status = fb.run(&["status"])?;
             if browsers::signed_in(&status) {
@@ -440,13 +440,13 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
             }
             visible_fallback(fb, status)
         }
-        SignIn::Browser(kind @ (BrowserKind::Brave | BrowserKind::Edge)) => {
-            match browsers::import_chromium(fb, kind) {
+        SignIn::Browser(browser) if browser.kind == BrowserKind::Firefox => {
+            match browsers::import_firefox(fb) {
                 Ok(status) => Ok(status),
                 Err(why) => visible_fallback(fb, why),
             }
         }
-        SignIn::Browser(BrowserKind::Firefox) => match browsers::import_firefox(fb) {
+        SignIn::Browser(browser) => match browsers::import_chromium(fb, &browser) {
             Ok(status) => Ok(status),
             Err(why) => visible_fallback(fb, why),
         },
@@ -631,7 +631,7 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
     if index >= detected.len() {
         return Some(SignIn::Visible);
     }
-    Some(SignIn::Browser(detected[index].kind))
+    Some(SignIn::Browser(detected[index].clone()))
 }
 
 /// Present the sign-in choice and start what the user picked. Returns

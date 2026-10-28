@@ -5,8 +5,10 @@
 //! - Chromium (Chrome, Chromium, Brave, Edge): every Chromium browser can
 //!   expose the same remote-debugging endpoint `fb` already uses for Chrome
 //!   (a `DevToolsActivePort` file in its user-data dir, gated by the user's
-//!   "Allow remote debugging" consent). `fb` only enumerates Chrome and
-//!   Chromium, so for Brave and Edge BlindFB performs fb's own steps —
+//!   "Allow remote debugging" consent). `fb` only enumerates the stable
+//!   Chrome and Chromium data dirs, so for Brave, Edge and every channel
+//!   build (Brave Beta/Nightly, Chrome Beta/Dev/Canary, Edge Beta/Dev —
+//!   each with its own user-data dir) BlindFB performs fb's own steps —
 //!   enable the setting in `Local State`, open the inspect page, wait for
 //!   the endpoint — and then hands the port to `fb login --from <port>`.
 //! - Firefox: no debugging-endpoint import exists, so BlindFB reads the
@@ -76,6 +78,10 @@ impl BrowserKind {
 #[derive(Debug, Clone)]
 pub struct Browser {
     pub kind: BrowserKind,
+    /// Channel label for non-stable builds ("Brave Nightly",
+    /// "Google Chrome Beta"); empty for the stable channel. Channel
+    /// builds keep their own user-data dir, so each is its own entry.
+    pub label: &'static str,
     /// User-data dir (Chromium kinds) or the profile root (Firefox).
     pub data_dir: Option<PathBuf>,
     pub exe: Option<PathBuf>,
@@ -83,8 +89,19 @@ pub struct Browser {
 }
 
 impl Browser {
-    pub fn name(&self) -> &'static str {
-        self.kind.name()
+    pub fn name(&self) -> &str {
+        if self.label.is_empty() {
+            self.kind.name()
+        } else {
+            self.label
+        }
+    }
+
+    /// fb's own guided login only enumerates the stable Chrome and
+    /// Chromium data dirs; every other install (Brave, Edge, and every
+    /// channel build) goes through BlindFB's import instead.
+    pub fn uses_fb_login(&self) -> bool {
+        self.label.is_empty() && matches!(self.kind, BrowserKind::Chrome | BrowserKind::Chromium)
     }
 }
 
@@ -112,6 +129,7 @@ fn on_path(name: &str) -> Option<PathBuf> {
 /// (user-data dir, Firefox profile root, executable paths in order).
 struct Spec {
     kind: BrowserKind,
+    label: &'static str,
     data_dir: Option<PathBuf>,
     exe_candidates: Vec<PathBuf>,
     exe_names: Vec<&'static str>,
@@ -127,6 +145,7 @@ fn specs() -> Vec<Spec> {
         let pf86 = env_path("ProgramFiles(x86)").unwrap_or_default();
         out.push(Spec {
             kind: BrowserKind::Chrome,
+            label: "",
             data_dir: Some(la.join("Google/Chrome/User Data")),
             exe_candidates: vec![
                 pf.join("Google/Chrome/Application/chrome.exe"),
@@ -135,8 +154,26 @@ fn specs() -> Vec<Spec> {
             ],
             exe_names: vec!["chrome.exe"],
         });
+        for (label, folder) in [
+            ("Google Chrome Beta", "Chrome Beta"),
+            ("Google Chrome Dev", "Chrome Dev"),
+            ("Google Chrome Canary", "Chrome SxS"),
+        ] {
+            out.push(Spec {
+                kind: BrowserKind::Chrome,
+                label,
+                data_dir: Some(la.join(format!("Google/{folder}/User Data"))),
+                exe_candidates: vec![
+                    pf.join(format!("Google/{folder}/Application/chrome.exe")),
+                    pf86.join(format!("Google/{folder}/Application/chrome.exe")),
+                    la.join(format!("Google/{folder}/Application/chrome.exe")),
+                ],
+                exe_names: vec!["chrome.exe"],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Brave,
+            label: "",
             data_dir: Some(la.join("BraveSoftware/Brave-Browser/User Data")),
             exe_candidates: vec![
                 la.join("BraveSoftware/Brave-Browser/Application/brave.exe"),
@@ -145,8 +182,22 @@ fn specs() -> Vec<Spec> {
             ],
             exe_names: vec!["brave.exe"],
         });
+        for (label, folder) in [("Brave Beta", "Brave-Browser-Beta"), ("Brave Nightly", "Brave-Browser-Nightly")] {
+            out.push(Spec {
+                kind: BrowserKind::Brave,
+                label,
+                data_dir: Some(la.join(format!("BraveSoftware/{folder}/User Data"))),
+                exe_candidates: vec![
+                    la.join(format!("BraveSoftware/{folder}/Application/brave.exe")),
+                    pf.join(format!("BraveSoftware/{folder}/Application/brave.exe")),
+                    pf86.join(format!("BraveSoftware/{folder}/Application/brave.exe")),
+                ],
+                exe_names: vec!["brave.exe"],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Edge,
+            label: "",
             data_dir: Some(la.join("Microsoft/Edge/User Data")),
             exe_candidates: vec![
                 pf86.join("Microsoft/Edge/Application/msedge.exe"),
@@ -154,8 +205,21 @@ fn specs() -> Vec<Spec> {
             ],
             exe_names: vec!["msedge.exe"],
         });
+        for (label, folder) in [("Microsoft Edge Beta", "Edge Beta"), ("Microsoft Edge Dev", "Edge Dev")] {
+            out.push(Spec {
+                kind: BrowserKind::Edge,
+                label,
+                data_dir: Some(la.join(format!("Microsoft/{folder}/User Data"))),
+                exe_candidates: vec![
+                    pf86.join(format!("Microsoft/{folder}/Application/msedge.exe")),
+                    pf.join(format!("Microsoft/{folder}/Application/msedge.exe")),
+                ],
+                exe_names: vec!["msedge.exe"],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Firefox,
+            label: "",
             data_dir: Some(ad.join("Mozilla/Firefox")),
             exe_candidates: vec![
                 pf.join("Mozilla Firefox/firefox.exe"),
@@ -175,30 +239,65 @@ fn specs() -> Vec<Spec> {
         };
         out.push(Spec {
             kind: BrowserKind::Chrome,
+            label: "",
             data_dir: Some(support.join("Google/Chrome")),
             exe_candidates: app("Google Chrome", "Google Chrome"),
             exe_names: vec![],
         });
+        for (label, folder) in [("Google Chrome Beta", "Google/Chrome Beta"), ("Google Chrome Canary", "Google/Chrome Canary")] {
+            out.push(Spec {
+                kind: BrowserKind::Chrome,
+                label,
+                data_dir: Some(support.join(folder)),
+                exe_candidates: app(label, label),
+                exe_names: vec![],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Brave,
+            label: "",
             data_dir: Some(support.join("BraveSoftware/Brave-Browser")),
             exe_candidates: app("Brave Browser", "Brave Browser"),
             exe_names: vec![],
         });
+        for (label, folder, app_name) in [
+            ("Brave Beta", "BraveSoftware/Brave-Browser-Beta", "Brave Browser Beta"),
+            ("Brave Nightly", "BraveSoftware/Brave-Browser-Nightly", "Brave Browser Nightly"),
+        ] {
+            out.push(Spec {
+                kind: BrowserKind::Brave,
+                label,
+                data_dir: Some(support.join(folder)),
+                exe_candidates: app(app_name, app_name),
+                exe_names: vec![],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Edge,
+            label: "",
             data_dir: Some(support.join("Microsoft Edge")),
             exe_candidates: app("Microsoft Edge", "Microsoft Edge"),
             exe_names: vec![],
         });
+        for label in ["Microsoft Edge Beta", "Microsoft Edge Dev"] {
+            out.push(Spec {
+                kind: BrowserKind::Edge,
+                label,
+                data_dir: Some(support.join(label)),
+                exe_candidates: app(label, label),
+                exe_names: vec![],
+            });
+        }
         out.push(Spec {
             kind: BrowserKind::Chromium,
+            label: "",
             data_dir: Some(support.join("Chromium")),
             exe_candidates: app("Chromium", "Chromium"),
             exe_names: vec![],
         });
         out.push(Spec {
             kind: BrowserKind::Firefox,
+            label: "",
             data_dir: Some(support.join("Firefox")),
             exe_candidates: app("Firefox", "Firefox"),
             exe_names: vec![],
@@ -207,35 +306,82 @@ fn specs() -> Vec<Spec> {
     #[cfg(target_os = "linux")]
     {
         let config = env_path("XDG_CONFIG_HOME").unwrap_or_else(|| home().join(".config"));
-        let push = |out: &mut Vec<Spec>, kind, dirs: Vec<PathBuf>, names: Vec<&'static str>| {
-            out.push(Spec { kind, data_dir: dirs.into_iter().next(), exe_candidates: vec![], exe_names: names });
+        let push = |out: &mut Vec<Spec>, kind, label, dirs: Vec<PathBuf>, names: Vec<&'static str>| {
+            out.push(Spec { kind, label, data_dir: dirs.into_iter().next(), exe_candidates: vec![], exe_names: names });
         };
         push(
             &mut out,
             BrowserKind::Chrome,
+            "",
             vec![config.join("google-chrome")],
             vec!["google-chrome", "google-chrome-stable"],
         );
         push(
             &mut out,
+            BrowserKind::Chrome,
+            "Google Chrome Beta",
+            vec![config.join("google-chrome-beta")],
+            vec!["google-chrome-beta"],
+        );
+        push(
+            &mut out,
+            BrowserKind::Chrome,
+            "Google Chrome Dev",
+            vec![config.join("google-chrome-unstable")],
+            vec!["google-chrome-unstable"],
+        );
+        push(
+            &mut out,
             BrowserKind::Brave,
+            "",
             vec![config.join("BraveSoftware/Brave-Browser")],
             vec!["brave", "brave-browser"],
         );
         push(
             &mut out,
+            BrowserKind::Brave,
+            "Brave Beta",
+            vec![config.join("BraveSoftware/Brave-Browser-Beta")],
+            vec!["brave-browser-beta"],
+        );
+        push(
+            &mut out,
+            BrowserKind::Brave,
+            "Brave Nightly",
+            vec![config.join("BraveSoftware/Brave-Browser-Nightly")],
+            vec!["brave-browser-nightly"],
+        );
+        push(
+            &mut out,
             BrowserKind::Edge,
+            "",
             vec![config.join("microsoft-edge")],
             vec!["microsoft-edge", "microsoft-edge-stable"],
         );
         push(
             &mut out,
+            BrowserKind::Edge,
+            "Microsoft Edge Beta",
+            vec![config.join("microsoft-edge-beta")],
+            vec!["microsoft-edge-beta"],
+        );
+        push(
+            &mut out,
+            BrowserKind::Edge,
+            "Microsoft Edge Dev",
+            vec![config.join("microsoft-edge-dev")],
+            vec!["microsoft-edge-dev"],
+        );
+        push(
+            &mut out,
             BrowserKind::Chromium,
+            "",
             vec![config.join("chromium")],
             vec!["chromium", "chromium-browser"],
         );
         out.push(Spec {
             kind: BrowserKind::Firefox,
+            label: "",
             data_dir: Some(home().join(".mozilla/firefox")),
             exe_candidates: vec![],
             exe_names: vec!["firefox", "firefox-esr"],
@@ -247,6 +393,9 @@ fn specs() -> Vec<Spec> {
 /// Every browser installed on this machine, default browser flagged.
 pub fn detect_browsers() -> Vec<Browser> {
     let default = default_browser_kind();
+    // The default is known only to family level, so the flag goes to the
+    // first entry of that family (stable sorts before its channels).
+    let mut default_claimed = false;
     let mut found = Vec::new();
     for spec in specs() {
         let exe = spec
@@ -265,12 +414,9 @@ pub fn detect_browsers() -> Vec<Browser> {
             }
         });
         if exe.is_some() || data_dir.is_some() {
-            found.push(Browser {
-                is_default: default == Some(spec.kind),
-                kind: spec.kind,
-                data_dir,
-                exe,
-            });
+            let is_default = !default_claimed && default == Some(spec.kind);
+            default_claimed |= is_default;
+            found.push(Browser { is_default, kind: spec.kind, label: spec.label, data_dir, exe });
         }
     }
     found
@@ -457,18 +603,15 @@ fn status(fb: &Fb) -> Result<String, String> {
 }
 
 /// Import the Facebook session from a Chromium browser fb does not
-/// enumerate itself (Brave, Edge; also works for Chrome/Chromium data
-/// dirs). Mirrors fb's guided Chrome flow, then `fb login --from <port>`.
-pub fn import_chromium(fb: &Fb, kind: BrowserKind) -> Result<String, String> {
-    let browsers = detect_browsers();
-    let browser = browsers
-        .iter()
-        .find(|b| b.kind == kind)
-        .ok_or_else(|| format!("{} is not installed", kind.name()))?;
+/// enumerate itself — Brave, Edge, and every channel build (Brave
+/// Nightly, Chrome Beta, …), each with its own user-data dir. Mirrors
+/// fb's guided Chrome flow, then `fb login --from <port>`.
+pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
+    let kind = browser.kind;
     let data_dir = browser
         .data_dir
         .clone()
-        .ok_or_else(|| format!("{} has not run yet — open it once, sign in to Facebook there, then try again", kind.name()))?;
+        .ok_or_else(|| format!("{} has not run yet — open it once, sign in to Facebook there, then try again", browser.name()))?;
 
     let endpoint = if let Some(endpoint) = devtools_endpoint(&data_dir) {
         Some(endpoint)
@@ -488,7 +631,7 @@ pub fn import_chromium(fb: &Fb, kind: BrowserKind) -> Result<String, String> {
     let (port, _) = endpoint.ok_or_else(|| {
         format!(
             "{} did not offer a debugging endpoint — in {}, tick \"Allow remote debugging for this browser instance\", then try again",
-            kind.name(),
+            browser.name(),
             kind.inspect_url()
         )
     })?;
@@ -498,7 +641,7 @@ pub fn import_chromium(fb: &Fb, kind: BrowserKind) -> Result<String, String> {
     if signed_in(&status) {
         Ok(status)
     } else {
-        Err(format!("{} is not signed in to Facebook — sign in there first, then try again", kind.name()))
+        Err(format!("{} is not signed in to Facebook — sign in there first, then try again", browser.name()))
     }
 }
 
@@ -899,6 +1042,29 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn channel_browsers_have_specs() {
+        // Brandon runs Brave Nightly: every platform's spec table must
+        // carry the Brave channel builds, or sign-in cannot find them.
+        let labels: Vec<&str> = specs().iter().map(|spec| spec.label).collect();
+        assert!(labels.contains(&"Brave Beta"), "labels: {labels:?}");
+        assert!(labels.contains(&"Brave Nightly"), "labels: {labels:?}");
+        assert!(labels.contains(&"Google Chrome Beta"), "labels: {labels:?}");
+        assert!(labels.contains(&"Microsoft Edge Beta"), "labels: {labels:?}");
+    }
+
+    #[test]
+    fn browser_names_and_login_routes() {
+        let browser = |kind, label| Browser { kind, label, data_dir: None, exe: None, is_default: false };
+        assert_eq!(browser(BrowserKind::Brave, "").name(), "Brave");
+        assert_eq!(browser(BrowserKind::Brave, "Brave Nightly").name(), "Brave Nightly");
+        assert!(browser(BrowserKind::Chrome, "").uses_fb_login());
+        assert!(browser(BrowserKind::Chromium, "").uses_fb_login());
+        assert!(!browser(BrowserKind::Chrome, "Google Chrome Beta").uses_fb_login());
+        assert!(!browser(BrowserKind::Brave, "Brave Nightly").uses_fb_login());
+        assert!(!browser(BrowserKind::Firefox, "").uses_fb_login());
+    }
 
     #[test]
     fn active_port_parses() {
