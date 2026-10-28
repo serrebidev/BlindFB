@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
@@ -77,8 +78,10 @@ const ID_GITHUB: i32 = 10071;
 
 const REACTIONS: [&str; 8] = ["like", "love", "care", "haha", "wow", "sad", "angry", "none"];
 const PAGE: u32 = 40;
+/// A cached section younger than this is shown without asking Facebook again.
+const FRESH: Duration = Duration::from_secs(60);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum View {
     Feed,
     RecentFeed,
@@ -114,12 +117,23 @@ impl View {
 }
 
 enum Tag {
-    List { view: View, request: u64, args: Vec<String>, unlock_attempted: bool },
+    List {
+        view: View,
+        request: u64,
+        args: Vec<String>,
+        unlock_attempted: bool,
+    },
+    /// Background read that only fills the section cache.
+    Prefetch(View),
     Text,
     ReloadChat(String),
     UpdateCheck,
     GroupsOpened(u64),
-    UnlockRetry { view: View, request: u64, args: Vec<String> },
+    UnlockRetry {
+        view: View,
+        request: u64,
+        args: Vec<String>,
+    },
     PostLoaded(u64),
     PostSent(u64),
     PostLiked(u64),
@@ -209,6 +223,11 @@ struct State {
     /// Author name -> profile URL, learned from post URLs as views load.
     /// Powers the "open on Facebook" link-outs (profiles, Messenger web).
     author_urls: HashMap<String, String>,
+    /// Last raw backend output per section, so switching back is instant.
+    cache: HashMap<View, (String, Instant)>,
+    prefetched: bool,
+    /// The list request refreshing a cached section the user is already reading.
+    background: Option<u64>,
 }
 
 struct RetryList {
@@ -345,6 +364,9 @@ fn run() {
         records: Vec::new(),
         attachments: Vec::new(),
         author_urls: HashMap::new(),
+        cache: HashMap::new(),
+        prefetched: false,
+        background: None,
     }));
     let ui = Ui {
         frame,
@@ -514,6 +536,20 @@ fn spawn_worker(
                 if *request != latest_list.load(Ordering::Relaxed) {
                     continue;
                 }
+            }
+            let read = matches!(job.tag, Tag::List { .. } | Tag::Prefetch(_))
+                && matches!(job.task, Task::Fb(_, None));
+            if read && fb.is_none() {
+                fb = Fb::discover();
+            }
+            if let (true, Some(fb), Task::Fb(args, _)) = (read, fb.clone(), &job.task) {
+                // The backend gives every command its own tab, so reads can run side by side.
+                let (args, tag, done) = (args.clone(), job.tag, done.clone());
+                thread::spawn(move || {
+                    let result = fb.run(&refs(&args));
+                    let _ = done.send(Done { tag, result });
+                });
+                continue;
             }
             let result = match job.task {
                 Task::InstallBackend => {
@@ -783,24 +819,62 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
 }
 
 fn load_view(ui: &Ui, view: View) {
+    let cached = ui.state.borrow().cache.get(&view).cloned();
+    if let Some((raw, at)) = &cached {
+        begin_list(ui, &view);
+        show_list(ui, &view, raw);
+        // The News feed pages forward on every load, so it waits for F5.
+        if view == View::Feed || at.elapsed() < FRESH {
+            return;
+        }
+    }
     if view == View::Groups {
         load_groups(ui);
-        return;
+    } else if let Some(args) = default_args(&view) {
+        load_args(ui, view, args);
     }
-    let args = match &view {
+    if cached.is_some() {
+        let mut state = ui.state.borrow_mut();
+        state.background = Some(state.list_request);
+    }
+}
+
+/// Read every main section in the background once, so first visits are instant too.
+fn prefetch(ui: &Ui) {
+    for view in [View::RecentFeed, View::Notifications, View::Friends, View::MyPosts, View::Chats] {
+        if let Some(args) = default_args(&view) {
+            let _ = ui.jobs.send(Job { task: Task::Fb(args, None), tag: Tag::Prefetch(view) });
+        }
+    }
+}
+
+fn cacheable(view: &View, args: &[String]) -> bool {
+    matches!(
+        view,
+        View::Feed
+            | View::RecentFeed
+            | View::Notifications
+            | View::Friends
+            | View::MyPosts
+            | View::Chats
+            | View::Groups
+    ) && !args.iter().any(|a| a == "--unread")
+}
+
+fn default_args(view: &View) -> Option<Vec<String>> {
+    Some(match view {
         View::Feed => feed_args(PAGE, false, true, true),
         View::RecentFeed => recent_feed_args(PAGE),
         View::Notifications => notifs_args(PAGE),
         View::Friends => friends_args(None, 100),
         View::MyPosts => posts_args("me", PAGE, true),
         View::Chats => chats_args(PAGE, false),
-        View::Groups | View::SearchResults => return,
+        View::Groups | View::SearchResults => return None,
         View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
         View::ProfileOf(who) => profile_args(who),
         View::ChatWith(name) => read_args(name, 50),
-    };
-    load_args(ui, view, args);
+    })
 }
 
 /// Groups load in two steps: open the groups home page in the backend's
@@ -870,6 +944,11 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
 /// Present the sign-in choice and start what the user picked. Returns
 /// whether a job was sent (setup callers load the feed when it was not).
 fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
+    {
+        let mut state = ui.state.borrow_mut();
+        state.cache.clear();
+        state.prefetched = false;
+    }
     match choose_sign_in(ui) {
         Some(SignIn::Install(kind)) => {
             ui.status(&format!("Installing {}…", kind.name()));
@@ -925,10 +1004,14 @@ fn install_browser_menu(ui: &Ui) {
 
 fn refresh(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
-    if view == View::Feed {
-        load_args(ui, view, feed_args(PAGE, true, true, true));
-    } else {
-        load_view(ui, view);
+    match view {
+        View::Feed => load_args(ui, view, feed_args(PAGE, true, true, true)),
+        View::Groups => load_groups(ui),
+        _ => {
+            if let Some(args) = default_args(&view) {
+                load_args(ui, view, args);
+            }
+        }
     }
 }
 
@@ -962,7 +1045,7 @@ fn display_for(view: &View, record: &Record) -> String {
         }
         View::Friends => {
             if record.fields.len() >= 3 {
-                format!("{} — {} mutual friends", record.field(0), record.field(2))
+                format!("{} — {}", record.field(0), record.field(2))
             } else {
                 record.raw.clone()
             }
@@ -1014,7 +1097,7 @@ fn details_for(view: &View, record: &Record) -> String {
             }
         }
         View::Friends => format!(
-            "Name: {}\nRef: {}\nMutual friends: {}",
+            "Name: {}\nRef: {}\n{}",
             record.field(0),
             record.field(1),
             record.field(2)
@@ -1091,85 +1174,102 @@ fn selected_post_ref(ui: &Ui) -> Option<String> {
     post_target(&ui.state.borrow().view, &record).map(str::to_owned)
 }
 
+/// Show a section's backend output in the Items list, updated in place so the
+/// selection and the screen reader's position survive.
+fn show_list(ui: &Ui, view: &View, raw: &str) -> bool {
+    let (records, body) = match parse_for(view, raw) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            ui.status("Could not read this section.");
+            show_error(&ui.frame, error, "BlindFB");
+            return false;
+        }
+    };
+    if matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)) {
+        let mut state = ui.state.borrow_mut();
+        for record in &records {
+            let author = record.field(1);
+            if !author.is_empty() {
+                if let Some(profile) = profile_url_from_post_url(record.field(0)) {
+                    state.author_urls.insert(author.to_owned(), profile);
+                }
+            }
+        }
+        drop(state);
+    }
+    let old_index = ui.items.get_selection();
+    let (old_labels, selected_key) = {
+        let state = ui.state.borrow();
+        let labels: Vec<_> =
+            state.records.iter().map(|r| display_for(&state.records_view, r)).collect();
+        let key = old_index
+            .and_then(|i| state.records.get(i as usize))
+            .map(|r| record_key(&state.records_view, r))
+            .filter(|k| !k.is_empty() && k != "-");
+        (labels, key)
+    };
+    let labels: Vec<_> = records.iter().map(|r| display_for(view, r)).collect();
+    let selected = selected_key
+        .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
+        .or_else(|| (!records.is_empty()).then_some(0));
+    {
+        let mut state = ui.state.borrow_mut();
+        state.records = records;
+        state.records_view = view.clone();
+    }
+    for (index, label) in labels.iter().enumerate() {
+        if index >= ui.items.get_count() as usize {
+            ui.items.append(label);
+        } else if old_labels.get(index) != Some(label) {
+            ui.items.set_string(index as u32, label);
+        }
+    }
+    while ui.items.get_count() as usize > labels.len() {
+        ui.items.delete(ui.items.get_count() - 1);
+    }
+    if let Some(selected) = selected {
+        if ui.items.get_selection() != Some(selected as u32) {
+            ui.items.set_selection(selected as u32, true);
+        }
+    }
+    if let Some(body) = body {
+        ui.details.set_value(&body);
+    } else if ui.items.get_count() > 0 {
+        show_details(ui, selected.unwrap_or(0));
+    } else {
+        ui.details.set_value("(nothing here)");
+    }
+    ui.status(&format!("{} — {} item(s)", view.title(), ui.items.get_count()));
+    true
+}
+
 fn apply_done(ui: &Ui, done: Done) {
     match done.tag {
         Tag::List { view, request, args, unlock_attempted } => {
-            if !current_list(ui, &view, request) {
-                return;
-            }
+            let current = current_list(ui, &view, request);
             match done.result {
                 Ok(raw) => {
-                    let (records, body) = match parse_for(&view, &raw) {
-                        Ok(parsed) => parsed,
-                        Err(error) => {
-                            ui.status("Could not read this section.");
-                            show_error(&ui.frame, error, "BlindFB");
-                            return;
-                        }
-                    };
-                    if matches!(
-                        view,
-                        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)
-                    ) {
-                        let mut state = ui.state.borrow_mut();
-                        for record in &records {
-                            let author = record.field(1);
-                            if !author.is_empty() {
-                                if let Some(profile) = profile_url_from_post_url(record.field(0)) {
-                                    state.author_urls.insert(author.to_owned(), profile);
-                                }
-                            }
-                        }
-                        drop(state);
+                    if cacheable(&view, &args) && parse_for(&view, &raw).is_ok() {
+                        ui.state
+                            .borrow_mut()
+                            .cache
+                            .insert(view.clone(), (raw.clone(), Instant::now()));
                     }
-                    let old_index = ui.items.get_selection();
-                    let (old_labels, selected_key) = {
-                        let state = ui.state.borrow();
-                        let labels: Vec<_> = state
-                            .records
-                            .iter()
-                            .map(|r| display_for(&state.records_view, r))
-                            .collect();
-                        let key = old_index
-                            .and_then(|i| state.records.get(i as usize))
-                            .map(|r| record_key(&state.records_view, r))
-                            .filter(|k| !k.is_empty() && k != "-");
-                        (labels, key)
-                    };
-                    let labels: Vec<_> = records.iter().map(|r| display_for(&view, r)).collect();
-                    let selected = selected_key
-                        .and_then(|key| records.iter().position(|r| record_key(&view, r) == key))
-                        .or_else(|| (!records.is_empty()).then_some(0));
+                    if !current {
+                        return;
+                    }
+                    if show_list(ui, &view, &raw)
+                        && view == View::Feed
+                        && !ui.state.borrow().prefetched
                     {
-                        let mut state = ui.state.borrow_mut();
-                        state.records = records;
-                        state.records_view = view.clone();
+                        ui.state.borrow_mut().prefetched = true;
+                        prefetch(ui);
                     }
-                    for (index, label) in labels.iter().enumerate() {
-                        if index >= ui.items.get_count() as usize {
-                            ui.items.append(label);
-                        } else if old_labels.get(index) != Some(label) {
-                            ui.items.set_string(index as u32, label);
-                        }
-                    }
-                    while ui.items.get_count() as usize > labels.len() {
-                        ui.items.delete(ui.items.get_count() - 1);
-                    }
-                    if let Some(selected) = selected {
-                        if ui.items.get_selection() != Some(selected as u32) {
-                            ui.items.set_selection(selected as u32, true);
-                        }
-                    }
-                    if let Some(body) = body {
-                        ui.details.set_value(&body);
-                    } else if ui.items.get_count() > 0 {
-                        show_details(ui, selected.unwrap_or(0));
-                    } else {
-                        ui.details.set_value("(nothing here)");
-                    }
-                    ui.status(&format!("{} — {} item(s)", view.title(), ui.items.get_count()));
                 }
                 Err(e) => {
+                    if !current {
+                        return;
+                    }
                     if matches!(view, View::Chats | View::ChatWith(_)) && needs_messenger_unlock(&e)
                     {
                         let mut state = ui.state.borrow_mut();
@@ -1191,9 +1291,31 @@ fn apply_done(ui: &Ui, done: Done) {
                         }
                         return;
                     }
+                    if ui.state.borrow().background == Some(request) {
+                        ui.status(&format!(
+                            "Could not update {}. Showing earlier results.",
+                            view.title()
+                        ));
+                        return;
+                    }
                     ui.status("Error");
                     show_error(&ui.frame, &e, "BlindFB");
                 }
+            }
+        }
+        Tag::Prefetch(view) => {
+            let Ok(raw) = done.result else { return };
+            if parse_for(&view, &raw).is_err() {
+                return;
+            }
+            ui.state.borrow_mut().cache.insert(view.clone(), (raw.clone(), Instant::now()));
+            // The user opened this section before its prefetch finished: show it now.
+            let waiting = {
+                let state = ui.state.borrow();
+                state.view == view && state.records_view != view
+            };
+            if waiting {
+                show_list(ui, &view, &raw);
             }
         }
         Tag::PostLoaded(session) => {

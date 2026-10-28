@@ -108,6 +108,12 @@ item, an actions row, and a message compose row for chats. Menus mirror every
 action with keyboard shortcuts: Ctrl+1…7 switch views, Enter opens the
 selected item, F5 refreshes, Ctrl+N writes a post, Ctrl+F searches.
 
+Facebook is read live, so a section's first load takes several seconds.
+Once the News feed is up, BlindFB loads the other main sections in the
+background, so switching sections is instant. A section you return to is
+shown at once and quietly refreshed if it is over a minute old; the News
+feed keeps your place until you press F5.
+
 The lists follow the quiet-list design rule (from
 [quiet-list](https://github.com/trypsynth/quiet-list)): rows are plain
 native list rows, refreshed in place, so a screen reader is not spammed with
