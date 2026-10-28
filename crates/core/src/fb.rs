@@ -26,11 +26,7 @@ impl Record {
     /// display-only rows (ads and suggestions without a permalink yet).
     pub fn refr(&self) -> Option<&str> {
         let first = self.field(0).trim();
-        if first.is_empty() || first == "-" {
-            None
-        } else {
-            Some(first)
-        }
+        if first.is_empty() || first == "-" { None } else { Some(first) }
     }
 }
 
@@ -44,6 +40,134 @@ pub fn parse_records(output: &str) -> Vec<Record> {
             raw: line.to_owned(),
         })
         .collect()
+}
+
+/// Feed rows (`ref, author, time, counts, text…`) without Facebook's badge
+/// text in the author, posts repeated by the feed scroller, or text the
+/// page rendered twice back to back.
+pub fn parse_feed(output: &str) -> Vec<Record> {
+    const NOISE: [&str; 7] = [
+        "Online status indicator",
+        "Active",
+        "Verified account",
+        "Suggested for you",
+        "Shared with Public",
+        "Follow",
+        "View more comments",
+    ];
+    let squash = |s: &str| s.split_whitespace().collect::<String>();
+    let mut seen = std::collections::HashSet::new();
+    let mut rows = Vec::new();
+    for mut record in parse_records(output) {
+        if record.fields.len() >= 5 {
+            let mut text = record.fields[4..].join(" ");
+            // Text repeated back to back: keep the first half.
+            let flat = squash(&text);
+            let half = flat.len() / 2;
+            if half > 0 && flat.is_char_boundary(half) && flat[..half] == flat[half..] {
+                let mut kept = 0;
+                let cut = text
+                    .char_indices()
+                    .find(|(_, c)| {
+                        if !c.is_whitespace() {
+                            kept += c.len_utf8();
+                        }
+                        kept > half
+                    })
+                    .map_or(text.len(), |(i, _)| i);
+                text = text[..cut].trim_end().to_owned();
+            }
+            let mut author = String::new();
+            let mut joined = true;
+            let mut parts: Vec<&str> = Vec::new();
+            for part in record.fields[1].split(" / ").map(str::trim) {
+                let noise = part.is_empty()
+                    || NOISE.contains(&part)
+                    || part.bytes().all(|b| b.is_ascii_digit())
+                    || (part.len() > 30 && text.contains(part))
+                    || parts.contains(&part);
+                if noise {
+                    continue;
+                }
+                parts.push(part);
+                if matches!(part, "and" | "follows" | "is with" | "is in" | "is at") {
+                    author.push(' ');
+                    author.push_str(part);
+                    joined = true;
+                } else {
+                    author.push_str(if author.is_empty() {
+                        ""
+                    } else if joined {
+                        " "
+                    } else {
+                        " / "
+                    });
+                    author.push_str(part);
+                    joined = false;
+                }
+            }
+            record.fields.truncate(4);
+            record.fields[1] = author;
+            record.fields.push(text);
+            record.raw = record.fields.join("\t");
+        }
+        // The same post can come back under different photo links, so text wins over the link.
+        let text = squash(record.field(4).trim_end_matches("… See more"));
+        let key = if text.is_empty() {
+            record.raw.clone()
+        } else {
+            format!("{}\t{text}", record.field(1))
+        };
+        if seen.insert(key) {
+            rows.push(record);
+        }
+    }
+    rows
+}
+
+/// Keep notification post URLs instead of replacing them with daemon-local references.
+pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
+    let value: serde_json::Value = serde_json::from_str(output).map_err(|_| {
+        "The backend returned unreadable notifications. Refresh to retry.".to_owned()
+    })?;
+    if let Some(error) = value["err"].as_str() {
+        return Err(error.to_owned());
+    }
+    let rows = value["rows"].as_array().ok_or("The backend returned no notification list")?;
+    rows.iter()
+        .map(|row| {
+            let cells = row
+                .as_array()
+                .filter(|cells| cells.len() == 4)
+                .ok_or("The backend returned a malformed notification")?;
+            let mut fields = Vec::new();
+            for cell in &cells[..3] {
+                fields.push(
+                    cell.as_str()
+                        .ok_or("The backend returned an unreadable notification field")?
+                        .to_owned(),
+                );
+            }
+            fields.push(
+                cells[3]["v"]
+                    .as_str()
+                    .ok_or("This notification has no Facebook target")?
+                    .to_owned(),
+            );
+            Ok(Record { raw: fields.join("\t"), fields })
+        })
+        .collect()
+}
+
+pub fn recent_feed_args(count: u32) -> Vec<String> {
+    vec![
+        "posts".into(),
+        "https://www.facebook.com/?filter=all&sk=h_chr".into(),
+        "-n".into(),
+        count.to_string(),
+        "--full".into(),
+        "--urls".into(),
+    ]
 }
 
 /// Locates and runs the `fb` binary.
@@ -111,7 +235,8 @@ impl Fb {
             crate::engine::endpoint()
         } else {
             crate::browsers::fb_browser_endpoint()
-        }.ok_or_else(|| "the backend browser is not running".to_owned())
+        }
+        .ok_or_else(|| "the backend browser is not running".to_owned())
     }
 
     /// Run `fb` with `args` and return stdout. On non-zero exit the error is
@@ -121,7 +246,8 @@ impl Fb {
         if self.engine.is_some() && args == ["login", "--visible"] {
             return self.login_visible();
         }
-        let output = self.command(args)?
+        let output = self
+            .command(args)?
             .args(args)
             .output()
             .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
@@ -163,8 +289,16 @@ impl Fb {
         use crate::browsers::cdp_call;
         // Revoked cookies must not satisfy status before the user signs in again.
         cdp_call(endpoint, "Storage.clearCookies", &serde_json::json!({}))?;
-        let target = cdp_call(endpoint, "Target.createTarget", &serde_json::json!({"url": "https://www.facebook.com/"}))?;
-        cdp_call(endpoint, "Target.activateTarget", &serde_json::json!({"targetId": target["targetId"]}))?;
+        let target = cdp_call(
+            endpoint,
+            "Target.createTarget",
+            &serde_json::json!({"url": "https://www.facebook.com/"}),
+        )?;
+        cdp_call(
+            endpoint,
+            "Target.activateTarget",
+            &serde_json::json!({"targetId": target["targetId"]}),
+        )?;
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(900);
         let mut last_error = String::new();
         while std::time::Instant::now() < deadline {
@@ -184,13 +318,16 @@ impl Fb {
             }
             std::thread::sleep(std::time::Duration::from_secs(3));
         }
-        Err(format!("Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {last_error}"))
+        Err(format!(
+            "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {last_error}"
+        ))
     }
 
     /// Run `fb` feeding `input` on stdin (used for `unlock -`, so a Messenger
     /// PIN never appears in a process list).
     pub fn run_stdin(&self, args: &[&str], input: &str) -> Result<String, String> {
-        let mut child = self.command(args)?
+        let mut child = self
+            .command(args)?
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -213,11 +350,7 @@ fn collect(output: std::process::Output) -> Result<String, String> {
         Ok(stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = if stderr.trim().is_empty() {
-            stdout.trim()
-        } else {
-            stderr.trim()
-        };
+        let message = if stderr.trim().is_empty() { stdout.trim() } else { stderr.trim() };
         Err(if message.is_empty() {
             format!("fb exited with {}", output.status)
         } else {
@@ -258,7 +391,13 @@ pub fn feed_args(count: u32, refresh: bool, full: bool, urls: bool) -> Vec<Strin
 }
 
 pub fn posts_args(who: &str, count: u32, urls: bool) -> Vec<String> {
-    let mut args = vec!["posts".to_owned(), who.to_owned(), "-n".to_owned(), count.to_string()];
+    let mut args = vec![
+        "posts".to_owned(),
+        who.to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--full".to_owned(),
+    ];
     if urls {
         args.push("--urls".to_owned());
     }
@@ -295,7 +434,11 @@ pub fn search_args(query: &str, kind: Option<&str>, count: u32) -> Vec<String> {
 }
 
 pub fn notifs_args(count: u32) -> Vec<String> {
-    vec!["notifs".to_owned(), "-n".to_owned(), count.to_string()]
+    vec![
+        "eval".to_owned(),
+        "https://www.facebook.com/notifications/".to_owned(),
+        format!("window.__fb.notifs({count}).then(JSON.stringify)"),
+    ]
 }
 
 pub fn chats_args(count: u32, unread_only: bool) -> Vec<String> {
@@ -433,29 +576,18 @@ pub const GROUPS_HOME: &str = "https://www.facebook.com/groups/";
 const GROUPS_JS: &str = "JSON.stringify([...document.querySelectorAll('a[href*=\"/groups/\"]')].map(a=>[(a.textContent||'').trim(),a.getAttribute('href')]).filter(([t,h])=>t&&h&&/^\\/groups\\/[^\\/?#]+\\/?$/.test(h.split(/[?#]/)[0])&&!/^\\/groups\\/(feed|discover|joins|create|search)/.test(h)).filter((v,i,a)=>a.findIndex(x=>x[1].split(/[?#]/)[0]===v[1].split(/[?#]/)[0])===i).slice(0,120))";
 
 pub fn groups_open_args() -> Vec<String> {
-    vec![
-        "page".to_owned(),
-        GROUPS_PAGE_NAME.to_owned(),
-        "open".to_owned(),
-        GROUPS_HOME.to_owned(),
-    ]
+    vec!["page".to_owned(), GROUPS_PAGE_NAME.to_owned(), "open".to_owned(), GROUPS_HOME.to_owned()]
 }
 
 pub fn groups_eval_args() -> Vec<String> {
-    vec![
-        "page".to_owned(),
-        GROUPS_PAGE_NAME.to_owned(),
-        "eval".to_owned(),
-        GROUPS_JS.to_owned(),
-    ]
+    vec!["page".to_owned(), GROUPS_PAGE_NAME.to_owned(), "eval".to_owned(), GROUPS_JS.to_owned()]
 }
 
 /// Parse the JSON `[[name, href], ...]` the groups eval returns into
 /// records with fields [name, group URL].
 pub fn parse_groups_json(output: &str) -> Vec<Record> {
     let text = output.trim();
-    let Ok(serde_json::Value::Array(rows)) = serde_json::from_str::<serde_json::Value>(text)
-    else {
+    let Ok(serde_json::Value::Array(rows)) = serde_json::from_str::<serde_json::Value>(text) else {
         return Vec::new();
     };
     rows.iter()
@@ -475,6 +607,66 @@ pub fn parse_groups_json(output: &str) -> Vec<Record> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn notifications_preserve_post_urls_in_the_fourth_field() {
+        let raw = r#"{"rows":[["1h","!","Someone commented",{"r":"p","v":"https://www.facebook.com/permalink.php?story_fbid=123&id=456"}]]}"#;
+        let records = parse_notifications(raw).unwrap();
+        assert_eq!(records[0].field(0), "1h");
+        assert_eq!(
+            records[0].field(3),
+            "https://www.facebook.com/permalink.php?story_fbid=123&id=456"
+        );
+        assert!(parse_notifications(r#"{"err":"notifications unavailable"}"#).is_err());
+        assert!(parse_notifications(r#"{"rows":[["1h","!","body"]]}"#).is_err());
+    }
+
+    #[test]
+    fn feeds_requests_full_chronological_facebook_view() {
+        assert_eq!(
+            recent_feed_args(20),
+            [
+                "posts",
+                "https://www.facebook.com/?filter=all&sk=h_chr",
+                "-n",
+                "20",
+                "--full",
+                "--urls"
+            ]
+        );
+        assert!(notifs_args(20).iter().any(|s| s == "window.__fb.notifs(20).then(JSON.stringify)"));
+    }
+
+    #[test]
+    fn feed_rows_drop_badges_repeats_and_doubled_text() {
+        let out = [
+            "-\tOnline status indicator / Active / Kawaling Pinoy / Verified account / Suggested for you\t\t9/1/1\tSkip takeout!",
+            "-\tSteve Barclay / Shared with Public / Will David Eby go down as our FAFO premier? / 18 / View more comments / Steve Barclay\t3d\t1/0/0\tWill David Eby go down as our FAFO premier?",
+            "-\tJohanne Foulds / follows / Scotiabank\t\t0/0/0\tSaving? … See more",
+            "-\tAI group / Abdul\t\t0/0/0\tWhat fails? Let it.What fails? Let it.",
+            "-\tC\t\t1/2/0\tI feel bad. Crying helps.",
+            "-\tC\t\t1/2/0\tI feel bad.Crying helps.",
+            "-\tOnline status indicator / Active / Kawaling Pinoy / Verified account / Suggested for you\t\t9/1/1\tSkip takeout!",
+            "/photo/?fbid=1&set=a.9\tJeremy Smith\t\t0/0/0\tNormal people rearrange eggs",
+            "/photo/?fbid=2&set=a.9\tJeremy Smith\t\t0/0/0\tNormal people rearrange eggs",
+            "-\tEvan / is in / Vancouver\t\t0/0/0\tRadio Free Roscoe",
+        ]
+        .join("\n");
+        let rows = parse_feed(&out);
+        let summary: Vec<(&str, &str)> = rows.iter().map(|r| (r.field(1), r.field(4))).collect();
+        assert_eq!(
+            summary,
+            [
+                ("Kawaling Pinoy", "Skip takeout!"),
+                ("Steve Barclay", "Will David Eby go down as our FAFO premier?"),
+                ("Johanne Foulds follows Scotiabank", "Saving? … See more"),
+                ("AI group / Abdul", "What fails? Let it."),
+                ("C", "I feel bad. Crying helps."),
+                ("Jeremy Smith", "Normal people rearrange eggs"),
+                ("Evan is in Vancouver", "Radio Free Roscoe"),
+            ]
+        );
+    }
 
     #[test]
     fn parses_feed_lines_and_refs() {
@@ -521,7 +713,8 @@ mod tests {
 
     #[test]
     fn parses_groups_json() {
-        let out = r#"[["Hikers","/groups/111"],["Bakers","https://www.facebook.com/groups/bakers"]]"#;
+        let out =
+            r#"[["Hikers","/groups/111"],["Bakers","https://www.facebook.com/groups/bakers"]]"#;
         let records = parse_groups_json(out);
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].field(1), "https://www.facebook.com/groups/111");

@@ -13,10 +13,20 @@ everything and presents its output in a keyboard-first window.
 
 ## What you can do
 
-- Browse your **news feed** (with refresh-ahead scrolling), read a post's
-  full text and comments, react (like, love, care, haha, wow, sad, angry),
-  comment, and open the author's profile or posts.
-- Browse **notifications**.
+- Browse your **news feed** (with refresh-ahead scrolling), or **Feeds
+  (most recent)** with Ctrl+7, with each post's full text in its row. React
+  (like, love, care, haha, wow, sad, angry), comment, and open the author's
+  profile or posts.
+- **Post reader**: press Enter on a post to open it in a native dialog with
+  the full post, its comments and replies, and a comment box ("Write a
+  comment", Alt+W; Ctrl+Enter sends). Applications or Shift+F10 on a comment
+  replies to that exact comment, likes it, copies it or opens it on the web;
+  on the post it comments, reacts, shares, copies the text or link, or opens
+  it on the web. **Share** (Alt+H) uses Facebook's own share dialog, tells
+  you the audience first, and takes optional text.
+- Every item in the Items list has a context menu (Applications or
+  Shift+F10) with the actions that fit it.
+- Browse **notifications** and open the posts they point to.
 - Browse and search your **friends list**; open any friend's profile, read
   their posts, or jump straight into a Messenger chat with them. (Adding and
   removing friends is not something the `fb` backend can do — the Post menu
@@ -49,6 +59,11 @@ Messenger (web)" takes you to that very conversation in your browser, where
 the call buttons are. The same pattern covers adding/removing friends
 (profile on the web) and posting into a group (the group's web page).
 Everything else the backend exposes is in the app.
+
+Facebook hides the link of many feed posts (often friends' text posts and
+group posts), and the backend cannot recover it yet, so BlindFB cannot open,
+react to or comment on those rows; it says so when you try. Reels and photo
+albums open in your browser instead of the reader.
 
 ## Requirements
 
@@ -87,11 +102,11 @@ Everything else the backend exposes is in the app.
 
 ## Layout of the window
 
-A Views list (News feed, Notifications, Friends, My posts, Chats), an Items
-list for the current view, a Details pane for the selected item, an actions
-row, and a message compose row for chats. Menus mirror every action with
-keyboard shortcuts: Ctrl+1…6 switch views, F5 refreshes, Ctrl+N writes a
-post, Ctrl+F searches.
+A Views list (News feed, Notifications, Friends, My posts, Chats, Groups,
+Feeds), an Items list for the current view, a Details pane for the selected
+item, an actions row, and a message compose row for chats. Menus mirror every
+action with keyboard shortcuts: Ctrl+1…7 switch views, Enter opens the
+selected item, F5 refreshes, Ctrl+N writes a post, Ctrl+F searches.
 
 The lists follow the quiet-list design rule (from
 [quiet-list](https://github.com/trypsynth/quiet-list)): rows are plain
