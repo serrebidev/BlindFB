@@ -801,7 +801,7 @@ fn download_and_run(url: &str, file_name: &str) -> Result<String, String> {
     Command::new(&path)
         .stdin(Stdio::null())
         .spawn()
-        .map(|_| format!("installer downloaded and started — follow its prompts, then try again"))
+        .map(|_| "installer downloaded and started — follow its prompts, then try again".to_owned())
         .map_err(|e| format!("cannot start the installer: {e}"))
 }
 
