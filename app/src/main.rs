@@ -1610,9 +1610,9 @@ fn apply_done(ui: &Ui, done: Done) {
             Err(error) => show_error(&ui.frame, error, "Browser install"),
         },
         Tag::GroupsOpened(request) => {
-            if current_list(ui, &View::Groups, request) {
+            if ui.latest_list.lock().unwrap().current(&View::Groups, request) {
                 let args = groups_eval_args();
-                ui.send(Job {
+                let _ = ui.jobs.send(Job {
                     task: Task::Fb(args.clone(), None),
                     tag: Tag::List { view: View::Groups, request, args, unlock_attempted: false, append: false },
                 });
