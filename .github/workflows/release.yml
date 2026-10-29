@@ -49,6 +49,7 @@ jobs:
           node-version: 22
 
       - name: Validate release
+        shell: bash
         run: |
           cargo clippy --locked --workspace --all-targets -- -D warnings
           cargo test --locked --workspace

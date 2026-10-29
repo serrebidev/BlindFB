@@ -4,7 +4,7 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## v0.6.8 - 2026-10-29
+## v0.6.9 - 2026-10-29
 
 - Windows playback uses automatically installed mpv and bundled codecs, with native NVDA controls and no mediaCtrl Tab stop.
 - Enter on the final Load more list item appends the next batch and selects the first new item. Feeds request 100 items; reels request 20.
