@@ -11,6 +11,8 @@ pub mod browsers;
 mod engine;
 pub mod fb;
 pub mod http;
+pub mod media;
 pub mod posts;
+pub mod reels;
 
 pub use fb::{Fb, Record, parse_groups_json, parse_records};

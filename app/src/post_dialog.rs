@@ -1,12 +1,14 @@
 //! Native post reader. The modal is entered by item activation, never the result timer.
 use super::{Job, REACTIONS, Tag, Task, Ui, open_url};
 use blindfb_core::fb::react_args;
-use blindfb_core::posts::{Comment, parse_detail};
+use blindfb_core::posts::{Comment, Link, parse_detail};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 use wxdragon::keycode::{WXK_NUMPAD_ENTER, WXK_RETURN};
 use wxdragon::prelude::*;
+use wxdragon::widgets::media_ctrl::SeekMode;
 
 const ID_REPLY: i32 = 12101;
 const ID_COPY: i32 = 12102;
@@ -28,6 +30,14 @@ pub(super) struct PostReader {
     url: String,
     post: TextCtrl,
     comments: ListBox,
+    links: ListBox,
+    open_link: Button,
+    media: MediaCtrl,
+    play: Button,
+    stop: Button,
+    back: Button,
+    forward: Button,
+    volume: Slider,
     composer_label: StaticText,
     composer: TextCtrl,
     status: TextCtrl,
@@ -38,17 +48,49 @@ pub(super) struct PostReader {
     state: Rc<RefCell<ReaderState>>,
 }
 
+struct ReelPlayback {
+    stream: Option<String>,
+    preparing: bool,
+}
+
 struct ReaderState {
     comments: Vec<Comment>,
+    links: Vec<Link>,
+    video: Option<String>,
+    video_requested: bool,
+    video_request: u64,
+    media_ready: bool,
+    media_loading: Option<Instant>,
     parent: Option<String>,
     busy: bool,
     loaded: bool,
     /// Audience Facebook's share dialog reported; the reader's timer asks next.
     share_audience: Option<String>,
     share_requested: bool,
+    action_requested: Option<i32>,
+    playback: Option<ReelPlayback>,
 }
 
 impl ReaderState {
+    fn take_cached_stream(&mut self) -> Option<String> {
+        let stream = self.playback.as_mut()?.stream.take()?;
+        self.playback = None;
+        Some(stream)
+    }
+
+    fn take_autoplay_request(&mut self) -> bool {
+        if self.loaded && !self.busy && self.playback.as_ref().is_some_and(|request| !request.preparing && request.stream.is_none()) {
+            self.playback = None;
+            true
+        } else { false }
+    }
+    fn take_action_request(&mut self) -> Option<i32> {
+        if self.loaded && !self.busy { self.action_requested.take() } else { None }
+    }
+    fn take_video_request(&mut self, request: u64) -> bool {
+        request == self.video_request && std::mem::take(&mut self.video_requested)
+    }
+
     fn take_share_request(&mut self) -> bool {
         self.loaded && !self.busy && std::mem::take(&mut self.share_requested)
     }
@@ -62,11 +104,107 @@ impl PostReader {
 
     fn controls(&self) {
         let state = self.state.borrow();
+        self.play.enable(
+            state.video.is_some() && state.playback.is_none() && !state.video_requested && state.media_loading.is_none(),
+        );
+        self.stop
+            .enable(state.playback.is_some() || state.video_requested || state.media_loading.is_some() || state.media_ready);
+        self.back.enable(state.media_ready);
+        self.forward.enable(state.media_ready);
+        self.volume.enable(state.video.is_some());
+        self.open_link.enable(self.links.get_selection().is_some());
         self.send.enable(state.loaded && !state.busy);
         self.share.enable(state.loaded && !state.busy);
         self.refresh.enable(!state.busy);
         self.cancel.enable(state.parent.is_some() && !state.busy);
         self.composer.set_editable(!state.busy);
+    }
+
+    fn open_link(&self) {
+        if let Some(link) = self.links.get_selection().and_then(|index| {
+            self.state.borrow().links.get(index as usize).map(|link| link.url.clone())
+        }) {
+            open_url(&link);
+        }
+    }
+
+    fn play_label(&self, playing: bool) {
+        let label = if playing { "&Pause video" } else { "&Play video" };
+        self.play.set_label(label);
+        self.play.set_name(&label.replace('&', ""));
+    }
+
+    fn play(&self, ui: &Ui) {
+        let mut state = self.state.borrow_mut();
+        if state.video_requested || state.media_loading.is_some() {
+            return;
+        }
+        if state.media_ready {
+            drop(state);
+            let (ok, message) = if self.media.get_state() == MediaState::Playing {
+                (self.media.pause(), "Video paused.")
+            } else {
+                (self.media.play(), "Playing video.")
+            };
+            if !ok {
+                self.state.borrow_mut().media_ready = false;
+            }
+            self.message(ui, if ok { message } else { "Playback failed. Press Play to retry." });
+            self.play_label(ok && self.media.get_state() == MediaState::Playing);
+            self.controls();
+            return;
+        }
+        let Some(target) = state.video.clone() else { return };
+        state.video_requested = true;
+        state.video_request = state.video_request.wrapping_add(1);
+        let request = state.video_request;
+        drop(state);
+        self.controls();
+        ui.send(Job {
+            task: Task::PostVideo { page: self.page.clone(), target },
+            tag: Tag::PostVideo(self.session, request),
+        });
+        self.message(ui, "Preparing video…");
+    }
+
+    fn load_stream(&self, ui: &Ui, url: &str) {
+        self.state.borrow_mut().media_loading = Some(Instant::now());
+        self.message(ui, "Loading video…");
+        if !self.media.load_uri(url) {
+            self.state.borrow_mut().media_loading = None;
+            self.message(ui, "Could not load video. Press Play to retry.");
+        }
+        self.controls();
+    }
+
+    fn stop(&self, ui: &Ui) {
+        let was_ready = self.state.borrow().media_ready;
+        let stopped = self.media.stop();
+        let mut state = self.state.borrow_mut();
+        state.video_request = state.video_request.wrapping_add(1);
+        state.video_requested = false;
+        state.playback = None;
+        state.media_loading = None;
+        drop(state);
+        self.play_label(!stopped && self.media.get_state() == MediaState::Playing);
+        self.controls();
+        self.message(
+            ui,
+            if was_ready && !stopped {
+                "Could not stop video. Try Pause or close the reader."
+            } else {
+                "Video stopped."
+            },
+        );
+    }
+
+    fn seek(&self, ui: &Ui, offset: i64) {
+        let position = seek_position(self.media.tell(), self.media.length(), offset);
+        if self.media.seek(position, SeekMode::FromStart) < 0 {
+            self.message(ui, "This video could not seek.");
+        } else {
+            self.message(ui, &format!("Video position: {} seconds.", position / 1000));
+        }
     }
 
     fn cancel_reply(&self) {
@@ -147,6 +285,18 @@ impl PostReader {
             ID_WEB_POST => open_url(&self.url),
             _ if (ID_REACT..ID_REACT + REACTIONS.len() as i32).contains(&action) => {
                 let reaction = REACTIONS[(action - ID_REACT) as usize];
+                if is_video_page(&self.url) {
+                    self.start(
+                        ui,
+                        Task::PostReelReact {
+                            page: self.page.clone(),
+                            reaction: reaction.to_owned(),
+                        },
+                        Tag::PostReelReacted(self.session),
+                        "Reacting…",
+                    );
+                    return;
+                }
                 ui.send(Job {
                     task: Task::Fb(react_args(&self.url, reaction), None),
                     tag: Tag::PostNote(self.session),
@@ -237,10 +387,29 @@ impl PostReader {
 }
 
 pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
+    open_requested(ui, target, share_requested, None, None);
+}
+
+pub(super) fn open_reel(ui: &Ui, target: &str, stream: Option<String>, preparing: bool) {
+    open_requested(ui, target, false, None, Some(ReelPlayback {stream, preparing}));
+}
+
+pub(super) fn react(ui: &Ui, target: &str, reaction: &str) {
+    if let Some(index) = REACTIONS.iter().position(|kind| *kind == reaction) {
+        open_requested(ui, target, false, Some(ID_REACT + index as i32), None);
+    }
+}
+
+pub(super) fn comment(ui: &Ui, target: &str) {
+    open_requested(ui, target, false, Some(ID_POST_COMMENT), None);
+}
+
+fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested: Option<i32>, playback: Option<ReelPlayback>) {
     if ui.post_reader.borrow().is_some() {
         return;
     }
     let selection = ui.items.get_selection();
+    let autoplay = playback.is_some();
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let dialog = Dialog::builder(&ui.frame, "Post and comments")
         .with_size(900, 700)
@@ -253,6 +422,34 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
         .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
         .build();
     post.set_name("Full post. Applications or Shift+F10 for comment, react, share and copy");
+    let links_label = StaticText::builder(&dialog).with_label("Post lin&ks").build();
+    let links = ListBox::builder(&dialog).build();
+    links.set_name("Post links. Enter opens the selected link in your browser");
+    let open_link = Button::builder(&dialog).with_label("&Open link").build();
+    let media_label = StaticText::builder(&dialog).with_label("Video player").build();
+    let media_builder = MediaCtrl::builder(&dialog).with_size(Size::new(320, 120));
+    // WMP handles network MP4 asynchronously; DirectShow may block while opening it.
+    #[cfg(target_os = "windows")]
+    let media_builder = media_builder.with_backend_name(MediaCtrl::BACKEND_WMP10);
+    let media = media_builder.build();
+    media.set_name("Video display");
+    // Keep embedded ActiveX UI out of Tab order; use the native transport buttons below.
+    media.show_player_controls(MediaCtrlPlayerControls::None);
+    media.disable_focus_from_keyboard();
+    media.set_can_focus(false);
+    let player_buttons = BoxSizer::builder(Orientation::Horizontal).build();
+    let play = Button::builder(&dialog).with_label("&Play video").build();
+    let stop = Button::builder(&dialog).with_label("S&top video").build();
+    let back = Button::builder(&dialog).with_label("Back 10 seconds").build();
+    let forward = Button::builder(&dialog).with_label("Forward 10 seconds").build();
+    for button in [&play, &stop, &back, &forward] {
+        button.set_name(&button.get_label());
+        player_buttons.add(button, 0, SizerFlag::All, 4);
+    }
+    let volume_label = StaticText::builder(&dialog).with_label("Video &volume (percent)").build();
+    let volume =
+        Slider::builder(&dialog).with_value(100).with_min_value(0).with_max_value(100).build();
+    volume.set_name("Video volume, percent");
     let comments_label = StaticText::builder(&dialog).with_label("&Comments").build();
     let comments = ListBox::builder(&dialog).build();
     comments
@@ -263,6 +460,7 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     let status_label = StaticText::builder(&dialog).with_label("Reader status").build();
     let status = TextCtrl::builder(&dialog).with_style(TextCtrlStyle::ReadOnly).build();
     status.set_name("Reader status");
+    status.enable_focus_from_keyboard();
     let buttons = BoxSizer::builder(Orientation::Horizontal).build();
     let send = Button::builder(&dialog).with_label("&Send (Ctrl+Enter)").build();
     let share = Button::builder(&dialog).with_label("S&hare…").build();
@@ -275,6 +473,14 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     }
     root.add(&post_label, 0, SizerFlag::All, 4);
     root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&links_label, 0, SizerFlag::All, 4);
+    root.add(&links, 1, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&open_link, 0, SizerFlag::All, 4);
+    root.add(&media_label, 0, SizerFlag::All, 4);
+    root.add(&media, 0, SizerFlag::All, 4);
+    root.add_sizer(&player_buttons, 0, SizerFlag::Expand, 0);
+    root.add(&volume_label, 0, SizerFlag::All, 4);
+    root.add(&volume, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&comments_label, 0, SizerFlag::All, 4);
     root.add(&comments, 3, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&composer_label, 0, SizerFlag::All, 4);
@@ -290,6 +496,14 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
         url: target.to_owned(),
         post,
         comments,
+        links,
+        open_link,
+        media,
+        play,
+        stop,
+        back,
+        forward,
+        volume,
         composer_label,
         composer,
         status,
@@ -299,15 +513,73 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
         cancel,
         state: Rc::new(RefCell::new(ReaderState {
             comments: Vec::new(),
+            links: Vec::new(),
+            video: autoplay.then(|| target.to_owned()),
+            video_requested: false,
+            video_request: 0,
+            media_ready: false,
+            media_loading: None,
             parent: None,
             busy: true,
             loaded: false,
             share_audience: None,
             share_requested,
+            action_requested,
+            playback,
         })),
     };
     reader.controls();
     *ui.post_reader.borrow_mut() = Some(reader.clone());
+    let r = reader.clone();
+    open_link.on_click(move |_| r.open_link());
+    let r = reader.clone();
+    links.on_selection_changed(move |_| r.controls());
+    let r = reader.clone();
+    dialog.on_char_hook(move |event| {
+        if let WindowEventData::Keyboard(key) = &event {
+            if r.links.has_focus()
+                && matches!(key.get_key_code(), Some(WXK_RETURN | WXK_NUMPAD_ENTER))
+            {
+                event.skip(false);
+                r.open_link();
+                return;
+            }
+        }
+        event.skip(true);
+    });
+    let (r, u) = (reader.clone(), ui.clone());
+    play.on_click(move |_| r.play(&u));
+    let (r, u) = (reader.clone(), ui.clone());
+    stop.on_click(move |_| r.stop(&u));
+    let (r, u) = (reader.clone(), ui.clone());
+    back.on_click(move |_| r.seek(&u, -10_000));
+    let (r, u) = (reader.clone(), ui.clone());
+    forward.on_click(move |_| r.seek(&u, 10_000));
+    let (r, u) = (reader.clone(), ui.clone());
+    volume.on_slider(move |_| {
+        if r.state.borrow().media_ready && !r.media.set_volume(r.volume.value() as f64 / 100.0) {
+            r.message(&u, "Could not set video volume.");
+        }
+    });
+    let (r, u) = (reader.clone(), ui.clone());
+    media.on_loaded(move |_| {
+        if r.state.borrow_mut().media_loading.take().is_none() {
+            return;
+        }
+        r.media.set_volume(r.volume.value() as f64 / 100.0);
+        let ok = r.media.play();
+        r.state.borrow_mut().media_ready = ok;
+        r.play_label(ok);
+        r.controls();
+        r.message(&u, if ok { "Playing video." } else { "Playback failed. Press Play to retry." });
+    });
+    let r = reader.clone();
+    media.on_state_changed(move |_| r.play_label(r.media.get_state() == MediaState::Playing));
+    let (r, u) = (reader.clone(), ui.clone());
+    media.on_finished(move |_| {
+        r.play_label(false);
+        r.message(&u, "Video finished.");
+    });
     let (r, u) = (reader.clone(), ui.clone());
     send.on_click(move |_| r.send(&u));
     let (r, u) = (reader.clone(), ui.clone());
@@ -328,16 +600,21 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     });
     let (r, u) = (reader.clone(), ui.clone());
     refresh.on_click(move |_| {
-        {
+        let loaded = {
             let mut state = r.state.borrow_mut();
             if state.busy {
                 return;
             }
             state.busy = true;
-        }
+            state.loaded
+        };
         r.controls();
         u.send(Job {
-            task: Task::PostRefresh { page: r.page.clone() },
+            task: if loaded {
+                Task::PostRefresh { page: r.page.clone() }
+            } else {
+                Task::PostLoad { page: r.page.clone(), target: r.url.clone() }
+            },
             tag: Tag::PostLoaded(r.session),
         });
         r.message(&u, "Refreshing comments…");
@@ -421,9 +698,31 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     let share_timer = Timer::new(&dialog);
     let (r, u) = (reader.clone(), ui.clone());
     share_timer.on_tick(move |_| {
+        let cached = r.state.borrow_mut().take_cached_stream();
+        if let Some(stream) = cached {
+            r.load_stream(&u, &stream);
+        } else {
+            let resolve = r.state.borrow_mut().take_autoplay_request();
+            if resolve { r.play(&u); }
+        }
+        let timed_out = r
+            .state
+            .borrow()
+            .media_loading
+            .is_some_and(|start| start.elapsed() > Duration::from_secs(30));
+        if timed_out {
+            r.media.stop();
+            r.state.borrow_mut().media_loading = None;
+            r.controls();
+            r.message(&u, "Video loading timed out. Press Play to retry.");
+        }
         let requested = r.state.borrow_mut().take_share_request();
         if requested {
             r.share_start(&u);
+        }
+        let action = r.state.borrow_mut().take_action_request();
+        if let Some(action) = action {
+            r.post_action(&u, action);
         }
         let audience = r.state.borrow_mut().share_audience.take();
         if let Some(audience) = audience {
@@ -436,9 +735,10 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
         tag: Tag::PostLoaded(session),
     });
     reader.message(ui, "Loading post and comments…");
-    comments.set_focus();
+    if autoplay { stop.set_focus(); } else { comments.set_focus(); }
     dialog.show_modal();
     share_timer.stop();
+    reader.media.stop();
     // Remove the session before destroying controls, so queued completions cannot touch them.
     ui.post_reader.borrow_mut().take();
     let _ =
@@ -448,6 +748,45 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
         ui.items.set_selection(index, true);
     }
     ui.items.set_focus();
+}
+
+pub(super) fn is_video_page(url: &str) -> bool {
+    let Some((_, rest)) = url.split_once("://") else { return false };
+    let Some((_, path)) = rest.split_once('/') else { return false };
+    let (path, query) = path.split_once('?').unwrap_or((path, ""));
+    path.starts_with("reel/")
+        || path.contains("/videos/")
+        || path.starts_with("videos/")
+        || (matches!(path, "watch" | "watch/" | "watch/live" | "watch/live/")
+            && query.split('&').any(|pair| pair.starts_with("v=")))
+}
+
+fn seek_position(current: i64, length: i64, offset: i64) -> i64 {
+    let target = current.saturating_add(offset).max(0);
+    if length > 0 { target.min(length) } else { target }
+}
+
+pub(super) fn stream(ui: &Ui, session: u64, request: u64, result: Result<String, String>) {
+    let Some(reader) = active(ui, session) else { return };
+    if !reader.state.borrow_mut().take_video_request(request) {
+        reader.controls();
+        return;
+    }
+    match result {
+        Ok(url) => reader.load_stream(ui, &url),
+        Err(error) => reader.message(ui, &format!("{error} Press Play to retry.")),
+    }
+    reader.controls();
+}
+
+pub(super) fn prepared(ui: &Ui, target: &str, result: Result<String, String>) {
+    let reader = ui.post_reader.borrow().as_ref().filter(|reader| reader.url == target).cloned();
+    let Some(reader) = reader else { return };
+    let mut state = reader.state.borrow_mut();
+    if let Some(request) = state.playback.as_mut() {
+        request.preparing = false;
+        request.stream = result.ok();
+    }
 }
 
 fn selected_index(comments: &[Comment], id: Option<&str>) -> Option<u32> {
@@ -522,10 +861,21 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             } else if let Some(index) = reader.comments.get_selection() {
                 reader.comments.set_selection(index, false);
             }
+            if reader.state.borrow().links != detail.links {
+                reader.links.clear();
+                for link in &detail.links {
+                    reader.links.append(&format!("{} — {}", link.label, link.url));
+                }
+                if !detail.links.is_empty() {
+                    reader.links.set_selection(0, true);
+                }
+            }
             let count = detail.comments.len();
             {
                 let mut state = reader.state.borrow_mut();
                 state.comments = detail.comments;
+                state.links = detail.links;
+                state.video = detail.video;
                 state.loaded = true;
             }
             if sent {
@@ -543,12 +893,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn video_routes_and_seek_bounds() {
+        assert!(is_video_page("https://www.facebook.com/reel/123"));
+        assert!(is_video_page("https://www.facebook.com/author/videos/123"));
+        assert!(is_video_page("https://www.facebook.com/watch/?v=123"));
+        assert!(is_video_page("https://www.facebook.com/watch/live/?v=123"));
+        assert!(!is_video_page("https://www.facebook.com/a/posts/123?next=/reel/123"));
+        assert!(!is_video_page("https://www.facebook.com/watch/?next=v=123"));
+        assert_eq!(seek_position(5_000, 60_000, -10_000), 0);
+        assert_eq!(seek_position(55_000, 60_000, 10_000), 60_000);
+        assert_eq!(seek_position(55_000, 0, 10_000), 65_000);
+    }
+
+    #[test]
     fn requested_share_waits_for_load_and_starts_once() {
         let mut state = ReaderState {
-            comments: Vec::new(), parent: None, busy: true, loaded: false,
-            share_audience: None, share_requested: true,
+            comments: Vec::new(),
+            links: Vec::new(),
+            video: None,
+            video_requested: false,
+            video_request: 0,
+            media_ready: false,
+            media_loading: None,
+            parent: None,
+            busy: true,
+            loaded: false,
+            share_audience: None,
+            share_requested: true,
+            action_requested: Some(ID_POST_COMMENT),
+            playback: None,
         };
+        state.video_requested = true;
+        state.video_request = 2;
+        assert!(!state.take_video_request(1));
+        assert!(state.video_requested);
+        assert!(state.take_video_request(2));
+        assert!(!state.take_video_request(2));
         assert!(!state.take_share_request());
+        assert!(state.take_action_request().is_none());
         state.busy = false;
         assert!(!state.take_share_request());
         state.loaded = true;
@@ -557,6 +939,21 @@ mod tests {
         state.busy = false;
         assert!(state.take_share_request());
         assert!(!state.take_share_request());
+        assert_eq!(state.take_action_request(), Some(ID_POST_COMMENT));
+        assert_eq!(state.take_action_request(), None);
+        state.loaded = false;
+        state.playback = Some(ReelPlayback {stream:Some("https://video.example/cached".into()),preparing:false});
+        assert_eq!(state.take_cached_stream().as_deref(), Some("https://video.example/cached"));
+        assert!(state.take_cached_stream().is_none());
+        state.playback = Some(ReelPlayback {stream:None,preparing:true});
+        state.loaded = true;
+        assert!(!state.take_autoplay_request());
+        state.playback.as_mut().unwrap().preparing = false;
+        state.busy = true;
+        assert!(!state.take_autoplay_request());
+        state.busy = false;
+        assert!(state.take_autoplay_request());
+        assert!(!state.take_autoplay_request());
     }
 
     #[test]

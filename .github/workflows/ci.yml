@@ -27,7 +27,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy,rustfmt
 
       - name: Install wxWidgets build dependencies
         if: runner.os == 'Linux'
@@ -35,7 +35,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libclang-dev pkg-config libgtk-3-dev libpng-dev libjpeg-dev \
-            libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev
+            libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav gstreamer1.0-x
+
+      - name: Test Linux launcher
+        if: runner.os == 'Linux'
+        run: sh packaging/test-linux-launcher.sh
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -43,6 +49,15 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Reader and reels fixtures
+        run: |
+          node crates/core/src/post_scripts/reader.test.js
+          node crates/core/src/reels.test.js
 
       - name: Build
         run: cargo build --workspace --all-targets

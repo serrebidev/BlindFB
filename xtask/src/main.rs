@@ -78,9 +78,17 @@ fn package() -> Result<(), Box<dyn Error>> {
         shipfitter::macos::dmg(&bundle, &out)?;
         out
     } else {
+        let launcher = root.join("target").join("release").join("blindfb-launcher");
+        fs::write(&launcher, include_str!("../../packaging/linux-launcher.sh"))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&launcher, fs::Permissions::from_mode(0o755))?;
+        }
         let out = dist.join(format!("{APP}.tar.gz"));
         let mut tar = TarGz::create(&out)?;
-        tar.file(&binary, "blindfb")?;
+        tar.file(&launcher, "blindfb")?;
+        tar.file(&binary, "blindfb-bin")?;
         tar.file(&readme, "README.md")?;
         tar.finish()?;
         out

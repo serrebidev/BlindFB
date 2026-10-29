@@ -139,7 +139,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
         .map(|row| {
             let cells = row
                 .as_array()
-                .filter(|cells| cells.len() == 4)
+                .filter(|cells| matches!(cells.len(), 4 | 5))
                 .ok_or("The backend returned a malformed notification")?;
             let mut fields = Vec::new();
             for cell in &cells[..3] {
@@ -155,6 +155,9 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
                     .ok_or("This notification has no Facebook target")?
                     .to_owned(),
             );
+            if let Some(metadata) = cells.get(4).filter(|value| value.is_object()) {
+                fields.push(metadata.to_string());
+            }
             Ok(Record { raw: fields.join("\t"), fields })
         })
         .collect()
@@ -443,7 +446,7 @@ pub fn notifs_args(count: u32) -> Vec<String> {
     vec![
         "eval".to_owned(),
         "https://www.facebook.com/notifications/".to_owned(),
-        format!("window.__fb.notifs({count}).then(JSON.stringify)"),
+        format!("{};window.__fb.notifs({count}).then(out=>JSON.stringify({{...out,rows:out.rows.map(row=>{{if(!row[2].toLowerCase().includes(' new reels'))return row;const metadata=window.__blindfbReels.notificationNow(new URL(row[3].v,window.location.origin).href);return metadata?[...row,metadata]:row}})}}))", include_str!("reels.js")),
     ]
 }
 
@@ -640,7 +643,7 @@ mod tests {
                 "--urls"
             ]
         );
-        assert!(notifs_args(20).iter().any(|s| s == "window.__fb.notifs(20).then(JSON.stringify)"));
+        assert!(notifs_args(20).iter().any(|script| script.contains("window.__fb.notifs(20)") && script.contains("notificationNow")));
     }
 
     #[test]

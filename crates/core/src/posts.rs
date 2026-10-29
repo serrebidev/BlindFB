@@ -15,12 +15,22 @@ pub struct Comment {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Link {
+    pub label: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostDetail {
     pub url: String,
     pub author: String,
     pub time: String,
     pub text: String,
     pub comments: Vec<Comment>,
+    /// Links in the message and pages outside Facebook, for the browser.
+    pub links: Vec<Link>,
+    /// The Facebook URL of the post's video or reel, for the player.
+    pub video: Option<String>,
 }
 
 fn string(value: &Value, field: &str) -> Result<String, String> {
@@ -83,12 +93,30 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         }
         validated.extend(seen);
     }
+    // Only web pages leave for the browser; anything else stays out of the list.
+    let links = value["links"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| Some(Link { label: string(row, "label").ok()?, url: string(row, "url").ok()? }))
+                .filter(|link| {
+                    (link.url.starts_with("https://") || link.url.starts_with("http://"))
+                        && !link.url.chars().any(|c| c.is_whitespace() || c.is_control())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    // The player hands this to yt-dlp, so it must be a Facebook URL.
+    let video = optional_string(&value, "video")?
+        .filter(|video| crate::media::is_facebook_url(video));
     Ok(PostDetail {
         url,
         author: string(&value, "author")?,
         time: string(&value, "time")?,
         text: string(&value, "text")?,
         comments,
+        links,
+        video,
     })
 }
 
@@ -120,10 +148,10 @@ pub fn validate_target(target: &str) -> Result<(), String> {
     {
         let path = rest.split(['?', '#']).next().unwrap_or("");
         let segments: Vec<_> = path.split('/').filter(|p| !p.is_empty()).collect();
-        let post_path = matches!(segments.as_slice(), [_, "posts", id] | ["groups", _, "posts", id] | ["groups", _, "permalink", id] if !id.is_empty())
+        let post_path = matches!(segments.as_slice(), [_, "posts", id] | ["groups", _, "posts", id] | ["groups", _, "permalink", id] | ["reel", id] | ["videos", id] | [_, "videos", id] if !id.is_empty())
             // A bare post id; Facebook redirects it to the post.
             || matches!(segments.as_slice(), [id] if id.bytes().all(|b| b.is_ascii_digit()));
-        // Reels and photo viewers use other layouts the reader cannot parse yet.
+        // Photo viewers use another layout the reader cannot parse yet.
         let query_post = matches!(path, "permalink.php" | "story.php")
             && rest.split('?').nth(1).is_some_and(|q| {
                 q.split('&').any(|p| {
@@ -132,7 +160,11 @@ pub fn validate_target(target: &str) -> Result<(), String> {
                         .any(|key| p.strip_prefix(key).is_some_and(|v| !v.is_empty()))
                 })
             });
-        if post_path || query_post {
+        let watch = matches!(path.trim_end_matches('/'), "watch" | "watch/live")
+            && rest.split('?').nth(1).is_some_and(|query| query.split('&').any(|pair| {
+                pair.strip_prefix("v=").is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
+            }));
+        if post_path || query_post || watch {
             return Ok(());
         }
     }
@@ -202,6 +234,13 @@ pub fn like_comment(fb: &Fb, page: &str, id: &str) -> Result<String, String> {
     Ok(output)
 }
 
+/// React to the reel open in the reader; returns a fresh detail JSON.
+pub fn reel_react(fb: &Fb, page: &str, reaction: &str) -> Result<String, String> {
+    let output = eval(fb, page, &format!("window.__blindfbPost.reelReact({})", json!(reaction)))?;
+    parse_detail(&output)?;
+    Ok(output)
+}
+
 /// Open Facebook's share dialog for the post and return the audience it will use.
 /// Nothing is shared until `share_now`.
 pub fn share_open(fb: &Fb, page: &str) -> Result<String, String> {
@@ -246,6 +285,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn detail_exposes_web_links_and_only_facebook_video() {
+        let mut data = json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"","text":"","comments":[],
+            "links":[{"label":"Article","url":"https://example.org/story"},{"label":"Unsafe","url":"file:///secret"}],
+            "video":"https://www.facebook.com/reel/123/"});
+        let detail = parse_detail(&data.to_string()).unwrap();
+        assert_eq!(detail.links, vec![Link {label: "Article".to_owned(), url: "https://example.org/story".to_owned()}]);
+        assert_eq!(detail.video.as_deref(), Some("https://www.facebook.com/reel/123/"));
+        data["video"] = "https://example.org/video".into();
+        assert!(parse_detail(&data.to_string()).unwrap().video.is_none());
+    }
+
+    #[test]
     fn validates_post_targets_before_browser_access() {
         for bad in [
             "1h",
@@ -254,7 +305,7 @@ mod tests {
             "https://www.facebook.com/",
             "https://www.facebook.com/messages/t/1",
             "https://user@www.facebook.com/a/posts/1",
-            "https://www.facebook.com/reel/1/",
+            "https://www.facebook.com/reel/",
             "https://www.facebook.com/photo/?fbid=1",
             "https://www.facebook.com/afad/?approval_id=1",
         ] {
@@ -265,6 +316,10 @@ mod tests {
             "https://www.facebook.com/groups/7/posts/8",
             "https://www.facebook.com/permalink.php?story_fbid=1&id=2",
             "https://www.facebook.com/2284937812074776",
+            "https://www.facebook.com/reel/1413444364110358/",
+            "https://www.facebook.com/somepage/videos/123/",
+            "https://www.facebook.com/videos/123/",
+            "https://www.facebook.com/watch/?v=123",
         ] {
             assert!(validate_target(good).is_ok(), "{good}");
         }

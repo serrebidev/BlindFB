@@ -12,11 +12,11 @@ use std::path::PathBuf;
 use sha2::{Digest, Sha256};
 
 /// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
-/// (hieu-lee/facebook-cli#1 hidden feed links, #2 Messenger restore prompt). Back to upstream
+/// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
 /// once those merge.
-pub const BACKEND_VERSION: &str = "0.1.5-blindfb.1";
+pub const BACKEND_VERSION: &str = "0.1.5-blindfb.4";
 const RELEASE_URL: &str =
-    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.1";
+    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.4";
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {
@@ -85,7 +85,7 @@ pub fn asset_name() -> Option<&'static str> {
     }
 }
 
-fn get(url: &str) -> Result<Vec<u8>, String> {
+pub(crate) fn get(url: &str) -> Result<Vec<u8>, String> {
     let mut response = crate::http::agent()
         .get(url)
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
@@ -95,7 +95,7 @@ fn get(url: &str) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("download failed: {e}"))
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     digest.iter().map(|b| format!("{b:02x}")).collect()
 }

@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 blindfb-core = { path = "../crates/core" }
-wxdragon = { version = "0.9.24", default-features = false }
+wxdragon = { version = "0.9.24", default-features = false, features = ["media-ctrl"] }
 wx-utils = "0.4.4"
 ship-shape = "0.5.0"
 native-ocr = "0.2.1"

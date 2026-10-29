@@ -24,6 +24,19 @@ everything and presents its output in a keyboard-first window.
   on the post it comments, reacts, shares, copies the text or link, or opens
   it on the web. **Share** (Alt+H) uses Facebook's own share dialog, tells
   you the audience first, and takes optional text.
+- **Videos and reels** play in the reader, with Play/Pause, Stop, back/forward
+  10 seconds and a volume slider. Tab reaches every control; comments,
+  reactions and sharing remain available. **File → Open Facebook link**
+  (Ctrl+O) opens a post, video or reel URL. Post links have their own list;
+  Enter or **Open link** opens the selected page in your browser. F1 lists
+  keyboard commands. The video helper installs itself when first needed.
+- **Reels** (Ctrl+8) has its own section, with Load more and the same reader,
+  playback and post actions. Its list stays cached until you refresh it;
+  arrow keys change the selected reel, and Enter opens the player and starts
+  playback automatically. The selected and next reel prepare in the background.
+  Notifications about several new reels list the
+  exact reels when Facebook supplies their IDs; otherwise they show the
+  account's reels and explain that fallback.
 - Every item in the Items list has a context menu (Applications or
   Shift+F10) with the actions that fit it. **Share** is the second item
   for posts, including the news feed, Feeds, profile and group posts,
@@ -72,10 +85,16 @@ Everything else the backend exposes is in the app.
 Facebook hides the link of many feed posts until they get focus. BlindFB's
 backend build reveals most of them, including group posts, but a few rows
 (often ads and suggestions) still have none; BlindFB cannot open, react to
-or comment on those and marks them “(no link)” in the list. Reels and photo albums open
+or comment on those and marks them “(no link)” in the list. Photo albums open
 in your browser instead of the reader.
 
 ## Requirements
+
+On Ubuntu 24.04 or compatible Debian systems (glibc 2.39 or newer), extract
+the Linux download and start `blindfb`. On
+first launch it installs missing GTK and GStreamer media libraries through
+your package manager, using the standard system password prompt. Keep
+`blindfb` and `blindfb-bin` together. macOS uses its built-in media frameworks.
 
 - A browser you are signed in to Facebook in: Google Chrome, Chromium,
   Brave, Microsoft Edge or Firefox. Chrome, Chromium, Brave and Edge can
@@ -90,8 +109,13 @@ in your browser instead of the reader.
   folder, replacing an older copy at startup. Until two fixes are merged
   upstream (hidden feed post links, hieu-lee/facebook-cli#1; the Messenger
   restore prompt, #2), that release is
-  [serrebidev/facebook-cli `v0.1.5-blindfb.1`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.1):
-  upstream 0.1.5 plus those fixes. **Backend → Install or update backend**
+  [serrebidev/facebook-cli `v0.1.5-blindfb.4`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.4):
+  upstream 0.1.5 plus those fixes, faster feed loading, complete shared-post
+  text and the empty comment/share editor fix ([PR #3](https://github.com/hieu-lee/facebook-cli/pull/3),
+  [PR #4](https://github.com/hieu-lee/facebook-cli/pull/4)). Full post text is
+  expanded before reading, including list rows ([PR #5](https://github.com/hieu-lee/facebook-cli/pull/5)).
+  Expansion controls are excluded from post text ([PR #6](https://github.com/hieu-lee/facebook-cli/pull/6)).
+  **Backend → Install or update backend**
   reinstalls it any time.
   (BlindFB also finds an `fb` you installed yourself: the managed copy
   first, then next to the BlindFB executable, then your `PATH`, then
