@@ -32,8 +32,8 @@ use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
 use blindfb_core::fb::{
-    Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, groups_eval_args,
-    groups_open_args, notifs_args, parse_feed, parse_groups_json, parse_notifications,
+    Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, groups_args,
+    notifs_args, parse_feed, parse_notifications,
     parse_records, post_args, posts_args, profile_args, profile_url_from_post_url, react_args,
     read_args, recent_feed_args, search_args, send_args, thread_url_from_profile_url, unsend_args,
     view_args, web_url,
@@ -139,7 +139,6 @@ enum Tag {
     Text,
     ReloadChat(String, u64),
     ChatSent(u64),
-    GroupsOpened(u64),
     UnlockRetry {
         view: View,
         request: u64,
@@ -689,7 +688,6 @@ fn spawn_worker(
             // Arrowing through Views queues a load per section; run only the one still wanted for that section.
             let list = match &job.tag {
                 Tag::List { view, request, .. } => Some((view, *request)),
-                Tag::GroupsOpened(request) => Some((&View::Groups, *request)),
                 _ => None,
             };
             if let Some((view, request)) = list {
@@ -1040,8 +1038,6 @@ fn load_view(ui: &Ui, view: View) {
     }
     if let View::Reels(source) = &view {
         load_reels(ui, source.clone(), false);
-    } else if view == View::Groups {
-        load_groups(ui);
     } else if let Some(args) = cached.as_ref().map(|(_, _, args)| args.clone())
         .or_else(|| default_args(&view)) {
         load_args(ui, view, args);
@@ -1093,22 +1089,13 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::Friends => friends_args(None, 100),
         View::MyPosts => posts_args("me", PAGE, true),
         View::Chats => chats_args(PAGE, false),
-        View::Groups | View::SearchResults | View::Reels(_) => return None,
+        View::Groups => groups_args(PAGE),
+        View::SearchResults | View::Reels(_) => return None,
         View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
         View::ProfileOf(who) => profile_args(who),
         View::ChatWith(name) => read_args(name, 50),
     })
-}
-
-/// Groups load in two steps: open the groups home page in the backend's
-/// named browser page, then eval the group links out of it. The open result
-/// is ignored on purpose: the page may already be open from an earlier load,
-/// and the eval is what counts.
-fn load_groups(ui: &Ui) {
-    let request = begin_list(ui, &View::Groups);
-    ui.status("Loading my groups…");
-    ui.send(Job { task: Task::Fb(groups_open_args(), None), tag: Tag::GroupsOpened(request) });
 }
 
 fn load_reels(ui: &Ui, source: ReelSource, append: bool) {
@@ -1265,7 +1252,7 @@ fn refresh(ui: &Ui) {
     match view {
         View::Reels(source) => load_reels(ui, source, false),
         View::Feed => load_args(ui, view, feed_args(FEED_FIRST, true, true, true)),
-        View::Groups => load_groups(ui),
+        View::Groups => load_args(ui, view, groups_args(PAGE)),
         _ => {
             let previous = ui.state.borrow().last_args.clone();
             if let Some(args) = refresh_args(&view, &previous) {
@@ -1291,7 +1278,7 @@ fn more_args(view: &View, previous: &[String], loaded: usize, loading: bool) -> 
         View::Feed => Some(feed_args(PAGE, false, true, true)),
         View::Notifications => Some(notifs_args(u32::try_from(loaded).ok()?.checked_add(PAGE)?)),
         View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::Friends
-        | View::Chats | View::SearchResults => {
+        | View::Chats | View::SearchResults | View::Groups => {
             let mut args = previous.to_vec();
             let index = args.iter().position(|arg| arg == "-n")? + 1;
             let count: u32 = args.get(index)?.parse().ok()?;
@@ -1470,11 +1457,15 @@ fn details_for(view: &View, record: &Record) -> String {
             record.field(1),
             record.fields[4..].join("\t")
         ),
-        View::Groups => format!(
-            "Group: {}\nOn the web: {}\n\nOpen the group to read and take part in its posts here. Posting to a group, and group settings, live on the web page.",
-            record.field(0),
-            record.field(1)
-        ),
+        View::Groups => {
+            let info = record.field(2);
+            format!(
+                "Group: {}\n{}On the web: {}\n\nOpen the group to read and take part in its posts here. Posting to a group, and group settings, live on the web page.",
+                record.field(0),
+                if info.is_empty() { String::new() } else { format!("{info}\n") },
+                record.field(1)
+            )
+        }
         _ => record.raw.clone(),
     }
 }
@@ -1695,6 +1686,7 @@ fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
         View::Reels(_) => Some("Load more reels"),
         View::Notifications => Some("Load more notifications"),
         View::Friends => Some("Load more friends"),
+        View::Groups => Some("Load more groups"),
         View::Chats => Some("Load more conversations"),
         _ => None,
     }
@@ -2051,15 +2043,6 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(summary) => ui.status(&summary),
             Err(error) => show_error(&ui.frame, error, "Browser install"),
         },
-        Tag::GroupsOpened(request) => {
-            if ui.latest_list.lock().unwrap().current(&View::Groups, request) {
-                let args = groups_eval_args();
-                let _ = ui.jobs.send(Job {
-                    task: Task::Fb(args.clone(), None),
-                    tag: Tag::List { view: View::Groups, request, args, unlock_attempted: false, append: false },
-                });
-            }
-        }
     }
 }
 
@@ -2097,7 +2080,6 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                 .collect(),
             Some(raw.trim().to_owned()),
         ),
-        View::Groups => (parse_groups_json(raw), None),
         _ => (parse_records(raw), None),
     })
 }
@@ -2939,7 +2921,8 @@ mod tests {
             Some(search_args("rust", Some("posts"), PAGE * 2)));
         assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40, false),
             Some(notifs_args(40 + PAGE)));
-        assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40, false), None);
+        assert_eq!(more_args(&View::Groups, &groups_args(PAGE), 40, false),
+            Some(groups_args(PAGE * 2)));
         assert_eq!(more_args(&View::Feed, &[], 0, false), None);
         assert_eq!(more_args(&View::SearchResults, &search_args("new query", Some("posts"), PAGE), 40, true), None);
     }
@@ -2949,7 +2932,7 @@ mod tests {
         assert_eq!(more_row_label(&View::Feed, 100), Some("Load more posts"));
         assert_eq!(more_row_label(&View::Reels(ReelSource::Recommended), 20), Some("Load more reels"));
         assert!(more_row_label(&View::Feed, 0).is_none());
-        assert!(more_row_label(&View::Groups, 10).is_none());
+        assert_eq!(more_row_label(&View::Groups, 10), Some("Load more groups"));
         assert!(is_more_row(&View::Feed, 100, 100));
         assert!(!is_more_row(&View::Feed, 100, 99));
         assert!(!is_more_row(&View::Feed, 100, 101));

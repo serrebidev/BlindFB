@@ -4,6 +4,10 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.10 - 2026-10-29
+
+- Groups fixed: the list now comes from the backend's new `groups` command, which reads your joined-groups list and scrolls it in full. Before, Groups scraped the groups feed page, so it mixed in suggested groups, missed most groups you belong to, and often showed post text instead of group names. Group details now include the group's privacy and size line, and Load more works for groups. Backend updated to facebook-cli 0.1.5-blindfb.6.
+
 ## v0.6.9 - 2026-10-29
 
 - Windows playback uses automatically installed mpv and bundled codecs, with native NVDA controls and no mediaCtrl Tab stop.

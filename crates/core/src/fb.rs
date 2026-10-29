@@ -574,44 +574,17 @@ pub fn thread_url_from_profile_url(profile_url: &str) -> Option<String> {
 }
 
 // --- Groups ---------------------------------------------------------------
-// `fb` has no joined-groups command, but its named-page browser primitives
-// are part of the backend: open facebook.com/groups in a named page and
-// read the group links out of it with eval. Group posts then load through
-// the ordinary `posts <group url>` command, and every post action works.
+// The backend's `groups` command (since 0.1.5-blindfb.6) reads the
+// joined-groups list page itself, scrolling until it stops growing, so the
+// records are exactly the groups the user belongs to: fields [name, group
+// URL, privacy/size info], parsed by parse_records like every other list.
+// Group posts then load through the ordinary `posts <group url>` command,
+// and every post action works.
 
-pub const GROUPS_PAGE_NAME: &str = "blindfb-groups";
-pub const GROUPS_HOME: &str = "https://www.facebook.com/groups/";
-
-const GROUPS_JS: &str = "JSON.stringify([...document.querySelectorAll('a[href*=\"/groups/\"]')].map(a=>[(a.textContent||'').trim(),a.getAttribute('href')]).filter(([t,h])=>t&&h&&/^\\/groups\\/[^\\/?#]+\\/?$/.test(h.split(/[?#]/)[0])&&!/^\\/groups\\/(feed|discover|joins|create|search)/.test(h)).filter((v,i,a)=>a.findIndex(x=>x[1].split(/[?#]/)[0]===v[1].split(/[?#]/)[0])===i).slice(0,120))";
-
-pub fn groups_open_args() -> Vec<String> {
-    vec!["page".to_owned(), GROUPS_PAGE_NAME.to_owned(), "open".to_owned(), GROUPS_HOME.to_owned()]
+pub fn groups_args(count: u32) -> Vec<String> {
+    vec!["groups".to_owned(), "-n".to_owned(), count.to_string(), "--urls".to_owned()]
 }
 
-pub fn groups_eval_args() -> Vec<String> {
-    vec!["page".to_owned(), GROUPS_PAGE_NAME.to_owned(), "eval".to_owned(), GROUPS_JS.to_owned()]
-}
-
-/// Parse the JSON `[[name, href], ...]` the groups eval returns into
-/// records with fields [name, group URL].
-pub fn parse_groups_json(output: &str) -> Vec<Record> {
-    let text = output.trim();
-    let Ok(serde_json::Value::Array(rows)) = serde_json::from_str::<serde_json::Value>(text) else {
-        return Vec::new();
-    };
-    rows.iter()
-        .filter_map(|row| {
-            let pair = row.as_array()?;
-            let name = pair.first()?.as_str()?.trim().to_owned();
-            let href = pair.get(1)?.as_str()?;
-            if name.is_empty() {
-                return None;
-            }
-            let url = web_url(href);
-            Some(Record { fields: vec![name.clone(), url], raw: name })
-        })
-        .collect()
-}
 
 #[cfg(test)]
 mod tests {
@@ -721,12 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_groups_json() {
-        let out =
-            r#"[["Hikers","/groups/111"],["Bakers","https://www.facebook.com/groups/bakers"]]"#;
-        let records = parse_groups_json(out);
-        assert_eq!(records.len(), 2);
-        assert_eq!(records[0].field(1), "https://www.facebook.com/groups/111");
-        assert_eq!(parse_groups_json("not json").len(), 0);
+    fn groups_command_args() {
+        assert_eq!(groups_args(120), ["groups", "-n", "120", "--urls"]);
     }
 }

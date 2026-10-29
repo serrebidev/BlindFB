@@ -16,4 +16,4 @@ pub mod mpv;
 pub mod posts;
 pub mod reels;
 
-pub use fb::{Fb, Record, parse_groups_json, parse_records};
+pub use fb::{Fb, Record, parse_records};
