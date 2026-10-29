@@ -9,7 +9,5 @@ publish = false
 shipfitter = { version = "0.2.4", features = ["package"] }
 ship-shape = "0.5.0"
 minisign = "0.10.0"
-
-[dev-dependencies]
 # The check the updater itself makes on a download.
 minisign-verify = "0.2.5"

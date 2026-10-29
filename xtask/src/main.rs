@@ -20,10 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     match env::args().nth(1).as_deref() {
         Some("package") => package(),
         Some("sign") => sign(),
+        Some("verify") => verify(),
         Some("minisign-key") => minisign_key(),
         Some("update-check") => update_check(),
         _ => {
-            eprintln!("usage: cargo xtask package|sign <file>...|minisign-key <dir>|update-check [version]");
+            eprintln!("usage: cargo xtask package|sign <file>...|verify <file>...|minisign-key <dir>|update-check [version]");
             std::process::exit(2);
         }
     }
@@ -105,7 +106,9 @@ fn sign_asset(path: &Path) -> Result<(), Box<dyn Error>> {
 
 fn sign_with(path: &Path, key: &str, password: Option<&str>) -> Result<(), Box<dyn Error>> {
     let boxed = minisign::SecretKeyBox::from_string(key)?;
-    let key = match password {
+    // An unset CI secret arrives as an empty string, which the minisign crate would take
+    // as the password for a key that has none.
+    let key = match password.filter(|password| !password.is_empty()) {
         Some(password) => boxed.into_secret_key(Some(password.to_owned())),
         None => boxed.into_unencrypted_secret_key(),
     }?;
@@ -134,6 +137,29 @@ fn sign() -> Result<(), Box<dyn Error>> {
     }
     for file in files {
         sign_asset(Path::new(&file))?;
+    }
+    Ok(())
+}
+
+/// Checks `<file>.minisig` against the public key the app ships, as the updater will.
+fn verify() -> Result<(), Box<dyn Error>> {
+    let files: Vec<String> = env::args().skip(2).collect();
+    if files.is_empty() {
+        return Err("verify needs at least one file".into());
+    }
+    let key = fs::read_to_string(root().join("app/assets/minisign.pub"))?;
+    let key = key.lines().nth(1).unwrap_or_default().trim();
+    let public = minisign_verify::PublicKey::from_base64(key)
+        .map_err(|e| format!("public key: {e}"))?;
+    for file in files {
+        let signature = fs::read_to_string(format!("{file}.minisig"))
+            .map_err(|e| format!("{file}.minisig: {e}"))?;
+        let signature = minisign_verify::Signature::decode(&signature)
+            .map_err(|e| format!("{file}.minisig: {e}"))?;
+        public
+            .verify(&fs::read(&file)?, &signature, false)
+            .map_err(|e| format!("{file}: {e}"))?;
+        println!("verified {file}");
     }
     Ok(())
 }
@@ -224,7 +250,8 @@ mod tests {
         let file = dir.join("BlindFB.zip");
         fs::write(&file, b"release contents").unwrap();
         let pair = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
-        sign_with(&file, &pair.sk.to_box(None).unwrap().into_string(), None).unwrap();
+        // An unset MINISIGN_PASSWORD in CI reaches us as Some("").
+        sign_with(&file, &pair.sk.to_box(None).unwrap().into_string(), Some("")).unwrap();
 
         let public = pair.pk.to_box().unwrap().into_string();
         let public = minisign_verify::PublicKey::from_base64(public.lines().nth(1).unwrap()).unwrap();
