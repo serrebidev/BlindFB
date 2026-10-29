@@ -732,11 +732,10 @@ fn spawn_worker(
                     (fb.clone(), page, target, job.tag, done.clone());
                 thread::spawn(move || {
                     let result = match fb {
-                        Some(fb) => (|| {
-                            #[cfg(windows)]
-                            blindfb_core::mpv::ensure()?;
-                            blindfb_core::media::stream_details(&fb, &page, &target)
-                        })(),
+                        #[cfg(windows)]
+                        Some(fb) => blindfb_core::mpv::ensure().and_then(|_| blindfb_core::media::stream_details(&fb, &page, &target)),
+                        #[cfg(not(windows))]
+                        Some(fb) => blindfb_core::media::stream_details(&fb, &page, &target),
                         None => Err("The Facebook backend is not installed".to_owned()),
                     };
                     let _ = done.send(Done { tag, result });
