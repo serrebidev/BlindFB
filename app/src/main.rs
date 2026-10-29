@@ -15,6 +15,7 @@
 //! any other posts here.
 
 mod post_dialog;
+mod update;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -33,7 +34,6 @@ use blindfb_core::fb::{
     read_args, recent_feed_args, search_args, send_args, thread_url_from_profile_url, unsend_args,
     view_args, web_url,
 };
-use blindfb_core::update;
 use wx_utils::{AboutBoxBuilder, confirm, prompt_text, show_error, show_warning};
 use wxdragon::prelude::*;
 
@@ -128,7 +128,6 @@ enum Tag {
     Text,
     ReloadChat(String, u64),
     ChatSent(u64),
-    UpdateCheck,
     GroupsOpened(u64),
     UnlockRetry {
         view: View,
@@ -571,6 +570,8 @@ fn run() {
     startup_log("run: showing the window");
     frame.show(true);
     frame.raise();
+    // A copy the updater just relaunched takes the foreground on Windows.
+    ship_shape::ui::bring_to_front_after_update(&frame);
     startup_log("run: window shown");
 }
 
@@ -1720,34 +1721,6 @@ fn apply_done(ui: &Ui, done: Done) {
                 });
             }
         }
-        Tag::UpdateCheck => match done.result {
-            Ok(payload) => {
-                let mut parts = payload.splitn(2, '\n');
-                let version = parts.next().unwrap_or_default().to_owned();
-                let url = parts.next().unwrap_or(update::RELEASES_PAGE).to_owned();
-                if update::is_newer(env!("CARGO_PKG_VERSION"), &version) {
-                    ui.status(&format!("BlindFB {version} is available"));
-                    if confirm(
-                        &ui.frame,
-                        &format!(
-                            "BlindFB {version} is available (you have {}). Open the download page?",
-                            env!("CARGO_PKG_VERSION")
-                        ),
-                        "Update available",
-                    ) {
-                        open_url(&url);
-                    }
-                } else {
-                    ui.status("BlindFB is up to date");
-                    show_warning(
-                        &ui.frame,
-                        format!("You have the latest BlindFB ({}).", env!("CARGO_PKG_VERSION")),
-                        "Check for updates",
-                    );
-                }
-            }
-            Err(e) => show_error(&ui.frame, &e, "Check for updates"),
-        },
     }
 }
 
@@ -2142,7 +2115,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_NEW_POST_IMAGES => new_post(ui, true),
         ID_SEARCH => search_dialog(ui),
         ID_OCR => ocr_dialog(ui),
-        ID_UPDATE => check_updates(ui),
+        ID_UPDATE => update::check(&ui.frame, ship_shape::ui::CheckTrigger::Manual),
         ID_STATUS => ui.send(Job { task: Task::Fb(vec!["status".into()], None), tag: Tag::Text }),
         ID_STOP_DAEMON => {
             ui.send(Job { task: Task::Fb(vec!["stop".into()], None), tag: Tag::Text })
@@ -2406,15 +2379,6 @@ fn ocr_file(path: &str) -> Result<String, String> {
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
     native_ocr::recognize_rgba(rgba.as_raw(), width, height).map_err(|e| format!("OCR failed: {e}"))
-}
-
-fn check_updates(ui: &Ui) {
-    let done_tx = ui.done_tx.clone();
-    ui.status("Checking for updates…");
-    thread::spawn(move || {
-        let result = update::latest_release().map(|r| format!("{}\n{}", r.version, r.url));
-        let _ = done_tx.send(Done { tag: Tag::UpdateCheck, result });
-    });
 }
 
 fn open_url(url: &str) {

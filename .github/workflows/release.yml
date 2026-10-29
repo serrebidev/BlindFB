@@ -34,6 +34,9 @@ jobs:
           cache-on-failure: true
 
       - name: Package with shipfitter (cargo xtask package)
+        env:
+          MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
+          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
         run: cargo xtask package
 
       - name: Upload to the GitHub release

@@ -55,8 +55,10 @@ everything and presents its output in a keyboard-first window.
 - **OCR an image** file using the OCR engine built into your operating
   system (via [native-ocr](https://github.com/trypsynth/native-ocr); on
   Linux that is Tesseract from your package manager).
-- **Check for updates** from the Help menu; releases are packaged and
-  versioned with [shipfitter](https://github.com/trypsynth/shipfitter).
+- **Check for updates** from the Help menu: BlindFB downloads the new
+  release, verifies its minisign signature, installs it and restarts.
+  Releases are packaged with [shipfitter](https://github.com/trypsynth/shipfitter)
+  and installed by [ship-shape](https://github.com/trypsynth/ship-shape).
 
 ### Not supported in-app (linked out instead)
 
@@ -140,7 +142,9 @@ is the consumer-facing piece of that world.
 
 ```sh
 cargo build --release -p blindfb
-cargo xtask package   # writes dist/BlindFB-<version>-<os>-<arch>.zip / .tar.gz
+cargo xtask package   # writes the updater's asset: dist/BlindFB.zip (Windows),
+                      # dist/BlindFB.tar.gz (Linux), dist/BlindFB-<arch>.dmg (macOS)
+                      # and its .minisig when MINISIGN_KEY is set
 ```
 
 Linux build dependencies for wxWidgets are the usual GTK set (see

@@ -1,5 +1,5 @@
 //! BlindFB backend: a thin, GUI-free driver for the `fb` command-line tool
-//! (hieu-lee/facebook-cli) plus a GitHub release check for updates.
+//! (hieu-lee/facebook-cli).
 //!
 //! `fb` prints one record per line, tab separated, and gives posts, chats and
 //! profiles short refs (`p3k9a`, `c8x2f`, `u1abc`) that every command accepts
@@ -12,6 +12,5 @@ mod engine;
 pub mod fb;
 pub mod http;
 pub mod posts;
-pub mod update;
 
 pub use fb::{Fb, Record, parse_groups_json, parse_records};
