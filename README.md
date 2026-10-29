@@ -1,195 +1,86 @@
 # BlindFB
 
-An accessible Facebook and Messenger client for screen reader users, written
-in Rust with [wxDragon](https://github.com/trypsynth/wxDragon) (native
-wxWidgets controls on Windows, macOS and Linux, so lists, menus and dialogs
-are the real platform widgets your screen reader already knows).
+A vibe-coded, screen-reader-friendly Facebook and Messenger client for Windows, macOS, and Linux, built for reading, posting and chatting without the web site.
 
-BlindFB is a front end for the
-[`fb` command-line tool](https://github.com/hieu-lee/facebook-cli)
-(hieu-lee/facebook-cli), which drives a dedicated headless Chrome profile
-that stays logged in to your Facebook account. BlindFB runs `fb` for
-everything and presents its output in a keyboard-first window.
+[![Join SerrebiProjects on Telegram](https://img.shields.io/badge/Telegram-SerrebiProjects-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/SerrebiProjects)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## What you can do
+**Questions, bugs, or release news?** Join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects), the fastest place to get help.
 
-- Browse your **news feed** (with refresh-ahead scrolling), or **Feeds
-  (most recent)** with Ctrl+7, with each post's full text in its row. React
-  (like, love, care, haha, wow, sad, angry), comment, and open the author's
-  profile or posts.
-- **Post reader**: press Enter on a post to open it in a native dialog with
-  the full post, its comments and replies, and a comment box ("Write a
-  comment", Alt+W; Ctrl+Enter sends). Applications or Shift+F10 on a comment
-  replies to that exact comment, likes it, copies it or opens it on the web;
-  on the post it comments, reacts, shares, copies the text or link, or opens
-  it on the web. A **Links** submenu opens the post's links. **Share** (Alt+H) uses Facebook's own share dialog, tells
-  you the audience first, and takes optional text.
-- **Videos and reels** play in the reader, with Play/Pause, Stop, back/forward
-  10 seconds and a volume slider. Tab reaches every control; comments,
-  reactions and sharing remain available. **File → Open Facebook link**
-  (Ctrl+O) opens a post, video or reel URL. Post links have their own list;
-  Enter or **Open link** opens the selected page in your browser. F1 lists
-  keyboard commands. The video helper installs itself when first needed.
-  Windows playback uses managed mpv with its bundled codecs. Native buttons
-  and sliders provide NVDA controls; the video surface stays out of Tab order.
-  External links come first, shared post sources follow, and **Full post on
-  Facebook** is always last. Tab from a selected post goes directly to its
-  links; the reader opens with Post links focused. Shared posts include a
-  labelled link to their original author and post.
-- **Reels** (Ctrl+8) has its own section, with Load more and the same reader,
-  playback and post actions. Its list stays cached until you refresh it;
-  arrow keys change the selected reel, and Enter opens the player and starts
-  playback automatically. The selected and next reel prepare in the background.
-  Notifications about several new reels list the
-  exact reels when Facebook supplies their IDs; otherwise they show the
-  account's reels and explain that fallback.
-  Reels without captions use their video title when it is available.
-- The final **Load more posts** or **Load more reels** list item loads the
-  next batch when you press Enter. Selection stays at the first new item.
-  **Ctrl+L** also works. Each batch requests 100 items in feeds and other
-  paged lists, or 20 reels. Facebook may return fewer when it has no more items
-  ready. The news feed shows its first 10 posts before filling the cache.
-- Every item in the Items list has a context menu (Applications or
-  Shift+F10) with the actions that fit it. **Share** is the second item
-  for posts, including the news feed, Feeds, profile and group posts,
-  search results and notifications. It opens the reader and share prompt.
-- **Load more** (the final list item, Ctrl+L, or View menu) appends more items
-  without repeating existing rows. It works in
-  feeds, post lists, search results, notifications, friends and chat lists.
-  Other sections do not support loading more. Facebook may return fewer
-  items or none when it has no further results available.
-- Browse **notifications** and open the posts they point to. Group post
-  notifications preserve comment links. Other notification types open their
-  Facebook page in your browser. Photo links follow their parent post when available.
-- Browse and search your **friends list**; open any friend's profile, read
-  their posts, or jump straight into a Messenger chat with them. (Adding and
-  removing friends is not something the `fb` backend can do — the Post menu
-  links out to the person's real profile on the web, where that lives.)
-- **Groups**: the Groups view lists the groups you belong to (read out of
-  facebook.com/groups through the backend's named-page browser support).
-  Open a group to read its posts and take part with the usual view, comment
-  and react actions; group posts also appear in your news feed as usual.
-  Posting *into* a group and group settings live on the group's web page,
-  one menu item away.
-- Read your own profile posts and **delete** your own posts.
-- **Post** to your profile, with an audience (public, friends, only me) and
-  optional images.
-- **Search** people, pages, groups, posts and events.
-- **Messenger**: browse chats (including unread-only), read conversations,
-  send text and file attachments, unsend your last message, and unlock
-  end-to-end encrypted chats with your Messenger PIN (the PIN is fed to `fb`
-  on stdin, never stored).
-- **OCR an image** file using the OCR engine built into your operating
-  system (via [native-ocr](https://github.com/trypsynth/native-ocr); on
-  Linux that is Tesseract from your package manager).
-- **Check for updates** from the Help menu: BlindFB downloads the new
-  release, verifies its minisign signature, installs it and restarts.
-  Releases are packaged with [shipfitter](https://github.com/trypsynth/shipfitter)
-  and installed by [ship-shape](https://github.com/trypsynth/ship-shape).
+BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-lee/facebook-cli), which drives a dedicated browser profile that stays logged in to your Facebook account. BlindFB runs `fb` for everything and presents its output in a keyboard-first window built on [wxDragon](https://github.com/trypsynth/wxDragon): native lists, menus and dialogs, the real platform widgets your screen reader already knows.
 
-### Not supported in-app (linked out instead)
+## Features
 
-Voice and video **calls**: the `fb` backend has no call commands, and
-Messenger calls use a separate calling stack. The Chat menu's "Open chat in
-Messenger (web)" takes you to that very conversation in your browser, where
-the call buttons are. The same pattern covers adding/removing friends
-(profile on the web) and posting into a group (the group's web page).
-Everything else the backend exposes is in the app.
+- News feed with refresh-ahead scrolling, and Feeds (most recent) on Ctrl+7, with each post's full text expanded in its row.
+- A post reader on Enter: the full post, its comments and replies, and a comment box; the context menu replies to, likes and copies the exact comment.
+- React with like, love, care, haha, wow, sad and angry, comment, and share through Facebook's own share dialog, which tells you the audience first and takes optional text.
+- Reels on Ctrl+8, in a cached list you can browse by caption; Enter plays, Escape returns to the same reel.
+- Videos and reels play in the reader, with Play/Pause, Stop, seek and a volume slider, and every control reachable with Tab.
+  Windows uses automatically installed mpv and its bundled codecs. Native NVDA controls keep the video surface out of Tab order.
+- File, Open Facebook link (Ctrl+O) opens a post, video or reel URL directly.
+- The final Load more list item (Enter, or Ctrl+L) appends the next posts, reels, results or chats and selects the first new item. Batches request 100 items, or 20 reels; Facebook may return fewer.
+- External links come first, shared source links follow, and the current Facebook post stays last. Links have a context submenu and receive focus first in the reader.
+- Notifications open their posts in the reader, including group post/comment links. Other destinations open on Facebook in your browser. Photo links follow their parent post when available.
+- Friends list with search: open a profile, read its posts, or jump into a Messenger chat.
+- Groups you belong to, with their posts read and answered the same way as the feed.
+- Your own profile posts, and deleting your own posts.
+- Post to your profile with an audience (public, friends, only me) and optional images.
+- Search people, pages, groups, posts and events.
+- Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored.
+- OCR an image file with the OCR engine built into your operating system.
+- F1 lists the keyboard commands; Ctrl+1 to Ctrl+8 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+F searches.
+- Help, Check for updates downloads the new release, verifies its minisign signature, installs it and restarts.
 
-Facebook hides the link of many feed posts until they get focus. BlindFB's
-backend build reveals most of them, including group posts, but a few rows
-(often ads and suggestions) still have none; BlindFB cannot open, react to
-or comment on those and marks them “(no link)” in the list. Photo albums open
-in your browser instead of the reader.
+Some things the `fb` backend cannot do are linked out instead of faked: voice and video calls open the conversation in Messenger on the web, adding or removing friends opens the person's real profile, and posting into a group opens the group's web page. Photo albums open in your browser. A few feed rows (often ads and suggestions) never expose a link to Facebook's own scripts; BlindFB marks those "(no link)" and cannot open them.
+
+## Download and install
+
+Grab the latest build from the [Releases page](https://github.com/serrebidev/BlindFB/releases).
+For a version-by-version history, see the [changelog](CHANGELOG.md).
+
+1. Download the archive for your system: `BlindFB.zip` (Windows), `BlindFB.tar.gz` (Linux) or `BlindFB-arm64.dmg` (macOS). Each has a `.minisig` beside it.
+2. Extract or open it and run BlindFB. There is nothing else to install: on first run BlindFB downloads the matching `fb` backend release, verifies its SHA-256 checksum, and keeps it in its own app-data folder.
+3. Sign in: BlindFB asks which browser to copy your Facebook session from, with your default browser marked. Pick the browser you are signed in to Facebook in, or sign in directly in the separate browser window BlindFB offers.
+
+The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.5`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.5): upstream 0.1.5 plus hidden feed links ([#1](https://github.com/hieu-lee/facebook-cli/pull/1)), Messenger restore ([#2](https://github.com/hieu-lee/facebook-cli/pull/2)), complete feed reading, and shared author labels ([#7](https://github.com/hieu-lee/facebook-cli/pull/7)). Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
 
 ## Requirements
 
-On Ubuntu 24.04 or compatible Debian systems (glibc 2.39 or newer), extract
-the Linux download and start `blindfb`. On
-first launch it installs missing GTK and GStreamer media libraries through
-your package manager, using the standard system password prompt. Keep
-`blindfb` and `blindfb-bin` together. macOS uses its built-in media frameworks.
+- A browser you are signed in to Facebook in: Google Chrome, Chromium, Brave or Microsoft Edge, including their Beta, Dev, Canary and Nightly channels, each with its own data folder. Firefox can supply a session, but one of the Chromium browsers is still needed as the engine. Backend, Install a browser installs a browser from its vendor.
+- On Windows, cookie import reads the chosen browser's cookie store locally. Close that browser first if its database is locked. Beta and Nightly encrypted cookies may not import on Windows; signing in directly in BlindFB's browser window always works.
+- Linux builds need Ubuntu 24.04 or a compatible Debian-based system (glibc 2.39 or newer). On first launch the Linux launcher offers to install the GTK and GStreamer packages the app needs through your package manager. Keep `blindfb` and `blindfb-bin` together.
+- Facebook is read live, so a section's first load takes several seconds. After that, sections are cached and prefetched, and switching is instant.
 
-- A browser you are signed in to Facebook in: Google Chrome, Chromium,
-  Brave, Microsoft Edge or Firefox. Chrome, Chromium, Brave and Edge can
-  run the backend. When stable Chrome/Chromium is unavailable, BlindFB
-  starts another installed Chromium browser in a separate profile; your
-  everyday browser stays separate. Firefox can supply a session but needs
-  one of those Chromium browsers as the engine. **Backend → Install a
-  browser** installs a browser from its vendor.
-- Nothing else to install: **BlindFB installs the `fb` backend itself** on
-  first run — it downloads the matching facebook-cli release from GitHub,
-  verifies its SHA-256 checksum, and keeps it in BlindFB's own app-data
-  folder, replacing an older copy at startup. Until two fixes are merged
-  upstream (hidden feed post links, hieu-lee/facebook-cli#1; the Messenger
-  restore prompt, #2), that release is
-  [serrebidev/facebook-cli `v0.1.5-blindfb.5`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.5):
-  upstream 0.1.5 plus those fixes, faster feed loading, complete shared-post
-  text and the empty comment/share editor fix ([PR #3](https://github.com/hieu-lee/facebook-cli/pull/3),
-  [PR #4](https://github.com/hieu-lee/facebook-cli/pull/4)). Full post text is
-  expanded before reading, including list rows ([PR #5](https://github.com/hieu-lee/facebook-cli/pull/5)).
-  Expansion controls are excluded from post text ([PR #6](https://github.com/hieu-lee/facebook-cli/pull/6)).
-  Shared feed posts include the original author's name ([PR #7](https://github.com/hieu-lee/facebook-cli/pull/7)).
-  **Backend → Install or update backend**
-  reinstalls it any time.
-  (BlindFB also finds an `fb` you installed yourself: the managed copy
-  first, then next to the BlindFB executable, then your `PATH`, then
-  `~/.local/bin`; the `BLINDFB_FB` environment variable overrides all.)
-- First run, sign-in happens **in your browser**: BlindFB asks which
-  browser to copy your Facebook session from (your default browser is
-  marked). On Windows, BlindFB uses [rookie-cookies](https://github.com/teng-lin/rookie-cookies)
-  to read Facebook cookies from the selected Chromium profile. Close that
-  browser first if its cookie database is locked. Encrypted-cookie import
-  depends on the installed browser's Windows encryption service; Stable
-  Brave is tested, while Beta/Nightly may require direct sign-in instead.
-  On macOS/Linux, tick **Allow remote debugging** if the browser asks.
-  Firefox sessions are read from its cookie database. You can also choose
-  **Sign in in a new browser window** and sign in directly in BlindFB's
-  separate browser profile. A completed import is checked against Facebook.
-  Encrypted chats additionally need **Chat → Unlock encrypted chats**
-  once per daemon lifetime.
+## Privacy policy
 
-  On Windows, rookie-cookies may use an unprivileged browser-process
-  injection method for app-bound encrypted cookies. BlindFB does not request
-  its elevated SYSTEM fallback. Direct sign-in avoids cookie extraction.
-  Cookie values are never passed on the command line or written to logs.
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
 
-## Layout of the window
-
-A Views list (News feed, Notifications, Friends, My posts, Chats, Groups,
-Feeds), an Items list for the current view, a Details pane for the selected
-item, an actions row, and a message compose row for chats. Menus mirror every
-action with keyboard shortcuts: Ctrl+1…7 switch views, Enter opens the
-selected item, F5 refreshes, Ctrl+L loads more, Ctrl+N writes a post, Ctrl+F searches.
-
-Facebook is read live, so a section's first load takes several seconds.
-Once the News feed is up, BlindFB loads the other main sections in the
-background, so switching sections is instant. A section you return to is
-shown at once and quietly refreshed if it is over a minute old; the News
-feed keeps your place until you press F5; Ctrl+L appends its next posts.
-
-The lists follow the quiet-list design rule (from
-[quiet-list](https://github.com/trypsynth/quiet-list)): rows are plain
-native list rows, refreshed in place, so a screen reader is not spammed with
-re-announcements while you browse. Helper dialogs (confirm, prompt, about)
-come from [wx-utils](https://github.com/trypsynth/wx-utils). The design of
-the backend ecosystem follows the Rust conventions of
-[rust-shed](https://github.com/facebookexperimental/rust-shed); `fb` itself
-is the consumer-facing piece of that world.
+BlindFB has no telemetry, analytics or accounts of its own. It talks to Facebook through the `fb` backend and the browser profile you sign in with, under Meta's own policies, and checks this repository's GitHub releases for app updates. Your Facebook cookies are read locally from the browser you pick; they are never passed on a command line, written to logs, or sent anywhere except to Facebook itself by the backend's browser. Your Messenger PIN is typed into the backend and never stored.
 
 ## Building
 
 ```sh
 cargo build --release -p blindfb
-cargo xtask package   # writes the updater's asset: dist/BlindFB.zip (Windows),
-                      # dist/BlindFB.tar.gz (Linux), dist/BlindFB-<arch>.dmg (macOS)
-                      # and its .minisig when MINISIGN_KEY is set
+cargo xtask package   # dist/BlindFB.zip (Windows), dist/BlindFB.tar.gz (Linux),
+                      # dist/BlindFB-<arch>.dmg (macOS), each with its .minisig
 ```
 
-Linux build dependencies for wxWidgets are the usual GTK set (see
-`.github/workflows/ci.yml`). Windows releases are packaged locally, Linux on
-the release build host, and macOS by GitHub Actions on `v*` tags.
+Linux build dependencies for wxWidgets are the usual GTK set (see `.github/workflows/ci.yml`). GitHub Actions builds signed packages for all three systems on `v*` tags and publishes when all expected assets arrive.
+
+## Debug logging
+
+BlindFB writes a `startup.log` in its app-data folder as the window opens, recording each startup step. If the app ever runs without showing a window, the last line of that log names the step it reached.
+
+## Contributing
+
+Pull requests are welcome. If BlindFB has been useful to you, open a PR with a fix or feature and I'll review it.
 
 ## License
 
-MIT. BlindFB is an unofficial client and is not affiliated with Meta.
+BlindFB is under the [MIT license](LICENSE) — use it, change it, redistribute it, or package it for a distro repository, no permission needed.
+
+BlindFB is an unofficial client and is not affiliated with Meta.
+
+## Community and support
+
+Report bugs and request features in [Issues](https://github.com/serrebidev/BlindFB/issues). For questions, feedback, and release news, join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects).
