@@ -84,7 +84,7 @@ const ID_ABOUT: i32 = 10070;
 const ID_GITHUB: i32 = 10071;
 
 const REACTIONS: [&str; 8] = ["like", "love", "care", "haha", "wow", "sad", "angry", "none"];
-const PAGE: u32 = 40;
+const PAGE: u32 = 100;
 /// The News feed opens with this many posts, then loads a full page while the user reads.
 const FEED_FIRST: u32 = 10;
 /// A cached section younger than this is shown without asking Facebook again.
@@ -2851,7 +2851,7 @@ mod tests {
         assert_eq!(more_args(&View::SearchResults, &search_args("rust", Some("posts"), PAGE), 40, false),
             Some(search_args("rust", Some("posts"), PAGE * 2)));
         assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40, false),
-            Some(notifs_args(PAGE * 2)));
+            Some(notifs_args(40 + PAGE)));
         assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40, false), None);
         assert_eq!(more_args(&View::Feed, &[], 0, false), None);
         assert_eq!(more_args(&View::SearchResults, &search_args("new query", Some("posts"), PAGE), 40, true), None);

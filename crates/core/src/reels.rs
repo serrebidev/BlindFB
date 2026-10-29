@@ -5,6 +5,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 
+const BATCH_SIZE: usize = 20;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ReelSource {
     Recommended,
@@ -169,7 +171,7 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
         let _ = fb.run(&["page", &page, "close"]);
     }
     if append {
-        return eval(fb, &page, &format!("window.__blindfbReels.more({},6)", json!(key)));
+        return eval(fb, &page, &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)));
     }
     let (url, mode, notice) = match source {
         ReelSource::Recommended => {
@@ -265,7 +267,7 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
             json!(notice)
         ),
     )?;
-    eval(fb, &page, &format!("window.__blindfbReels.more({},6)", json!(key)))
+    eval(fb, &page, &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)))
 }
 
 #[cfg(test)]

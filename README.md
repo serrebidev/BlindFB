@@ -41,6 +41,9 @@ everything and presents its output in a keyboard-first window.
   Notifications about several new reels list the
   exact reels when Facebook supplies their IDs; otherwise they show the
   account's reels and explain that fallback.
+- **Load more** (Ctrl+L) requests another 100 items in feeds and other paged
+  lists, or 20 reels. Facebook may return fewer when it has no more items
+  ready. The news feed shows its first 10 posts before filling the cache.
 - Every item in the Items list has a context menu (Applications or
   Shift+F10) with the actions that fit it. **Share** is the second item
   for posts, including the news feed, Feeds, profile and group posts,
