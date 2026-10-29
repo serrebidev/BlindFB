@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.7 - 2026-10-29
+
+- Windows playback uses automatically installed mpv and bundled codecs, with native NVDA controls and no mediaCtrl Tab stop.
+- Enter on the final Load more list item appends the next batch and selects the first new item. Feeds request 100 items; reels request 20.
+- Group notifications resolve their post and comment links. Other notification destinations open directly on Facebook; photo links follow their original post when available.
+- Reader links are available while loading and keep their selection on refresh. External links come first, source posts follow, and the current Facebook post stays last.
+- Shared feed posts identify the original author. Captionless reels use the available video title.
+- Stop main-window timers before destruction to prevent the native timer crash. Retry temporary Windows locks when replacing the backend.
+- Verify Microsoft Edge session import with live profile/feed reads and persistence after browser restart.
+- Build and sign all three platform packages through GitHub Actions before publishing.
+
 ## v0.6.3 - 2026-10-29
 
 - Reels (Ctrl+8) gets a cached list: browse full captions with the arrow keys, Enter opens the player and playback starts at once, and Escape returns to the same reel.
