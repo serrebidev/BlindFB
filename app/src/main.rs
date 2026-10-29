@@ -398,17 +398,17 @@ fn run() {
     let items_label = StaticText::builder(&panel).with_label("Items").build();
     let items = ListBox::builder(&panel).with_size(Size::new(-1, 260)).build();
 
-    let details_label = StaticText::builder(&panel).with_label("Details").build();
-    let details = TextCtrl::builder(&panel)
-        .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
-        .with_size(Size::new(-1, 170))
-        .build();
-
     let links_label = StaticText::builder(&panel).with_label("Lin&ks in selected item").build();
     let links = ListBox::builder(&panel).with_size(Size::new(-1, 70)).build();
     links.set_name("Links in selected item. Enter opens the selected link in your browser");
     let open_link = Button::builder(&panel).with_label("Open selected &link").build();
     open_link.enable(false);
+
+    let details_label = StaticText::builder(&panel).with_label("Details").build();
+    let details = TextCtrl::builder(&panel)
+        .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
+        .with_size(Size::new(-1, 170))
+        .build();
 
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     let refresh_btn = Button::builder(&panel).with_label("Refresh (F5)").build();
@@ -448,11 +448,11 @@ fn run() {
     root.add(&views, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
     root.add(&items_label, 0, SizerFlag::All, 4);
     root.add(&items, 1, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
-    root.add(&details_label, 0, SizerFlag::All, 4);
-    root.add(&details, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
     root.add(&links_label, 0, SizerFlag::All, 4);
     root.add(&links, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
     root.add(&open_link, 0, SizerFlag::All, 4);
+    root.add(&details_label, 0, SizerFlag::All, 4);
+    root.add(&details, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
     root.add_sizer(&actions, 0, SizerFlag::Expand, 2);
     root.add_sizer(&compose, 0, SizerFlag::Expand, 2);
     panel.set_sizer(root, true);
@@ -1538,7 +1538,10 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
             links.push(Link { label: url.to_owned(), url: url.to_owned() });
         }
     }
-    links
+    match post {
+        Some(post) => blindfb_core::posts::ordered_links(links, post),
+        None => links,
+    }
 }
 
 fn set_details(ui: &Ui, text: &str, post: Option<&str>) {
@@ -1574,6 +1577,25 @@ fn open_detail_link(ui: &Ui) {
     }) {
         open_url(&url);
     }
+}
+
+fn append_links_menu(menu: &Menu, links: &[Link]) {
+    if links.is_empty() { return; }
+    const BASE: i32 = 20000;
+    let submenu = Menu::builder().build();
+    for (index, link) in links.iter().enumerate() {
+        let label = link.label.replace('&', "&&").replace(['\t', '\r', '\n'], " ");
+        submenu.append(BASE + index as i32, &format!("{}. {label}", index + 1), &link.url, ItemKind::Normal);
+    }
+    // Keep the URLs shown when the menu opened, even if a background refresh finishes.
+    let targets = links.to_vec();
+    submenu.on_selected(move |event| {
+        event.event.skip(false);
+        if let Some(link) = event.get_id().checked_sub(BASE).and_then(|index| targets.get(index as usize)) {
+            open_url(&link.url);
+        }
+    });
+    menu.append_submenu(submenu, "&Links", "Open a link in your browser");
 }
 
 fn prepare_reels(ui: &Ui) {
@@ -2452,8 +2474,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  Ctrl+1 through Ctrl+8: switch views. Ctrl+8 opens Reels. F5: refresh. Ctrl+L: load more.\n\
                  Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n\
-                 Tab from Details to Links in selected item; Enter opens its selected link. Open / read full post and links includes named attachment links.\n\
-                 In the post reader, Tab or Shift+Tab moves between post text, links, video controls, comments and the composer.\n\
+                 Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
+                 The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
                  Enter on a selected link or Open link opens your browser.\n\
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
                  Arrow keys on Video volume change its percentage.\n\
@@ -2543,6 +2565,7 @@ fn show_item_menu(ui: &Ui) {
                 react.append(ID_REACT_BASE + i as i32, &label, "", ItemKind::Normal);
             }
             menu.append_submenu(react, "&React", "");
+            append_links_menu(&menu, &ui.link_targets.borrow());
             add(
                 &menu,
                 &[
@@ -2724,8 +2747,9 @@ mod tests {
         let post = "https://www.facebook.com/a/posts/1";
         let links = links_in_text(&format!("{post}/ {post} https://example.org/story"), Some(post));
         assert_eq!(links.len(), 2);
-        assert_eq!(links[0].label, "Full post on Facebook");
-        assert_eq!(links[0].url, post);
+        assert_eq!(links[0].url, "https://example.org/story");
+        assert_eq!(links[1].label, "Full post on Facebook");
+        assert_eq!(links[1].url, post);
     }
 
     #[test]

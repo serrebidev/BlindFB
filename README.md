@@ -22,7 +22,7 @@ everything and presents its output in a keyboard-first window.
   comment", Alt+W; Ctrl+Enter sends). Applications or Shift+F10 on a comment
   replies to that exact comment, likes it, copies it or opens it on the web;
   on the post it comments, reacts, shares, copies the text or link, or opens
-  it on the web. **Share** (Alt+H) uses Facebook's own share dialog, tells
+  it on the web. A **Links** submenu opens the post's links. **Share** (Alt+H) uses Facebook's own share dialog, tells
   you the audience first, and takes optional text.
 - **Videos and reels** play in the reader, with Play/Pause, Stop, back/forward
   10 seconds and a volume slider. Tab reaches every control; comments,
@@ -30,6 +30,10 @@ everything and presents its output in a keyboard-first window.
   (Ctrl+O) opens a post, video or reel URL. Post links have their own list;
   Enter or **Open link** opens the selected page in your browser. F1 lists
   keyboard commands. The video helper installs itself when first needed.
+  External links come first, shared post sources follow, and **Full post on
+  Facebook** is always last. Tab from a selected post goes directly to its
+  links; the reader opens with Post links focused. Shared posts include a
+  labelled link to their original author and post.
 - **Reels** (Ctrl+8) has its own section, with Load more and the same reader,
   playback and post actions. Its list stays cached until you refresh it;
   arrow keys change the selected reel, and Enter opens the player and starts

@@ -33,6 +33,27 @@ pub struct PostDetail {
     pub video: Option<String>,
 }
 
+/// Keep article links first and the current Facebook post available at the end.
+pub fn ordered_links(mut links: Vec<Link>, post: &str) -> Vec<Link> {
+    let current = facebook_link_key(post);
+    links.retain(|link| facebook_link_key(&link.url).is_none_or(|key| Some(key) != current));
+    links.sort_by_key(|link| facebook_link_key(&link.url).is_some());
+    links.push(Link {label: "Full post on Facebook".to_owned(), url: post.to_owned()});
+    links
+}
+
+fn facebook_link_key(url: &str) -> Option<String> {
+    let uri = url.split('#').next()?.parse::<tungstenite::http::Uri>().ok()?;
+    let host = uri.host()?.to_ascii_lowercase();
+    if host != "facebook.com" && !host.ends_with(".facebook.com") { return None; }
+    let mut parameters = uri.query().unwrap_or("").split('&').filter(|part| {
+        matches!(part.split('=').next().unwrap_or(""),
+            "id" | "story_fbid" | "fbid" | "v" | "set" | "multi_permalinks" | "comment_id" | "reply_comment_id")
+    }).collect::<Vec<_>>();
+    parameters.sort_unstable();
+    Some(format!("{}?{}", uri.path().trim_end_matches('/'), parameters.join("&")))
+}
+
 fn string(value: &Value, field: &str) -> Result<String, String> {
     value[field]
         .as_str()
@@ -109,6 +130,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
     // The player hands this to yt-dlp, so it must be a Facebook URL.
     let video = optional_string(&value, "video")?
         .filter(|video| crate::media::is_facebook_url(video));
+    let links = ordered_links(links, &url);
     Ok(PostDetail {
         url,
         author: string(&value, "author")?,
@@ -285,12 +307,43 @@ mod tests {
     use super::*;
 
     #[test]
+    fn links_put_external_pages_first_and_the_current_post_last() {
+        let post = "https://www.facebook.com/a/posts/1";
+        let data = json!({"url":post,"author":"A","time":"","text":"","comments":[],"links":[
+            {"label":"Shared post","url":"https://www.facebook.com/b/posts/2"},
+            {"label":"Current post duplicate","url":format!("{post}/")},
+            {"label":"Article","url":"https://example.org/story"},
+            {"label":"Another article","url":"https://facebook.com.example.org/story"}
+        ]});
+        let links = parse_detail(&data.to_string()).unwrap().links;
+        assert_eq!(links.iter().map(|link| link.label.as_str()).collect::<Vec<_>>(),
+            ["Article", "Another article", "Shared post", "Full post on Facebook"]);
+        assert_eq!(links.last().unwrap().url, post);
+    }
+
+    #[test]
+    fn current_post_aliases_are_removed_but_comment_and_other_post_links_remain() {
+        let post = "https://www.facebook.com/a/posts/1";
+        let urls = ["https://m.facebook.com/a/posts/1?ref=share#fragment",
+            "https://www.facebook.com/a/posts/1?__cft__[0]=tracking&fbclid=tracking",
+            "https://www.facebook.com/a/posts/1?comment_id=3",
+            "https://www.facebook.com/a/posts/2"];
+        let links = urls.iter().map(|url| Link {label: (*url).to_owned(), url: (*url).to_owned()}).collect();
+        let ordered = ordered_links(links, post);
+        assert_eq!(ordered.iter().map(|link| link.url.as_str()).collect::<Vec<_>>(), [urls[2], urls[3], post]);
+        let post = "https://www.facebook.com/permalink.php?story_fbid=1&id=2";
+        let links = vec![Link {label: "Other post".into(), url: "https://www.facebook.com/permalink.php?story_fbid=3&id=2".into()}];
+        assert_eq!(ordered_links(links, post).len(), 2);
+    }
+
+    #[test]
     fn detail_exposes_web_links_and_only_facebook_video() {
         let mut data = json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"","text":"","comments":[],
             "links":[{"label":"Article","url":"https://example.org/story"},{"label":"Unsafe","url":"file:///secret"}],
             "video":"https://www.facebook.com/reel/123/"});
         let detail = parse_detail(&data.to_string()).unwrap();
-        assert_eq!(detail.links, vec![Link {label: "Article".to_owned(), url: "https://example.org/story".to_owned()}]);
+        assert_eq!(detail.links[0], Link {label: "Article".to_owned(), url: "https://example.org/story".to_owned()});
+        assert_eq!(detail.links.last().unwrap().url, "https://www.facebook.com/a/posts/1");
         assert_eq!(detail.video.as_deref(), Some("https://www.facebook.com/reel/123/"));
         data["video"] = "https://example.org/video".into();
         assert!(parse_detail(&data.to_string()).unwrap().video.is_none());

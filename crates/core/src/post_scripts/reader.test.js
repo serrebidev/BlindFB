@@ -21,11 +21,24 @@ function fixture(mode = false) {
   video.parentElement = isReel ? reelCard : null;
   const openComments = {getAttribute: () => isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
-  const messages = mode === 'shared' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
+  const messages = mode === 'shared' || mode === 'shared-source' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
   if (mode === 'shared') messages.push({text: 'Hidden template', visible: false, closest: () => null, contains: () => false});
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || comments.includes(e) || cards.includes(e), querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR && editor ? [editor] : []};
-  const profile = {innerText: 'Post author', parentElement: {parentElement: {parentElement: {}}}};
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR && editor ? [editor] : []};
+  const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
+  let revealed = false;
+  const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
+    getAttribute: () => revealed ? '/bistro/posts/2' : '?__cft__[0]=tracking', closest: () => null,
+    focus() {revealed = true;}, blur() {}};
+  const headerLink = (href, comment = false) => ({href, getAttribute: () => href, closest: () => comment ? {} : null});
+  profile.parentElement.parentElement.parentElement.querySelectorAll = () => [headerLink('https://www.facebook.com/a/posts/1')];
+  const profiles = [profile, {innerText: 'Big Feast Bistro + Retail', closest: () => null,
+    parentElement: {parentElement: {parentElement: {querySelectorAll: () => [sourceLink,
+      headerLink('https://www.facebook.com.evil/bistro/posts/2'),
+      headerLink('https://www.facebook.com/bistro/posts/2?comment_id=3'),
+      headerLink('https://www.facebook.com/bistro/posts/3', true)]}}}},
+    {innerText: 'Hidden template', visible: false, closest: () => null},
+    {innerText: 'Comment author', closest: () => ({}), parentElement: {parentElement: {parentElement: {querySelectorAll() {throw Error('Do not inspect comment headers');}}}}}];
   const document = {
     querySelectorAll: selector => selector === 'video' ? [video] : selector === '[role=button][aria-label]' ? [openComments] : (selector === '[role=dialog]' && watch || selector === '[role=complementary]' && isReel) && opened ? [root] : [],
     querySelector: () => opened ? {closest: () => root} : null,
@@ -56,6 +69,7 @@ function fixture(mode = false) {
     return editor;
   }
   const F = {
+    canon: href => {const url = new URL(href); return url.pathname;},
     clean: text => text.trim(), TIME: /^\d+h$/, visible: element => element.visible !== false, enabled: () => true,
     vtext: scope => scope === reelCard ? ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See more', 'Following', '::-webkit-scrollbar {width: 7px;}'] : ['Post author', '1h'],
     postText: element => element === reelCard ? ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See more', 'Following'].join('\n') : mode === 'slow' && !expanded ? 'Short caption… See more' : element.text || 'Entire post text',
@@ -76,6 +90,8 @@ function fixture(mode = false) {
   assert.equal(JSON.parse(await slow.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Entire post text');
   const shared = fixture('shared');
   assert.equal(JSON.parse(await shared.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Poster text\nShared original');
+  const sourced = JSON.parse(await fixture('shared-source').api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.deepEqual(sourced.links, [{label: 'Shared post by Big Feast Bistro + Retail', url: 'https://www.facebook.com/bistro/posts/2'}]);
   const ambiguous = fixture('ambiguous');
   await assert.rejects(ambiguous.api.initialize('https://www.facebook.com/a/posts/1'), /More than one post/);
   const reel = fixture('reel');

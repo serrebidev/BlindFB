@@ -1,5 +1,5 @@
 //! Native post reader. The modal is entered by item activation, never the result timer.
-use super::{Job, REACTIONS, Tag, Task, Ui, open_url};
+use super::{Job, REACTIONS, Tag, Task, Ui, append_links_menu, open_url};
 use blindfb_core::fb::react_args;
 use blindfb_core::posts::{Comment, Link, parse_detail};
 use std::cell::RefCell;
@@ -417,15 +417,15 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
-    let post_label = StaticText::builder(&dialog).with_label("&Full post").build();
-    let post = TextCtrl::builder(&dialog)
-        .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
-        .build();
-    post.set_name("Full post. Applications or Shift+F10 for comment, react, share and copy");
     let links_label = StaticText::builder(&dialog).with_label("Post lin&ks").build();
     let links = ListBox::builder(&dialog).build();
     links.set_name("Post links. Enter opens the selected link in your browser");
     let open_link = Button::builder(&dialog).with_label("&Open link").build();
+    let post_label = StaticText::builder(&dialog).with_label("&Full post").build();
+    let post = TextCtrl::builder(&dialog)
+        .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
+        .build();
+    post.set_name("Full post. Applications or Shift+F10 for links, comment, react, share and copy");
     let media_label = StaticText::builder(&dialog).with_label("Video player").build();
     let media_builder = MediaCtrl::builder(&dialog).with_size(Size::new(320, 120));
     // WMP handles network MP4 asynchronously; DirectShow may block while opening it.
@@ -471,11 +471,11 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         button.set_name(&button.get_label());
         buttons.add(button, 0, SizerFlag::All, 4);
     }
-    root.add(&post_label, 0, SizerFlag::All, 4);
-    root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&links_label, 0, SizerFlag::All, 4);
     root.add(&links, 1, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&open_link, 0, SizerFlag::All, 4);
+    root.add(&post_label, 0, SizerFlag::All, 4);
+    root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&media_label, 0, SizerFlag::All, 4);
     root.add(&media, 0, SizerFlag::All, 4);
     root.add_sizer(&player_buttons, 0, SizerFlag::Expand, 0);
@@ -671,6 +671,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
             react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
         }
         menu.append_submenu(react, "&React", "");
+        append_links_menu(&menu, &r.state.borrow().links);
         menu.append_separator();
         menu.append(ID_COPY_POST, "Cop&y post text", "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, "Copy &link", "", ItemKind::Normal);
@@ -735,7 +736,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         tag: Tag::PostLoaded(session),
     });
     reader.message(ui, "Loading post and comments…");
-    if autoplay { stop.set_focus(); } else { comments.set_focus(); }
+    links.set_focus();
     dialog.show_modal();
     share_timer.stop();
     reader.media.stop();

@@ -61,6 +61,33 @@
     return [...found.values()];
   }
 
+  async function sharedLinks(scope) {
+    const found = new Map();
+    for (const profile of scope.querySelectorAll('[data-ad-rendering-role=profile_name]')) {
+      if (!F.visible(profile) || profile.closest(ARTICLE)) continue;
+      const name = F.clean(profile.innerText || '').replace(/\s+/g, ' ');
+      const header = profile.parentElement?.parentElement?.parentElement;
+      if (!name || !header) continue;
+      for (const a of header.querySelectorAll('a[href]')) {
+        if (!F.visible(a) || a.closest(ARTICLE)) continue;
+        // Facebook reveals the original post's timestamp URL only after focus.
+        if (/^\?/.test(a.getAttribute('href') || '')) {
+          a.focus({preventScroll: true});
+          await F.waitFor(() => !/^\?/.test(a.getAttribute('href') || ''), 400, 30);
+          a.blur();
+        }
+        let url;
+        try { url = new URL(a.href, location.href); } catch { continue; }
+        if (!/^https?:$/.test(url.protocol) || !/^(www\.|m\.|web\.)?facebook\.com$/.test(url.hostname) || url.searchParams.has('comment_id') || url.searchParams.has('reply_comment_id')) continue;
+        const path = F.canon(url.href);
+        if (!/(?:\/posts\/|\/permalink\/|^\/(?:permalink|story)\.php\?|\/reel\/|\/videos\/|^\/watch\/?\?v=)/.test(path) || path === F.canon(target)) continue;
+        const address = 'https://www.facebook.com' + path;
+        if (!found.has(address)) found.set(address, {label: 'Shared post by ' + name, url: address});
+      }
+    }
+    return [...found.values()];
+  }
+
   // Profile links carry base64 "comment:<post>_<id>"; reduce it to the numeric comment id.
   function plain(value) {
     if (/^\d+$/.test(value)) return value;
@@ -155,7 +182,7 @@
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : '';
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set(outerMessages.map(element => F.postText(element)).filter(Boolean))].join('\n');
-    return JSON.stringify({url: target, author, time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: links(root, messages), video: videoTarget(root)});
+    return JSON.stringify({url: target, author, time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
   function selected(id) {
