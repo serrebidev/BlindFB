@@ -12,6 +12,7 @@ mod engine;
 pub mod fb;
 pub mod http;
 pub mod media;
+pub mod mpv;
 pub mod posts;
 pub mod reels;
 

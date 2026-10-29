@@ -15,6 +15,7 @@
 //! any other posts here.
 
 mod post_dialog;
+mod player;
 mod reel_cache;
 mod update;
 
@@ -341,7 +342,7 @@ fn startup_log(line: &str) {
         std::fs::OpenOptions::new().create(true).append(true).open(dir.join("startup.log"))
     {
         use std::io::Write;
-        let _ = writeln!(file, "{line}");
+        let _ = writeln!(file, "[{}] {line}", std::process::id());
     }
 }
 
@@ -353,6 +354,7 @@ fn main() {
     let _ = wxdragon::main(|_| {
         run();
     });
+    startup_log("main: window loop returned; closing browser pages");
     if let Some(fb) = Fb::discover() { reels::close_all(&fb); }
     startup_log("main: exited");
 }
@@ -412,7 +414,6 @@ fn run() {
 
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     let refresh_btn = Button::builder(&panel).with_label("Refresh (F5)").build();
-    let more_btn = Button::builder(&panel).with_label("Load more (Ctrl+L)").build();
     let open_btn = Button::builder(&panel).with_label("Open / read full post and links").build();
     let react_btn = Button::builder(&panel).with_label("React").build();
     let comment_btn = Button::builder(&panel).with_label("Comment").build();
@@ -422,7 +423,6 @@ fn run() {
     let delete_btn = Button::builder(&panel).with_label("Delete post").build();
     for b in [
         &refresh_btn,
-        &more_btn,
         &open_btn,
         &react_btn,
         &comment_btn,
@@ -567,8 +567,6 @@ fn run() {
 
     let ui_refresh = ui.clone();
     refresh_btn.on_click(move |_| refresh(&ui_refresh));
-    let ui_more = ui.clone();
-    more_btn.on_click(move |_| load_more(&ui_more));
     let ui_open2 = ui.clone();
     open_btn.on_click(move |_| open_selected(&ui_open2));
     let ui_react = ui.clone();
@@ -623,6 +621,15 @@ fn run() {
         }
     });
     unlock_timer.start(120, false);
+    frame.bind_internal(EventType::CLOSE_WINDOW, move |event| {
+        startup_log("window: close requested");
+        event.skip(true);
+    });
+    frame.on_destroy(move |_| {
+        startup_log("window: stopping timers before destruction");
+        timer.stop();
+        unlock_timer.stop();
+    });
 
     frame.centre();
     startup_log("run: showing the window");
@@ -725,7 +732,11 @@ fn spawn_worker(
                     (fb.clone(), page, target, job.tag, done.clone());
                 thread::spawn(move || {
                     let result = match fb {
-                        Some(fb) => blindfb_core::media::stream_url(&fb, &page, &target),
+                        Some(fb) => (|| {
+                            #[cfg(windows)]
+                            blindfb_core::mpv::ensure()?;
+                            blindfb_core::media::stream_details(&fb, &page, &target)
+                        })(),
                         None => Err("The Facebook backend is not installed".to_owned()),
                     };
                     let _ = done.send(Done { tag, result });
@@ -776,10 +787,7 @@ fn spawn_worker(
                     Some(fb) => blindfb_core::posts::load(fb, &page, &target),
                     None => Err("The Facebook backend is not installed".to_owned()),
                 },
-                Task::PostVideo { page, target } => match &fb {
-                    Some(fb) => blindfb_core::media::stream_url(fb, &page, &target),
-                    None => Err("The Facebook backend is not installed".to_owned()),
-                },
+                Task::PostVideo { .. } => unreachable!("video preparation runs independently"),
                 Task::PostReelReact { page, reaction } => match &fb {
                     Some(fb) => blindfb_core::posts::reel_react(fb, &page, &reaction),
                     None => Err("The Facebook backend is not installed".to_owned()),
@@ -1618,8 +1626,45 @@ fn prepare_reels(ui: &Ui) {
     }
 }
 
+fn set_reel_title(record: &mut Record, target: &str, title: &str) -> bool {
+    if title.is_empty() || record.field(0) != target || !record.field(4).trim().is_empty() || record.fields.len() < 5 {
+        return false;
+    }
+    record.fields[4] = title.to_owned();
+    record.raw = record.fields.join("\t");
+    true
+}
+
+fn update_reel_titles(ui: &Ui, target: &str, title: &str) {
+    let changed = {
+        let mut state = ui.state.borrow_mut();
+        for (view, (records, _, _)) in &mut state.cache {
+            if matches!(view, View::Reels(_)) {
+                for record in records { set_reel_title(record, target, title); }
+            }
+        }
+        if !matches!(state.records_view, View::Reels(_)) { return; }
+        let current = state.view == state.records_view;
+        let view = state.records_view.clone();
+        state.records.iter_mut().enumerate().filter_map(|(index, record)| {
+            (set_reel_title(record, target, title) && current).then(|| (index, list_label(&view, record)))
+        }).collect::<Vec<_>>()
+    };
+    for (index, label) in changed {
+        ui.items.set_string(index as u32, &label);
+        if ui.items.get_selection() == Some(index as u32) { show_details(ui, index); }
+    }
+}
+
 fn show_details(ui: &Ui, index: usize) {
     let state = ui.state.borrow();
+    if is_more_row(&state.records_view, state.records.len(), index) {
+        let label = more_row_label(&state.records_view, state.records.len()).unwrap();
+        let text = format!("{label}. Press Enter to load the next batch.");
+        drop(state);
+        set_details(ui, &text, None);
+        return;
+    }
     if let Some(record) = state.records.get(index) {
         let text = details_for(&state.view, record);
         let post = post_target(&state.view, record)
@@ -1644,6 +1689,27 @@ fn selected_post_ref(ui: &Ui) -> Option<String> {
     post_target(&ui.state.borrow().view, &record).map(str::to_owned)
 }
 
+fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
+    if count == 0 { return None; }
+    match view {
+        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => Some("Load more posts"),
+        View::Reels(_) => Some("Load more reels"),
+        View::Notifications => Some("Load more notifications"),
+        View::Friends => Some("Load more friends"),
+        View::Chats => Some("Load more conversations"),
+        _ => None,
+    }
+}
+
+fn is_more_row(view: &View, count: usize, index: usize) -> bool {
+    index == count && more_row_label(view, count).is_some()
+}
+
+fn more_selection(view: &View, old_count: usize, selected: Option<u32>, count: usize) -> Option<usize> {
+    selected.filter(|index| count > 0 && is_more_row(view, old_count, *index as usize))
+        .map(|index| (index as usize).min(count))
+}
+
 /// Show a section's backend output in the Items list, updated in place so the
 /// selection and the screen reader's position survive.
 fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>) {
@@ -1660,7 +1726,7 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         drop(state);
     }
     let old_index = ui.items.get_selection();
-    let (old_labels, selected_key) = {
+    let (mut old_labels, selected_key, more_selected) = {
         let state = ui.state.borrow();
         let labels: Vec<_> =
             state.records.iter().map(|r| list_label(&state.records_view, r)).collect();
@@ -1668,12 +1734,20 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
             .and_then(|i| state.records.get(i as usize))
             .map(|r| record_key(&state.records_view, r))
             .filter(|k| !k.is_empty() && k != "-");
-        (labels, key)
+        let more_selected = if state.records_view == *view {
+            more_selection(view, state.records.len(), old_index, records.len())
+        } else { None };
+        (labels, key, more_selected)
     };
-    let labels: Vec<_> = records.iter().map(|r| list_label(view, r)).collect();
-    let selected = selected_key
+    if let Some(label) = more_row_label(&ui.state.borrow().records_view, old_labels.len()) {
+        old_labels.push(label.to_owned());
+    }
+    let count = records.len();
+    let mut labels: Vec<_> = records.iter().map(|r| list_label(view, r)).collect();
+    if let Some(label) = more_row_label(view, count) { labels.push(label.to_owned()); }
+    let selected = more_selected.or_else(|| selected_key
         .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
-        .or_else(|| (!records.is_empty()).then_some(0));
+        .or_else(|| (!records.is_empty()).then_some(0)));
     {
         let mut state = ui.state.borrow_mut();
         state.records = records;
@@ -1690,7 +1764,7 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         ui.items.delete(ui.items.get_count() - 1);
     }
     if let Some(selected) = selected {
-        if ui.items.get_selection() != Some(selected as u32) {
+        if more_selected.is_some() || ui.items.get_selection() != Some(selected as u32) {
             ui.items.set_selection(selected as u32, true);
         }
     }
@@ -1701,7 +1775,7 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     } else {
         set_details(ui, "(nothing here)", None);
     }
-    ui.status(&format!("{} — {} item(s)", view.title(), ui.items.get_count()));
+    ui.status(&format!("{} — {} item(s)", view.title(), count));
     prepare_reels(ui);
 }
 
@@ -1737,7 +1811,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.state.borrow_mut().last_args = args;
                     show_records(ui, &view, records, body);
                     if append {
-                        ui.status(&format!("{added} new item(s) loaded. {} item(s) total.", ui.items.get_count()));
+                        ui.status(&format!("{added} new item(s) loaded. {} item(s) total.", ui.state.borrow().records.len()));
                     }
                     if view == View::Feed && !append && ui.items.get_count() > 0 {
                         load_more(ui);
@@ -1795,6 +1869,9 @@ fn apply_done(ui: &Ui, done: Done) {
                 let mut state = ui.state.borrow_mut();
                 if state.account != account { return; }
                 state.reel_cache.finish(&target, &done.result, Instant::now());
+            }
+            if let Some(info) = done.result.as_ref().ok().and_then(|data| blindfb_core::media::parse_stream(data).ok()) {
+                update_reel_titles(ui, &target, &info.title);
             }
             post_dialog::prepared(ui, &target, done.result);
             prepare_reels(ui);
@@ -2079,6 +2156,11 @@ fn open_facebook_link(ui: &Ui) {
 }
 
 fn open_selected(ui: &Ui) {
+    let more = ui.items.get_selection().is_some_and(|index| {
+        let state = ui.state.borrow();
+        state.view == state.records_view && is_more_row(&state.view, state.records.len(), index as usize)
+    });
+    if more { load_more(ui); return; }
     let Some((_, record)) = selected(ui) else {
         return;
     };
@@ -2119,6 +2201,10 @@ fn open_selected(ui: &Ui) {
                     post_dialog::open_reel(ui, &url, stream, preparing);
                 }
                 Some(url) => post_dialog::open(ui, &url, false),
+                None if view == View::Notifications => {
+                    open_url(&web_url(target));
+                    ui.status("Opened notification on Facebook.");
+                }
                 None => {
                     // Photo albums and other pages the reader cannot parse yet.
                     if confirm(
@@ -2379,6 +2465,7 @@ fn send_composed(ui: &Ui) {
 }
 
 fn handle_menu(ui: &Ui, id: i32) {
+    startup_log(&format!("menu: command {id}"));
     match id {
         ID_EXIT => ui.frame.close(true),
         ID_FEED => load_view(ui, View::Feed),
@@ -2472,6 +2559,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 &ui.frame,
                 "Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
+                 End then Enter on Load more posts or Load more reels loads the next batch.\n\
                  Ctrl+1 through Ctrl+8: switch views. Ctrl+8 opens Reels. F5: refresh. Ctrl+L: load more.\n\
                  Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n\
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
@@ -2855,6 +2943,30 @@ mod tests {
         assert_eq!(more_args(&View::Groups, &groups_eval_args(), 40, false), None);
         assert_eq!(more_args(&View::Feed, &[], 0, false), None);
         assert_eq!(more_args(&View::SearchResults, &search_args("new query", Some("posts"), PAGE), 40, true), None);
+    }
+
+    #[test]
+    fn load_more_is_a_final_action_row_only_in_paged_sections() {
+        assert_eq!(more_row_label(&View::Feed, 100), Some("Load more posts"));
+        assert_eq!(more_row_label(&View::Reels(ReelSource::Recommended), 20), Some("Load more reels"));
+        assert!(more_row_label(&View::Feed, 0).is_none());
+        assert!(more_row_label(&View::Groups, 10).is_none());
+        assert!(is_more_row(&View::Feed, 100, 100));
+        assert!(!is_more_row(&View::Feed, 100, 99));
+        assert!(!is_more_row(&View::Feed, 100, 101));
+        assert_eq!(more_selection(&View::Feed, 100, Some(100), 200), Some(100));
+        assert_eq!(more_selection(&View::Feed, 100, Some(100), 100), Some(100));
+        assert_eq!(more_selection(&View::Feed, 100, Some(99), 200), None);
+    }
+
+    #[test]
+    fn a_video_title_fills_only_the_matching_reels_empty_caption() {
+        let (mut rows, _) = reels::parse(r#"{"rows":[{"url":"https://www.facebook.com/reel/1/","author":"Rock Bottom","text":""},{"url":"https://www.facebook.com/reel/2/","author":"Other","text":"Original caption"}]}"#).unwrap();
+        assert!(!set_reel_title(&mut rows[1], "https://www.facebook.com/reel/1/", "Wrong reel"));
+        assert!(set_reel_title(&mut rows[0], "https://www.facebook.com/reel/1/", "Dedicated To Bart Simpson"));
+        assert_eq!(rows[0].field(4), "Dedicated To Bart Simpson");
+        assert!(!set_reel_title(&mut rows[0], "https://www.facebook.com/reel/1/", "Replacement"));
+        assert_eq!(rows[1].field(4), "Original caption");
     }
 
     #[test]

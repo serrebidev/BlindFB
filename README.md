@@ -30,6 +30,8 @@ everything and presents its output in a keyboard-first window.
   (Ctrl+O) opens a post, video or reel URL. Post links have their own list;
   Enter or **Open link** opens the selected page in your browser. F1 lists
   keyboard commands. The video helper installs itself when first needed.
+  Windows playback uses managed mpv with its bundled codecs. Native buttons
+  and sliders provide NVDA controls; the video surface stays out of Tab order.
   External links come first, shared post sources follow, and **Full post on
   Facebook** is always last. Tab from a selected post goes directly to its
   links; the reader opens with Post links focused. Shared posts include a
@@ -41,19 +43,24 @@ everything and presents its output in a keyboard-first window.
   Notifications about several new reels list the
   exact reels when Facebook supplies their IDs; otherwise they show the
   account's reels and explain that fallback.
-- **Load more** (Ctrl+L) requests another 100 items in feeds and other paged
-  lists, or 20 reels. Facebook may return fewer when it has no more items
+  Reels without captions use their video title when it is available.
+- The final **Load more posts** or **Load more reels** list item loads the
+  next batch when you press Enter. Selection stays at the first new item.
+  **Ctrl+L** also works. Each batch requests 100 items in feeds and other
+  paged lists, or 20 reels. Facebook may return fewer when it has no more items
   ready. The news feed shows its first 10 posts before filling the cache.
 - Every item in the Items list has a context menu (Applications or
   Shift+F10) with the actions that fit it. **Share** is the second item
   for posts, including the news feed, Feeds, profile and group posts,
   search results and notifications. It opens the reader and share prompt.
-- **Load more** (Ctrl+L, the button, or View menu) appends more items
-  without moving your selection or repeating existing rows. It works in
+- **Load more** (the final list item, Ctrl+L, or View menu) appends more items
+  without repeating existing rows. It works in
   feeds, post lists, search results, notifications, friends and chat lists.
   Other sections do not support loading more. Facebook may return fewer
   items or none when it has no further results available.
-- Browse **notifications** and open the posts they point to.
+- Browse **notifications** and open the posts they point to. Group post
+  notifications preserve comment links. Other notification types open their
+  Facebook page in your browser. Photo links follow their parent post when available.
 - Browse and search your **friends list**; open any friend's profile, read
   their posts, or jump straight into a Messenger chat with them. (Adding and
   removing friends is not something the `fb` backend can do — the Post menu
@@ -116,12 +123,13 @@ your package manager, using the standard system password prompt. Keep
   folder, replacing an older copy at startup. Until two fixes are merged
   upstream (hidden feed post links, hieu-lee/facebook-cli#1; the Messenger
   restore prompt, #2), that release is
-  [serrebidev/facebook-cli `v0.1.5-blindfb.4`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.4):
+  [serrebidev/facebook-cli `v0.1.5-blindfb.5`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.5):
   upstream 0.1.5 plus those fixes, faster feed loading, complete shared-post
   text and the empty comment/share editor fix ([PR #3](https://github.com/hieu-lee/facebook-cli/pull/3),
   [PR #4](https://github.com/hieu-lee/facebook-cli/pull/4)). Full post text is
   expanded before reading, including list rows ([PR #5](https://github.com/hieu-lee/facebook-cli/pull/5)).
   Expansion controls are excluded from post text ([PR #6](https://github.com/hieu-lee/facebook-cli/pull/6)).
+  Shared feed posts include the original author's name ([PR #7](https://github.com/hieu-lee/facebook-cli/pull/7)).
   **Backend → Install or update backend**
   reinstalls it any time.
   (BlindFB also finds an `fb` you installed yourself: the managed copy

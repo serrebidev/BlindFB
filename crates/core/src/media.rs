@@ -18,8 +18,41 @@ use crate::backend::{data_dir, expected_hash, get, sha256_hex};
 const RELEASES: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/";
 /// Facebook changes its pages often and yt-dlp follows; refresh a copy older than this.
 const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
-/// Progressive MP4 (sound and picture in one file), which every native player can stream.
-const FORMAT: &str = "hd/sd/best[vcodec!=none][acodec!=none]";
+/// mpv handles HD codecs on Windows; other system players prefer H.264 SD streams.
+const FORMAT: &str = if cfg!(windows) { "hd/sd/best[vcodec!=none][acodec!=none]" }
+    else { "sd/hd/best[vcodec!=none][acodec!=none]" };
+
+pub struct VideoStream {
+    pub url: String,
+    pub title: String,
+}
+
+pub fn parse_stream(output: &str) -> Result<VideoStream, String> {
+    let data: serde_json::Value = serde_json::from_str(output).map_err(|_| "Invalid video metadata")?;
+    let url = data["url"].as_str().filter(|url| playable_url(true, url).is_some()
+        && !url.chars().any(|c| c.is_control() || c.is_whitespace()))
+        .ok_or("Invalid video stream URL")?;
+    Ok(VideoStream {url: url.to_owned(), title: data["title"].as_str().unwrap_or("").split_whitespace().collect::<Vec<_>>().join(" ")})
+}
+
+fn video_command(program: &Path, video: &str, cookies: Option<&Path>) -> Command {
+    let mut command = Command::new(program);
+    command.args(["--ignore-config", "--no-playlist", "--no-warnings",
+        "--socket-timeout", "15", "--retries", "1", "--extractor-retries", "1",
+        "-f", FORMAT, "--print", r#"{"url":%(url)j,"title":%(title)j}"#]);
+    if let Some(cookies) = cookies { command.arg("--cookies").arg(cookies); }
+    command.args(["--", video]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    command
+}
+
+fn generic_title(title: &str) -> bool {
+    title.is_empty() || title == "Facebook" || title.starts_with("Facebook video #")
+}
 
 /// The yt-dlp release asset for this OS and CPU.
 fn asset_name() -> Option<&'static str> {
@@ -220,10 +253,10 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
     Ok(Output { status, stdout: read_output(&stdout)?, stderr: read_output(&stderr)? })
 }
 
-/// Resolve a Facebook video or reel to a stream URL for the player, with the session of the
+/// Resolve a Facebook video or reel to JSON stream metadata, with the session of the
 /// browser tab `page` (the reader's own), so it is always the browser the backend really uses.
 /// Blocking.
-pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
+pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
     if !is_facebook_url(video) {
         return Err("This video is not on Facebook, so BlindFB will not play it.".to_owned());
     }
@@ -238,24 +271,24 @@ pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
     .map_err(|_| "could not read your Facebook session for the video helper".to_owned())?;
     let dir = data_dir().ok_or("could not find BlindFB's data folder")?;
     let file = CookieFile::create(&dir, &netscape_cookies(&cookies["cookies"]))?;
-    let mut command = Command::new(program);
-    command
-        .arg("--ignore-config")
-        .arg("--no-playlist")
-        .arg("--no-warnings")
-        .args(["--socket-timeout", "15", "--retries", "1", "--extractor-retries", "1"])
-        .arg("--cookies")
-        .arg(&file.0)
-        .args(["-f", FORMAT, "-g", "--", video]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    }
+    let mut command = video_command(&program, video, Some(&file.0));
     let output = run_helper(&mut command, Duration::from_secs(60))?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    if let Some(url) = playable_url(output.status.success(), &stdout) {
-        return Ok(url.to_owned());
+    if output.status.success() {
+        if let Ok(mut info) = parse_stream(&stdout) {
+            // The signed-in reels page may omit a title that the public video page exposes.
+            if generic_title(&info.title) {
+                if let Ok(public) = run_helper(&mut video_command(&program, video, None), Duration::from_secs(15)) {
+                    if public.status.success() {
+                        if let Ok(metadata) = parse_stream(&String::from_utf8_lossy(&public.stdout)) {
+                            if !generic_title(&metadata.title) { info.title = metadata.title; }
+                        }
+                    }
+                }
+                if generic_title(&info.title) { info.title.clear(); }
+            }
+            return Ok(serde_json::json!({"url":info.url,"title":info.title}).to_string());
+        }
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
     let reason =
@@ -263,9 +296,23 @@ pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
     Err(format!("Facebook did not give a playable video. {}", reason.trim_start_matches("ERROR: ")))
 }
 
+pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
+    Ok(parse_stream(&stream_details(fb, page, video)?)?.url)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn video_metadata_keeps_the_title_and_requires_one_https_stream() {
+        let info = parse_stream(r#"{"url":"https://video.fbcdn.net/movie.mp4","title":"Dedicated To Bart Simpson"}"#).unwrap();
+        assert_eq!(info.title, "Dedicated To Bart Simpson");
+        assert_eq!(info.url, "https://video.fbcdn.net/movie.mp4");
+        assert!(parse_stream(r#"{"url":"file:///secret","title":"Title"}"#).is_err());
+        assert!(parse_stream("{\"url\":\"https://video/test\\n\"}").is_err());
+        assert!(parse_stream("{}\n{}").is_err());
+    }
 
     #[test]
     fn only_facebook_pages_reach_the_helper() {

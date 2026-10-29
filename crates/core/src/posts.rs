@@ -146,9 +146,10 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
 /// A photo shared inside a post (`set=pcb.<id>` or `set=gm.<id>`) opens that post.
 pub fn reader_url(target: &str) -> Option<String> {
     let url = crate::fb::web_url(target);
+    let url = group_notification_post(&url).unwrap_or(url);
     let parent = url
         .split_once('?')
-        .filter(|(path, _)| path.trim_end_matches('/').ends_with("/photo"))
+        .filter(|(path, _)| matches!(path.trim_end_matches('/').rsplit('/').next(), Some("photo" | "photo.php")))
         .and_then(|(_, query)| {
             query
                 .split('&')
@@ -159,6 +160,26 @@ pub fn reader_url(target: &str) -> Option<String> {
         None => url,
     };
     validate_target(&url).ok().map(|_| url)
+}
+
+fn group_notification_post(url: &str) -> Option<String> {
+    let uri = url.parse::<tungstenite::http::Uri>().ok()?;
+    if !matches!(uri.host()?, "www.facebook.com" | "facebook.com" | "m.facebook.com") { return None; }
+    let parts: Vec<_> = uri.path().split('/').filter(|part| !part.is_empty()).collect();
+    let ["groups", group] = parts.as_slice() else { return None; };
+    let query: Vec<_> = uri.query()?.split('&').collect();
+    let raw = query.iter().find_map(|part| part.strip_prefix("post_id="))
+        .or_else(|| query.iter().find_map(|part| part.strip_prefix("multi_permalinks=")))?;
+    let ids = raw.replace("%2C", ",").replace("%2c", ",");
+    let id = ids.split(',').next()?;
+    if id.is_empty() || !id.bytes().all(|b| b.is_ascii_digit()) { return None; }
+    let mut address = format!("https://www.facebook.com/groups/{group}/posts/{id}");
+    let comments: Vec<_> = query.into_iter().filter(|part| {
+        ["comment_id=", "reply_comment_id="].iter().any(|key| part.strip_prefix(key)
+            .is_some_and(|value| !value.is_empty() && value.bytes().all(|b| b.is_ascii_digit())))
+    }).collect();
+    if !comments.is_empty() { address.push('?'); address.push_str(&comments.join("&")); }
+    Some(address)
 }
 
 pub fn validate_target(target: &str) -> Result<(), String> {
@@ -173,7 +194,6 @@ pub fn validate_target(target: &str) -> Result<(), String> {
         let post_path = matches!(segments.as_slice(), [_, "posts", id] | ["groups", _, "posts", id] | ["groups", _, "permalink", id] | ["reel", id] | ["videos", id] | [_, "videos", id] if !id.is_empty())
             // A bare post id; Facebook redirects it to the post.
             || matches!(segments.as_slice(), [id] if id.bytes().all(|b| b.is_ascii_digit()));
-        // Photo viewers use another layout the reader cannot parse yet.
         let query_post = matches!(path, "permalink.php" | "story.php")
             && rest.split('?').nth(1).is_some_and(|q| {
                 q.split('&').any(|p| {
@@ -186,7 +206,11 @@ pub fn validate_target(target: &str) -> Result<(), String> {
             && rest.split('?').nth(1).is_some_and(|query| query.split('&').any(|pair| {
                 pair.strip_prefix("v=").is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
             }));
-        if post_path || query_post || watch {
+        let photo = matches!(path.trim_end_matches('/'), "photo" | "photo.php")
+            && rest.split('?').nth(1).is_some_and(|query| query.split('&').any(|pair| {
+                pair.strip_prefix("fbid=").is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
+            }));
+        if post_path || query_post || watch || photo {
             return Ok(());
         }
     }
@@ -201,13 +225,30 @@ fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
 pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
     validate_target(target)?;
     fb.run(&["page", page, "open", target])?;
+    let mut target = target.to_owned();
+    if target.split('?').next().is_some_and(|path| matches!(path.trim_end_matches('/').rsplit('/').next(), Some("photo" | "photo.php"))) {
+        let parent = eval(fb, page, r#"(async()=>{const links=await window.__fb.waitFor(()=>{const found=[...document.querySelectorAll('a[href]')].filter(a=>!a.closest('[role=article][aria-label]')&&window.__fb.visible(a)&&/^(View post|Voir la publication|Xem bài viết)$/i.test(window.__fb.clean(a.innerText||'')));return found.length===1?found[0].href:null;},3000);return JSON.stringify(links);})()"#)?;
+        if let Ok(Some(parent)) = serde_json::from_str::<Option<String>>(&parent) {
+            if let Some(parent) = reader_url(&parent).filter(|parent| !parent.contains("/photo")) {
+                fb.run(&["page", page, "open", &parent])?;
+                target = parent;
+            }
+        }
+    }
     let script = format!(
         "{};window.__blindfbPost.initialize({})",
         include_str!("post_scripts/reader.js"),
         json!(target)
     );
     let result = eval(fb, page, &script).and_then(|output| {
-        parse_detail(&output)?;
+        let detail = parse_detail(&output)?;
+        if detail.text.trim().is_empty() && detail.video.as_ref().is_some_and(|video| video.contains("/reel/")) {
+            if let Ok(info) = crate::media::stream_details(fb, page, &target).and_then(|data| crate::media::parse_stream(&data)) {
+                if !info.title.is_empty() {
+                    return eval(fb, page, &format!("window.__blindfbPost.setTitle({})", json!(info.title)));
+                }
+            }
+        }
         Ok(output)
     });
     if result.is_err() {
@@ -359,7 +400,7 @@ mod tests {
             "https://www.facebook.com/messages/t/1",
             "https://user@www.facebook.com/a/posts/1",
             "https://www.facebook.com/reel/",
-            "https://www.facebook.com/photo/?fbid=1",
+            "https://www.facebook.com/photo/?fbid=not-a-number",
             "https://www.facebook.com/afad/?approval_id=1",
         ] {
             assert!(validate_target(bad).is_err(), "{bad}");
@@ -373,6 +414,8 @@ mod tests {
             "https://www.facebook.com/somepage/videos/123/",
             "https://www.facebook.com/videos/123/",
             "https://www.facebook.com/watch/?v=123",
+            "https://www.facebook.com/photo/?fbid=1&set=a.5",
+            "https://www.facebook.com/photo.php?fbid=1",
         ] {
             assert!(validate_target(good).is_ok(), "{good}");
         }
@@ -384,9 +427,19 @@ mod tests {
             reader_url("/photo/?fbid=1&set=gm.33&idorvanity=4").as_deref(),
             Some("https://www.facebook.com/33")
         );
-        assert_eq!(reader_url("/photo/?fbid=1&set=a.5"), None);
+        assert_eq!(reader_url("/photo/?fbid=1&set=a.5").as_deref(), Some("https://www.facebook.com/photo/?fbid=1&set=a.5"));
+        assert_eq!(reader_url("/photo.php?fbid=1&set=pcb.22").as_deref(), Some("https://www.facebook.com/22"));
         assert_eq!(reader_url("/2284937812074776/x"), None);
         assert!(reader_url("/alice/posts/pfbid0x").is_some());
+    }
+
+    #[test]
+    fn group_notifications_resolve_posts_and_keep_comment_identity() {
+        assert_eq!(reader_url("/groups/7/?post_id=8&comment_id=9&reply_comment_id=10&notif_id=11").as_deref(),
+            Some("https://www.facebook.com/groups/7/posts/8?comment_id=9&reply_comment_id=10"));
+        assert_eq!(reader_url("/groups/aisaas/?multi_permalinks=12%2C13&notif_t=group_highlights").as_deref(),
+            Some("https://www.facebook.com/groups/aisaas/posts/12"));
+        assert!(reader_url("/groups/7/?post_id=invalid").is_none());
     }
 
     #[test]

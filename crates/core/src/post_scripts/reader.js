@@ -351,6 +351,7 @@
   }
 
   window.__blindfbPost = {
+    setTitle(title) { current(); if (card && !reel.text) reel.text = title; return read(); },
     like, shareOpen, shareFill, shareNow, shareClose, reelReact,
     async initialize(url) {
       target = url;

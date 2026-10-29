@@ -8,15 +8,16 @@
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 
 /// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
 /// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
 /// once those merge.
-pub const BACKEND_VERSION: &str = "0.1.5-blindfb.4";
+pub const BACKEND_VERSION: &str = "0.1.5-blindfb.5";
 const RELEASE_URL: &str =
-    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.4";
+    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.5";
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {
@@ -203,16 +204,52 @@ pub fn install_or_update() -> Result<String, String> {
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755));
     }
-    fs::rename(&tmp, &target).map_err(|e| format!("could not install the backend: {e}"))?;
+    replace_binary(&tmp, &target, Duration::from_secs(5))
+        .map_err(|e| format!("could not install the backend: {e}"))?;
     Ok(format!(
         "Installed the Facebook backend {tag} to {}",
         target.display()
     ))
 }
 
+fn replace_binary(source: &std::path::Path, target: &std::path::Path, timeout: Duration) -> std::io::Result<()> {
+    let start = Instant::now();
+    loop {
+        match fs::rename(source, target) {
+            Ok(()) => return Ok(()),
+            // A daemon can return from quit just before Windows releases its executable.
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied && start.elapsed() < timeout =>
+                std::thread::sleep(Duration::from_millis(100)),
+            Err(error) => return Err(error),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(windows)]
+    fn backend_replacement_waits_for_a_closing_process_file_lock() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = std::env::temp_dir().join(format!("blindfb-backend-lock-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("fb.exe");
+        let source = dir.join("fb.exe.new");
+        fs::write(&target, b"old").unwrap();
+        fs::write(&source, b"new").unwrap();
+        let held = fs::OpenOptions::new().read(true).share_mode(0).open(&target).unwrap();
+        assert!(fs::rename(&source, &target).is_err());
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            drop(held);
+        });
+        replace_binary(&source, &target, Duration::from_secs(2)).unwrap();
+        release.join().unwrap();
+        assert_eq!(fs::read(&target).unwrap(), b"new");
+        fs::remove_dir_all(dir).unwrap();
+    }
 
     #[test]
     fn extracts_only_the_backend_binary_from_both_archive_formats() {

@@ -2,6 +2,10 @@
 //! Windows embed the application manifest and the Explorer version resource.
 
 fn main() {
+    // wxWidgets debug symbols exceed the default MSVC PDB page limit.
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        println!("cargo:rustc-link-arg=/PDBPAGESIZE:8192");
+    }
     shipfitter::build::embed_commit_info("BLINDFB");
     // The updater verifies every download with this key; its secret half signs releases.
     println!("cargo:rerun-if-changed=assets/minisign.pub");

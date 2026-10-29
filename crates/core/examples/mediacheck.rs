@@ -7,6 +7,9 @@ fn main() -> Result<(), String> {
     let json = blindfb_core::posts::load(&fb, &page, &url)?;
     let result = (|| {
         let detail = blindfb_core::posts::parse_detail(&json)?;
+        if let Some(expected) = std::env::args().nth(2) {
+            assert!(detail.text.contains(&expected), "reader must expose the expected video title; got {:?}", detail.text);
+        }
         assert!(detail.video.is_some(), "reader must expose the video");
         println!(
             "Reader ready in {:?}: {} comments, {} links",

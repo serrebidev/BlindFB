@@ -31,6 +31,26 @@ fn brave_import_and_facebook_read() {
 }
 
 #[test]
+#[ignore = "requires a signed-in Microsoft Edge profile; reads this machine's Facebook session"]
+fn edge_import_and_facebook_read() {
+    let fb = Fb::discover().expect("install the backend first");
+    let browser = browsers::detect_browsers().into_iter()
+        .find(|b| b.kind == browsers::BrowserKind::Edge && b.label.is_empty())
+        .expect("install Microsoft Edge Stable first");
+    let status = browsers::import_chromium(&fb, &browser).expect("import Edge session");
+    assert!(browsers::signed_in(&status));
+    let profile = fb.run(&["profile", "me"]).expect("Facebook must accept the Edge session");
+    assert!(!profile.trim().is_empty());
+    let feed = fb.run(&["feed", "-n", "3", "--full", "--urls"]).expect("read feed with Edge session");
+    assert!(!blindfb_core::fb::parse_feed(&feed).is_empty());
+    fb.run(&["quit"]).expect("close only BlindFB's dedicated browser");
+    assert!(browsers::signed_in(&fb.run(&["status"]).unwrap()));
+    fb.run(&["profile", "me"]).expect("Edge session must survive a browser restart");
+    fb.run(&["quit"]).expect("close only BlindFB's dedicated browser");
+    println!("Edge import, authenticated profile/feed reads, and session persistence passed.");
+}
+
+#[test]
 #[ignore = "opens a dedicated Facebook sign-in window for the user"]
 fn visible_sign_in_and_facebook_read() {
     let fb = Fb::discover().expect("install the backend first");

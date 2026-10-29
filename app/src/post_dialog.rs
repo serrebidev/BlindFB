@@ -2,13 +2,13 @@
 use super::{Job, REACTIONS, Tag, Task, Ui, append_links_menu, open_url};
 use blindfb_core::fb::react_args;
 use blindfb_core::posts::{Comment, Link, parse_detail};
+use super::player::{Player, PlayerEvent};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use wxdragon::keycode::{WXK_NUMPAD_ENTER, WXK_RETURN};
 use wxdragon::prelude::*;
-use wxdragon::widgets::media_ctrl::SeekMode;
 
 const ID_REPLY: i32 = 12101;
 const ID_COPY: i32 = 12102;
@@ -32,7 +32,7 @@ pub(super) struct PostReader {
     comments: ListBox,
     links: ListBox,
     open_link: Button,
-    media: MediaCtrl,
+    media: Player,
     play: Button,
     stop: Button,
     back: Button,
@@ -54,6 +54,7 @@ struct ReelPlayback {
 }
 
 struct ReaderState {
+    target: String,
     comments: Vec<Comment>,
     links: Vec<Link>,
     video: Option<String>,
@@ -130,6 +131,7 @@ impl PostReader {
 
     fn play_label(&self, playing: bool) {
         let label = if playing { "&Pause video" } else { "&Play video" };
+        if self.play.get_label() == label { return; }
         self.play.set_label(label);
         self.play.set_name(&label.replace('&', ""));
     }
@@ -167,10 +169,14 @@ impl PostReader {
         self.message(ui, "Preparing video…");
     }
 
-    fn load_stream(&self, ui: &Ui, url: &str) {
+    fn load_stream(&self, ui: &Ui, data: &str) {
+        let info = match blindfb_core::media::parse_stream(data) {
+            Ok(info) => info,
+            Err(error) => { self.message(ui, &error); return; }
+        };
         self.state.borrow_mut().media_loading = Some(Instant::now());
         self.message(ui, "Loading video…");
-        if !self.media.load_uri(url) {
+        if !self.media.load_uri(&info.url) {
             self.state.borrow_mut().media_loading = None;
             self.message(ui, "Could not load video. Press Play to retry.");
         }
@@ -200,10 +206,40 @@ impl PostReader {
 
     fn seek(&self, ui: &Ui, offset: i64) {
         let position = seek_position(self.media.tell(), self.media.length(), offset);
-        if self.media.seek(position, SeekMode::FromStart) < 0 {
+        if self.media.seek(position) < 0 {
             self.message(ui, "This video could not seek.");
         } else {
             self.message(ui, &format!("Video position: {} seconds.", position / 1000));
+        }
+    }
+
+    fn poll_player(&self, ui: &Ui) {
+        for event in self.media.poll() {
+            match event {
+                PlayerEvent::Loaded => {
+                    if self.state.borrow_mut().media_loading.take().is_none() { continue; }
+                    self.media.set_volume(self.volume.value() as f64 / 100.0);
+                    let ok = self.media.play();
+                    self.state.borrow_mut().media_ready = ok;
+                    self.play_label(ok);
+                    self.controls();
+                    self.message(ui, if ok { "Playing video." } else { "Playback failed. Press Play to retry." });
+                }
+                PlayerEvent::StateChanged => self.play_label(self.media.get_state() == MediaState::Playing),
+                PlayerEvent::Finished => {
+                    self.play_label(false);
+                    self.message(ui, "Video finished.");
+                }
+                PlayerEvent::Error(error) => {
+                    let mut state = self.state.borrow_mut();
+                    state.media_loading = None;
+                    state.media_ready = false;
+                    drop(state);
+                    self.play_label(false);
+                    self.controls();
+                    self.message(ui, &format!("{error} Press Play to retry."));
+                }
+            }
         }
     }
 
@@ -279,13 +315,14 @@ impl PostReader {
                 self.message(ui, if copied { "Post copied." } else { "Could not copy the post." });
             }
             ID_COPY_POST_LINK => {
-                let copied = Clipboard::get().set_text(&self.url);
+                let copied = Clipboard::get().set_text(&self.state.borrow().target);
                 self.message(ui, if copied { "Link copied." } else { "Could not copy the link." });
             }
-            ID_WEB_POST => open_url(&self.url),
+            ID_WEB_POST => open_url(&self.state.borrow().target),
             _ if (ID_REACT..ID_REACT + REACTIONS.len() as i32).contains(&action) => {
                 let reaction = REACTIONS[(action - ID_REACT) as usize];
-                if is_video_page(&self.url) {
+                let target = self.state.borrow().target.clone();
+                if is_video_page(&target) {
                     self.start(
                         ui,
                         Task::PostReelReact {
@@ -298,7 +335,7 @@ impl PostReader {
                     return;
                 }
                 ui.send(Job {
-                    task: Task::Fb(react_args(&self.url, reaction), None),
+                    task: Task::Fb(react_args(&target, reaction), None),
                     tag: Tag::PostNote(self.session),
                 });
                 self.message(ui, "Reacting…");
@@ -409,6 +446,12 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         return;
     }
     let selection = ui.items.get_selection();
+    let preview = super::selected(ui).filter(|(_, record)| {
+        super::post_target(&ui.state.borrow().view, record)
+            .and_then(blindfb_core::posts::reader_url).as_deref() == Some(target)
+    }).map(|_| ui.details.get_value());
+    let initial_links = blindfb_core::posts::ordered_links(
+        if preview.is_some() { ui.link_targets.borrow().clone() } else { Vec::new() }, target);
     let autoplay = playback.is_some();
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let dialog = Dialog::builder(&ui.frame, "Post and comments")
@@ -420,23 +463,17 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let links_label = StaticText::builder(&dialog).with_label("Post lin&ks").build();
     let links = ListBox::builder(&dialog).build();
     links.set_name("Post links. Enter opens the selected link in your browser");
+    for link in &initial_links { links.append(&format!("{} — {}", link.label, link.url)); }
+    links.set_selection(0, true);
     let open_link = Button::builder(&dialog).with_label("&Open link").build();
     let post_label = StaticText::builder(&dialog).with_label("&Full post").build();
     let post = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
         .build();
     post.set_name("Full post. Applications or Shift+F10 for links, comment, react, share and copy");
+    post.change_value(preview.as_deref().unwrap_or("Loading post and comments…"));
     let media_label = StaticText::builder(&dialog).with_label("Video player").build();
-    let media_builder = MediaCtrl::builder(&dialog).with_size(Size::new(320, 120));
-    // WMP handles network MP4 asynchronously; DirectShow may block while opening it.
-    #[cfg(target_os = "windows")]
-    let media_builder = media_builder.with_backend_name(MediaCtrl::BACKEND_WMP10);
-    let media = media_builder.build();
-    media.set_name("Video display");
-    // Keep embedded ActiveX UI out of Tab order; use the native transport buttons below.
-    media.show_player_controls(MediaCtrlPlayerControls::None);
-    media.disable_focus_from_keyboard();
-    media.set_can_focus(false);
+    let media = Player::new(&dialog);
     let player_buttons = BoxSizer::builder(Orientation::Horizontal).build();
     let play = Button::builder(&dialog).with_label("&Play video").build();
     let stop = Button::builder(&dialog).with_label("S&top video").build();
@@ -477,7 +514,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     root.add(&post_label, 0, SizerFlag::All, 4);
     root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&media_label, 0, SizerFlag::All, 4);
-    root.add(&media, 0, SizerFlag::All, 4);
+    root.add(&media.surface(), 0, SizerFlag::All, 4);
     root.add_sizer(&player_buttons, 0, SizerFlag::Expand, 0);
     root.add(&volume_label, 0, SizerFlag::All, 4);
     root.add(&volume, 0, SizerFlag::Expand | SizerFlag::All, 4);
@@ -512,8 +549,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         refresh,
         cancel,
         state: Rc::new(RefCell::new(ReaderState {
+            target: target.to_owned(),
             comments: Vec::new(),
-            links: Vec::new(),
+            links: initial_links,
             video: autoplay.then(|| target.to_owned()),
             video_requested: false,
             video_request: 0,
@@ -560,25 +598,6 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         if r.state.borrow().media_ready && !r.media.set_volume(r.volume.value() as f64 / 100.0) {
             r.message(&u, "Could not set video volume.");
         }
-    });
-    let (r, u) = (reader.clone(), ui.clone());
-    media.on_loaded(move |_| {
-        if r.state.borrow_mut().media_loading.take().is_none() {
-            return;
-        }
-        r.media.set_volume(r.volume.value() as f64 / 100.0);
-        let ok = r.media.play();
-        r.state.borrow_mut().media_ready = ok;
-        r.play_label(ok);
-        r.controls();
-        r.message(&u, if ok { "Playing video." } else { "Playback failed. Press Play to retry." });
-    });
-    let r = reader.clone();
-    media.on_state_changed(move |_| r.play_label(r.media.get_state() == MediaState::Playing));
-    let (r, u) = (reader.clone(), ui.clone());
-    media.on_finished(move |_| {
-        r.play_label(false);
-        r.message(&u, "Video finished.");
     });
     let (r, u) = (reader.clone(), ui.clone());
     send.on_click(move |_| r.send(&u));
@@ -699,6 +718,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let share_timer = Timer::new(&dialog);
     let (r, u) = (reader.clone(), ui.clone());
     share_timer.on_tick(move |_| {
+        r.poll_player(&u);
         let cached = r.state.borrow_mut().take_cached_stream();
         if let Some(stream) = cached {
             r.load_stream(&u, &stream);
@@ -739,7 +759,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     links.set_focus();
     dialog.show_modal();
     share_timer.stop();
-    reader.media.stop();
+    reader.media.shutdown();
     // Remove the session before destroying controls, so queued completions cannot touch them.
     ui.post_reader.borrow_mut().take();
     let _ =
@@ -863,18 +883,33 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 reader.comments.set_selection(index, false);
             }
             if reader.state.borrow().links != detail.links {
-                reader.links.clear();
-                for link in &detail.links {
-                    reader.links.append(&format!("{} — {}", link.label, link.url));
+                let selected_url = reader.links.get_selection().and_then(|index| {
+                    let state = reader.state.borrow();
+                    state.loaded.then(|| state.links.get(index as usize).map(|link| link.url.clone())).flatten()
+                });
+                for (index, link) in detail.links.iter().enumerate() {
+                    let row = format!("{} — {}", link.label, link.url);
+                    if index < reader.links.get_count() as usize {
+                        if reader.links.get_string(index as u32).as_deref() != Some(&row) {
+                            reader.links.set_string(index as u32, &row);
+                        }
+                    } else {
+                        reader.links.append(&row);
+                    }
+                }
+                while reader.links.get_count() as usize > detail.links.len() {
+                    reader.links.delete(reader.links.get_count() - 1);
                 }
                 if !detail.links.is_empty() {
-                    reader.links.set_selection(0, true);
+                    let index = selected_url.and_then(|url| detail.links.iter().position(|link| link.url == url)).unwrap_or(0);
+                    reader.links.set_selection(index as u32, true);
                 }
             }
             let count = detail.comments.len();
             {
                 let mut state = reader.state.borrow_mut();
                 state.comments = detail.comments;
+                state.target = detail.url;
                 state.links = detail.links;
                 state.video = detail.video;
                 state.loaded = true;
@@ -909,6 +944,7 @@ mod tests {
     #[test]
     fn requested_share_waits_for_load_and_starts_once() {
         let mut state = ReaderState {
+            target: "https://www.facebook.com/a/posts/123".to_owned(),
             comments: Vec::new(),
             links: Vec::new(),
             video: None,

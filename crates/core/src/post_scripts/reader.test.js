@@ -7,7 +7,7 @@ const ARTICLE = '[role=article][aria-label]';
 const EDITOR = '[role=textbox][contenteditable=true],textarea';
 
 function fixture(mode = false) {
-  const watch = mode === true, isReel = mode === 'reel';
+  const watch = mode === true, isReel = mode === 'reel' || mode === 'untitled';
   let comments = [], focus, editor;
   let opened = !watch, paused = false;
   let expanded = false;
@@ -44,7 +44,7 @@ function fixture(mode = false) {
     querySelector: () => opened ? {closest: () => root} : null,
     createTreeWalker(article) {
       let index = 0;
-      const lines = article === reelCard ? ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See less', '::-webkit-scrollbar {width: 7px;}'] : article.lines;
+      const lines = article === reelCard ? mode === 'untitled' ? ['Reel author'] : ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See less', '::-webkit-scrollbar {width: 7px;}'] : article.lines;
       return {nextNode() {
         if (index >= lines.length) return null;
         const at = index++;
@@ -99,6 +99,11 @@ function fixture(mode = false) {
   assert.equal(reeled.text, 'Entire reel caption');
   assert.equal(reeled.author, 'Reel author');
   assert.equal(reeled.video, 'https://www.facebook.com/reel/123/');
+  const untitled = fixture('untitled');
+  assert.equal(JSON.parse(await untitled.api.initialize('https://www.facebook.com/reel/123/')).text, '');
+  assert.equal(JSON.parse(await untitled.api.setTitle('Dedicated To Bart Simpson')).text, 'Dedicated To Bart Simpson');
+  assert.equal(JSON.parse(await untitled.api.read()).text, 'Dedicated To Bart Simpson');
+  assert.equal(JSON.parse(await reel.api.setTitle('Other title')).text, 'Entire reel caption');
   const watch = fixture(true);
   const watched = JSON.parse(await watch.api.initialize('https://www.facebook.com/page/videos/123/'));
   assert.equal(watched.author, 'Post author');
