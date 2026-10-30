@@ -4,6 +4,12 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.12 - 2026-10-30
+
+- Messenger unlock fixed: entering your PIN in BlindFB now types it the way you would, digit by digit. On Messenger surfaces that give each digit its own box, the old single paste only ever landed the first digit, and surfaces waiting for a Continue or Restore tap never got one — the right PIN still left chats locked. If Facebook rejects the PIN, BlindFB now shows Facebook's own message instead of a generic failure.
+- Less CPU: the feed read-ahead tab the backend keeps in the background is frozen while it waits at its limit instead of running at full speed the whole session. Refills start just as fast as before.
+- Backend updated to facebook-cli 0.1.5-blindfb.8.
+
 ## v0.6.11 - 2026-10-29
 
 - Chats fixed: pressing Enter on a chat now opens the thread itself instead of matching the words on screen, so the "ambiguous 'Active now'" error is gone. Group chats and rooms open the same way and are marked as group chats in the list.
