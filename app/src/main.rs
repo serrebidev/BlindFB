@@ -1920,8 +1920,12 @@ fn apply_done(ui: &Ui, done: Done) {
                     });
                     ui.status("Messenger unlocked. Loading your chats…");
                 }
-                Ok(_) => ui.status("Messenger unlocked."),
+                Ok(_) => {
+                    ui.latest_list.lock().unwrap().finish(&view, request);
+                    ui.status("Messenger unlocked.");
+                }
                 Err(e) => {
+                    ui.latest_list.lock().unwrap().finish(&view, request);
                     ui.status("Messenger could not be unlocked.");
                     show_error(
                         &ui.frame,
@@ -2123,11 +2127,15 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
         ui.status("Unlock cancelled.");
         return;
     };
-    let retry = retry.unwrap_or_else(|| RetryList {
-        view: ui.state.borrow().view.clone(),
-        request: 0,
-        args: Vec::new(),
-        append: false,
+    // The automatic path passes the load it was resuming. The manual menu item
+    // passes nothing, so reload the section the user is looking at; otherwise
+    // entering the PIN leaves the chat list as empty as it was, with the only
+    // hint in a status bar a screen reader does not announce.
+    let retry = retry.unwrap_or_else(|| {
+        let view = ui.state.borrow().view.clone();
+        let args = default_args(&view).unwrap_or_default();
+        let request = if args.is_empty() { 0 } else { begin_list(ui, &view) };
+        RetryList { view, request, args, append: false }
     });
     ui.state.borrow_mut().unlocking = true;
     ui.status("Unlocking Messenger…");
