@@ -4,6 +4,18 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.13 - 2026-10-30
+
+Seven fixes contributed by Michał Dziwisz (PRs #1-#7), all in chats, groups, the reader and the player:
+
+- Chats: a chat row with fewer fields than expected no longer crashes the window when the reader moves onto it.
+- Chats: messaging a friend or commenter now opens their thread by its backend reference, not by display name, so two people with the same name can no longer open each other's thread.
+- Chats: unlocking Messenger from the menu now reloads the chat list, instead of leaving the empty list on screen after a successful unlock.
+- Groups: a member action on a row missing its profile link or name now says why and keeps the group window open, instead of closing it onto nothing.
+- Reader: the reader's buttons no longer announce "and Play video" — the mnemonic marker is stripped from their accessible names.
+- Reader: "Copy post text" is disabled until the post has loaded, so the "Loading post and comments..." placeholder can no longer land on the clipboard announced as a successful copy.
+- Player: a rejected player command (for example stopping a video that just ended) no longer disables the seek controls or reports a failed playback while the video is still playing.
+
 ## v0.6.12 - 2026-10-30
 
 - Messenger unlock fixed: entering your PIN in BlindFB now types it the way you would, digit by digit. On Messenger surfaces that give each digit its own box, the old single paste only ever landed the first digit, and surfaces waiting for a Continue or Restore tap never got one — the right PIN still left chats locked. If Facebook rejects the PIN, BlindFB now shows Facebook's own message instead of a generic failure.
