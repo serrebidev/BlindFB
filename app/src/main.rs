@@ -1462,13 +1462,19 @@ fn details_for(view: &View, record: &Record) -> String {
             record.field(1),
             record.field(2)
         ),
-        View::Chats => format!(
-            "Chat: {}\nTime: {}\nFlags: {} (! unread, g group, e encrypted)\n\n{}",
-            record.field(3),
-            record.field(2),
-            record.field(1),
-            record.fields[4..].join("\t")
-        ),
+        View::Chats => {
+            if record.fields.len() >= 5 {
+                format!(
+                    "Chat: {}\nTime: {}\nFlags: {} (! unread, g group, e encrypted)\n\n{}",
+                    record.field(3),
+                    record.field(2),
+                    record.field(1),
+                    record.fields[4..].join("\t")
+                )
+            } else {
+                record.raw.clone()
+            }
+        }
         View::Groups => {
             let info = record.field(2);
             format!(
@@ -2868,6 +2874,20 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chat_details_survive_a_short_row() {
+        // A chats line with fewer than five fields must not panic the reader.
+        let short = Record { fields: vec!["c1".into()], raw: "c1".into() };
+        assert_eq!(details_for(&View::Chats, &short), "c1");
+        let full = Record {
+            fields: vec!["c1".into(), "!".into(), "now".into(), "Alice".into(), "hi".into()],
+            raw: String::new(),
+        };
+        let details = details_for(&View::Chats, &full);
+        assert!(details.contains("Alice"));
+        assert!(details.contains("hi"));
+    }
 
     #[test]
     fn reels_with_matching_captions_keep_their_distinct_urls() {
