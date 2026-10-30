@@ -7,6 +7,12 @@ pub enum PlayerEvent {
     StateChanged,
     Finished,
     Error(String),
+    /// A single mpv command (seek, volume, stop) was rejected. Playback is not
+    /// affected, so the reader must not treat it like a failed load. Only the
+    /// Windows mpv backend produces it (the media-ctrl backend has no command
+    /// replies), so it is dead code elsewhere.
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+    CommandFailed(String),
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -160,7 +166,7 @@ mod platform {
             if message.get("request_id").is_some() {
                 return match message["error"].as_str() {
                     Some("success") | None => None,
-                    Some(_) => Some(PlayerEvent::Error(
+                    Some(_) => Some(PlayerEvent::CommandFailed(
                         "The video player could not complete that action.".into(),
                     )),
                 };
@@ -618,7 +624,7 @@ mod platform {
             assert!(state.parse(&json!({"request_id":1,"error":"success"})).is_none());
             assert!(matches!(
                 state.parse(&json!({"request_id":2,"error":"invalid parameter"})),
-                Some(PlayerEvent::Error(_))
+                Some(PlayerEvent::CommandFailed(_))
             ));
             let Some(PlayerEvent::Error(text)) = state.parse(&json!({"event":"end-file","reason":"error","file_error":"https://private.invalid/token"})) else { panic!("missing load error") };
             assert!(!text.contains("private.invalid"));
