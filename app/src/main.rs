@@ -2367,26 +2367,32 @@ fn posts_selected(ui: &Ui) {
     }
 }
 
-fn message_selected(ui: &Ui) {
-    let Some((_, record)) = selected(ui) else {
-        return;
-    };
-    let view = ui.state.borrow().view.clone();
-    let (id, name) = match view {
-        View::Friends => {
-            let name = record.field(0).to_owned();
-            (name.clone(), name)
-        }
+/// The Messenger target of the selected record: the backend chat spec and the
+/// label to show. The spec is a ref when the row has one, because names repeat
+/// across chats and a name is not an identity; `fb` resolves a person's ref to
+/// their thread.
+fn message_target(view: &View, record: &Record) -> (String, String) {
+    match view {
+        View::Friends => (record.field(1).to_owned(), record.field(0).to_owned()),
         View::Chats => (record.field(0).to_owned(), record.field(3).to_owned()),
         View::CommentsOf(_) => {
-            let name = record.field(2).to_owned();
-            (name.clone(), name)
+            let id = record.field(1);
+            let id = if id.is_empty() { record.field(2) } else { id };
+            (id.to_owned(), record.field(2).to_owned())
         }
         _ => {
             let name = record.field(1).to_owned();
             (name.clone(), name)
         }
+    }
+}
+
+fn message_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
     };
+    let view = ui.state.borrow().view.clone();
+    let (id, name) = message_target(&view, &record);
     if !name.is_empty() {
         load_view(ui, View::ChatWith(id, name));
     }
@@ -2895,6 +2901,25 @@ mod tests {
         let details = details_for(&View::Chats, &full);
         assert!(details.contains("Alice"));
         assert!(details.contains("hi"));
+    fn messaging_addresses_a_person_by_ref_not_by_name() {
+        // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
+        let friend = Record {
+            fields: vec!["Alice Smith".into(), "u1abc".into(), "3 mutual friends".into()],
+            raw: String::new(),
+        };
+        assert_eq!(
+            message_target(&View::Friends, &friend),
+            ("u1abc".to_owned(), "Alice Smith".to_owned())
+        );
+        // chats: ref, flags, time, name, preview.
+        let chat = Record {
+            fields: vec!["c8x2f".into(), "!".into(), "now".into(), "Bob".into(), "hi".into()],
+            raw: String::new(),
+        };
+        assert_eq!(
+            message_target(&View::Chats, &chat),
+            ("c8x2f".to_owned(), "Bob".to_owned())
+        );
     }
 
     #[test]
