@@ -317,6 +317,12 @@ impl PostReader {
             }
             ID_SHARE => self.share_start(ui),
             ID_COPY_POST => {
+                // Before the post arrives the field holds the loading placeholder;
+                // copying it and reporting success leaves junk on the clipboard.
+                if !self.state.borrow().loaded {
+                    self.message(ui, "The post has not loaded yet. Try again in a moment.");
+                    return;
+                }
                 let copied = Clipboard::get().set_text(&self.post.get_value());
                 self.message(ui, if copied { "Post copied." } else { "Could not copy the post." });
             }
@@ -712,9 +718,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let r = reader.clone();
     post.bind_internal(EventType::CONTEXT_MENU, move |event| {
         event.skip(false);
-        let ready = {
+        let (loaded, ready) = {
             let state = r.state.borrow();
-            state.loaded && !state.busy
+            (state.loaded, state.loaded && !state.busy)
         };
         let mut menu = Menu::builder()
             .append_item(ID_POST_COMMENT, "&Comment…", "Write a comment on this post")
@@ -735,6 +741,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         menu.append(ID_COPY_POST, "Cop&y post text", "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, "Copy &link", "", ItemKind::Normal);
         menu.append(ID_WEB_POST, "Open on &Facebook (web)", "", ItemKind::Normal);
+        menu.enable_item(ID_COPY_POST, loaded);
         menu.enable_item(ID_SHARE, ready);
         r.post.popup_menu(&mut menu, None);
     });
