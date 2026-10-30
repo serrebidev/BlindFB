@@ -8,6 +8,9 @@ use std::collections::{HashMap, HashSet};
 pub struct Comment {
     pub id: String,
     pub author: String,
+    /// The commenter's profile path (/vanity or /profile.php?id=), when the
+    /// comment linked one: enough to open the profile or send a friend request.
+    pub author_ref: Option<String>,
     pub time: String,
     pub text: String,
     pub parent_id: Option<String>,
@@ -90,6 +93,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         comments.push(Comment {
             id,
             author: string(row, "author")?,
+            author_ref: optional_string(row, "author_ref")?,
             time: string(row, "time")?,
             text: string(row, "text")?,
             parent_id: optional_string(row, "parent_id")?,

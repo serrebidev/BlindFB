@@ -130,16 +130,17 @@
       if (text) lines.push(text);
     }
     const author = lines[0] || article.getAttribute('aria-label') || '';
+    const authorRef = F.profilePath ? [...article.querySelectorAll('a[href]')].filter(a => a.closest(ARTICLE) === article).map(a => F.profilePath(a.href !== undefined ? a.href : a.getAttribute('href'))).find(Boolean) || null : null;
     const ti = lines.findIndex((text, index) => index < 7 && time.test(text));
     const body = lines.slice(1).filter((text, index) => index + 1 !== ti && !action.test(text) && !/^((by )?author|Top fan|Follow|·)$/i.test(text));
     // A bare number after the text is the reaction count.
     if (body.length > 1 && /^\d+$/.test(body[body.length - 1])) body.pop();
     const ancestor = article.parentElement.closest(ARTICLE);
     const parent = ancestor && root.contains(ancestor) ? identity(ancestor).id : id.parent;
-    return {id: id.id, author, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, url: id.url};
+    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, url: id.url};
   }
 
-  const fingerprint = value => JSON.stringify([value.id, value.author, value.text, value.parent_id, value.url]);
+  const fingerprint = value => JSON.stringify([value.id, value.author, value.author_ref, value.text, value.parent_id, value.url]);
   function collect() {
     current();
     const result = [...root.querySelectorAll(ARTICLE)].filter(F.visible).map(element => ({element, value: comment(element)}));

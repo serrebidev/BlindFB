@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.11 - 2026-10-29
+
+- Chats fixed: pressing Enter on a chat now opens the thread itself instead of matching the words on screen, so the "ambiguous 'Active now'" error is gone. Group chats and rooms open the same way and are marked as group chats in the list.
+- Groups: pressing Enter on a group opens a group window with the group's posts. Tab reaches the members list, which shows the whole list (capped at 500, and says so when capped). A member's context menu offers View profile, Message, Add friend and Open on Facebook; Enter on a post opens it in the main window.
+- Comments: the context menu on a comment now offers the commenter's profile and Add friend right there, in the post window and in the main window, alongside Message commenter and Copy text.
+- Backend updated to facebook-cli 0.1.5-blindfb.7.
+
 ## v0.6.10 - 2026-10-29
 
 - Groups fixed: the list now comes from the backend's new `groups` command, which reads your joined-groups list and scrolls it in full. Before, Groups scraped the groups feed page, so it mixed in suggested groups, missed most groups you belong to, and often showed post text instead of group names. Group details now include the group's privacy and size line, and Load more works for groups. Backend updated to facebook-cli 0.1.5-blindfb.6.

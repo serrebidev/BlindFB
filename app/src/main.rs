@@ -14,6 +14,7 @@
 //! named-page browser primitives, and a group's posts read and behave like
 //! any other posts here.
 
+mod group_dialog;
 mod post_dialog;
 mod player;
 mod reel_cache;
@@ -32,8 +33,8 @@ use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
 use blindfb_core::fb::{
-    Fb, Record, chats_args, comment_args, delete_args, feed_args, friends_args, groups_args,
-    notifs_args, parse_feed, parse_notifications,
+    Fb, Record, chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
+    groups_args, notifs_args, parse_feed, parse_notifications,
     parse_records, post_args, posts_args, profile_args, profile_url_from_post_url, react_args,
     read_args, recent_feed_args, search_args, send_args, thread_url_from_profile_url, unsend_args,
     view_args, web_url,
@@ -79,6 +80,7 @@ const ID_STATUS: i32 = 10060;
 const ID_LOGIN: i32 = 10061;
 const ID_INSTALL_BACKEND: i32 = 10083;
 const ID_INSTALL_BROWSER: i32 = 10084;
+const ID_COMMENT_FRIEND: i32 = 10085;
 const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
@@ -105,7 +107,10 @@ enum View {
     PostsOf(String),
     CommentsOf(String),
     ProfileOf(String),
-    ChatWith(String),
+    /// A conversation, identified by its backend ref (never its display
+    /// name: names repeat, and a presence label is not a name). The second
+    /// field is the display name, for the title and the web link-out.
+    ChatWith(String, String),
 }
 
 impl View {
@@ -123,7 +128,7 @@ impl View {
             View::PostsOf(who) => format!("Posts by {who}"),
             View::CommentsOf(_) => "Post and comments".to_owned(),
             View::ProfileOf(who) => format!("Profile of {who}"),
-            View::ChatWith(name) => format!("Chat with {name}"),
+            View::ChatWith(_, name) => format!("Chat with {name}"),
         }
     }
 }
@@ -137,7 +142,7 @@ enum Tag {
         append: bool,
     },
     Text,
-    ReloadChat(String, u64),
+    ReloadChat(String, String, u64),
     ChatSent(u64),
     UnlockRetry {
         view: View,
@@ -146,6 +151,8 @@ enum Tag {
         append: bool,
     },
     PostLoaded(u64),
+    GroupPosts(u64),
+    GroupMembers(u64),
     ReelPrepared { account: u64, target: String },
     PostVideo(u64, u64),
     PostReelReacted(u64),
@@ -299,6 +306,7 @@ struct RetryList {
 struct ChatSubmission {
     account: u64,
     chat: String,
+    name: String,
     text: String,
     files: Vec<String>,
 }
@@ -317,7 +325,7 @@ impl ChatSubmission {
         if files.starts_with(&self.files) {
             files.drain(..self.files.len());
         }
-        *view == View::ChatWith(self.chat.clone()) && text == self.text
+        matches!(view, View::ChatWith(id, _) if id == &self.chat) && text == self.text
     }
 
     fn finish(pending: &mut Option<Self>, account: u64) -> Option<Self> {
@@ -487,6 +495,7 @@ fn run() {
         jobs: job_tx.clone(),
         done_tx,
         post_reader: Rc::new(RefCell::new(None)),
+        group_window: Arc::new(Mutex::new(None)),
         latest_list,
     };
 
@@ -653,6 +662,7 @@ struct Ui {
     jobs: Sender<Job>,
     done_tx: Sender<Done>,
     post_reader: Rc<RefCell<Option<post_dialog::PostReader>>>,
+    group_window: Arc<Mutex<Option<group_dialog::GroupWindow>>>,
     /// The list request the user is waiting for; the worker skips older ones.
     latest_list: Arc<Mutex<ListRequests>>,
 }
@@ -1094,7 +1104,7 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
         View::ProfileOf(who) => profile_args(who),
-        View::ChatWith(name) => read_args(name, 50),
+        View::ChatWith(id, _) => read_args(id, 50),
     })
 }
 
@@ -1402,10 +1412,12 @@ fn display_for(view: &View, record: &Record) -> String {
             if record.fields.len() >= 5 {
                 let flags = record.field(1);
                 let marker = if flags.contains('!') { " (unread)" } else { "" };
+                let kind = if flags.contains('g') { " (group)" } else { "" };
                 format!(
-                    "{}{} · {} — {}",
+                    "{}{}{} · {} — {}",
                     record.field(3),
                     marker,
+                    kind,
                     record.field(2),
                     record.fields[4..].join(" ")
                 )
@@ -1414,12 +1426,12 @@ fn display_for(view: &View, record: &Record) -> String {
             }
         }
         View::CommentsOf(_) => {
-            if record.fields.len() >= 4 && record.field(0) == "c" {
+            if record.fields.len() >= 5 && record.field(0) == "c" {
                 format!(
                     "{} · {} — {}",
-                    record.field(1),
                     record.field(2),
-                    record.fields[3..].join(" ")
+                    record.field(3),
+                    record.fields[4..].join(" ")
                 )
             } else {
                 record.raw.clone()
@@ -1460,7 +1472,7 @@ fn details_for(view: &View, record: &Record) -> String {
         View::Groups => {
             let info = record.field(2);
             format!(
-                "Group: {}\n{}On the web: {}\n\nOpen the group to read and take part in its posts here. Posting to a group, and group settings, live on the web page.",
+                "Group: {}\n{}On the web: {}\n\nOpen the group for its window: its posts, and its full member list. Posting to a group, and group settings, live on the web page.",
                 record.field(0),
                 if info.is_empty() { String::new() } else { format!("{info}\n") },
                 record.field(1)
@@ -1818,7 +1830,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     if !current {
                         return;
                     }
-                    if matches!(view, View::Chats | View::ChatWith(_)) && needs_messenger_unlock(&e)
+                    if matches!(view, View::Chats | View::ChatWith(..)) && needs_messenger_unlock(&e)
                     {
                         let mut state = ui.state.borrow_mut();
                         if !unlock_attempted && !state.unlocking {
@@ -1866,6 +1878,10 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             post_dialog::prepared(ui, &target, done.result);
             prepare_reels(ui);
+        }
+        Tag::GroupPosts(session) => group_dialog::deliver_posts(ui, session, done.result),
+        Tag::GroupMembers(session) => {
+            group_dialog::deliver_members(ui, session, done.result)
         }
         Tag::PostLoaded(session) => {
             post_dialog::apply(ui, session, done.result, "Post ready.", false)
@@ -1938,14 +1954,14 @@ fn apply_done(ui: &Ui, done: Done) {
                         let clear = submitted.clear_sent(
                             &view, &ui.compose_box.get_value(), &mut state.attachments,
                         );
-                        (clear, view == View::ChatWith(submitted.chat.clone()))
+                        (clear, matches!(&view, View::ChatWith(id, _) if id == &submitted.chat))
                     };
                     if clear {
                         ui.compose_box.clear();
                     }
                     ui.status("Sent");
                     if current {
-                        load_view(ui, View::ChatWith(submitted.chat));
+                        load_view(ui, View::ChatWith(submitted.chat.clone(), submitted.name.clone()));
                     }
                 }
                 Err(e) => {
@@ -1954,15 +1970,15 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
         }
-        Tag::ReloadChat(chat, account) => {
+        Tag::ReloadChat(chat, name, account) => {
             if ui.state.borrow().account != account {
                 return;
             }
             match done.result {
                 Ok(_) => {
                     ui.status("Message removed");
-                    if ui.state.borrow().view == View::ChatWith(chat.clone()) {
-                        load_view(ui, View::ChatWith(chat));
+                    if matches!(&ui.state.borrow().view, View::ChatWith(id, _) if id == &chat) {
+                        load_view(ui, View::ChatWith(chat, name));
                     }
                 }
                 Err(e) => {
@@ -2051,7 +2067,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         View::Notifications => (parse_notifications(raw)?, None),
         View::Reels(_) => reels::parse(raw)?,
         View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) => (parse_feed(raw), None),
-        View::ChatWith(_) => (
+        View::ChatWith(..) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record { fields: vec![l.to_owned()], raw: l.to_owned() })
@@ -2061,12 +2077,17 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         View::CommentsOf(_) => {
             let mut body_lines = Vec::new();
             let mut comments = Vec::new();
+            // A `cu` line directly before a comment carries the commenter's
+            // profile path; it becomes the comment record's second field.
+            let mut pending_ref = String::new();
             for line in raw.lines() {
-                if line.starts_with("c\t") {
-                    comments.push(Record {
-                        fields: line.split('\t').map(str::to_owned).collect(),
-                        raw: line.to_owned(),
-                    });
+                if let Some(ref_) = line.strip_prefix("cu\t") {
+                    pending_ref = ref_.to_owned();
+                } else if line.starts_with("c\t") {
+                    let mut fields: Vec<String> =
+                        line.split('\t').map(str::to_owned).collect();
+                    fields.insert(1, std::mem::take(&mut pending_ref));
+                    comments.push(Record { fields, raw: line.to_owned() });
                 } else if !line.trim().is_empty() {
                     body_lines.push(line);
                 }
@@ -2199,18 +2220,18 @@ fn open_selected(ui: &Ui) {
             }
         }
         View::Chats => {
+            // Open by ref (field 0): names repeat across chats, and a row's
+            // name can be a presence label, so a name is not an identity.
+            let id = record.field(0).to_owned();
             let name = record.field(3).to_owned();
-            if !name.is_empty() {
-                load_view(ui, View::ChatWith(name));
+            if !id.is_empty() {
+                load_view(ui, View::ChatWith(id, name));
+            } else if !name.is_empty() {
+                load_view(ui, View::ChatWith(name.clone(), name));
             }
         }
         View::Friends => profile_selected(ui),
-        View::Groups => {
-            let url = record.field(1).to_owned();
-            if !url.is_empty() {
-                load_view(ui, View::PostsOf(url));
-            }
-        }
+        View::Groups => group_dialog::open(ui, &record),
         _ => {}
     }
 }
@@ -2275,6 +2296,14 @@ fn person_of(ui: &Ui, record: &Record) -> Option<String> {
     match view {
         View::Friends => Some(record.field(1).to_owned()),
         View::Chats => Some(record.field(3).to_owned()),
+        View::CommentsOf(_) => {
+            let ref_ = record.field(1);
+            if ref_.is_empty() {
+                Some(record.field(2).to_owned())
+            } else {
+                Some(ref_.to_owned())
+            }
+        }
         _ => {
             let author = record.field(1);
             if author.is_empty() { None } else { Some(author.to_owned()) }
@@ -2291,6 +2320,30 @@ fn profile_selected(ui: &Ui) {
     }
 }
 
+/// Send a friend request to the person the selected record is about (a
+/// comment's author, from the comments menu). The backend reports existing
+/// friends and pending requests instead of re-sending.
+fn friend_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let Some(who) = person_of(ui, &record) else {
+        return;
+    };
+    if who.is_empty() {
+        return;
+    }
+    let name = match ui.state.borrow().view {
+        View::CommentsOf(_) => record.field(2).to_owned(),
+        _ => who.clone(),
+    };
+    ui.status(&format!("Sending a friend request to {name}…"));
+    ui.send(Job {
+        task: Task::Fb(friend_add_args(&who), None),
+        tag: Tag::Text,
+    });
+}
+
 fn posts_selected(ui: &Ui) {
     let Some((_, record)) = selected(ui) else {
         return;
@@ -2305,13 +2358,23 @@ fn message_selected(ui: &Ui) {
         return;
     };
     let view = ui.state.borrow().view.clone();
-    let name = match view {
-        View::Friends => record.field(0).to_owned(),
-        View::Chats => record.field(3).to_owned(),
-        _ => record.field(1).to_owned(),
+    let (id, name) = match view {
+        View::Friends => {
+            let name = record.field(0).to_owned();
+            (name.clone(), name)
+        }
+        View::Chats => (record.field(0).to_owned(), record.field(3).to_owned()),
+        View::CommentsOf(_) => {
+            let name = record.field(2).to_owned();
+            (name.clone(), name)
+        }
+        _ => {
+            let name = record.field(1).to_owned();
+            (name.clone(), name)
+        }
     };
     if !name.is_empty() {
-        load_view(ui, View::ChatWith(name));
+        load_view(ui, View::ChatWith(id, name));
     }
 }
 
@@ -2375,7 +2438,7 @@ fn open_person_web(ui: &Ui) {
 fn open_chat_web(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
     let name = match &view {
-        View::ChatWith(name) => name.clone(),
+        View::ChatWith(_, name) => name.clone(),
         View::Chats => match selected(ui) {
             Some((_, record)) => record.field(3).to_owned(),
             None => return,
@@ -2424,7 +2487,7 @@ fn attach_files(ui: &Ui) {
 
 fn send_composed(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
-    let View::ChatWith(chat) = view else {
+    let View::ChatWith(chat, name) = view else {
         show_warning(&ui.frame, "Open a chat first, then write and send.", "Send");
         return;
     };
@@ -2434,7 +2497,7 @@ fn send_composed(ui: &Ui) {
         return;
     }
     let account = ui.state.borrow().account;
-    let submitted = ChatSubmission { account, chat: chat.clone(), text: text.clone(), files: files.clone() };
+    let submitted = ChatSubmission { account, chat: chat.clone(), name: name.clone(), text: text.clone(), files: files.clone() };
     if !ChatSubmission::begin(&mut ui.state.borrow_mut().sending, submitted) {
         ui.status("Wait for your message to finish sending.");
         return;
@@ -2482,6 +2545,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             }
         }
         ID_PROFILE => profile_selected(ui),
+        ID_COMMENT_FRIEND => friend_selected(ui),
         ID_AUTHOR_POSTS => posts_selected(ui),
         ID_MESSAGE => message_selected(ui),
         ID_DELETE => delete_selected(ui),
@@ -2520,7 +2584,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         }
         ID_UNSEND => {
             let view = ui.state.borrow().view.clone();
-            if let View::ChatWith(chat) = view {
+            if let View::ChatWith(chat, name) = view {
                 if confirm(
                     &ui.frame,
                     "Remove your newest message in this chat for everyone?",
@@ -2528,7 +2592,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 ) {
                     ui.send(Job {
                         task: Task::Fb(unsend_args(&chat, None), None),
-                        tag: Tag::ReloadChat(chat, ui.state.borrow().account),
+                        tag: Tag::ReloadChat(chat, name, ui.state.borrow().account),
                     });
                 }
             } else {
@@ -2675,7 +2739,7 @@ fn show_item_menu(ui: &Ui) {
         View::Chats => {
             add(&menu, &[(ID_OPEN, "&Open chat"), (ID_WEB_CHAT, "Open in &Messenger (web)")])
         }
-        View::ChatWith(_) => add(
+        View::ChatWith(..) => add(
             &menu,
             &[
                 (ID_COPY_TEXT, "Cop&y message"),
@@ -2683,10 +2747,19 @@ fn show_item_menu(ui: &Ui) {
                 (ID_WEB_CHAT, "Open in &Messenger (web)"),
             ],
         ),
+        View::CommentsOf(_) => add(
+            &menu,
+            &[
+                (ID_PROFILE, "Commenter &profile"),
+                (ID_COMMENT_FRIEND, "Add &friend"),
+                (ID_MESSAGE, "&Message commenter"),
+                (ID_COPY_TEXT, "Cop&y text"),
+            ],
+        ),
         View::Groups => add(
             &menu,
             &[
-                (ID_OPEN, "&Open group posts"),
+                (ID_OPEN, "&Open group"),
                 (ID_COPY_LINK, "Copy &link"),
                 (ID_WEB_PERSON, "Open group on &Facebook (web)"),
             ],
@@ -2857,7 +2930,7 @@ mod tests {
 
     #[test]
     fn sending_blocks_duplicates_until_completion() {
-        let message = ChatSubmission { account: 0, chat: "Alice".into(), text: "Hi".into(), files: vec![] };
+        let message = ChatSubmission { account: 0, chat: "Alice".into(), name: "Alice".into(), text: "Hi".into(), files: vec![] };
         let mut pending = None;
         assert!(ChatSubmission::begin(&mut pending, message.clone()));
         assert!(!ChatSubmission::begin(&mut pending, message.clone()));
@@ -2868,7 +2941,7 @@ mod tests {
     #[test]
     fn old_account_completion_cannot_take_new_accounts_pending_message() {
         let mut pending = Some(ChatSubmission {
-            account: 1, chat: "Bob".into(), text: "New account draft".into(), files: vec![],
+            account: 1, chat: "Bob".into(), name: "Bob".into(), text: "New account draft".into(), files: vec![],
         });
         assert!(ChatSubmission::finish(&mut pending, 0).is_none());
         assert_eq!(pending.as_ref().unwrap().text, "New account draft");
@@ -2879,14 +2952,14 @@ mod tests {
     #[test]
     fn sent_message_preserves_new_text_files_and_other_chat_drafts() {
         let message = ChatSubmission {
-            account: 0, chat: "Alice".into(), text: "First".into(), files: vec!["first.png".into()],
+            account: 0, chat: "c2".into(), name: "Alice".into(), text: "First".into(), files: vec!["first.png".into()],
         };
         let mut files = vec!["first.png".into(), "next.png".into()];
-        assert!(!message.clear_sent(&View::ChatWith("Bob".into()), "First", &mut files));
+        assert!(!message.clear_sent(&View::ChatWith("c1".into(), "Bob".into()), "First", &mut files));
         assert_eq!(files, ["next.png"]);
-        assert!(!message.clear_sent(&View::ChatWith("Alice".into()), "Next draft", &mut files));
+        assert!(!message.clear_sent(&View::ChatWith("c2".into(), "Alice".into()), "Next draft", &mut files));
         assert_eq!(files, ["next.png"]);
-        assert!(message.clear_sent(&View::ChatWith("Alice".into()), "First", &mut files));
+        assert!(message.clear_sent(&View::ChatWith("c2".into(), "Alice".into()), "First", &mut files));
         assert_eq!(files, ["next.png"]);
     }
 

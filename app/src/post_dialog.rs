@@ -1,6 +1,6 @@
 //! Native post reader. The modal is entered by item activation, never the result timer.
 use super::{Job, REACTIONS, Tag, Task, Ui, append_links_menu, open_url};
-use blindfb_core::fb::react_args;
+use blindfb_core::fb::{friend_add_args, react_args};
 use blindfb_core::posts::{Comment, Link, parse_detail};
 use super::player::{Player, PlayerEvent};
 use std::cell::RefCell;
@@ -20,6 +20,8 @@ const ID_COPY_POST: i32 = 12107;
 const ID_COPY_POST_LINK: i32 = 12108;
 const ID_WEB_POST: i32 = 12109;
 const ID_REACT: i32 = 12120; // + index into REACTIONS
+const ID_COMMENT_PROFILE: i32 = 12110;
+const ID_COMMENT_FRIEND: i32 = 12111;
 const COMPOSER: &str = "&Write a comment (Ctrl+Enter to send)";
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 
@@ -70,6 +72,10 @@ struct ReaderState {
     share_requested: bool,
     action_requested: Option<i32>,
     playback: Option<ReelPlayback>,
+    /// Set from a comment's context menu (View profile): the reader closes
+    /// and the main window opens this profile.
+    pending_profile: Option<String>,
+    profile_close_sent: bool,
 }
 
 impl ReaderState {
@@ -375,10 +381,11 @@ impl PostReader {
                     comment.author.clone(),
                     comment.text.clone(),
                     comment.url.clone(),
+                    comment.author_ref.clone(),
                 )
             })
         });
-        let Some((id, author, text, url)) = selected else {
+        let Some((id, author, text, url, author_ref)) = selected else {
             return;
         };
         match action {
@@ -417,6 +424,23 @@ impl PostReader {
                     Tag::PostLiked(self.session),
                     &format!("Changing your Like on {author}'s comment…"),
                 );
+            }
+            ID_COMMENT_PROFILE => {
+                let who = author_ref.unwrap_or(author);
+                if !who.is_empty() {
+                    self.state.borrow_mut().pending_profile = Some(who);
+                    self.message(ui, "Opening the commenter's profile…");
+                }
+            }
+            ID_COMMENT_FRIEND => {
+                let who = author_ref.unwrap_or_else(|| author.clone());
+                if !who.is_empty() {
+                    ui.send(Job {
+                        task: Task::Fb(friend_add_args(&who), None),
+                        tag: Tag::Text,
+                    });
+                    self.message(ui, &format!("Sending a friend request to {author}…"));
+                }
             }
             _ => {}
         }
@@ -489,8 +513,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     volume.set_name("Video volume, percent");
     let comments_label = StaticText::builder(&dialog).with_label("&Comments").build();
     let comments = ListBox::builder(&dialog).build();
-    comments
-        .set_name("Comments. Applications or Shift+F10 for reply, like, copy and Facebook actions");
+    comments.set_name(
+        "Comments. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions",
+    );
     let composer_label = StaticText::builder(&dialog).with_label(COMPOSER).build();
     let composer = TextCtrl::builder(&dialog).with_style(TextCtrlStyle::MultiLine).build();
     composer.set_name(&COMPOSER.replace('&', ""));
@@ -564,6 +589,8 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
             share_requested,
             action_requested,
             playback,
+            pending_profile: None,
+            profile_close_sent: false,
         })),
     };
     reader.controls();
@@ -648,12 +675,16 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         event.skip(false);
         let available = r.comments.get_selection().and_then(|i| {
             let state = r.state.borrow();
-            state
-                .comments
-                .get(i as usize)
-                .map(|c| (!state.busy && !c.id.is_empty(), c.url.is_some()))
+            state.comments.get(i as usize).map(|c| {
+                (
+                    !state.busy && !c.id.is_empty(),
+                    c.url.is_some(),
+                    !state.busy
+                        && (c.author_ref.is_some() || !c.author.is_empty()),
+                )
+            })
         });
-        let Some((reply, web)) = available else {
+        let Some((reply, web, person)) = available else {
             return;
         };
         let mut menu = Menu::builder()
@@ -662,11 +693,16 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
             .append_item(ID_COPY, "&Copy comment", "Copy the full comment")
             .append_item(ID_WEB, "Open comment on &Facebook", "Open the comment permalink")
             .append_separator()
+            .append_item(ID_COMMENT_PROFILE, "View &profile", "Open the commenter's profile")
+            .append_item(ID_COMMENT_FRIEND, "Add &friend", "Send the commenter a friend request")
+            .append_separator()
             .append_item(ID_POST_COMMENT, "Comment on the &post", "Write a new top-level comment")
             .build();
         menu.enable_item(ID_REPLY, reply);
         menu.enable_item(ID_LIKE, reply);
         menu.enable_item(ID_WEB, web);
+        menu.enable_item(ID_COMMENT_PROFILE, person);
+        menu.enable_item(ID_COMMENT_FRIEND, person);
         r.comments.popup_menu(&mut menu, None);
     });
     let r = reader.clone();
@@ -702,7 +738,7 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     share.on_click(move |_| r.share_start(&u));
     let (r, u) = (reader.clone(), ui.clone());
     dialog.bind_internal(EventType::MENU, move |event| match event.get_id() {
-        ID_REPLY | ID_COPY | ID_WEB | ID_LIKE => {
+        ID_REPLY | ID_COPY | ID_WEB | ID_LIKE | ID_COMMENT_PROFILE | ID_COMMENT_FRIEND => {
             event.skip(false);
             r.menu_action(&u, event.get_id());
         }
@@ -737,6 +773,18 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
             r.controls();
             r.message(&u, "Video loading timed out. Press Play to retry.");
         }
+        let close_for_profile = {
+            let mut state = r.state.borrow_mut();
+            if state.pending_profile.is_some() && !state.profile_close_sent {
+                state.profile_close_sent = true;
+                true
+            } else {
+                false
+            }
+        };
+        if close_for_profile {
+            dialog.end_modal(ID_CANCEL);
+        }
         let requested = r.state.borrow_mut().take_share_request();
         if requested {
             r.share_start(&u);
@@ -765,6 +813,10 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let _ =
         ui.jobs.send(Job { task: Task::PostClose { page: reader.page.clone() }, tag: Tag::Silent });
     dialog.destroy();
+    if let Some(who) = reader.state.borrow_mut().pending_profile.take() {
+        super::load_view(ui, super::View::ProfileOf(who));
+        return;
+    }
     if let Some(index) = selection.filter(|i| *i < ui.items.get_count()) {
         ui.items.set_selection(index, true);
     }
@@ -959,6 +1011,8 @@ mod tests {
             share_requested: true,
             action_requested: Some(ID_POST_COMMENT),
             playback: None,
+            pending_profile: None,
+            profile_close_sent: false,
         };
         state.video_requested = true;
         state.video_request = 2;

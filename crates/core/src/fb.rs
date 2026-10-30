@@ -417,6 +417,23 @@ pub fn view_args(post: &str, comments: u32) -> Vec<String> {
     vec!["view".to_owned(), post.to_owned(), "-n".to_owned(), comments.to_string()]
 }
 
+pub fn members_args(group: &str, count: u32, urls: bool) -> Vec<String> {
+    let mut args = vec![
+        "members".to_owned(),
+        group.to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+    ];
+    if urls {
+        args.push("--urls".to_owned());
+    }
+    args
+}
+
+pub fn friend_add_args(who: &str) -> Vec<String> {
+    vec!["friend-add".to_owned(), who.to_owned()]
+}
+
 pub fn profile_args(who: &str) -> Vec<String> {
     vec!["profile".to_owned(), who.to_owned()]
 }
