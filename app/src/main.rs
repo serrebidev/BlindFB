@@ -2901,6 +2901,9 @@ mod tests {
         let details = details_for(&View::Chats, &full);
         assert!(details.contains("Alice"));
         assert!(details.contains("hi"));
+    }
+
+    #[test]
     fn messaging_addresses_a_person_by_ref_not_by_name() {
         // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
         let friend = Record {
