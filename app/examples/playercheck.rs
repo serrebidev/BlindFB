@@ -44,6 +44,9 @@ fn main() {
                         loaded.set(checked_media.play());
                     }
                     PlayerEvent::Error(error) => eprintln!("Player error: {error}"),
+                    PlayerEvent::CommandFailed(error) => {
+                        eprintln!("Player command failed: {error}")
+                    }
                     _ => {}
                 }
             }

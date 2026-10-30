@@ -245,6 +245,10 @@ impl PostReader {
                     self.controls();
                     self.message(ui, &format!("{error} Press Play to retry."));
                 }
+                PlayerEvent::CommandFailed(error) => {
+                    // Playback continues; only say the command did not land.
+                    self.message(ui, &error);
+                }
             }
         }
     }
