@@ -504,7 +504,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let back = Button::builder(&dialog).with_label("Back 10 seconds").build();
     let forward = Button::builder(&dialog).with_label("Forward 10 seconds").build();
     for button in [&play, &stop, &back, &forward] {
-        button.set_name(&button.get_label());
+        // set_name overrides wx's own accessible name, so strip the mnemonic
+        // marker: a raw label becomes "and Play video" for a screen reader.
+        button.set_name(&button.get_label().replace('&', ""));
         player_buttons.add(button, 0, SizerFlag::All, 4);
     }
     let volume_label = StaticText::builder(&dialog).with_label("Video &volume (percent)").build();
@@ -530,7 +532,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let cancel = Button::builder(&dialog).with_label("Ca&ncel reply").build();
     let close = Button::builder(&dialog).with_id(ID_CANCEL).with_label("C&lose").build();
     for button in [&send, &share, &refresh, &cancel, &close] {
-        button.set_name(&button.get_label());
+        // Same as above: strip the mnemonic marker before it becomes the
+        // accessible name a screen reader announces.
+        button.set_name(&button.get_label().replace('&', ""));
         buttons.add(button, 0, SizerFlag::All, 4);
     }
     root.add(&links_label, 0, SizerFlag::All, 4);
