@@ -45,6 +45,18 @@ enum Pending {
     Post(String),
 }
 
+/// The view a member context-menu action should open, or None when the row is
+/// missing the field that action needs (so the window stays open and says why).
+fn member_view_action(id: i32, name: &str, url: &str) -> Option<Pending> {
+    match id {
+        ID_MEMBER_PROFILE if !url.is_empty() => Some(Pending::View(View::ProfileOf(url.to_owned()))),
+        ID_MEMBER_MESSAGE if !name.is_empty() => {
+            Some(Pending::View(View::ChatWith(name.to_owned(), name.to_owned())))
+        }
+        _ => None,
+    }
+}
+
 impl GroupWindow {
     fn note(&self, text: &str) {
         self.status.change_value(text);
@@ -62,20 +74,17 @@ impl GroupWindow {
         let name = member.field(0).to_owned();
         let url = member.field(1).to_owned();
         match id {
-            ID_MEMBER_PROFILE => {
-                if !url.is_empty() {
-                    self.state.lock().unwrap().pending =
-                        Some(Pending::View(View::ProfileOf(url)));
-                }
-            }
-            ID_MEMBER_MESSAGE => {
-                if !name.is_empty() {
-                    self.state.lock().unwrap().pending =
-                        Some(Pending::View(View::ChatWith(name.clone(), name)));
-                }
-            }
+            ID_MEMBER_PROFILE | ID_MEMBER_MESSAGE => match member_view_action(id, &name, &url) {
+                Some(pending) => self.state.lock().unwrap().pending = Some(pending),
+                // The row lacks the field this action needs; say so instead of
+                // closing the window onto nothing.
+                None if id == ID_MEMBER_PROFILE => self.note("This member row has no profile link."),
+                None => self.note("This member row has no name, so its chat cannot open."),
+            },
             ID_MEMBER_FRIEND => {
-                if !url.is_empty() {
+                if url.is_empty() {
+                    self.note("This member row has no profile link, so a friend request cannot be sent.");
+                } else {
                     self.note(&format!("Sending a friend request to {name}…"));
                     ui.send(Job {
                         task: Task::Fb(friend_add_args(&url), None),
@@ -83,13 +92,18 @@ impl GroupWindow {
                     });
                 }
             }
-            ID_MEMBER_WEB if !url.is_empty() => {
-                open_url(&url);
+            ID_MEMBER_WEB => {
+                if url.is_empty() {
+                    self.note("This member row has no link to open.");
+                } else {
+                    open_url(&url);
+                }
             }
             _ => {}
         }
-        if matches!(id, ID_MEMBER_PROFILE | ID_MEMBER_MESSAGE) {
-            // The dialog closes itself from its menu handler; see open().
+        // The dialog closes itself from its menu handler (see open()), but only
+        // when an action actually queued a view.
+        if self.state.lock().unwrap().pending.is_some() {
             self.state.lock().unwrap().close_requested = true;
         }
     }
@@ -347,5 +361,26 @@ pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, Stri
     match result {
         Ok(raw) => fill_members(&window, &raw),
         Err(e) => window.note(&format!("Members could not load: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_member_action_with_no_source_field_queues_nothing() {
+        // A member row whose url column is absent must not close the window.
+        assert!(member_view_action(ID_MEMBER_PROFILE, "Alice", "").is_none());
+        assert!(member_view_action(ID_MEMBER_MESSAGE, "", "https://facebook.com/x").is_none());
+        // With the needed field, the matching view is queued.
+        assert!(matches!(
+            member_view_action(ID_MEMBER_PROFILE, "Alice", "https://facebook.com/x"),
+            Some(Pending::View(View::ProfileOf(_)))
+        ));
+        assert!(matches!(
+            member_view_action(ID_MEMBER_MESSAGE, "Alice", ""),
+            Some(Pending::View(View::ChatWith(_, _)))
+        ));
     }
 }
