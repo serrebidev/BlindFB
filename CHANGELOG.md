@@ -4,6 +4,12 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.14 - 2026-10-30
+
+- Messenger unlock fixed for real accounts: on a real account Facebook's restore opens in stages — first an explanation, then a choice of how to restore — and the PIN box only appears after those. BlindFB's backend only recognised a dialog that already contained the PIN box, so unlocking failed with "PIN restore dialog not found" before the PIN was ever typed. The unlock now walks the stages (choosing the PIN method, never the reset path), opens the restore offer when it sits in the chat pane instead of a dialog, and finds the PIN field on full-page restore screens too. If Facebook changes the flow again, the error now names the dialogs and buttons actually on screen instead of just reporting the dialog missing. A correct PIN is also no longer failed by the words "try again" in the dialog's help text.
+- Chats: pressing Enter on a chat or a group chat now opens that conversation in its own window, like groups. The window shows the messages (newest last), with Load more for older history, Refresh, and a composer — Enter or Send sends, and files can be attached. If Messenger is locked, the window says so and points at Chat, Unlock encrypted chats.
+- Backend updated to facebook-cli 0.1.5-blindfb.9.
+
 ## v0.6.13 - 2026-10-30
 
 Seven fixes contributed by Michał Dziwisz (PRs #1-#7), all in chats, groups, the reader and the player:

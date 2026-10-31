@@ -14,6 +14,7 @@
 //! named-page browser primitives, and a group's posts read and behave like
 //! any other posts here.
 
+mod chat_dialog;
 mod group_dialog;
 mod post_dialog;
 mod player;
@@ -153,6 +154,8 @@ enum Tag {
     PostLoaded(u64),
     GroupPosts(u64),
     GroupMembers(u64),
+    ChatMessages(u64),
+    ChatWindowSent(u64),
     ReelPrepared { account: u64, target: String },
     PostVideo(u64, u64),
     PostReelReacted(u64),
@@ -496,6 +499,7 @@ fn run() {
         done_tx,
         post_reader: Rc::new(RefCell::new(None)),
         group_window: Arc::new(Mutex::new(None)),
+        chat_window: Arc::new(Mutex::new(None)),
         latest_list,
     };
 
@@ -663,6 +667,7 @@ struct Ui {
     done_tx: Sender<Done>,
     post_reader: Rc<RefCell<Option<post_dialog::PostReader>>>,
     group_window: Arc<Mutex<Option<group_dialog::GroupWindow>>>,
+    chat_window: Arc<Mutex<Option<chat_dialog::ChatWindow>>>,
     /// The list request the user is waiting for; the worker skips older ones.
     latest_list: Arc<Mutex<ListRequests>>,
 }
@@ -1889,6 +1894,12 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::GroupMembers(session) => {
             group_dialog::deliver_members(ui, session, done.result)
         }
+        Tag::ChatMessages(session) => {
+            chat_dialog::deliver_messages(ui, session, done.result)
+        }
+        Tag::ChatWindowSent(session) => {
+            chat_dialog::deliver_sent(ui, session, done.result)
+        }
         Tag::PostLoaded(session) => {
             post_dialog::apply(ui, session, done.result, "Post ready.", false)
         }
@@ -2233,17 +2244,7 @@ fn open_selected(ui: &Ui) {
                 }
             }
         }
-        View::Chats => {
-            // Open by ref (field 0): names repeat across chats, and a row's
-            // name can be a presence label, so a name is not an identity.
-            let id = record.field(0).to_owned();
-            let name = record.field(3).to_owned();
-            if !id.is_empty() {
-                load_view(ui, View::ChatWith(id, name));
-            } else if !name.is_empty() {
-                load_view(ui, View::ChatWith(name.clone(), name));
-            }
-        }
+        View::Chats => chat_dialog::open(ui, &record),
         View::Friends => profile_selected(ui),
         View::Groups => group_dialog::open(ui, &record),
         _ => {}
