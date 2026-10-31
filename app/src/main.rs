@@ -2568,7 +2568,7 @@ fn apply_done(ui: &Ui, done: Done) {
         } => {
             ui.state.borrow_mut().unlocking = false;
             match done.result {
-                Ok(_) if !args.is_empty() && current_list(ui, &view, request) => {
+                Ok(text) if !args.is_empty() && current_list(ui, &view, request) => {
                     ui.latest_list.lock().unwrap().pending.insert(view.clone());
                     ui.send(Job {
                         task: Task::Fb(args.clone(), None),
@@ -2580,11 +2580,22 @@ fn apply_done(ui: &Ui, done: Done) {
                             append,
                         },
                     });
-                    ui.status("Messenger unlocked. Loading your chats…");
+                    // The backend distinguishes a finished restore from a
+                    // PIN Facebook accepted and is still verifying: report
+                    // the second honestly instead of promising chats now.
+                    ui.status(if text.contains("still restoring") {
+                        "PIN accepted. Facebook is still restoring your chat history — loading your chats…"
+                    } else {
+                        "Messenger unlocked. Loading your chats…"
+                    });
                 }
-                Ok(_) => {
+                Ok(text) => {
                     ui.latest_list.lock().unwrap().finish(&view, request);
-                    ui.status("Messenger unlocked.");
+                    ui.status(if text.contains("still restoring") {
+                        "PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes."
+                    } else {
+                        "Messenger unlocked."
+                    });
                 }
                 Err(e) => {
                     ui.latest_list.lock().unwrap().finish(&view, request);

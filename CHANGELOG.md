@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.4 - 2026-10-31
+
+The unlock fix, finished. Two deeper faults kept Messenger history locked even with the right prompt finder, both found by auditing the whole read/unlock path end to end:
+
+- The backend no longer declines your restore for you. When a read or a send met the restore prompt, the old code cleared it by pressing "Don't restore messages" on Facebook's confirmation — telling Facebook to skip the restore on this device, so the PIN prompt Unlock waits for never came back. It now answers Cancel and simply reports the chat as locked until you unlock it. Declining a restore is your decision, never a side effect of reading your chats.
+- Unlock waits for the restore to actually finish. "Verifying your PIN" can run for minutes; the old code called the sealed PIN field a success after a few seconds and parked the browser tab frozen — and a frozen page cannot finish restoring, so the prompt kept coming back. Unlock now waits until the prompt really clears (up to four minutes). If Facebook is still verifying at that point, BlindFB says so — "PIN accepted. Facebook is still restoring your chat history" — and leaves the tab running so the restore completes in the background. Backend v0.1.5-blindfb.15.
+
 ## v0.7.3 - 2026-10-31
 
 Three fixes from hands-on testing, verified against a real account this time.
