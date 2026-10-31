@@ -4,6 +4,18 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.15 - 2026-10-30
+
+- Controls now follow what you are doing: buttons that do not apply to the current view or selection are disabled instead of sitting there live. Post actions (Open, React, Comment) only work in post lists, Delete only in My Posts, a person's Profile, Posts and Message only where a person is selected, and the message box with its Attach, Attachments and Send buttons only inside a chat.
+- Messages have a proper context menu now: right-click a message in a chat — in the Chats view or in a chat window — for Reply and React (Like, Love, Care, Haha, Wow, Sad, Angry), alongside Copy. Reply quotes the message above the composer; choosing Cancel reply before sending clears the quote. Reacting and replying act on the newest message containing the text you picked, the same rule Unsend already used.
+- Attachments you add to a message can be removed again: the new Attachments button beside the message box shows how many files are attached and lets you remove one or all of them, without leaving the chat. Before this, a file over Messenger's 25 MB limit failed not just its own send but every later message too, until the chat was closed and reopened — a failed send now also says the files are still attached and where to remove them.
+- Pressing Enter on a post now lands on the post text itself, ready to read, instead of on the post's link list.
+- Going back works: with a list focused, Backspace or Escape returns to the previous list — from a chat back to the chat list, from someone's posts back to where you were. Typing in the message box or any text field is unaffected.
+- The Recent feed now says when each post was published: the time comes right after the author's name in the list, before the post text.
+- Links in a post open in your default browser: pressing Enter on a link in the post's link list works now, and the Open link button no longer opens your Documents folder in File Explorer instead of the link.
+- Less CPU, steadier screen reading: arrowing through a list no longer rebuilds the details pane and link list for every row you pass — only the row you stop on is built. In the backend, every parked background tab is now frozen while it waits (the feed tab already was), so idle Facebook tabs cost no CPU; a tab wakes the moment a command needs it.
+- Backend updated to facebook-cli 0.1.5-blindfb.10.
+
 ## v0.6.14 - 2026-10-30
 
 - Messenger unlock fixed for real accounts: on a real account Facebook's restore opens in stages — first an explanation, then a choice of how to restore — and the PIN box only appears after those. BlindFB's backend only recognised a dialog that already contained the PIN box, so unlocking failed with "PIN restore dialog not found" before the PIN was ever typed. The unlock now walks the stages (choosing the PIN method, never the reset path), opens the restore offer when it sits in the chat pane instead of a dialog, and finds the PIN field on full-page restore screens too. If Facebook changes the flow again, the error now names the dialogs and buttons actually on screen instead of just reporting the dialog missing. A correct PIN is also no longer failed by the words "try again" in the dialog's help text.

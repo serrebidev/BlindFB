@@ -488,6 +488,34 @@ pub fn send_args(chat: &str, text: &str, files: &[String]) -> Vec<String> {
     args
 }
 
+pub fn msg_react_args(chat: &str, reaction: &str, match_text: Option<&str>) -> Vec<String> {
+    let mut args = vec!["msgreact".to_owned(), chat.to_owned(), reaction.to_owned()];
+    if let Some(text) = match_text {
+        args.push("--match".to_owned());
+        args.push(text.to_owned());
+    }
+    args
+}
+
+pub fn reply_args(
+    chat: &str,
+    text: &str,
+    files: &[String],
+    match_text: &str,
+) -> Vec<String> {
+    let mut args = vec!["reply".to_owned(), chat.to_owned()];
+    if !text.is_empty() {
+        args.push(text.to_owned());
+    }
+    args.push("--match".to_owned());
+    args.push(match_text.to_owned());
+    for file in files {
+        args.push("--file".to_owned());
+        args.push(file.clone());
+    }
+    args
+}
+
 pub fn unsend_args(chat: &str, match_text: Option<&str>) -> Vec<String> {
     let mut args = vec!["unsend".to_owned(), chat.to_owned()];
     if let Some(text) = match_text {
@@ -606,6 +634,26 @@ pub fn groups_args(count: u32) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_action_args_target_the_matched_message() {
+        assert_eq!(
+            msg_react_args("/messages/t/42", "love", Some("see you")),
+            ["msgreact", "/messages/t/42", "love", "--match", "see you"]
+        );
+        assert_eq!(
+            msg_react_args("/messages/t/42", "like", None),
+            ["msgreact", "/messages/t/42", "like"]
+        );
+        assert_eq!(
+            reply_args("/messages/t/42", "on my way", &["a.png".to_owned()], "see you"),
+            ["reply", "/messages/t/42", "on my way", "--match", "see you", "--file", "a.png"]
+        );
+        assert_eq!(
+            reply_args("/messages/t/42", "", &[], "see you"),
+            ["reply", "/messages/t/42", "--match", "see you"]
+        );
+    }
 
     #[test]
     fn notifications_preserve_post_urls_in_the_fourth_field() {

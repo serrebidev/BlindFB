@@ -35,10 +35,10 @@ use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
 use blindfb_core::fb::{
     Fb, Record, chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
-    groups_args, notifs_args, parse_feed, parse_notifications,
+    groups_args, msg_react_args, notifs_args, parse_feed, parse_notifications,
     parse_records, post_args, posts_args, profile_args, profile_url_from_post_url, react_args,
-    read_args, recent_feed_args, search_args, send_args, thread_url_from_profile_url, unsend_args,
-    view_args, web_url,
+    read_args, recent_feed_args, reply_args, search_args, send_args, thread_url_from_profile_url,
+    unsend_args, view_args, web_url,
 };
 use wx_utils::{AboutBoxBuilder, confirm, prompt_text, show_error, show_warning};
 use wxdragon::prelude::*;
@@ -76,6 +76,8 @@ const ID_COPY_TEXT: i32 = 10045;
 const ID_COPY_LINK: i32 = 10046;
 const ID_SHARE: i32 = 10047;
 const ID_UNSEND: i32 = 10050;
+const ID_MSG_REPLY: i32 = 10090;
+const ID_MSG_REACT_BASE: i32 = 10100; // + index into REACTIONS
 const ID_UNLOCK: i32 = 10051;
 const ID_STATUS: i32 = 10060;
 const ID_LOGIN: i32 = 10061;
@@ -252,6 +254,12 @@ struct State {
     unlocking: bool,
     records: Vec<Record>,
     attachments: Vec<String>,
+    /// Text of the message the next send replies to (quotes), from the
+    /// message context menu's Reply.
+    reply_to: Option<String>,
+    /// A selection whose details pane update is waiting out the debounce:
+    /// arrowing fast should not rebuild the details and links per row.
+    pending_details: Option<(usize, Instant)>,
     sending: Option<ChatSubmission>,
     account: u64,
     reel_cache: reel_cache::ReelCache,
@@ -260,6 +268,10 @@ struct State {
     author_urls: HashMap<String, String>,
     /// Last parsed backend output and request per section, so switching back is instant.
     cache: HashMap<View, (Vec<Record>, Instant, Vec<String>)>,
+    /// Where Backspace/Escape in the list returns to, most recent last.
+    history: Vec<View>,
+    /// Set while a Back navigation loads, so it does not push itself.
+    back_nav: bool,
     prefetched: bool,
     /// The list request refreshing a cached section the user is already reading.
     background: Option<u64>,
@@ -448,10 +460,13 @@ fn run() {
     let compose_label = StaticText::builder(&panel).with_label("Message").build();
     let compose_box = TextCtrl::builder(&panel).with_style(TextCtrlStyle::ProcessEnter).build();
     let attach_btn = Button::builder(&panel).with_label("Attach files").build();
+    let attachments_btn = Button::builder(&panel).with_label("Attachments (0)").build();
+    attachments_btn.set_name("Attachments, 0 attached");
     let send_btn = Button::builder(&panel).with_label("Send").build();
     compose.add(&compose_label, 0, SizerFlag::AlignCenterVertical | SizerFlag::All, 3);
     compose.add(&compose_box, 1, SizerFlag::Expand | SizerFlag::All, 3);
     compose.add(&attach_btn, 0, SizerFlag::All, 3);
+    compose.add(&attachments_btn, 0, SizerFlag::All, 3);
     compose.add(&send_btn, 0, SizerFlag::All, 3);
 
     root.add(&views_label, 0, SizerFlag::All, 4);
@@ -478,11 +493,15 @@ fn run() {
         unlocking: false,
         records: Vec::new(),
         attachments: Vec::new(),
+        reply_to: None,
+        pending_details: None,
         sending: None,
         account: 0,
         reel_cache: reel_cache::ReelCache::default(),
         author_urls: HashMap::new(),
         cache: HashMap::new(),
+        history: Vec::new(),
+        back_nav: false,
         prefetched: false,
         background: None,
     }));
@@ -494,6 +513,16 @@ fn run() {
         open_link,
         link_targets: Rc::new(RefCell::new(Vec::new())),
         compose_box,
+        attachments_btn,
+        open_btn,
+        react_btn,
+        comment_btn,
+        profile_btn,
+        posts_btn,
+        message_btn,
+        delete_btn,
+        attach_btn,
+        send_btn,
         state: state.clone(),
         jobs: job_tx.clone(),
         done_tx,
@@ -530,7 +559,13 @@ fn run() {
     let ui_sel = ui.clone();
     items.on_selection_changed(move |event| {
         if let Some(sel) = event.get_selection() {
-            show_details(&ui_sel, sel as usize);
+            // Debounce the details pane: it rebuilds the text and the link
+            // list, which is real work per row and makes a screen reader
+            // process a flood of changes while arrowing. The resting row
+            // pays it once; rows passed over pay nothing.
+            ui_sel.state.borrow_mut().pending_details =
+                Some((sel as usize, Instant::now()));
+            refresh_controls(&ui_sel);
             prepare_reels(&ui_sel);
         }
     });
@@ -553,6 +588,16 @@ fn run() {
     // Char hook, not the list's key-down: Windows dialog navigation eats Enter before the list sees it.
     frame.on_char_hook(move |event| {
         if let WindowEventData::Keyboard(key) = &event {
+            if (ui_enter.items.has_focus() || ui_enter.links.has_focus())
+                && matches!(
+                    key.get_key_code(),
+                    Some(wxdragon::keycode::WXK_BACK | wxdragon::keycode::WXK_ESCAPE)
+                )
+            {
+                event.skip(false);
+                go_back(&ui_enter);
+                return;
+            }
             if ui_enter.links.has_focus()
                 && matches!(
                     key.get_key_code(),
@@ -595,6 +640,8 @@ fn run() {
     delete_btn.on_click(move |_| delete_selected(&ui_delete));
     let ui_attach = ui.clone();
     attach_btn.on_click(move |_| attach_files(&ui_attach));
+    let ui_attachments = ui.clone();
+    attachments_btn.on_click(move |_| manage_attachments(&ui_attachments));
     let ui_send = ui.clone();
     send_btn.on_click(move |_| send_composed(&ui_send));
     let ui_send2 = ui.clone();
@@ -615,6 +662,19 @@ fn run() {
         }
         while let Ok(done) = done_rx.try_recv() {
             apply_done(&ui_tick, done);
+        }
+        let due = {
+            let state = ui_tick.state.borrow();
+            state
+                .pending_details
+                .filter(|(_, at)| at.elapsed() >= Duration::from_millis(160))
+                .map(|(index, _)| index)
+        };
+        if let Some(index) = due {
+            ui_tick.state.borrow_mut().pending_details = None;
+            if ui_tick.items.get_selection() == Some(index as u32) {
+                show_details(&ui_tick, index);
+            }
         }
     });
     timer.start(120, false);
@@ -662,6 +722,16 @@ struct Ui {
     open_link: Button,
     link_targets: Rc<RefCell<Vec<Link>>>,
     compose_box: TextCtrl,
+    attachments_btn: Button,
+    open_btn: Button,
+    react_btn: Button,
+    comment_btn: Button,
+    profile_btn: Button,
+    posts_btn: Button,
+    message_btn: Button,
+    delete_btn: Button,
+    attach_btn: Button,
+    send_btn: Button,
     state: Rc<RefCell<State>>,
     jobs: Sender<Job>,
     done_tx: Sender<Done>,
@@ -1007,6 +1077,9 @@ fn activate_view(ui: &Ui, view: &View) {
         state.records.clear();
     }
     state.view = view.clone();
+    if !matches!(view, View::ChatWith(..)) {
+        state.reply_to = None;
+    }
     drop(state);
     if clear {
         ui.items.clear();
@@ -1035,6 +1108,18 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
 }
 
 fn load_view(ui: &Ui, view: View) {
+    {
+        let mut state = ui.state.borrow_mut();
+        if state.back_nav {
+            state.back_nav = false;
+        } else if state.view != view && state.history.last() != Some(&state.view) {
+            let previous = state.view.clone();
+            state.history.push(previous);
+            if state.history.len() > 50 {
+                state.history.remove(0);
+            }
+        }
+    }
     let cached = ui.state.borrow().cache.get(&view).cloned();
     activate_view(ui, &view);
     if let Some((records, _, args)) = &cached {
@@ -1060,6 +1145,38 @@ fn load_view(ui: &Ui, view: View) {
     if cached.is_some() {
         let mut state = ui.state.borrow_mut();
         state.background = ui.latest_list.lock().unwrap().latest.get(&state.view).copied();
+    }
+}
+
+/// Backspace/Escape in the list: return to the previous list, like a
+/// browser Back. Internal loads (refresh, send reloads) never pushed, so
+/// Back always lands on a list the user actually visited.
+fn pop_previous(history: &mut Vec<View>, current: &View) -> Option<View> {
+    loop {
+        match history.pop() {
+            Some(view) if view != *current => return Some(view),
+            Some(_) => continue,
+            None => return None,
+        }
+    }
+}
+
+fn go_back(ui: &Ui) {
+    let target = {
+        let mut state = ui.state.borrow_mut();
+        let current = state.view.clone();
+        let target = pop_previous(&mut state.history, &current);
+        if target.is_some() {
+            state.back_nav = true;
+        }
+        target
+    };
+    match target {
+        Some(view) => {
+            ui.status(&format!("Back to {}", view.title()));
+            load_view(ui, view);
+        }
+        None => ui.status("No previous list to go back to."),
     }
 }
 
@@ -1194,6 +1311,9 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
         state.records_view = View::Feed;
         state.attachments.clear();
         state.cache.clear();
+        state.history.clear();
+        state.pending_details = None;
+        state.reply_to = None;
         state.prefetched = false;
         state.background = None;
         state.author_urls.clear();
@@ -1385,7 +1505,15 @@ fn display_for(view: &View, record: &Record) -> String {
             if record.fields.len() >= 5 {
                 // A post without text or time must not read as ". ." to a screen reader.
                 let text = one_line(&record.fields[4..].join(" "));
-                [record.field(1), text.as_str(), record.field(2)]
+                // In Most Recent the time is the point of the view: say it
+                // right after the author, before the (possibly long) text
+                // buries it at the end of the row.
+                let parts: [&str; 3] = if matches!(view, View::RecentFeed) {
+                    [record.field(1), record.field(2), text.as_str()]
+                } else {
+                    [record.field(1), text.as_str(), record.field(2)]
+                };
+                parts
                     .into_iter()
                     .filter(|part| !part.is_empty())
                     .collect::<Vec<_>>()
@@ -1790,7 +1918,38 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         set_details(ui, "(nothing here)", None);
     }
     ui.status(&format!("{} — {} item(s)", view.title(), count));
+    refresh_controls(ui);
     prepare_reels(ui);
+}
+
+/// Enable only the controls that mean something in the current view.
+/// Every button used to sit live everywhere — React, Comment and Delete
+/// in a chat list, Send outside a chat — which made the control set noise
+/// instead of guidance. The layout stays fixed (a screen reader's spatial
+/// memory matters); availability follows the view and the selection.
+fn refresh_controls(ui: &Ui) {
+    let view = ui.state.borrow().view.clone();
+    let has = ui.items.get_selection().is_some();
+    let post_list = matches!(
+        view,
+        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults
+    );
+    let people = post_list || matches!(view, View::Friends);
+    let comments = matches!(view, View::CommentsOf(_));
+    let in_chat = matches!(view, View::ChatWith(..));
+    let openable = post_list
+        || matches!(view, View::Notifications | View::Friends | View::Chats | View::Groups);
+    ui.open_btn.enable(has && openable);
+    ui.react_btn.enable(has && post_list);
+    ui.comment_btn.enable(has && post_list);
+    ui.profile_btn.enable(has && (people || comments));
+    ui.posts_btn.enable(has && people);
+    ui.message_btn.enable(has && (people || comments));
+    ui.delete_btn.enable(has && matches!(view, View::MyPosts));
+    ui.compose_box.set_editable(in_chat);
+    ui.attach_btn.enable(in_chat);
+    ui.attachments_btn.enable(in_chat);
+    ui.send_btn.enable(in_chat);
 }
 
 fn apply_done(ui: &Ui, done: Done) {
@@ -1980,13 +2139,20 @@ fn apply_done(ui: &Ui, done: Done) {
                     if clear {
                         ui.compose_box.clear();
                     }
+                    refresh_attachment_count(ui);
+                    ui.state.borrow_mut().reply_to = None;
                     ui.status("Sent");
                     if current {
                         load_view(ui, View::ChatWith(submitted.chat.clone(), submitted.name.clone()));
                     }
                 }
                 Err(e) => {
-                    ui.status("Message could not be sent. Your draft has been kept.");
+                    let kept = ui.state.borrow().attachments.len();
+                    ui.status(if kept > 0 {
+                        "Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
+                    } else {
+                        "Message could not be sent. Your draft has been kept."
+                    });
                     show_error(&ui.frame, &e, "Send message");
                 }
             }
@@ -2504,6 +2670,149 @@ fn attach_files(ui: &Ui) {
             ui.status(&format!("{} file(s) attached", state.attachments.len()));
         }
     }
+    refresh_attachment_count(ui);
+}
+
+/// The attachment manager: queued files with a way to remove one or all.
+/// Attachments used to be add-only, so a single file over Messenger's
+/// 25 MB limit poisoned every later send in the chat — the error came
+/// back even for a plain message, with no way out but reopening the chat.
+fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
+    if files.is_empty() {
+        return;
+    }
+    let dialog = Dialog::builder(parent, "Attached files")
+        .with_size(640, 420)
+        .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
+        .build();
+    dialog.set_escape_id(ID_CANCEL);
+    let root = BoxSizer::builder(Orientation::Vertical).build();
+    let label = StaticText::builder(&dialog).with_label("Attached &files").build();
+    let list = ListBox::builder(&dialog).build();
+    list.set_name("Attached files");
+    let fill = |list: &ListBox, files: &[String]| {
+        list.clear();
+        for path in files {
+            let name = std::path::Path::new(path)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.clone());
+            list.append(&name);
+        }
+        if !files.is_empty() {
+            list.set_selection(0, true);
+        }
+    };
+    fill(&list, files);
+    let remove = Button::builder(&dialog).with_label("&Remove selected").build();
+    let remove_all = Button::builder(&dialog).with_label("Remove &all").build();
+    let close = Button::builder(&dialog).with_id(ID_CANCEL).with_label("C&lose").build();
+    let actions = BoxSizer::builder(Orientation::Horizontal).build();
+    actions.add(&remove, 0, SizerFlag::All, 4);
+    actions.add(&remove_all, 0, SizerFlag::All, 4);
+    actions.add(&close, 0, SizerFlag::All, 4);
+    root.add(&label, 0, SizerFlag::All, 4);
+    root.add(&list, 1, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add_sizer(&actions, 0, SizerFlag::Expand, 4);
+    dialog.set_sizer(root, true);
+    let working = Rc::new(RefCell::new(files.clone()));
+    let (w, l) = (working.clone(), list);
+    remove.on_click(move |_| {
+        if let Some(index) = l.get_selection() {
+            let mut files = w.borrow_mut();
+            if (index as usize) < files.len() {
+                files.remove(index as usize);
+            }
+            fill(&l, &files);
+        }
+    });
+    let (w, l) = (working.clone(), list);
+    remove_all.on_click(move |_| {
+        w.borrow_mut().clear();
+        fill(&l, &[]);
+    });
+    close.on_click(move |_| dialog.end_modal(ID_CANCEL));
+    let d = dialog;
+    dialog.bind_internal(EventType::CLOSE_WINDOW, move |event| {
+        event.skip(false);
+        d.end_modal(ID_CANCEL);
+    });
+    list.set_focus();
+    dialog.show_modal();
+    dialog.destroy();
+    *files = working.borrow().clone();
+}
+
+fn manage_attachments(ui: &Ui) {
+    let mut files = ui.state.borrow().attachments.clone();
+    if files.is_empty() {
+        ui.status("No files are attached.");
+        return;
+    }
+    manage_files_dialog(&ui.frame, &mut files);
+    let count = files.len();
+    ui.state.borrow_mut().attachments = files;
+    refresh_attachment_count(ui);
+    ui.status(&format!("{count} file(s) attached"));
+}
+
+fn refresh_attachment_count(ui: &Ui) {
+    let count = ui.state.borrow().attachments.len();
+    ui.attachments_btn.set_label(&format!("Attachments ({count})"));
+    ui.attachments_btn.set_name(&format!("Attachments, {count} attached"));
+}
+
+/// The message text a chat line is matched by: `fb read` lines are
+/// "HH:MM Sender: text {reactions}"; the backend matches the bare text.
+fn message_match_text(line: &str) -> String {
+    let after_time = line.split_once(' ').map(|(_, rest)| rest).unwrap_or(line);
+    let text = after_time
+        .split_once(": ")
+        .map(|(_, rest)| rest)
+        .unwrap_or(after_time);
+    let text = match text.rfind(" {") {
+        Some(i) if text.ends_with('}') => &text[..i],
+        _ => text,
+    };
+    text.trim().to_owned()
+}
+
+fn selected_message_match(ui: &Ui) -> Option<String> {
+    let (_, record) = selected(ui)?;
+    let text = message_match_text(record.field(0));
+    (!text.is_empty()).then_some(text)
+}
+
+fn reply_selected(ui: &Ui) {
+    if ui.state.borrow().reply_to.is_some() {
+        ui.state.borrow_mut().reply_to = None;
+        ui.status("Reply cancelled. Your next message sends normally.");
+        return;
+    }
+    let Some(text) = selected_message_match(ui) else {
+        ui.status("That message has no text to reply to.");
+        return;
+    };
+    ui.state.borrow_mut().reply_to = Some(text.clone());
+    ui.status(&format!(
+        "Replying to: {text}. Write your reply in the message box and send as usual."
+    ));
+    ui.compose_box.set_focus();
+}
+
+fn msg_react_selected(ui: &Ui, reaction: &str) {
+    let View::ChatWith(chat, _) = ui.state.borrow().view.clone() else {
+        return;
+    };
+    let Some(text) = selected_message_match(ui) else {
+        ui.status("That message has no text to react to.");
+        return;
+    };
+    ui.send(Job {
+        task: Task::Fb(msg_react_args(&chat, reaction, Some(&text)), None),
+        tag: Tag::Text,
+    });
+    ui.status(&format!("Reacting {reaction} to: {text}"));
 }
 
 fn send_composed(ui: &Ui) {
@@ -2523,8 +2832,13 @@ fn send_composed(ui: &Ui) {
         ui.status("Wait for your message to finish sending.");
         return;
     }
+    let reply_to = ui.state.borrow().reply_to.clone();
+    let args = match &reply_to {
+        Some(target) => reply_args(&chat, &text, &files, target),
+        None => send_args(&chat, &text, &files),
+    };
     ui.send(Job {
-        task: Task::Fb(send_args(&chat, &text, &files), None),
+        task: Task::Fb(args, None),
         tag: Tag::ChatSent(account),
     });
 }
@@ -2655,8 +2969,14 @@ fn handle_menu(ui: &Ui, id: i32) {
                 .show();
         }
         ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
+        ID_MSG_REPLY => reply_selected(ui),
         _ => {
-            if (ID_REACT_BASE..ID_REACT_BASE + REACTIONS.len() as i32).contains(&id) {
+            if (ID_MSG_REACT_BASE..ID_MSG_REACT_BASE + REACTIONS.len() as i32)
+                .contains(&id)
+            {
+                let reaction = REACTIONS[(id - ID_MSG_REACT_BASE) as usize];
+                msg_react_selected(ui, reaction);
+            } else if (ID_REACT_BASE..ID_REACT_BASE + REACTIONS.len() as i32).contains(&id) {
                 if let Some(post) = post_or_warn(ui, "React") {
                     let reaction = REACTIONS[(id - ID_REACT_BASE) as usize];
                     react_to(ui, &post, reaction);
@@ -2760,14 +3080,33 @@ fn show_item_menu(ui: &Ui) {
         View::Chats => {
             add(&menu, &[(ID_OPEN, "&Open chat"), (ID_WEB_CHAT, "Open in &Messenger (web)")])
         }
-        View::ChatWith(..) => add(
-            &menu,
-            &[
-                (ID_COPY_TEXT, "Cop&y message"),
-                (ID_UNSEND, "&Unsend my last message…"),
-                (ID_WEB_CHAT, "Open in &Messenger (web)"),
-            ],
-        ),
+        View::ChatWith(..) => {
+            let replying = ui.state.borrow().reply_to.is_some();
+            add(
+                &menu,
+                &[(
+                    ID_MSG_REPLY,
+                    if replying { "Cancel &reply" } else { "&Reply" },
+                )],
+            );
+            let react = Menu::builder().build();
+            for (i, reaction) in REACTIONS.iter().enumerate() {
+                if *reaction == "none" {
+                    continue;
+                }
+                let label = reaction[..1].to_uppercase() + &reaction[1..];
+                react.append(ID_MSG_REACT_BASE + i as i32, &label, "", ItemKind::Normal);
+            }
+            menu.append_submenu(react, "Re&act", "React to this message");
+            add(
+                &menu,
+                &[
+                    (ID_COPY_TEXT, "Cop&y message"),
+                    (ID_UNSEND, "&Unsend my last message…"),
+                    (ID_WEB_CHAT, "Open in &Messenger (web)"),
+                ],
+            );
+        }
         View::CommentsOf(_) => add(
             &menu,
             &[
@@ -2877,18 +3216,48 @@ fn ocr_file(path: &str) -> Result<String, String> {
     native_ocr::recognize_rgba(rgba.as_raw(), width, height).map_err(|e| format!("OCR failed: {e}"))
 }
 
+/// Open a link in the default browser. Facebook paths are made absolute
+/// first. The platform browser launcher does the work — the old Windows
+/// path handed the URL to explorer.exe, which treats it as a folder path
+/// and opened the Documents folder instead of the browser.
 fn open_url(url: &str) {
+    let url = web_url(url);
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return;
+    }
+    if launch_default_browser(&url, BrowserLaunchFlags::Default) {
+        return;
+    }
     #[cfg(target_os = "windows")]
-    let _ = std::process::Command::new("explorer.exe").arg(url).spawn();
+    let _ = std::process::Command::new("rundll32")
+        .arg("url.dll,FileProtocolHandler")
+        .arg(&url)
+        .spawn();
     #[cfg(target_os = "macos")]
-    let _ = std::process::Command::new("open").arg(url).spawn();
+    let _ = std::process::Command::new("open").arg(&url).spawn();
     #[cfg(all(unix, not(target_os = "macos")))]
-    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_match_text_strips_time_sender_and_reactions() {
+        assert_eq!(message_match_text("10:00 Alice: see you at 5"), "see you at 5");
+        assert_eq!(message_match_text("10:00 You: ok {👍❤️}"), "ok");
+        assert_eq!(message_match_text("9:41 Bob: note: with colon"), "note: with colon");
+        assert_eq!(message_match_text("10:00 You: {only}"), "{only}");
+    }
+
+    #[test]
+    fn back_pops_to_the_previous_different_view() {
+        let mut history = vec![View::Feed, View::Chats, View::Chats];
+        assert_eq!(pop_previous(&mut history, &View::Chats), Some(View::Feed));
+        assert!(history.is_empty());
+        assert_eq!(pop_previous(&mut history, &View::Feed), None);
+    }
 
     #[test]
     fn chat_details_survive_a_short_row() {

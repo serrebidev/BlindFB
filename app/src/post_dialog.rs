@@ -612,6 +612,8 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
     let r = reader.clone();
     open_link.on_click(move |_| r.open_link());
     let r = reader.clone();
+    links.on_item_double_clicked(move |_| r.open_link());
+    let r = reader.clone();
     links.on_selection_changed(move |_| r.controls());
     let r = reader.clone();
     dialog.on_char_hook(move |event| {
@@ -819,7 +821,9 @@ fn open_requested(ui: &Ui, target: &str, share_requested: bool, action_requested
         tag: Tag::PostLoaded(session),
     });
     reader.message(ui, "Loading post and comments…");
-    links.set_focus();
+    // Land on the full post text, not the link list: the text is why the
+    // reader was opened; the links are one Tab away.
+    post.set_focus();
     dialog.show_modal();
     share_timer.stop();
     reader.media.shutdown();
