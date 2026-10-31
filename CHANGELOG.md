@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.1 - 2026-10-31
+
+Two fixes from hands-on testing, both in backend v0.1.5-blindfb.12.
+
+- Verified accounts read properly: a post from a verified page or person read out the badge's whole tooltip ("Accounts with a verified badge have been authenticated and can be Meta Verified subscribers or notable persons or brands."). It now just says "Verified".
+- Unlock finds more restore entries: the Messenger history restore walk only recognised a short-labelled button, so on pages where Facebook offers the restore as a link, or as a banner whose label is a whole sentence, Unlock reported the restore dialog missing while the entry was on screen. The walk now presses links and long banners too, and if the entry still cannot be found, the error shows the restore-related text Facebook is actually displaying.
+
 ## v0.7.0 - 2026-10-30
 
 Search and Marketplace, end to end.
