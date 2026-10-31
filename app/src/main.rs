@@ -827,6 +827,45 @@ impl Ui {
     }
 }
 
+/// Bounds concurrent backend reads. Every read is a tab on a live
+/// Facebook page in the backend's Chrome, and the launch burst (the
+/// first feed page, its Load more, and the five-section prefetch)
+/// otherwise runs them all at once and pins the CPU.
+struct ReadGate {
+    taken: Mutex<usize>,
+    freed: std::sync::Condvar,
+    max: usize,
+}
+
+impl ReadGate {
+    fn new(max: usize) -> Self {
+        Self {
+            taken: Mutex::new(0),
+            freed: std::sync::Condvar::new(),
+            max,
+        }
+    }
+    fn acquire(&self) -> ReadPermit<'_> {
+        let mut taken = self.taken.lock().unwrap();
+        while *taken >= self.max {
+            taken = self.freed.wait(taken).unwrap();
+        }
+        *taken += 1;
+        ReadPermit { gate: self }
+    }
+}
+
+struct ReadPermit<'a> {
+    gate: &'a ReadGate,
+}
+
+impl Drop for ReadPermit<'_> {
+    fn drop(&mut self) {
+        *self.gate.taken.lock().unwrap() -= 1;
+        self.gate.freed.notify_one();
+    }
+}
+
 fn spawn_worker(
     fb: Option<Fb>,
     jobs: Receiver<Job>,
@@ -835,6 +874,7 @@ fn spawn_worker(
 ) {
     thread::spawn(move || {
         let mut fb = fb;
+        let read_gate = std::sync::Arc::new(ReadGate::new(2));
         // Before the first backend command, so an old daemon never serves this session.
         if blindfb_core::backend::managed_outdated() {
             startup_log("setup: updating the Facebook backend");
@@ -860,9 +900,12 @@ fn spawn_worker(
                 fb = Fb::discover();
             }
             if let (true, Some(fb), Task::Fb(args, _)) = (read, fb.clone(), &job.task) {
-                // The backend gives every command its own tab, so reads can run side by side.
-                let (args, tag, done) = (args.clone(), job.tag, done.clone());
+                // The backend gives every command its own tab, so reads can
+                // run side by side — two at a time, so a burst of reads
+                // cannot pin the CPU (see ReadGate).
+                let (args, tag, done, gate) = (args.clone(), job.tag, done.clone(), read_gate.clone());
                 thread::spawn(move || {
+                    let _permit = gate.acquire();
                     let result = fb.run(&refs(&args));
                     let _ = done.send(Done { tag, result });
                 });
@@ -1004,6 +1047,26 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
             match browsers::import_firefox(fb, &browser) {
                 Ok(status) => Ok(status),
                 Err(why) => visible_fallback(fb, why),
+            }
+        }
+        SignIn::Browser(browser) if browser.uses_fb_login() => {
+            // The backend's guided login copies the session from Chrome
+            // itself over a debugging connection, so it survives Chrome's
+            // app-bound cookie encryption, which a cookie-file import
+            // cannot always read. The import stays as the fallback.
+            match fb.run(&["login"]) {
+                Ok(_) => {
+                    let status = fb.run(&["status"])?;
+                    if browsers::signed_in(&status) {
+                        Ok(status)
+                    } else {
+                        visible_fallback(fb, "the Chrome sign-in did not finish".to_owned())
+                    }
+                }
+                Err(why) => match browsers::import_chromium(fb, &browser) {
+                    Ok(status) => Ok(status),
+                    Err(_) => visible_fallback(fb, why),
+                },
             }
         }
         SignIn::Browser(browser) => match browsers::import_chromium(fb, &browser) {
@@ -2358,7 +2421,11 @@ fn apply_done(ui: &Ui, done: Done) {
                         return;
                     }
                     ui.state.borrow_mut().last_args = args;
+                    let empty = records.is_empty();
                     show_records(ui, &view, records, body);
+                    if !append && empty {
+                        ui.status(&format!("{}: no items to show.", view.title()));
+                    }
                     if append {
                         ui.status(&format!(
                             "{added} new item(s) loaded. {} item(s) total.",

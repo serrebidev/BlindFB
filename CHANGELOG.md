@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.2 - 2026-10-31
+
+Three fixes from hands-on testing.
+
+- Unlock reaches the restore on accounts where the chat list never offers it: once the first-run restore prompt is spent, the messages page has no restore entry at all, and Unlock walked that page in vain. Unlock now also goes to Facebook's secure-storage page, where the PIN restore lives permanently, and walks the PIN surface there. Backend v0.1.5-blindfb.13.
+- Launch no longer pins the CPU: the first feed page, its Load more, and the background prefetch of every other section each ran as their own tab on a live Facebook page, all at the same moment. Backend reads now run at most two at a time.
+- Signing in with Google Chrome works again: Chrome now encrypts its cookies so a cookie-file copy cannot always read them. Picking Google Chrome (or Chromium) in the sign-in dialog now uses the backend's guided sign-in, which copies the session from Chrome itself; the cookie import remains as a fallback, and an empty list now says "no items to show" in the status bar instead of leaving the list silently blank.
+
 ## v0.7.1 - 2026-10-31
 
 Two fixes from hands-on testing, both in backend v0.1.5-blindfb.12.
