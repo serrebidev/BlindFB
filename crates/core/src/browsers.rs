@@ -119,7 +119,10 @@ fn home() -> PathBuf {
 }
 
 fn env_path(var: &str) -> Option<PathBuf> {
-    std::env::var(var).ok().filter(|v| !v.is_empty()).map(PathBuf::from)
+    std::env::var(var)
+        .ok()
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
 }
 
 /// Locate an executable on PATH (a tiny `which`, so core stays dep-light).
@@ -191,7 +194,10 @@ fn specs() -> Vec<Spec> {
             ],
             exe_names: vec!["brave.exe"],
         });
-        for (label, folder) in [("Brave Beta", "Brave-Browser-Beta"), ("Brave Nightly", "Brave-Browser-Nightly")] {
+        for (label, folder) in [
+            ("Brave Beta", "Brave-Browser-Beta"),
+            ("Brave Nightly", "Brave-Browser-Nightly"),
+        ] {
             out.push(Spec {
                 kind: BrowserKind::Brave,
                 label,
@@ -214,7 +220,10 @@ fn specs() -> Vec<Spec> {
             ],
             exe_names: vec!["msedge.exe"],
         });
-        for (label, folder) in [("Microsoft Edge Beta", "Edge Beta"), ("Microsoft Edge Dev", "Edge Dev")] {
+        for (label, folder) in [
+            ("Microsoft Edge Beta", "Edge Beta"),
+            ("Microsoft Edge Dev", "Edge Dev"),
+        ] {
             out.push(Spec {
                 kind: BrowserKind::Edge,
                 label,
@@ -253,7 +262,10 @@ fn specs() -> Vec<Spec> {
             exe_candidates: app("Google Chrome", "Google Chrome"),
             exe_names: vec![],
         });
-        for (label, folder) in [("Google Chrome Beta", "Google/Chrome Beta"), ("Google Chrome Canary", "Google/Chrome Canary")] {
+        for (label, folder) in [
+            ("Google Chrome Beta", "Google/Chrome Beta"),
+            ("Google Chrome Canary", "Google/Chrome Canary"),
+        ] {
             out.push(Spec {
                 kind: BrowserKind::Chrome,
                 label,
@@ -270,8 +282,16 @@ fn specs() -> Vec<Spec> {
             exe_names: vec![],
         });
         for (label, folder, app_name) in [
-            ("Brave Beta", "BraveSoftware/Brave-Browser-Beta", "Brave Browser Beta"),
-            ("Brave Nightly", "BraveSoftware/Brave-Browser-Nightly", "Brave Browser Nightly"),
+            (
+                "Brave Beta",
+                "BraveSoftware/Brave-Browser-Beta",
+                "Brave Browser Beta",
+            ),
+            (
+                "Brave Nightly",
+                "BraveSoftware/Brave-Browser-Nightly",
+                "Brave Browser Nightly",
+            ),
         ] {
             out.push(Spec {
                 kind: BrowserKind::Brave,
@@ -315,9 +335,16 @@ fn specs() -> Vec<Spec> {
     #[cfg(target_os = "linux")]
     {
         let config = env_path("XDG_CONFIG_HOME").unwrap_or_else(|| home().join(".config"));
-        let push = |out: &mut Vec<Spec>, kind, label, dirs: Vec<PathBuf>, names: Vec<&'static str>| {
-            out.push(Spec { kind, label, data_dir: dirs.into_iter().next(), exe_candidates: vec![], exe_names: names });
-        };
+        let push =
+            |out: &mut Vec<Spec>, kind, label, dirs: Vec<PathBuf>, names: Vec<&'static str>| {
+                out.push(Spec {
+                    kind,
+                    label,
+                    data_dir: dirs.into_iter().next(),
+                    exe_candidates: vec![],
+                    exe_names: names,
+                });
+            };
         push(
             &mut out,
             BrowserKind::Chrome,
@@ -425,17 +452,27 @@ pub fn detect_browsers() -> Vec<Browser> {
         if exe.is_some() {
             let is_default = !default_claimed && default == Some(spec.kind);
             default_claimed |= is_default;
-            found.push(Browser { is_default, kind: spec.kind, label: spec.label, data_dir, exe });
+            found.push(Browser {
+                is_default,
+                kind: spec.kind,
+                label: spec.label,
+                data_dir,
+                exe,
+            });
         }
     }
     found
 }
 
 pub(crate) fn fallback_engine(browsers: &[Browser]) -> Option<Browser> {
-    if browsers.iter().any(|b| b.uses_fb_login() && b.exe.is_some()) {
+    if browsers
+        .iter()
+        .any(|b| b.uses_fb_login() && b.exe.is_some())
+    {
         return None;
     }
-    browsers.iter()
+    browsers
+        .iter()
         .filter(|b| b.kind.is_chromium() && b.exe.is_some())
         .min_by_key(|b| !b.is_default)
         .cloned()
@@ -503,8 +540,13 @@ pub fn default_browser_kind() -> Option<BrowserKind> {
     }
     #[cfg(target_os = "macos")]
     {
-        let plist = home().join("Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist");
-        let output = Command::new("plutil").args(["-convert", "xml1", "-o", "-", plist.to_str()?]).output().ok()?;
+        let plist = home().join(
+            "Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist",
+        );
+        let output = Command::new("plutil")
+            .args(["-convert", "xml1", "-o", "-", plist.to_str()?])
+            .output()
+            .ok()?;
         let xml = String::from_utf8_lossy(&output.stdout);
         // Find the handler dict for the https scheme and read the bundle id
         // following its LSHandlerRoleAll key.
@@ -525,7 +567,10 @@ pub fn default_browser_kind() -> Option<BrowserKind> {
     }
     #[cfg(target_os = "linux")]
     {
-        let output = Command::new("xdg-settings").args(["get", "default-web-browser"]).output().ok()?;
+        let output = Command::new("xdg-settings")
+            .args(["get", "default-web-browser"])
+            .output()
+            .ok()?;
         let text = String::from_utf8_lossy(&output.stdout);
         return kind_from_hint(text.trim());
     }
@@ -564,7 +609,11 @@ fn browser_running(kind: BrowserKind) -> bool {
         }
         #[cfg(unix)]
         {
-            if Command::new("pgrep").args(["-x", name]).output().is_ok_and(|o| o.status.success()) {
+            if Command::new("pgrep")
+                .args(["-x", name])
+                .output()
+                .is_ok_and(|o| o.status.success())
+            {
                 return true;
             }
         }
@@ -577,14 +626,18 @@ fn browser_running(kind: BrowserKind) -> bool {
 /// makes for Chrome. Only takes effect on the browser's next start.
 pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     let path = data_dir.join("Local State");
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut root: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
     root["devtools"]["remote_debugging"]["user-enabled"] = serde_json::Value::Bool(true);
     std::fs::write(data_dir.join("Local State.blindfb-backup"), &text)
         .map_err(|e| format!("cannot back up Local State: {e}"))?;
     let tmp = data_dir.join("Local State.blindfb-tmp");
-    let write = std::fs::write(&tmp, serde_json::to_string(&root).map_err(|e| e.to_string())?)
-        .and_then(|()| std::fs::rename(&tmp, &path));
+    let write = std::fs::write(
+        &tmp,
+        serde_json::to_string(&root).map_err(|e| e.to_string())?,
+    )
+    .and_then(|()| std::fs::rename(&tmp, &path));
     write.map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
         format!("cannot update Local State: {e}")
@@ -593,7 +646,10 @@ pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
 
 #[cfg(not(windows))]
 fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
-    let exe = browser.exe.clone().ok_or_else(|| format!("{} is not installed", browser.name()))?;
+    let exe = browser
+        .exe
+        .clone()
+        .ok_or_else(|| format!("{} is not installed", browser.name()))?;
     Command::new(&exe)
         .arg(url)
         .stdin(Stdio::null())
@@ -640,10 +696,12 @@ pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
 #[cfg(not(windows))]
 fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, String> {
     let kind = browser.kind;
-    let data_dir = browser
-        .data_dir
-        .clone()
-        .ok_or_else(|| format!("{} has not run yet — open it once, sign in to Facebook there, then try again", browser.name()))?;
+    let data_dir = browser.data_dir.clone().ok_or_else(|| {
+        format!(
+            "{} has not run yet — open it once, sign in to Facebook there, then try again",
+            browser.name()
+        )
+    })?;
 
     let endpoint = if let Some(endpoint) = devtools_endpoint(&data_dir) {
         Some(endpoint)
@@ -673,18 +731,27 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
     if signed_in(&status) {
         Ok(status)
     } else {
-        Err(format!("{} is not signed in to Facebook — sign in there first, then try again", browser.name()))
+        Err(format!(
+            "{} is not signed in to Facebook — sign in there first, then try again",
+            browser.name()
+        ))
     }
 }
 
 #[cfg(windows)]
 fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String> {
-    let root = browser.data_dir.as_ref().ok_or("this browser has no profile yet; sign in to Facebook there first")?;
+    let root = browser
+        .data_dir
+        .as_ref()
+        .ok_or("this browser has no profile yet; sign in to Facebook there first")?;
     let mut profiles = Vec::new();
     if let Ok(text) = std::fs::read_to_string(root.join("Local State")) {
         if let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) {
             if let Some(last) = state["profile"]["last_used"].as_str() {
-                if Path::new(last).components().count() == 1 && !last.contains(['/', '\\']) && last != ".." {
+                if Path::new(last).components().count() == 1
+                    && !last.contains(['/', '\\'])
+                    && last != ".."
+                {
                     profiles.push(root.join(last));
                 }
             }
@@ -692,40 +759,58 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
     }
     profiles.push(root.join("Default"));
     if let Ok(entries) = std::fs::read_dir(root) {
-        let mut others: Vec<_> = entries.filter_map(Result::ok)
+        let mut others: Vec<_> = entries
+            .filter_map(Result::ok)
             .filter(|e| e.file_name().to_string_lossy().starts_with("Profile "))
-            .map(|e| e.path()).collect();
+            .map(|e| e.path())
+            .collect();
         others.sort();
         profiles.extend(others);
     }
     let mut tried = Vec::new();
     let mut last_error = "no signed-in Facebook profile found".to_owned();
     for profile in profiles {
-        if tried.contains(&profile) { continue; }
+        if tried.contains(&profile) {
+            continue;
+        }
         tried.push(profile.clone());
         let database = [profile.join("Network/Cookies"), profile.join("Cookies")]
-            .into_iter().find(|p| p.is_file());
+            .into_iter()
+            .find(|p| p.is_file());
         let Some(database) = database else { continue };
         let request = rookie_cookies::direct_path::PathExtractRequest::windows_local_state(
-            database, root.join("Local State"))
-            .domains(Some(vec!["facebook.com".to_owned()]))
-            .timeout(Duration::from_secs(30));
+            database,
+            root.join("Local State"),
+        )
+        .domains(Some(vec!["facebook.com".to_owned()]))
+        .timeout(Duration::from_secs(30));
         match rookie_cookies::direct_path::extract_from_path(request) {
             Ok(cookies) => {
-                let cookies: Vec<_> = cookies.into_iter().map(|c| FfCookie {
-                    name: c.name, value: c.value, host: c.domain, path: c.path,
-                    expiry: c.expires.map_or(0, |e| e.min(i64::MAX as u64) as i64),
-                    secure: c.secure, http_only: c.http_only,
-                }).filter(valid_facebook_cookie).collect();
+                let cookies: Vec<_> = cookies
+                    .into_iter()
+                    .map(|c| FfCookie {
+                        name: c.name,
+                        value: c.value,
+                        host: c.domain,
+                        path: c.path,
+                        expiry: c.expires.map_or(0, |e| e.min(i64::MAX as u64) as i64),
+                        secure: c.secure,
+                        http_only: c.http_only,
+                    })
+                    .filter(valid_facebook_cookie)
+                    .collect();
                 if has_facebook_session(&cookies) {
                     return import_cookies(fb, &cookies);
                 }
             }
-            Err(error) => last_error = if error.code() == "source_inspection_failed" {
-                "the cookie database could not be read; close this browser normally and retry".to_owned()
-            } else {
-                format!("cookie extraction failed ({}): {error}", error.code())
-            },
+            Err(error) => {
+                last_error = if error.code() == "source_inspection_failed" {
+                    "the cookie database could not be read; close this browser normally and retry"
+                        .to_owned()
+                } else {
+                    format!("cookie extraction failed ({}): {error}", error.code())
+                }
+            }
         }
     }
     Err(format!("Could not import {}: {last_error}. Sign in to Facebook there, or choose a new browser window.", browser.name()))
@@ -733,15 +818,19 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
 
 fn valid_facebook_cookie(cookie: &FfCookie) -> bool {
     let host = cookie.host.trim_start_matches('.');
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs() as i64);
     (host == "facebook.com" || host.ends_with(".facebook.com"))
         && (cookie.expiry == 0 || cookie.expiry > now)
 }
 
 fn has_facebook_session(cookies: &[FfCookie]) -> bool {
-    ["c_user", "xs"].iter().all(|name| cookies.iter()
-        .any(|c| c.name == *name && !c.value.is_empty() && valid_facebook_cookie(c)))
+    ["c_user", "xs"].iter().all(|name| {
+        cookies
+            .iter()
+            .any(|c| c.name == *name && !c.value.is_empty() && valid_facebook_cookie(c))
+    })
 }
 
 fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
@@ -752,7 +841,8 @@ fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
     let endpoint = fb.browser_endpoint()?;
     // Restart the daemon after import so account-specific caches cannot survive a switch.
     fb.run(&["stop"])?;
-    let params: serde_json::Value = serde_json::from_str(&cookies_param_json(cookies)).map_err(|e| e.to_string())?;
+    let params: serde_json::Value =
+        serde_json::from_str(&cookies_param_json(cookies)).map_err(|e| e.to_string())?;
     cdp_call(&endpoint, "Storage.clearCookies", &serde_json::json!({}))?;
     cdp_call(&endpoint, "Storage.setCookies", &params)?;
     let current = status(fb)?;
@@ -784,8 +874,16 @@ pub struct FfCookie {
 pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
     let resolve = |raw: &str| -> Option<PathBuf> {
         let rel = raw.trim().replace('\\', "/");
-        let candidate = if Path::new(&rel).is_absolute() { PathBuf::from(&rel) } else { root.join(&rel) };
-        if candidate.is_dir() { Some(candidate) } else { None }
+        let candidate = if Path::new(&rel).is_absolute() {
+            PathBuf::from(&rel)
+        } else {
+            root.join(&rel)
+        };
+        if candidate.is_dir() {
+            Some(candidate)
+        } else {
+            None
+        }
     };
     if let Ok(text) = std::fs::read_to_string(root.join("installs.ini")) {
         let mut is_relative = true;
@@ -847,17 +945,18 @@ pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
 pub fn extract_firefox_cookies(profile: &Path) -> Result<Vec<FfCookie>, String> {
     let source = profile.join("cookies.sqlite");
     if !source.is_file() {
-        return Err("this Firefox profile has no cookie database — sign in to Facebook in Firefox first".to_owned());
+        return Err(
+            "this Firefox profile has no cookie database — sign in to Facebook in Firefox first"
+                .to_owned(),
+        );
     }
     read_cookie_db(&source)
 }
 
 fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
-    let conn = rusqlite::Connection::open_with_flags(
-        db,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .map_err(|e| format!("cannot open the Firefox cookie database: {e}"))?;
+    let conn =
+        rusqlite::Connection::open_with_flags(db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|e| format!("cannot open the Firefox cookie database: {e}"))?;
     let mut stmt = conn
         .prepare(
             "SELECT name, value, host, path, expiry, isSecure, isHttpOnly, originAttributes \
@@ -882,7 +981,8 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
         .map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
     let mut groups: Vec<(String, Vec<FfCookie>)> = Vec::new();
     for row in rows {
-        let (cookie, attributes) = row.map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
+        let (cookie, attributes) =
+            row.map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
         if !valid_facebook_cookie(&cookie) {
             continue;
         }
@@ -897,11 +997,17 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
     let pick = groups
         .iter()
         .find(|(attributes, list)| attributes.is_empty() && has(list, "c_user") && has(list, "xs"))
-        .or_else(|| groups.iter().find(|(_, list)| has(list, "c_user") && has(list, "xs")))
+        .or_else(|| {
+            groups
+                .iter()
+                .find(|(_, list)| has(list, "c_user") && has(list, "xs"))
+        })
         .or_else(|| groups.iter().find(|(_, list)| has(list, "c_user")));
     match pick {
         Some((_, list)) => Ok(list.clone()),
-        None => Err("Firefox is not signed in to Facebook — sign in there first, then try again".to_owned()),
+        None => Err(
+            "Firefox is not signed in to Facebook — sign in there first, then try again".to_owned(),
+        ),
     }
 }
 
@@ -942,19 +1048,32 @@ pub fn fb_browser_endpoint() -> Option<(u16, String)> {
 }
 
 /// Send one CDP command to a browser endpoint and return its `result`.
-pub(crate) fn cdp_call(endpoint: &(u16, String), method: &str, params: &serde_json::Value) -> Result<serde_json::Value, String> {
+pub(crate) fn cdp_call(
+    endpoint: &(u16, String),
+    method: &str,
+    params: &serde_json::Value,
+) -> Result<serde_json::Value, String> {
     let (port, path) = endpoint;
     let url = format!("ws://127.0.0.1:{port}{path}");
-    let (mut socket, _) = tungstenite::connect(url.as_str()).map_err(|e| format!("cannot reach the backend browser: {e}"))?;
+    let (mut socket, _) = tungstenite::connect(url.as_str())
+        .map_err(|e| format!("cannot reach the backend browser: {e}"))?;
     if let tungstenite::stream::MaybeTlsStream::Plain(stream) = socket.get_mut() {
         let _ = stream.set_read_timeout(Some(Duration::from_secs(20)));
     }
     let request = serde_json::json!({ "id": 1, "method": method, "params": params }).to_string();
-    socket.send(tungstenite::Message::Text(request)).map_err(|e| format!("cannot talk to the backend browser: {e}"))?;
+    socket
+        .send(tungstenite::Message::Text(request))
+        .map_err(|e| format!("cannot talk to the backend browser: {e}"))?;
     loop {
-        let message = socket.read().map_err(|e| format!("the backend browser did not answer: {e}"))?;
-        let tungstenite::Message::Text(text) = message else { continue };
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { continue };
+        let message = socket
+            .read()
+            .map_err(|e| format!("the backend browser did not answer: {e}"))?;
+        let tungstenite::Message::Text(text) = message else {
+            continue;
+        };
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+            continue;
+        };
         if value["id"].as_i64() != Some(1) {
             continue;
         }
@@ -968,8 +1087,11 @@ pub(crate) fn cdp_call(endpoint: &(u16, String), method: &str, params: &serde_js
 /// Import the Facebook session from Firefox: extract its cookies, set
 /// them in the backend's browser, and verify with `fb status`.
 pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
-    let root = firefox.data_dir.clone().ok_or("Firefox has not run yet — open it once, sign in to Facebook there, then try again")?;
-    let profile = firefox_profile(&root).ok_or("no Firefox profile found — sign in to Facebook in Firefox first")?;
+    let root = firefox.data_dir.clone().ok_or(
+        "Firefox has not run yet — open it once, sign in to Facebook there, then try again",
+    )?;
+    let profile = firefox_profile(&root)
+        .ok_or("no Firefox profile found — sign in to Facebook in Firefox first")?;
     let cookies = extract_firefox_cookies(&profile)?;
 
     import_cookies(fb, &cookies)
@@ -985,7 +1107,8 @@ fn download(url: &str) -> Result<Vec<u8>, String> {
         .get(url)
         .call()
         .map_err(|e| format!("download of {url} failed: {e}"))?;
-    crate::http::download_body(response.body_mut()).map_err(|e| format!("download of {url} failed: {e}"))
+    crate::http::download_body(response.body_mut())
+        .map_err(|e| format!("download of {url} failed: {e}"))
 }
 
 #[cfg(windows)]
@@ -1009,13 +1132,18 @@ fn winget_install(id: &str) -> Result<String, String> {
     if status.success() {
         Ok(format!("installed via winget ({id})"))
     } else {
-        Err(format!("winget could not install {id} (it may have asked for administrator approval)"))
+        Err(format!(
+            "winget could not install {id} (it may have asked for administrator approval)"
+        ))
     }
 }
 
 #[cfg(windows)]
 fn installer_command(path: &Path) -> Command {
-    if path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("msi")) {
+    if path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("msi"))
+    {
         let mut command = Command::new("msiexec.exe");
         command.arg("/i").arg(path);
         command
@@ -1054,11 +1182,24 @@ fn install_from_dmg(kind: BrowserKind, url: &str, app_name: &str) -> Result<Stri
     }
     let apps = home().join("Applications");
     let _ = std::fs::create_dir_all(&apps);
-    let copied = Command::new("cp").arg("-R").arg(mount.join(app_name)).arg(&apps).status();
-    let _ = Command::new("hdiutil").args(["detach", "-quiet"]).arg(&mount).status();
+    let copied = Command::new("cp")
+        .arg("-R")
+        .arg(mount.join(app_name))
+        .arg(&apps)
+        .status();
+    let _ = Command::new("hdiutil")
+        .args(["detach", "-quiet"])
+        .arg(&mount)
+        .status();
     match copied {
-        Ok(status) if status.success() => Ok(format!("{} installed to your Applications folder", kind.name())),
-        _ => Err(format!("could not copy {} into your Applications folder", kind.name())),
+        Ok(status) if status.success() => Ok(format!(
+            "{} installed to your Applications folder",
+            kind.name()
+        )),
+        _ => Err(format!(
+            "could not copy {} into your Applications folder",
+            kind.name()
+        )),
     }
 }
 
@@ -1092,7 +1233,12 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
                 "https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US",
                 "firefox-setup.exe",
             ),
-            BrowserKind::Chromium => return Err("Chromium has no official Windows installer — install Google Chrome instead".to_owned()),
+            BrowserKind::Chromium => {
+                return Err(
+                    "Chromium has no official Windows installer — install Google Chrome instead"
+                        .to_owned(),
+                )
+            }
         };
         if winget_available() {
             return winget_install(winget_id);
@@ -1102,11 +1248,28 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
         let (url, app) = match kind {
-            BrowserKind::Chrome => ("https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg", "Google Chrome.app"),
-            BrowserKind::Brave => ("https://laptop-updates.brave.com/latest/osx", "Brave Browser.app"),
-            BrowserKind::Edge => ("https://go.microsoft.com/fwlink/?linkid=2069148", "Microsoft Edge.app"),
-            BrowserKind::Firefox => ("https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=en-US", "Firefox.app"),
-            BrowserKind::Chromium => return Err("Chromium has no official macOS installer — install Google Chrome instead".to_owned()),
+            BrowserKind::Chrome => (
+                "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+                "Google Chrome.app",
+            ),
+            BrowserKind::Brave => (
+                "https://laptop-updates.brave.com/latest/osx",
+                "Brave Browser.app",
+            ),
+            BrowserKind::Edge => (
+                "https://go.microsoft.com/fwlink/?linkid=2069148",
+                "Microsoft Edge.app",
+            ),
+            BrowserKind::Firefox => (
+                "https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=en-US",
+                "Firefox.app",
+            ),
+            BrowserKind::Chromium => {
+                return Err(
+                    "Chromium has no official macOS installer — install Google Chrome instead"
+                        .to_owned(),
+                )
+            }
         };
         return install_from_dmg(kind, url, app);
     }
@@ -1145,10 +1308,19 @@ mod tests {
 
     #[test]
     fn session_requires_live_facebook_authentication_cookies() {
-        let user = FfCookie { name: "c_user".to_owned(), value: "account".to_owned(),
-            host: ".facebook.com".to_owned(), path: "/".to_owned(), expiry: 0,
-            secure: true, http_only: true };
-        let mut xs = FfCookie { name: "xs".to_owned(), ..user.clone() };
+        let user = FfCookie {
+            name: "c_user".to_owned(),
+            value: "account".to_owned(),
+            host: ".facebook.com".to_owned(),
+            path: "/".to_owned(),
+            expiry: 0,
+            secure: true,
+            http_only: true,
+        };
+        let mut xs = FfCookie {
+            name: "xs".to_owned(),
+            ..user.clone()
+        };
         assert!(has_facebook_session(&[user.clone(), xs.clone()]));
         assert!(!has_facebook_session(std::slice::from_ref(&user)));
         xs.host = ".notfacebook.com".to_owned();
@@ -1164,9 +1336,11 @@ mod tests {
     #[test]
     fn backend_engine_supports_channels_and_requires_an_executable() {
         let mut brave = Browser {
-            kind: BrowserKind::Brave, label: "Brave Nightly",
+            kind: BrowserKind::Brave,
+            label: "Brave Nightly",
             data_dir: Some(PathBuf::from("everyday-profile")),
-            exe: Some(PathBuf::from("brave.exe")), is_default: true,
+            exe: Some(PathBuf::from("brave.exe")),
+            is_default: true,
         };
         assert_eq!(fallback_engine(&[brave.clone()]).unwrap().exe, brave.exe);
         brave.exe = None;
@@ -1175,14 +1349,36 @@ mod tests {
 
     #[test]
     fn backend_engine_prefers_default_chromium_but_keeps_native_chrome() {
-        let edge = Browser { kind: BrowserKind::Edge, label: "", data_dir: None,
-            exe: Some(PathBuf::from("edge")), is_default: false };
-        let brave = Browser { kind: BrowserKind::Brave, label: "Brave Nightly", data_dir: None,
-            exe: Some(PathBuf::from("brave")), is_default: true };
-        assert_eq!(fallback_engine(&[edge.clone(), brave.clone()]).unwrap().kind, BrowserKind::Brave);
-        let firefox = Browser { kind: BrowserKind::Firefox, ..brave.clone() };
+        let edge = Browser {
+            kind: BrowserKind::Edge,
+            label: "",
+            data_dir: None,
+            exe: Some(PathBuf::from("edge")),
+            is_default: false,
+        };
+        let brave = Browser {
+            kind: BrowserKind::Brave,
+            label: "Brave Nightly",
+            data_dir: None,
+            exe: Some(PathBuf::from("brave")),
+            is_default: true,
+        };
+        assert_eq!(
+            fallback_engine(&[edge.clone(), brave.clone()])
+                .unwrap()
+                .kind,
+            BrowserKind::Brave
+        );
+        let firefox = Browser {
+            kind: BrowserKind::Firefox,
+            ..brave.clone()
+        };
         assert!(fallback_engine(&[firefox]).is_none());
-        let chrome = Browser { kind: BrowserKind::Chrome, label: "", ..edge.clone() };
+        let chrome = Browser {
+            kind: BrowserKind::Chrome,
+            label: "",
+            ..edge.clone()
+        };
         assert!(fallback_engine(&[brave, edge, chrome]).is_none());
     }
 
@@ -1194,14 +1390,26 @@ mod tests {
         assert!(labels.contains(&"Brave Beta"), "labels: {labels:?}");
         assert!(labels.contains(&"Brave Nightly"), "labels: {labels:?}");
         assert!(labels.contains(&"Google Chrome Beta"), "labels: {labels:?}");
-        assert!(labels.contains(&"Microsoft Edge Beta"), "labels: {labels:?}");
+        assert!(
+            labels.contains(&"Microsoft Edge Beta"),
+            "labels: {labels:?}"
+        );
     }
 
     #[test]
     fn browser_names_and_login_routes() {
-        let browser = |kind, label| Browser { kind, label, data_dir: None, exe: None, is_default: false };
+        let browser = |kind, label| Browser {
+            kind,
+            label,
+            data_dir: None,
+            exe: None,
+            is_default: false,
+        };
         assert_eq!(browser(BrowserKind::Brave, "").name(), "Brave");
-        assert_eq!(browser(BrowserKind::Brave, "Brave Nightly").name(), "Brave Nightly");
+        assert_eq!(
+            browser(BrowserKind::Brave, "Brave Nightly").name(),
+            "Brave Nightly"
+        );
         assert!(browser(BrowserKind::Chrome, "").uses_fb_login());
         assert!(browser(BrowserKind::Chromium, "").uses_fb_login());
         assert!(!browser(BrowserKind::Chrome, "Google Chrome Beta").uses_fb_login());
@@ -1211,7 +1419,10 @@ mod tests {
 
     #[test]
     fn active_port_parses() {
-        assert_eq!(parse_active_port("9222\n/devtools/browser/abc\n"), Some((9222, "/devtools/browser/abc".to_owned())));
+        assert_eq!(
+            parse_active_port("9222\n/devtools/browser/abc\n"),
+            Some((9222, "/devtools/browser/abc".to_owned()))
+        );
         assert_eq!(parse_active_port("9222\n"), Some((9222, String::new())));
         assert_eq!(parse_active_port("nope\n"), None);
         assert_eq!(parse_active_port(""), None);
@@ -1222,27 +1433,54 @@ mod tests {
         assert_eq!(kind_from_progid("ChromeHTML"), Some(BrowserKind::Chrome));
         assert_eq!(kind_from_progid("BraveHTML"), Some(BrowserKind::Brave));
         assert_eq!(kind_from_progid("MSEdgeHTM"), Some(BrowserKind::Edge));
-        assert_eq!(kind_from_progid("FirefoxURL-308046B0AF4A39CB"), Some(BrowserKind::Firefox));
+        assert_eq!(
+            kind_from_progid("FirefoxURL-308046B0AF4A39CB"),
+            Some(BrowserKind::Firefox)
+        );
         assert_eq!(kind_from_progid("AppXsomething"), None);
     }
 
     #[test]
     fn hints_map() {
-        assert_eq!(kind_from_hint("brave-browser.desktop"), Some(BrowserKind::Brave));
-        assert_eq!(kind_from_hint("microsoft-edge.desktop"), Some(BrowserKind::Edge));
-        assert_eq!(kind_from_hint("com.microsoft.edgemac"), Some(BrowserKind::Edge));
-        assert_eq!(kind_from_hint("org.mozilla.firefox"), Some(BrowserKind::Firefox));
-        assert_eq!(kind_from_hint("google-chrome.desktop"), Some(BrowserKind::Chrome));
-        assert_eq!(kind_from_hint("chromium.desktop"), Some(BrowserKind::Chromium));
+        assert_eq!(
+            kind_from_hint("brave-browser.desktop"),
+            Some(BrowserKind::Brave)
+        );
+        assert_eq!(
+            kind_from_hint("microsoft-edge.desktop"),
+            Some(BrowserKind::Edge)
+        );
+        assert_eq!(
+            kind_from_hint("com.microsoft.edgemac"),
+            Some(BrowserKind::Edge)
+        );
+        assert_eq!(
+            kind_from_hint("org.mozilla.firefox"),
+            Some(BrowserKind::Firefox)
+        );
+        assert_eq!(
+            kind_from_hint("google-chrome.desktop"),
+            Some(BrowserKind::Chrome)
+        );
+        assert_eq!(
+            kind_from_hint("chromium.desktop"),
+            Some(BrowserKind::Chromium)
+        );
     }
 
     #[test]
     fn local_state_flip_preserves_other_keys() {
         let dir = std::env::temp_dir().join(format!("blindfb-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&dir);
-        std::fs::write(dir.join("Local State"), r#"{"devtools":{"other":1},"profile":{"last_used":"Default"}}"#).unwrap();
+        std::fs::write(
+            dir.join("Local State"),
+            r#"{"devtools":{"other":1},"profile":{"last_used":"Default"}}"#,
+        )
+        .unwrap();
         enable_remote_debugging(&dir).unwrap();
-        let after: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.join("Local State")).unwrap()).unwrap();
+        let after: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join("Local State")).unwrap())
+                .unwrap();
         assert_eq!(after["devtools"]["remote_debugging"]["user-enabled"], true);
         assert_eq!(after["devtools"]["other"], 1);
         assert_eq!(after["profile"]["last_used"], "Default");
@@ -1291,14 +1529,29 @@ mod tests {
             .unwrap();
             let insert = "INSERT INTO moz_cookies (originAttributes, name, value, host, path, expiry, isSecure, isHttpOnly) \
                             VALUES (?1, ?2, ?3, ?4, '/', 1893456000, 1, 1)";
-            conn.execute(insert, rusqlite::params!["", "c_user", "12345", ".facebook.com"]).unwrap();
-            conn.execute(insert, rusqlite::params!["", "xs", "secret", ".facebook.com"]).unwrap();
-            conn.execute(insert, rusqlite::params!["", "fr", "x", ".example.com"]).unwrap();
-            conn.execute(insert, rusqlite::params!["", "fake", "x", ".notfacebook.com"]).unwrap();
+            conn.execute(
+                insert,
+                rusqlite::params!["", "c_user", "12345", ".facebook.com"],
+            )
+            .unwrap();
+            conn.execute(
+                insert,
+                rusqlite::params!["", "xs", "secret", ".facebook.com"],
+            )
+            .unwrap();
+            conn.execute(insert, rusqlite::params!["", "fr", "x", ".example.com"])
+                .unwrap();
+            conn.execute(
+                insert,
+                rusqlite::params!["", "fake", "x", ".notfacebook.com"],
+            )
+            .unwrap();
         }
         let cookies = extract_firefox_cookies(&dir).unwrap();
         assert_eq!(cookies.len(), 2);
-        assert!(cookies.iter().any(|c| c.name == "c_user" && c.value == "12345"));
+        assert!(cookies
+            .iter()
+            .any(|c| c.name == "c_user" && c.value == "12345"));
         let json = cookies_param_json(&cookies);
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed["cookies"].as_array().unwrap().len(), 2);
@@ -1318,7 +1571,9 @@ mod tests {
             BEGIN IMMEDIATE;
             UPDATE moz_cookies SET value='uncommitted' WHERE name='xs';").unwrap();
         let cookies = extract_firefox_cookies(&dir).unwrap();
-        assert!(cookies.iter().any(|cookie| cookie.name == "xs" && cookie.value == "committed"));
+        assert!(cookies
+            .iter()
+            .any(|cookie| cookie.name == "xs" && cookie.value == "committed"));
         conn.execute_batch("ROLLBACK;").unwrap();
         drop(conn);
         let _ = std::fs::remove_dir_all(&dir);

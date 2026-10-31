@@ -16,8 +16,8 @@
 
 mod chat_dialog;
 mod group_dialog;
-mod post_dialog;
 mod player;
+mod post_dialog;
 mod reel_cache;
 mod update;
 
@@ -25,22 +25,22 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use blindfb_core::browsers::{self, Browser, BrowserKind};
+use blindfb_core::fb::{
+    chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args, groups_args,
+    msg_react_args, notifs_args, parse_feed, parse_notifications, parse_records, post_args,
+    posts_args, profile_args, profile_url_from_post_url, react_args, read_args, recent_feed_args,
+    reply_args, search_args, send_args, thread_url_from_profile_url, unsend_args, view_args,
+    web_url, Fb, Record,
+};
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
-use blindfb_core::fb::{
-    Fb, Record, chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
-    groups_args, msg_react_args, notifs_args, parse_feed, parse_notifications,
-    parse_records, post_args, posts_args, profile_args, profile_url_from_post_url, react_args,
-    read_args, recent_feed_args, reply_args, search_args, send_args, thread_url_from_profile_url,
-    unsend_args, view_args, web_url,
-};
-use wx_utils::{AboutBoxBuilder, confirm, prompt_text, show_error, show_warning};
+use wx_utils::{confirm, prompt_text, show_error, show_warning, AboutBoxBuilder};
 use wxdragon::prelude::*;
 
 const ID_FEED: i32 = 10001;
@@ -89,7 +89,9 @@ const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
 const ID_GITHUB: i32 = 10071;
 
-const REACTIONS: [&str; 8] = ["like", "love", "care", "haha", "wow", "sad", "angry", "none"];
+const REACTIONS: [&str; 8] = [
+    "like", "love", "care", "haha", "wow", "sad", "angry", "none",
+];
 const PAGE: u32 = 100;
 /// The News feed opens with this many posts, then loads a full page while the user reads.
 const FEED_FIRST: u32 = 10;
@@ -158,7 +160,10 @@ enum Tag {
     GroupMembers(u64),
     ChatMessages(u64),
     ChatWindowSent(u64),
-    ReelPrepared { account: u64, target: String },
+    ReelPrepared {
+        account: u64,
+        target: String,
+    },
     PostVideo(u64, u64),
     PostReelReacted(u64),
     PostSent(u64),
@@ -186,7 +191,10 @@ enum SignIn {
 }
 
 enum Task {
-    ReelsLoad { source: ReelSource, append: bool },
+    ReelsLoad {
+        source: ReelSource,
+        append: bool,
+    },
     /// Run the backend with these args (and optional stdin, for the PIN).
     Fb(Vec<String>, Option<String>),
     /// Download and install/update the managed backend binary.
@@ -344,7 +352,10 @@ impl ChatSubmission {
     }
 
     fn finish(pending: &mut Option<Self>, account: u64) -> Option<Self> {
-        if pending.as_ref().is_some_and(|message| message.account == account) {
+        if pending
+            .as_ref()
+            .is_some_and(|message| message.account == account)
+        {
             pending.take()
         } else {
             None
@@ -360,8 +371,10 @@ fn startup_log(line: &str) {
         return;
     };
     let _ = std::fs::create_dir_all(&dir);
-    if let Ok(mut file) =
-        std::fs::OpenOptions::new().create(true).append(true).open(dir.join("startup.log"))
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("startup.log"))
     {
         use std::io::Write;
         let _ = writeln!(file, "[{}] {line}", std::process::id());
@@ -377,7 +390,9 @@ fn main() {
         run();
     });
     startup_log("main: window loop returned; closing browser pages");
-    if let Some(fb) = Fb::discover() { reels::close_all(&fb); }
+    if let Some(fb) = Fb::discover() {
+        reels::close_all(&fb);
+    }
     startup_log("main: exited");
 }
 
@@ -389,7 +404,10 @@ fn run() {
     let latest_list = Arc::new(Mutex::new(ListRequests::default()));
     spawn_worker(fb.clone(), job_rx, done_tx.clone(), latest_list.clone());
 
-    let frame = Frame::builder().with_title("BlindFB").with_size(Size::new(1100, 760)).build();
+    let frame = Frame::builder()
+        .with_title("BlindFB")
+        .with_size(Size::new(1100, 760))
+        .build();
     frame.create_status_bar(1, 0, -1, "status");
     frame.set_status_text(
         if fb.is_some() {
@@ -413,19 +431,27 @@ fn run() {
         "Chats",
         "Groups",
         "Feeds (most recent)",
-            "Reels",
+        "Reels",
     ] {
         views.append(name);
     }
     views.set_selection(0, true);
 
     let items_label = StaticText::builder(&panel).with_label("Items").build();
-    let items = ListBox::builder(&panel).with_size(Size::new(-1, 260)).build();
+    let items = ListBox::builder(&panel)
+        .with_size(Size::new(-1, 260))
+        .build();
 
-    let links_label = StaticText::builder(&panel).with_label("Lin&ks in selected item").build();
-    let links = ListBox::builder(&panel).with_size(Size::new(-1, 70)).build();
+    let links_label = StaticText::builder(&panel)
+        .with_label("Lin&ks in selected item")
+        .build();
+    let links = ListBox::builder(&panel)
+        .with_size(Size::new(-1, 70))
+        .build();
     links.set_name("Links in selected item. Enter opens the selected link in your browser");
-    let open_link = Button::builder(&panel).with_label("Open selected &link").build();
+    let open_link = Button::builder(&panel)
+        .with_label("Open selected &link")
+        .build();
     open_link.enable(false);
 
     let details_label = StaticText::builder(&panel).with_label("Details").build();
@@ -436,7 +462,9 @@ fn run() {
 
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     let refresh_btn = Button::builder(&panel).with_label("Refresh (F5)").build();
-    let open_btn = Button::builder(&panel).with_label("Open / read full post and links").build();
+    let open_btn = Button::builder(&panel)
+        .with_label("Open / read full post and links")
+        .build();
     let react_btn = Button::builder(&panel).with_label("React").build();
     let comment_btn = Button::builder(&panel).with_label("Comment").build();
     let profile_btn = Button::builder(&panel).with_label("Profile").build();
@@ -458,26 +486,55 @@ fn run() {
 
     let compose = BoxSizer::builder(Orientation::Horizontal).build();
     let compose_label = StaticText::builder(&panel).with_label("Message").build();
-    let compose_box = TextCtrl::builder(&panel).with_style(TextCtrlStyle::ProcessEnter).build();
+    let compose_box = TextCtrl::builder(&panel)
+        .with_style(TextCtrlStyle::ProcessEnter)
+        .build();
     let attach_btn = Button::builder(&panel).with_label("Attach files").build();
-    let attachments_btn = Button::builder(&panel).with_label("Attachments (0)").build();
+    let attachments_btn = Button::builder(&panel)
+        .with_label("Attachments (0)")
+        .build();
     attachments_btn.set_name("Attachments, 0 attached");
     let send_btn = Button::builder(&panel).with_label("Send").build();
-    compose.add(&compose_label, 0, SizerFlag::AlignCenterVertical | SizerFlag::All, 3);
+    compose.add(
+        &compose_label,
+        0,
+        SizerFlag::AlignCenterVertical | SizerFlag::All,
+        3,
+    );
     compose.add(&compose_box, 1, SizerFlag::Expand | SizerFlag::All, 3);
     compose.add(&attach_btn, 0, SizerFlag::All, 3);
     compose.add(&attachments_btn, 0, SizerFlag::All, 3);
     compose.add(&send_btn, 0, SizerFlag::All, 3);
 
     root.add(&views_label, 0, SizerFlag::All, 4);
-    root.add(&views, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
+    root.add(
+        &views,
+        0,
+        SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right,
+        4,
+    );
     root.add(&items_label, 0, SizerFlag::All, 4);
-    root.add(&items, 1, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
+    root.add(
+        &items,
+        1,
+        SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right,
+        4,
+    );
     root.add(&links_label, 0, SizerFlag::All, 4);
-    root.add(&links, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
+    root.add(
+        &links,
+        0,
+        SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right,
+        4,
+    );
     root.add(&open_link, 0, SizerFlag::All, 4);
     root.add(&details_label, 0, SizerFlag::All, 4);
-    root.add(&details, 0, SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right, 4);
+    root.add(
+        &details,
+        0,
+        SizerFlag::Expand | SizerFlag::Left | SizerFlag::Right,
+        4,
+    );
     root.add_sizer(&actions, 0, SizerFlag::Expand, 2);
     root.add_sizer(&compose, 0, SizerFlag::Expand, 2);
     panel.set_sizer(root, true);
@@ -537,7 +594,10 @@ fn run() {
     // but signed out, setup offers the browser sign-in. Signed in already:
     // straight to the feed.
     ui.status("Checking the Facebook backend…");
-    ui.send(Job { task: Task::Fb(vec!["status".into()], None), tag: Tag::SetupStatus });
+    ui.send(Job {
+        task: Task::Fb(vec!["status".into()], None),
+        tag: Tag::SetupStatus,
+    });
 
     let ui_views = ui.clone();
     views.on_selection_changed(move |event| {
@@ -563,15 +623,16 @@ fn run() {
             // list, which is real work per row and makes a screen reader
             // process a flood of changes while arrowing. The resting row
             // pays it once; rows passed over pay nothing.
-            ui_sel.state.borrow_mut().pending_details =
-                Some((sel as usize, Instant::now()));
+            ui_sel.state.borrow_mut().pending_details = Some((sel as usize, Instant::now()));
             refresh_controls(&ui_sel);
             prepare_reels(&ui_sel);
         }
     });
     let ui_links = ui.clone();
     links.on_selection_changed(move |_| {
-        ui_links.open_link.enable(ui_links.links.get_selection().is_some());
+        ui_links
+            .open_link
+            .enable(ui_links.links.get_selection().is_some());
     });
     let ui_links = ui.clone();
     open_link.on_click(move |_| open_detail_link(&ui_links));
@@ -780,8 +841,7 @@ fn spawn_worker(
                     continue;
                 }
             }
-            let read = matches!(job.tag, Tag::List { .. })
-                && matches!(job.task, Task::Fb(_, None));
+            let read = matches!(job.tag, Tag::List { .. }) && matches!(job.task, Task::Fb(_, None));
             if read && fb.is_none() {
                 fb = Fb::discover();
             }
@@ -795,18 +855,19 @@ fn spawn_worker(
                 continue;
             }
             if let Task::ReelsLoad { source, append } = &job.task {
-                let (fb, source, append, tag, done) = (fb.clone(), source.clone(), *append, job.tag, done.clone());
+                let (fb, source, append, tag, done) =
+                    (fb.clone(), source.clone(), *append, job.tag, done.clone());
                 thread::spawn(move || {
                     let result = match fb {
                         Some(fb) => reels::load(&fb, &source, append),
                         None => Err("The Facebook backend is not installed".to_owned()),
                     };
-                    let _ = done.send(Done {tag, result});
+                    let _ = done.send(Done { tag, result });
                 });
                 continue;
             }
             let video = match &job.task {
-                Task::PostVideo {page, target} => Some((page.clone(), target.clone())),
+                Task::PostVideo { page, target } => Some((page.clone(), target.clone())),
                 _ => None,
             };
             if let Some((page, target)) = video {
@@ -816,7 +877,8 @@ fn spawn_worker(
                 thread::spawn(move || {
                     let result = match fb {
                         #[cfg(windows)]
-                        Some(fb) => blindfb_core::mpv::ensure().and_then(|_| blindfb_core::media::stream_details(&fb, &page, &target)),
+                        Some(fb) => blindfb_core::mpv::ensure()
+                            .and_then(|_| blindfb_core::media::stream_details(&fb, &page, &target)),
                         #[cfg(not(windows))]
                         Some(fb) => blindfb_core::media::stream_details(&fb, &page, &target),
                         None => Err("The Facebook backend is not installed".to_owned()),
@@ -905,7 +967,13 @@ fn spawn_worker(
                     None => Ok(String::new()),
                 },
             };
-            if done.send(Done { tag: job.tag, result }).is_err() {
+            if done
+                .send(Done {
+                    tag: job.tag,
+                    result,
+                })
+                .is_err()
+            {
                 break;
             }
         }
@@ -943,7 +1011,11 @@ fn visible_fallback(fb: &Fb, why: String) -> Result<String, String> {
         format!("Session import failed: {why}\n\nDirect sign-in failed: {error}")
     })?;
     let status = fb.run(&["status"])?;
-    if browsers::signed_in(&status) { Ok(status) } else { Err(why) }
+    if browsers::signed_in(&status) {
+        Ok(status)
+    } else {
+        Err(why)
+    }
 }
 
 fn refs(args: &[String]) -> Vec<&str> {
@@ -952,7 +1024,11 @@ fn refs(args: &[String]) -> Vec<&str> {
 
 fn build_menus(frame: &Frame) {
     let file_menu = Menu::builder()
-        .append_item(ID_OPEN_LINK, "Open Facebook &link…\tCtrl+O", "Open a Facebook post, video or reel link")
+        .append_item(
+            ID_OPEN_LINK,
+            "Open Facebook &link…\tCtrl+O",
+            "Open a Facebook post, video or reel link",
+        )
         .append_item(ID_NEW_POST, "&New post…\tCtrl+N", "Write a new post")
         .append_item(
             ID_NEW_POST_IMAGES,
@@ -969,7 +1045,11 @@ fn build_menus(frame: &Frame) {
             "&OCR an image…",
             "Read the text in an image file with the operating system's OCR engine",
         )
-        .append_item(ID_UPDATE, "Check for &updates…", "Check GitHub for a newer BlindFB")
+        .append_item(
+            ID_UPDATE,
+            "Check for &updates…",
+            "Check GitHub for a newer BlindFB",
+        )
         .append_separator()
         .append_item(ID_EXIT, "E&xit\tCtrl+Q", "Close BlindFB")
         .build();
@@ -986,11 +1066,23 @@ fn build_menus(frame: &Frame) {
             "Feeds (most &recent)\tCtrl+7",
             "Newest posts from followed friends, pages and groups",
         )
-        .append_item(ID_REELS, "Re&els\tCtrl+8", "Browse reels with the accessible player")
-        .append_item(ID_UNREAD_CHATS, "&Unread chats only", "Chats with unread messages")
+        .append_item(
+            ID_REELS,
+            "Re&els\tCtrl+8",
+            "Browse reels with the accessible player",
+        )
+        .append_item(
+            ID_UNREAD_CHATS,
+            "&Unread chats only",
+            "Chats with unread messages",
+        )
         .append_separator()
         .append_item(ID_REFRESH, "&Refresh\tF5", "Reload the current view")
-        .append_item(ID_MORE, "&Load more\tCtrl+L", "Append more items and keep your reading position")
+        .append_item(
+            ID_MORE,
+            "&Load more\tCtrl+L",
+            "Append more items and keep your reading position",
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -1054,8 +1146,16 @@ fn build_menus(frame: &Frame) {
         .build();
 
     let help_menu = Menu::builder()
-        .append_item(ID_KEYS, "&Keyboard commands\tF1", "Keyboard commands and reader controls")
-        .append_item(ID_GITHUB, "BlindFB on &GitHub", "Open the BlindFB repository")
+        .append_item(
+            ID_KEYS,
+            "&Keyboard commands\tF1",
+            "Keyboard commands and reader controls",
+        )
+        .append_item(
+            ID_GITHUB,
+            "BlindFB on &GitHub",
+            "Open the BlindFB repository",
+        )
         .append_item(ID_ABOUT, "&About BlindFB", "About this program")
         .build();
 
@@ -1102,7 +1202,13 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
     ui.state.borrow_mut().last_args = args.clone();
     ui.send(Job {
         task: Task::Fb(args.clone(), None),
-        tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false, append: false },
+        tag: Tag::List {
+            view: view.clone(),
+            request,
+            args,
+            unlock_attempted: false,
+            append: false,
+        },
     });
     ui.status(&format!("Loading {}…", view.title()));
 }
@@ -1138,13 +1244,22 @@ fn load_view(ui: &Ui, view: View) {
     }
     if let View::Reels(source) = &view {
         load_reels(ui, source.clone(), false);
-    } else if let Some(args) = cached.as_ref().map(|(_, _, args)| args.clone())
-        .or_else(|| default_args(&view)) {
+    } else if let Some(args) = cached
+        .as_ref()
+        .map(|(_, _, args)| args.clone())
+        .or_else(|| default_args(&view))
+    {
         load_args(ui, view, args);
     }
     if cached.is_some() {
         let mut state = ui.state.borrow_mut();
-        state.background = ui.latest_list.lock().unwrap().latest.get(&state.view).copied();
+        state.background = ui
+            .latest_list
+            .lock()
+            .unwrap()
+            .latest
+            .get(&state.view)
+            .copied();
     }
 }
 
@@ -1182,7 +1297,13 @@ fn go_back(ui: &Ui) {
 
 /// Read every main section in the background once, so first visits are instant too.
 fn prefetch(ui: &Ui) {
-    for view in [View::RecentFeed, View::Notifications, View::Friends, View::MyPosts, View::Chats] {
+    for view in [
+        View::RecentFeed,
+        View::Notifications,
+        View::Friends,
+        View::MyPosts,
+        View::Chats,
+    ] {
         if let Some(args) = default_args(&view) {
             let request = {
                 let mut requests = ui.latest_list.lock().unwrap();
@@ -1193,7 +1314,13 @@ fn prefetch(ui: &Ui) {
             };
             let _ = ui.jobs.send(Job {
                 task: Task::Fb(args.clone(), None),
-                tag: Tag::List { view, request, args, unlock_attempted: false, append: false },
+                tag: Tag::List {
+                    view,
+                    request,
+                    args,
+                    unlock_attempted: false,
+                    append: false,
+                },
             });
         }
     }
@@ -1234,8 +1361,14 @@ fn load_reels(ui: &Ui, source: ReelSource, append: bool) {
     let view = View::Reels(source.clone());
     let request = begin_list(ui, &view);
     ui.send(Job {
-        task: Task::ReelsLoad {source, append},
-        tag: Tag::List {view: view.clone(), request, args: Vec::new(), unlock_attempted: false, append},
+        task: Task::ReelsLoad { source, append },
+        tag: Tag::List {
+            view: view.clone(),
+            request,
+            args: Vec::new(),
+            unlock_attempted: false,
+            append,
+        },
     });
     ui.status(&format!("Loading {}…", view.title()));
 }
@@ -1247,7 +1380,10 @@ fn load_reels(ui: &Ui, source: ReelSource, append: bool) {
 /// Chrome-family browser to run at all.
 fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
     let detected = browsers::detect_browsers();
-    if !detected.iter().any(|browser| browser.kind.is_chromium() && browser.exe.is_some()) {
+    if !detected
+        .iter()
+        .any(|browser| browser.kind.is_chromium() && browser.exe.is_some())
+    {
         if confirm(
             &ui.frame,
             "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?",
@@ -1328,11 +1464,17 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
     match sign {
         Some(SignIn::Install(kind)) => {
             ui.status(&format!("Installing {}…", kind.name()));
-            ui.send(Job { task: Task::InstallBrowser(kind), tag: Tag::BrowserInstalled });
+            ui.send(Job {
+                task: Task::InstallBrowser(kind),
+                tag: Tag::BrowserInstalled,
+            });
             true
         }
         Some(sign) => {
-            ui.send(Job { task: Task::LoginFlow(sign), tag });
+            ui.send(Job {
+                task: Task::LoginFlow(sign),
+                tag,
+            });
             ui.status("Signing in through your browser…");
             true
         }
@@ -1348,7 +1490,12 @@ fn start_sign_in(ui: &Ui, tag: Tag) {
 /// Backend → Install a browser…: pick a browser to download from its
 /// vendor (installed ones are marked; reinstalling also repairs).
 fn install_browser_menu(ui: &Ui) {
-    let kinds = [BrowserKind::Chrome, BrowserKind::Brave, BrowserKind::Edge, BrowserKind::Firefox];
+    let kinds = [
+        BrowserKind::Chrome,
+        BrowserKind::Brave,
+        BrowserKind::Edge,
+        BrowserKind::Firefox,
+    ];
     let detected = browsers::detect_browsers();
     let labels: Vec<String> = kinds
         .iter()
@@ -1373,14 +1520,19 @@ fn install_browser_menu(ui: &Ui) {
         if index >= 0 {
             let kind = kinds[index as usize];
             ui.status(&format!("Installing {}…", kind.name()));
-            ui.send(Job { task: Task::InstallBrowser(kind), tag: Tag::BrowserInstalledMenu });
+            ui.send(Job {
+                task: Task::InstallBrowser(kind),
+                tag: Tag::BrowserInstalledMenu,
+            });
         }
     }
 }
 
 fn refresh(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
-    if matches!(view, View::Feed | View::Reels(_)) && ui.latest_list.lock().unwrap().pending.contains(&view) {
+    if matches!(view, View::Feed | View::Reels(_))
+        && ui.latest_list.lock().unwrap().pending.contains(&view)
+    {
         ui.status("Wait for this section to finish loading before refreshing.");
         return;
     }
@@ -1405,15 +1557,25 @@ fn refresh_args(view: &View, previous: &[String]) -> Option<Vec<String>> {
     }
 }
 
-fn more_args(view: &View, previous: &[String], loaded: usize, loading: bool) -> Option<Vec<String>> {
+fn more_args(
+    view: &View,
+    previous: &[String],
+    loaded: usize,
+    loading: bool,
+) -> Option<Vec<String>> {
     if loading || previous.is_empty() {
         return None;
     }
     match view {
         View::Feed => Some(feed_args(PAGE, false, true, true)),
         View::Notifications => Some(notifs_args(u32::try_from(loaded).ok()?.checked_add(PAGE)?)),
-        View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::Friends
-        | View::Chats | View::SearchResults | View::Groups => {
+        View::RecentFeed
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::Friends
+        | View::Chats
+        | View::SearchResults
+        | View::Groups => {
             let mut args = previous.to_vec();
             let index = args.iter().position(|arg| arg == "-n")? + 1;
             let count: u32 = args.get(index)?.parse().ok()?;
@@ -1431,7 +1593,13 @@ fn load_more(ui: &Ui) {
             let state = ui.state.borrow();
             state.records_view == state.view && !state.records.is_empty()
         };
-        if ui.latest_list.lock().unwrap().pending.contains(&ui.state.borrow().view) {
+        if ui
+            .latest_list
+            .lock()
+            .unwrap()
+            .pending
+            .contains(&ui.state.borrow().view)
+        {
             ui.status("Reels are already loading…");
         } else if !loaded {
             ui.status("Load the reels list first, or refresh it to retry.");
@@ -1447,7 +1615,8 @@ fn load_more(ui: &Ui) {
             return;
         }
         let loading = ui.latest_list.lock().unwrap().pending.contains(&state.view);
-        let Some(args) = more_args(&state.view, &state.last_args, state.records.len(), loading) else {
+        let Some(args) = more_args(&state.view, &state.last_args, state.records.len(), loading)
+        else {
             ui.status(if loading { "Items are already loading…" } else {
                 "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
             });
@@ -1458,23 +1627,47 @@ fn load_more(ui: &Ui) {
     let request = begin_list(ui, &view);
     ui.send(Job {
         task: Task::Fb(args.clone(), None),
-        tag: Tag::List { view: view.clone(), request, args, unlock_attempted: false, append: true },
+        tag: Tag::List {
+            view: view.clone(),
+            request,
+            args,
+            unlock_attempted: false,
+            append: true,
+        },
     });
     ui.status(&format!("Loading more {}…", view.title()));
 }
 
 fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) -> Vec<Record> {
+    // Rows without a ref share the placeholder ("-" or empty); keying on it
+    // would collapse every ref-less row into the first one on Load more.
+    let id_or_raw = |value: &str, record: &Record| {
+        if value.is_empty() || value == "-" {
+            record.raw.clone()
+        } else {
+            value.to_owned()
+        }
+    };
     let key = |record: &Record| match view {
-        View::Friends | View::Groups => record.field(1).to_owned(),
-        View::Chats => record.field(0).to_owned(),
+        View::Friends | View::Groups => id_or_raw(record.field(1), record),
+        View::Chats => id_or_raw(record.field(0), record),
         View::Notifications => format!("{}\t{}", record.field(2), record.field(3)),
-        _ => post_target(view, record).map(str::to_owned).unwrap_or_else(|| record.raw.clone()),
+        _ => post_target(view, record)
+            .map(str::to_owned)
+            .unwrap_or_else(|| record.raw.clone()),
     };
     let mut seen: HashSet<String> = existing.iter().map(&key).collect();
-    let feed = matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_));
-    let mut seen_posts: HashSet<String> = existing.iter().map(blindfb_core::fb::feed_record_key).collect();
+    let feed = matches!(
+        view,
+        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)
+    );
+    let mut seen_posts: HashSet<String> = existing
+        .iter()
+        .map(blindfb_core::fb::feed_record_key)
+        .collect();
     existing.extend(incoming.into_iter().filter(|record| {
-        seen.insert(key(record)) && (!feed || seen_posts.insert(blindfb_core::fb::feed_record_key(record)))
+        seen.insert(key(record))
+            && (!feed || seen_posts.insert(blindfb_core::fb::feed_record_key(record)))
     }));
     existing
 }
@@ -1501,7 +1694,12 @@ fn list_label(view: &View, record: &Record) -> String {
 
 fn display_for(view: &View, record: &Record) -> String {
     match view {
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::SearchResults => {
             if record.fields.len() >= 5 {
                 // A post without text or time must not read as ". ." to a screen reader.
                 let text = one_line(&record.fields[4..].join(" "));
@@ -1526,7 +1724,11 @@ fn display_for(view: &View, record: &Record) -> String {
             if record.fields.len() >= 3 {
                 format!(
                     "{}{}. {}",
-                    if record.field(1) == "!" { "Unread. " } else { "" },
+                    if record.field(1) == "!" {
+                        "Unread. "
+                    } else {
+                        ""
+                    },
                     record.field(2),
                     record.field(0)
                 )
@@ -1576,7 +1778,12 @@ fn display_for(view: &View, record: &Record) -> String {
 
 fn details_for(view: &View, record: &Record) -> String {
     match view {
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::SearchResults => {
             if record.fields.len() >= 5 {
                 format!(
                     "Author: {}\nTime: {}\nReactions / comments / shares: {}\n\n{}",
@@ -1622,15 +1829,21 @@ fn details_for(view: &View, record: &Record) -> String {
 }
 
 fn one_line(text: &str) -> String {
-    text.replace('⏎', " ").split_whitespace().collect::<Vec<_>>().join(" ")
+    text.replace('⏎', " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn post_target<'a>(view: &View, record: &'a Record) -> Option<&'a str> {
     let value = match view {
         View::Notifications => record.field(3),
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
-            record.field(0)
-        }
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::SearchResults => record.field(0),
         _ => return None,
     }
     .trim();
@@ -1649,7 +1862,12 @@ fn record_key(view: &View, record: &Record) -> String {
     post_target(view, record)
         .unwrap_or_else(|| match view {
             View::Friends | View::Groups => record.field(1),
-            View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults => &record.raw,
+            View::Feed
+            | View::RecentFeed
+            | View::Reels(_)
+            | View::MyPosts
+            | View::PostsOf(_)
+            | View::SearchResults => &record.raw,
             _ => record.field(0),
         })
         .to_owned()
@@ -1659,14 +1877,18 @@ fn record_key(view: &View, record: &Record) -> String {
 fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
     let mut links = Vec::new();
     if let Some(url) = post {
-        links.push(Link { label: "Full post on Facebook".to_owned(), url: url.to_owned() });
+        links.push(Link {
+            label: "Full post on Facebook".to_owned(),
+            url: url.to_owned(),
+        });
     }
     for word in text.split(|c: char| c.is_whitespace() || c == '⏎') {
         let mut url = word.trim_start_matches(['(', '[', '<', '"', '\'']);
         loop {
             let trimmed = url.trim_end_matches(['.', ',', ';', ':', '!', '?', '"', '\'', '>']);
             let extra_closing = [('(', ')'), ('[', ']')].iter().any(|(open, close)| {
-                trimmed.ends_with(*close) && trimmed.matches(*close).count() > trimmed.matches(*open).count()
+                trimmed.ends_with(*close)
+                    && trimmed.matches(*close).count() > trimmed.matches(*open).count()
             });
             if extra_closing {
                 url = &trimmed[..trimmed.len() - 1];
@@ -1675,16 +1897,26 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
                 break;
             }
         }
-        let Some((scheme, rest)) = url.split_once("://") else { continue };
+        let Some((scheme, rest)) = url.split_once("://") else {
+            continue;
+        };
         let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
         if !(scheme.eq_ignore_ascii_case("https") || scheme.eq_ignore_ascii_case("http"))
             || authority.is_empty()
-            || url.chars().any(|c| c.is_control() || matches!(c, '\\' | '"' | '\'' | '<' | '>'))
+            || url
+                .chars()
+                .any(|c| c.is_control() || matches!(c, '\\' | '"' | '\'' | '<' | '>'))
         {
             continue;
         }
-        if !links.iter().any(|link| link.url.trim_end_matches('/') == url.trim_end_matches('/')) {
-            links.push(Link { label: url.to_owned(), url: url.to_owned() });
+        if !links
+            .iter()
+            .any(|link| link.url.trim_end_matches('/') == url.trim_end_matches('/'))
+        {
+            links.push(Link {
+                label: url.to_owned(),
+                url: url.to_owned(),
+            });
         }
     }
     match post {
@@ -1698,9 +1930,14 @@ fn set_details(ui: &Ui, text: &str, post: Option<&str>) {
         ui.details.change_value(text);
     }
     let links = links_in_text(text, post);
-    if *ui.link_targets.borrow() == links { return; }
+    if *ui.link_targets.borrow() == links {
+        return;
+    }
     let selected = ui.links.get_selection().and_then(|i| {
-        ui.link_targets.borrow().get(i as usize).map(|link| link.url.clone())
+        ui.link_targets
+            .borrow()
+            .get(i as usize)
+            .map(|link| link.url.clone())
     });
     ui.links.clear();
     for link in &links {
@@ -1711,7 +1948,8 @@ fn set_details(ui: &Ui, text: &str, post: Option<&str>) {
         };
         ui.links.append(&label);
     }
-    if let Some(index) = selected.and_then(|url| links.iter().position(|link| link.url == url))
+    if let Some(index) = selected
+        .and_then(|url| links.iter().position(|link| link.url == url))
         .or_else(|| (!links.is_empty()).then_some(0))
     {
         ui.links.set_selection(index as u32, true);
@@ -1722,25 +1960,42 @@ fn set_details(ui: &Ui, text: &str, post: Option<&str>) {
 
 fn open_detail_link(ui: &Ui) {
     if let Some(url) = ui.links.get_selection().and_then(|i| {
-        ui.link_targets.borrow().get(i as usize).map(|link| link.url.clone())
+        ui.link_targets
+            .borrow()
+            .get(i as usize)
+            .map(|link| link.url.clone())
     }) {
         open_url(&url);
     }
 }
 
 fn append_links_menu(menu: &Menu, links: &[Link]) {
-    if links.is_empty() { return; }
+    if links.is_empty() {
+        return;
+    }
     const BASE: i32 = 20000;
     let submenu = Menu::builder().build();
     for (index, link) in links.iter().enumerate() {
-        let label = link.label.replace('&', "&&").replace(['\t', '\r', '\n'], " ");
-        submenu.append(BASE + index as i32, &format!("{}. {label}", index + 1), &link.url, ItemKind::Normal);
+        let label = link
+            .label
+            .replace('&', "&&")
+            .replace(['\t', '\r', '\n'], " ");
+        submenu.append(
+            BASE + index as i32,
+            &format!("{}. {label}", index + 1),
+            &link.url,
+            ItemKind::Normal,
+        );
     }
     // Keep the URLs shown when the menu opened, even if a background refresh finishes.
     let targets = links.to_vec();
     submenu.on_selected(move |event| {
         event.event.skip(false);
-        if let Some(link) = event.get_id().checked_sub(BASE).and_then(|index| targets.get(index as usize)) {
+        if let Some(link) = event
+            .get_id()
+            .checked_sub(BASE)
+            .and_then(|index| targets.get(index as usize))
+        {
             open_url(&link.url);
         }
     });
@@ -1748,27 +2003,45 @@ fn append_links_menu(menu: &Menu, links: &[Link]) {
 }
 
 fn prepare_reels(ui: &Ui) {
-    let Some(index) = ui.items.get_selection() else { return };
+    let Some(index) = ui.items.get_selection() else {
+        return;
+    };
     let (account, page, targets) = {
         let mut state = ui.state.borrow_mut();
-        if !matches!(state.records_view, View::Reels(_)) || state.view != state.records_view { return; }
-        let View::Reels(source) = &state.records_view else { return };
+        if !matches!(state.records_view, View::Reels(_)) || state.view != state.records_view {
+            return;
+        }
+        let View::Reels(source) = &state.records_view else {
+            return;
+        };
         let page = reels::page_name(source);
-        let targets: Vec<_> = state.records.iter().skip(index as usize).take(2)
-            .map(|record| record.field(0).to_owned()).collect();
+        let targets: Vec<_> = state
+            .records
+            .iter()
+            .skip(index as usize)
+            .take(2)
+            .map(|record| record.field(0).to_owned())
+            .collect();
         let targets = state.reel_cache.plan(&targets, Instant::now());
         (state.account, page, targets)
     };
     for target in targets {
         let _ = ui.jobs.send(Job {
-            task: Task::PostVideo { page: page.clone(), target: target.clone() },
+            task: Task::PostVideo {
+                page: page.clone(),
+                target: target.clone(),
+            },
             tag: Tag::ReelPrepared { account, target },
         });
     }
 }
 
 fn set_reel_title(record: &mut Record, target: &str, title: &str) -> bool {
-    if title.is_empty() || record.field(0) != target || !record.field(4).trim().is_empty() || record.fields.len() < 5 {
+    if title.is_empty()
+        || record.field(0) != target
+        || !record.field(4).trim().is_empty()
+        || record.fields.len() < 5
+    {
         return false;
     }
     record.fields[4] = title.to_owned();
@@ -1781,19 +2054,31 @@ fn update_reel_titles(ui: &Ui, target: &str, title: &str) {
         let mut state = ui.state.borrow_mut();
         for (view, (records, _, _)) in &mut state.cache {
             if matches!(view, View::Reels(_)) {
-                for record in records { set_reel_title(record, target, title); }
+                for record in records {
+                    set_reel_title(record, target, title);
+                }
             }
         }
-        if !matches!(state.records_view, View::Reels(_)) { return; }
+        if !matches!(state.records_view, View::Reels(_)) {
+            return;
+        }
         let current = state.view == state.records_view;
         let view = state.records_view.clone();
-        state.records.iter_mut().enumerate().filter_map(|(index, record)| {
-            (set_reel_title(record, target, title) && current).then(|| (index, list_label(&view, record)))
-        }).collect::<Vec<_>>()
+        state
+            .records
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(index, record)| {
+                (set_reel_title(record, target, title) && current)
+                    .then(|| (index, list_label(&view, record)))
+            })
+            .collect::<Vec<_>>()
     };
     for (index, label) in changed {
         ui.items.set_string(index as u32, &label);
-        if ui.items.get_selection() == Some(index as u32) { show_details(ui, index); }
+        if ui.items.get_selection() == Some(index as u32) {
+            show_details(ui, index);
+        }
     }
 }
 
@@ -1831,9 +2116,13 @@ fn selected_post_ref(ui: &Ui) -> Option<String> {
 }
 
 fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
-    if count == 0 { return None; }
+    if count == 0 {
+        return None;
+    }
     match view {
-        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => Some("Load more posts"),
+        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
+            Some("Load more posts")
+        }
         View::Reels(_) => Some("Load more reels"),
         View::Notifications => Some("Load more notifications"),
         View::Friends => Some("Load more friends"),
@@ -1847,15 +2136,24 @@ fn is_more_row(view: &View, count: usize, index: usize) -> bool {
     index == count && more_row_label(view, count).is_some()
 }
 
-fn more_selection(view: &View, old_count: usize, selected: Option<u32>, count: usize) -> Option<usize> {
-    selected.filter(|index| count > 0 && is_more_row(view, old_count, *index as usize))
+fn more_selection(
+    view: &View,
+    old_count: usize,
+    selected: Option<u32>,
+    count: usize,
+) -> Option<usize> {
+    selected
+        .filter(|index| count > 0 && is_more_row(view, old_count, *index as usize))
         .map(|index| (index as usize).min(count))
 }
 
 /// Show a section's backend output in the Items list, updated in place so the
 /// selection and the screen reader's position survive.
 fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>) {
-    if matches!(view, View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)) {
+    if matches!(
+        view,
+        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)
+    ) {
         let mut state = ui.state.borrow_mut();
         for record in &records {
             let author = record.field(1);
@@ -1870,15 +2168,20 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     let old_index = ui.items.get_selection();
     let (mut old_labels, selected_key, more_selected) = {
         let state = ui.state.borrow();
-        let labels: Vec<_> =
-            state.records.iter().map(|r| list_label(&state.records_view, r)).collect();
+        let labels: Vec<_> = state
+            .records
+            .iter()
+            .map(|r| list_label(&state.records_view, r))
+            .collect();
         let key = old_index
             .and_then(|i| state.records.get(i as usize))
             .map(|r| record_key(&state.records_view, r))
             .filter(|k| !k.is_empty() && k != "-");
         let more_selected = if state.records_view == *view {
             more_selection(view, state.records.len(), old_index, records.len())
-        } else { None };
+        } else {
+            None
+        };
         (labels, key, more_selected)
     };
     if let Some(label) = more_row_label(&ui.state.borrow().records_view, old_labels.len()) {
@@ -1886,10 +2189,14 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     }
     let count = records.len();
     let mut labels: Vec<_> = records.iter().map(|r| list_label(view, r)).collect();
-    if let Some(label) = more_row_label(view, count) { labels.push(label.to_owned()); }
-    let selected = more_selected.or_else(|| selected_key
-        .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
-        .or_else(|| (!records.is_empty()).then_some(0)));
+    if let Some(label) = more_row_label(view, count) {
+        labels.push(label.to_owned());
+    }
+    let selected = more_selected.or_else(|| {
+        selected_key
+            .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
+            .or_else(|| (!records.is_empty()).then_some(0))
+    });
     {
         let mut state = ui.state.borrow_mut();
         state.records = records;
@@ -1932,13 +2239,21 @@ fn refresh_controls(ui: &Ui) {
     let has = ui.items.get_selection().is_some();
     let post_list = matches!(
         view,
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults
+        View::Feed
+            | View::RecentFeed
+            | View::Reels(_)
+            | View::MyPosts
+            | View::PostsOf(_)
+            | View::SearchResults
     );
     let people = post_list || matches!(view, View::Friends);
     let comments = matches!(view, View::CommentsOf(_));
     let in_chat = matches!(view, View::ChatWith(..));
     let openable = post_list
-        || matches!(view, View::Notifications | View::Friends | View::Chats | View::Groups);
+        || matches!(
+            view,
+            View::Notifications | View::Friends | View::Chats | View::Groups
+        );
     ui.open_btn.enable(has && openable);
     ui.react_btn.enable(has && post_list);
     ui.comment_btn.enable(has && post_list);
@@ -1954,7 +2269,13 @@ fn refresh_controls(ui: &Ui) {
 
 fn apply_done(ui: &Ui, done: Done) {
     match done.tag {
-        Tag::List { view, request, args, unlock_attempted, append } => {
+        Tag::List {
+            view,
+            request,
+            args,
+            unlock_attempted,
+            append,
+        } => {
             let current = current_list(ui, &view, request);
             if !ui.latest_list.lock().unwrap().finish(&view, request) {
                 return;
@@ -1963,20 +2284,28 @@ fn apply_done(ui: &Ui, done: Done) {
                 Ok((records, body)) => {
                     let previous = {
                         let state = ui.state.borrow();
-                        if current { state.records.clone() } else {
-                            state.cache.get(&view).map(|(rows, _, _)| rows.clone()).unwrap_or_default()
+                        if current {
+                            state.records.clone()
+                        } else {
+                            state
+                                .cache
+                                .get(&view)
+                                .map(|(rows, _, _)| rows.clone())
+                                .unwrap_or_default()
                         }
                     };
                     let before = previous.len();
                     let records = if append {
                         merge_records(&view, previous, records)
-                    } else { records };
+                    } else {
+                        records
+                    };
                     let added = records.len().saturating_sub(before);
                     if cacheable(&view, &args) {
-                        ui.state
-                            .borrow_mut()
-                            .cache
-                            .insert(view.clone(), (records.clone(), Instant::now(), args.clone()));
+                        ui.state.borrow_mut().cache.insert(
+                            view.clone(),
+                            (records.clone(), Instant::now(), args.clone()),
+                        );
                     }
                     if !current {
                         return;
@@ -1984,13 +2313,14 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.state.borrow_mut().last_args = args;
                     show_records(ui, &view, records, body);
                     if append {
-                        ui.status(&format!("{added} new item(s) loaded. {} item(s) total.", ui.state.borrow().records.len()));
+                        ui.status(&format!(
+                            "{added} new item(s) loaded. {} item(s) total.",
+                            ui.state.borrow().records.len()
+                        ));
                     }
                     if view == View::Feed && !append && ui.items.get_count() > 0 {
                         load_more(ui);
-                    } else if view == View::Feed
-                        && !ui.state.borrow().prefetched
-                    {
+                    } else if view == View::Feed && !ui.state.borrow().prefetched {
                         // After the feed's second page, so other sections never slow the first ones.
                         ui.state.borrow_mut().prefetched = true;
                         prefetch(ui);
@@ -2000,12 +2330,18 @@ fn apply_done(ui: &Ui, done: Done) {
                     if !current {
                         return;
                     }
-                    if matches!(view, View::Chats | View::ChatWith(..)) && needs_messenger_unlock(&e)
+                    if matches!(view, View::Chats | View::ChatWith(..))
+                        && needs_messenger_unlock(&e)
                     {
                         let mut state = ui.state.borrow_mut();
                         if !unlock_attempted && !state.unlocking {
                             state.unlocking = true;
-                            state.pending_unlock = Some(RetryList { view, request, args, append });
+                            state.pending_unlock = Some(RetryList {
+                                view,
+                                request,
+                                args,
+                                append,
+                            });
                             drop(state);
                             ui.status("Messenger needs its history restored. Enter your PIN in the unlock dialog.");
                         } else {
@@ -2037,28 +2373,31 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::PostReelReacted(session) => {
             post_dialog::apply(ui, session, done.result, "Reaction set.", false)
         }
-        Tag::ReelPrepared {account, target} => {
+        Tag::ReelPrepared { account, target } => {
             {
                 let mut state = ui.state.borrow_mut();
-                if state.account != account { return; }
-                state.reel_cache.finish(&target, &done.result, Instant::now());
+                if state.account != account {
+                    return;
+                }
+                state
+                    .reel_cache
+                    .finish(&target, &done.result, Instant::now());
             }
-            if let Some(info) = done.result.as_ref().ok().and_then(|data| blindfb_core::media::parse_stream(data).ok()) {
+            if let Some(info) = done
+                .result
+                .as_ref()
+                .ok()
+                .and_then(|data| blindfb_core::media::parse_stream(data).ok())
+            {
                 update_reel_titles(ui, &target, &info.title);
             }
             post_dialog::prepared(ui, &target, done.result);
             prepare_reels(ui);
         }
         Tag::GroupPosts(session) => group_dialog::deliver_posts(ui, session, done.result),
-        Tag::GroupMembers(session) => {
-            group_dialog::deliver_members(ui, session, done.result)
-        }
-        Tag::ChatMessages(session) => {
-            chat_dialog::deliver_messages(ui, session, done.result)
-        }
-        Tag::ChatWindowSent(session) => {
-            chat_dialog::deliver_sent(ui, session, done.result)
-        }
+        Tag::GroupMembers(session) => group_dialog::deliver_members(ui, session, done.result),
+        Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
+        Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {
             post_dialog::apply(ui, session, done.result, "Post ready.", false)
         }
@@ -2078,21 +2417,36 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::PostShareClosed(session) => post_dialog::note(
             ui,
             session,
-            done.result.map(|_| "Share cancelled. Nothing was shared.".to_owned()),
+            done.result
+                .map(|_| "Share cancelled. Nothing was shared.".to_owned()),
             true,
         ),
-        Tag::PostNote(session) => {
-            post_dialog::note(ui, session, done.result.map(|_| "Reaction set.".to_owned()), false)
-        }
+        Tag::PostNote(session) => post_dialog::note(
+            ui,
+            session,
+            done.result.map(|_| "Reaction set.".to_owned()),
+            false,
+        ),
         Tag::Silent => {}
-        Tag::UnlockRetry { view, request, args, append } => {
+        Tag::UnlockRetry {
+            view,
+            request,
+            args,
+            append,
+        } => {
             ui.state.borrow_mut().unlocking = false;
             match done.result {
                 Ok(_) if !args.is_empty() && current_list(ui, &view, request) => {
                     ui.latest_list.lock().unwrap().pending.insert(view.clone());
                     ui.send(Job {
                         task: Task::Fb(args.clone(), None),
-                        tag: Tag::List { view, request, args, unlock_attempted: true, append },
+                        tag: Tag::List {
+                            view,
+                            request,
+                            args,
+                            unlock_attempted: true,
+                            append,
+                        },
                     });
                     ui.status("Messenger unlocked. Loading your chats…");
                 }
@@ -2132,9 +2486,14 @@ fn apply_done(ui: &Ui, done: Done) {
                         let mut state = ui.state.borrow_mut();
                         let view = state.view.clone();
                         let clear = submitted.clear_sent(
-                            &view, &ui.compose_box.get_value(), &mut state.attachments,
+                            &view,
+                            &ui.compose_box.get_value(),
+                            &mut state.attachments,
                         );
-                        (clear, matches!(&view, View::ChatWith(id, _) if id == &submitted.chat))
+                        (
+                            clear,
+                            matches!(&view, View::ChatWith(id, _) if id == &submitted.chat),
+                        )
                     };
                     if clear {
                         ui.compose_box.clear();
@@ -2143,7 +2502,10 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.state.borrow_mut().reply_to = None;
                     ui.status("Sent");
                     if current {
-                        load_view(ui, View::ChatWith(submitted.chat.clone(), submitted.name.clone()));
+                        load_view(
+                            ui,
+                            View::ChatWith(submitted.chat.clone(), submitted.name.clone()),
+                        );
                     }
                 }
                 Err(e) => {
@@ -2190,7 +2552,10 @@ fn apply_done(ui: &Ui, done: Done) {
             Err(_) if Fb::discover().is_none() => {
                 startup_log("setup: backend missing — installing");
                 ui.status("Installing the Facebook backend…");
-                ui.send(Job { task: Task::InstallBackend, tag: Tag::SetupInstall });
+                ui.send(Job {
+                    task: Task::InstallBackend,
+                    tag: Tag::SetupInstall,
+                });
             }
             Err(error) => {
                 ui.status("The Facebook backend could not start.");
@@ -2257,7 +2622,10 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         View::ChatWith(..) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
-                .map(|l| Record { fields: vec![l.to_owned()], raw: l.to_owned() })
+                .map(|l| Record {
+                    fields: vec![l.to_owned()],
+                    raw: l.to_owned(),
+                })
                 .collect(),
             None,
         ),
@@ -2271,11 +2639,16 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                 if let Some(ref_) = line.strip_prefix("cu\t") {
                     pending_ref = ref_.to_owned();
                 } else if line.starts_with("c\t") {
-                    let mut fields: Vec<String> =
-                        line.split('\t').map(str::to_owned).collect();
+                    let mut fields: Vec<String> = line.split('\t').map(str::to_owned).collect();
                     fields.insert(1, std::mem::take(&mut pending_ref));
-                    comments.push(Record { fields, raw: line.to_owned() });
+                    comments.push(Record {
+                        fields,
+                        raw: line.to_owned(),
+                    });
                 } else if !line.trim().is_empty() {
+                    // A ref belongs to the comment directly after it; a body
+                    // line in between means it was not a comment's ref.
+                    pending_ref.clear();
                     body_lines.push(line);
                 }
             }
@@ -2284,7 +2657,10 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         View::ProfileOf(_) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
-                .map(|l| Record { fields: vec![l.to_owned()], raw: l.to_owned() })
+                .map(|l| Record {
+                    fields: vec![l.to_owned()],
+                    raw: l.to_owned(),
+                })
                 .collect(),
             Some(raw.trim().to_owned()),
         ),
@@ -2303,7 +2679,9 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
     let dialog = TextEntryDialog::builder(&ui.frame, "Messenger PIN:", "Unlock encrypted chats")
         .password()
         .build();
-    let pin = (dialog.show_modal() == ID_OK).then(|| dialog.get_value()).flatten();
+    let pin = (dialog.show_modal() == ID_OK)
+        .then(|| dialog.get_value())
+        .flatten();
     dialog.destroy();
     let Some(pin) = pin.filter(|p| !p.is_empty()) else {
         ui.state.borrow_mut().unlocking = false;
@@ -2317,14 +2695,28 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
     let retry = retry.unwrap_or_else(|| {
         let view = ui.state.borrow().view.clone();
         let args = default_args(&view).unwrap_or_default();
-        let request = if args.is_empty() { 0 } else { begin_list(ui, &view) };
-        RetryList { view, request, args, append: false }
+        let request = if args.is_empty() {
+            0
+        } else {
+            begin_list(ui, &view)
+        };
+        RetryList {
+            view,
+            request,
+            args,
+            append: false,
+        }
     });
     ui.state.borrow_mut().unlocking = true;
     ui.status("Unlocking Messenger…");
     ui.send(Job {
         task: Task::Fb(vec!["unlock".into(), "-".into()], Some(format!("{pin}\n"))),
-        tag: Tag::UnlockRetry { view: retry.view, request: retry.request, args: retry.args, append: retry.append },
+        tag: Tag::UnlockRetry {
+            view: retry.view,
+            request: retry.request,
+            args: retry.args,
+            append: retry.append,
+        },
     });
 }
 
@@ -2333,8 +2725,11 @@ fn open_facebook_link(ui: &Ui) {
         &ui.frame,
         "Facebook post, video or reel link (full https:// URL):",
         "Open Facebook link",
-    ).build();
-    let target = (dialog.show_modal() == ID_OK).then(|| dialog.get_value()).flatten();
+    )
+    .build();
+    let target = (dialog.show_modal() == ID_OK)
+        .then(|| dialog.get_value())
+        .flatten();
     dialog.destroy();
     let Some(target) = target else { return };
     let target = target.trim();
@@ -2351,9 +2746,13 @@ fn open_facebook_link(ui: &Ui) {
 fn open_selected(ui: &Ui) {
     let more = ui.items.get_selection().is_some_and(|index| {
         let state = ui.state.borrow();
-        state.view == state.records_view && is_more_row(&state.view, state.records.len(), index as usize)
+        state.view == state.records_view
+            && is_more_row(&state.view, state.records.len(), index as usize)
     });
-    if more { load_more(ui); return; }
+    if more {
+        load_more(ui);
+        return;
+    }
     let Some((_, record)) = selected(ui) else {
         return;
     };
@@ -2389,7 +2788,13 @@ fn open_selected(ui: &Ui) {
                 Some(url) if matches!(view, View::Reels(_)) => {
                     let (stream, preparing) = {
                         let state = ui.state.borrow();
-                        (state.reel_cache.ready(&url, Instant::now()).map(str::to_owned), state.reel_cache.is_preparing(&url))
+                        (
+                            state
+                                .reel_cache
+                                .ready(&url, Instant::now())
+                                .map(str::to_owned),
+                            state.reel_cache.is_preparing(&url),
+                        )
                     };
                     post_dialog::open_reel(ui, &url, stream, preparing);
                 }
@@ -2440,7 +2845,9 @@ fn react_popup(ui: &Ui) {
     let reaction = if dialog.show_modal() == ID_OK {
         let index = dialog.get_selection();
         (index >= 0).then(|| REACTIONS[index as usize])
-    } else { None };
+    } else {
+        None
+    };
     dialog.destroy();
     if let Some(reaction) = reaction {
         react_to(ui, &post, reaction);
@@ -2451,7 +2858,10 @@ fn react_to(ui: &Ui, post: &str, reaction: &str) {
     if post_dialog::is_video_page(post) {
         post_dialog::react(ui, post, reaction);
     } else {
-        ui.send(Job { task: Task::Fb(react_args(post, reaction), None), tag: Tag::Text });
+        ui.send(Job {
+            task: Task::Fb(react_args(post, reaction), None),
+            tag: Tag::Text,
+        });
     }
 }
 
@@ -2465,7 +2875,10 @@ fn comment_selected(ui: &Ui) {
     }
     if let Some(text) = prompt_text(&ui.frame, "Your comment:", "Comment") {
         if !text.trim().is_empty() {
-            ui.send(Job { task: Task::Fb(comment_args(&post, &text), None), tag: Tag::Text });
+            ui.send(Job {
+                task: Task::Fb(comment_args(&post, &text), None),
+                tag: Tag::Text,
+            });
         }
     }
 }
@@ -2487,7 +2900,11 @@ fn person_of(ui: &Ui, record: &Record) -> Option<String> {
         }
         _ => {
             let author = record.field(1);
-            if author.is_empty() { None } else { Some(author.to_owned()) }
+            if author.is_empty() {
+                None
+            } else {
+                Some(author.to_owned())
+            }
         }
     }
 }
@@ -2614,7 +3031,9 @@ fn open_person_web(ui: &Ui) {
         Some(url) => open_url(&url),
         None => {
             let query = name.replace(' ', "%20");
-            open_url(&format!("https://www.facebook.com/search/people/?q={query}"));
+            open_url(&format!(
+                "https://www.facebook.com/search/people/?q={query}"
+            ));
         }
     }
 }
@@ -2631,7 +3050,11 @@ fn open_chat_web(ui: &Ui) {
             None => return,
         },
         _ => {
-            show_warning(&ui.frame, "Select or open a chat first.", "Open in Messenger");
+            show_warning(
+                &ui.frame,
+                "Select or open a chat first.",
+                "Open in Messenger",
+            );
             return;
         }
     };
@@ -2657,7 +3080,10 @@ fn delete_selected(ui: &Ui) {
         "Delete this post? Facebook moves it to the trash (permanent removal after 30 days).",
         "Delete post",
     ) {
-        ui.send(Job { task: Task::Fb(delete_args(&post), None), tag: Tag::Text });
+        ui.send(Job {
+            task: Task::Fb(delete_args(&post), None),
+            tag: Tag::Text,
+        });
     }
 }
 
@@ -2687,7 +3113,9 @@ fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
-    let label = StaticText::builder(&dialog).with_label("Attached &files").build();
+    let label = StaticText::builder(&dialog)
+        .with_label("Attached &files")
+        .build();
     let list = ListBox::builder(&dialog).build();
     list.set_name("Attached files");
     let fill = |list: &ListBox, files: &[String]| {
@@ -2704,9 +3132,14 @@ fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
         }
     };
     fill(&list, files);
-    let remove = Button::builder(&dialog).with_label("&Remove selected").build();
+    let remove = Button::builder(&dialog)
+        .with_label("&Remove selected")
+        .build();
     let remove_all = Button::builder(&dialog).with_label("Remove &all").build();
-    let close = Button::builder(&dialog).with_id(ID_CANCEL).with_label("C&lose").build();
+    let close = Button::builder(&dialog)
+        .with_id(ID_CANCEL)
+        .with_label("C&lose")
+        .build();
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     actions.add(&remove, 0, SizerFlag::All, 4);
     actions.add(&remove_all, 0, SizerFlag::All, 4);
@@ -2758,8 +3191,10 @@ fn manage_attachments(ui: &Ui) {
 
 fn refresh_attachment_count(ui: &Ui) {
     let count = ui.state.borrow().attachments.len();
-    ui.attachments_btn.set_label(&format!("Attachments ({count})"));
-    ui.attachments_btn.set_name(&format!("Attachments, {count} attached"));
+    ui.attachments_btn
+        .set_label(&format!("Attachments ({count})"));
+    ui.attachments_btn
+        .set_name(&format!("Attachments, {count} attached"));
 }
 
 /// The message text a chat line is matched by: `fb read` lines are
@@ -2827,7 +3262,13 @@ fn send_composed(ui: &Ui) {
         return;
     }
     let account = ui.state.borrow().account;
-    let submitted = ChatSubmission { account, chat: chat.clone(), name: name.clone(), text: text.clone(), files: files.clone() };
+    let submitted = ChatSubmission {
+        account,
+        chat: chat.clone(),
+        name: name.clone(),
+        text: text.clone(),
+        files: files.clone(),
+    };
     if !ChatSubmission::begin(&mut ui.state.borrow_mut().sending, submitted) {
         ui.status("Wait for your message to finish sending.");
         return;
@@ -2899,16 +3340,24 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SEARCH => search_dialog(ui),
         ID_OCR => ocr_dialog(ui),
         ID_UPDATE => update::check(&ui.frame, ship_shape::ui::CheckTrigger::Manual),
-        ID_STATUS => ui.send(Job { task: Task::Fb(vec!["status".into()], None), tag: Tag::Text }),
-        ID_STOP_DAEMON => {
-            ui.send(Job { task: Task::Fb(vec!["stop".into()], None), tag: Tag::Text })
-        }
-        ID_QUIT_DAEMON => {
-            ui.send(Job { task: Task::Fb(vec!["quit".into()], None), tag: Tag::Text })
-        }
+        ID_STATUS => ui.send(Job {
+            task: Task::Fb(vec!["status".into()], None),
+            tag: Tag::Text,
+        }),
+        ID_STOP_DAEMON => ui.send(Job {
+            task: Task::Fb(vec!["stop".into()], None),
+            tag: Tag::Text,
+        }),
+        ID_QUIT_DAEMON => ui.send(Job {
+            task: Task::Fb(vec!["quit".into()], None),
+            tag: Tag::Text,
+        }),
         ID_INSTALL_BACKEND => {
             ui.status("Downloading the Facebook backend…");
-            ui.send(Job { task: Task::InstallBackend, tag: Tag::Text });
+            ui.send(Job {
+                task: Task::InstallBackend,
+                tag: Tag::Text,
+            });
         }
         ID_LOGIN => start_sign_in(ui, Tag::SetupLogin),
         ID_INSTALL_BROWSER => install_browser_menu(ui),
@@ -2971,9 +3420,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
         ID_MSG_REPLY => reply_selected(ui),
         _ => {
-            if (ID_MSG_REACT_BASE..ID_MSG_REACT_BASE + REACTIONS.len() as i32)
-                .contains(&id)
-            {
+            if (ID_MSG_REACT_BASE..ID_MSG_REACT_BASE + REACTIONS.len() as i32).contains(&id) {
                 let reaction = REACTIONS[(id - ID_MSG_REACT_BASE) as usize];
                 msg_react_selected(ui, reaction);
             } else if (ID_REACT_BASE..ID_REACT_BASE + REACTIONS.len() as i32).contains(&id) {
@@ -3023,12 +3470,20 @@ fn show_item_menu(ui: &Ui) {
         }
     };
     match view {
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
-            add(&menu, &[
-                (ID_OPEN, "&Open post and comments"),
-                (ID_SHARE, "S&hare…"),
-                (ID_COMMENT, "&Comment…"),
-            ]);
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::SearchResults => {
+            add(
+                &menu,
+                &[
+                    (ID_OPEN, "&Open post and comments"),
+                    (ID_SHARE, "S&hare…"),
+                    (ID_COMMENT, "&Comment…"),
+                ],
+            );
             let react = Menu::builder().build();
             for (i, reaction) in REACTIONS.iter().enumerate() {
                 let label = if *reaction == "none" {
@@ -3077,9 +3532,13 @@ fn show_item_menu(ui: &Ui) {
                 (ID_WEB_PERSON, "Open on &Facebook (web)"),
             ],
         ),
-        View::Chats => {
-            add(&menu, &[(ID_OPEN, "&Open chat"), (ID_WEB_CHAT, "Open in &Messenger (web)")])
-        }
+        View::Chats => add(
+            &menu,
+            &[
+                (ID_OPEN, "&Open chat"),
+                (ID_WEB_CHAT, "Open in &Messenger (web)"),
+            ],
+        ),
         View::ChatWith(..) => {
             let replying = ui.state.borrow().reply_to.is_some();
             add(
@@ -3142,7 +3601,9 @@ fn new_post(ui: &Ui, with_images: bool) {
         if dialog.show_modal() != ID_OK {
             return;
         }
-        let Some(path) = dialog.get_path() else { return };
+        let Some(path) = dialog.get_path() else {
+            return;
+        };
         images.push(path);
     }
     let labels = ["Public", "Friends", "Only me"];
@@ -3157,7 +3618,10 @@ fn new_post(ui: &Ui, with_images: bool) {
         2 => Some("me"),
         _ => return,
     };
-    ui.send(Job { task: Task::Fb(post_args(&text, audience, &images), None), tag: Tag::Text });
+    ui.send(Job {
+        task: Task::Fb(post_args(&text, audience, &images), None),
+        tag: Tag::Text,
+    });
 }
 
 fn search_dialog(ui: &Ui) {
@@ -3205,7 +3669,10 @@ fn ocr_dialog(ui: &Ui) {
     ui.status("Reading image text…");
     thread::spawn(move || {
         let result = ocr_file(&path);
-        let _ = done_tx.send(Done { tag: Tag::Text, result });
+        let _ = done_tx.send(Done {
+            tag: Tag::Text,
+            result,
+        });
     });
 }
 
@@ -3245,9 +3712,15 @@ mod tests {
 
     #[test]
     fn message_match_text_strips_time_sender_and_reactions() {
-        assert_eq!(message_match_text("10:00 Alice: see you at 5"), "see you at 5");
+        assert_eq!(
+            message_match_text("10:00 Alice: see you at 5"),
+            "see you at 5"
+        );
         assert_eq!(message_match_text("10:00 You: ok {👍❤️}"), "ok");
-        assert_eq!(message_match_text("9:41 Bob: note: with colon"), "note: with colon");
+        assert_eq!(
+            message_match_text("9:41 Bob: note: with colon"),
+            "note: with colon"
+        );
         assert_eq!(message_match_text("10:00 You: {only}"), "{only}");
     }
 
@@ -3262,10 +3735,19 @@ mod tests {
     #[test]
     fn chat_details_survive_a_short_row() {
         // A chats line with fewer than five fields must not panic the reader.
-        let short = Record { fields: vec!["c1".into()], raw: "c1".into() };
+        let short = Record {
+            fields: vec!["c1".into()],
+            raw: "c1".into(),
+        };
         assert_eq!(details_for(&View::Chats, &short), "c1");
         let full = Record {
-            fields: vec!["c1".into(), "!".into(), "now".into(), "Alice".into(), "hi".into()],
+            fields: vec![
+                "c1".into(),
+                "!".into(),
+                "now".into(),
+                "Alice".into(),
+                "hi".into(),
+            ],
             raw: String::new(),
         };
         let details = details_for(&View::Chats, &full);
@@ -3277,7 +3759,11 @@ mod tests {
     fn messaging_addresses_a_person_by_ref_not_by_name() {
         // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
         let friend = Record {
-            fields: vec!["Alice Smith".into(), "u1abc".into(), "3 mutual friends".into()],
+            fields: vec![
+                "Alice Smith".into(),
+                "u1abc".into(),
+                "3 mutual friends".into(),
+            ],
             raw: String::new(),
         };
         assert_eq!(
@@ -3286,7 +3772,13 @@ mod tests {
         );
         // chats: ref, flags, time, name, preview.
         let chat = Record {
-            fields: vec!["c8x2f".into(), "!".into(), "now".into(), "Bob".into(), "hi".into()],
+            fields: vec![
+                "c8x2f".into(),
+                "!".into(),
+                "now".into(),
+                "Bob".into(),
+                "hi".into(),
+            ],
             raw: String::new(),
         };
         assert_eq!(
@@ -3300,7 +3792,10 @@ mod tests {
         let view = View::Reels(ReelSource::Recommended);
         assert!(cacheable(&view, &[]));
         let (rows, _) = reels::parse(r#"{"rows":[{"url":"https://www.facebook.com/reel/1/","author":"A","text":"Same"},{"url":"https://www.facebook.com/reel/2/","author":"A","text":"Same"}]}"#).unwrap();
-        assert_eq!(post_target(&view, &rows[0]), Some("https://www.facebook.com/reel/1/"));
+        assert_eq!(
+            post_target(&view, &rows[0]),
+            Some("https://www.facebook.com/reel/1/")
+        );
         assert_eq!(merge_records(&view, rows.clone(), rows).len(), 2);
     }
 
@@ -3311,9 +3806,22 @@ mod tests {
             None,
         );
         let urls: Vec<_> = links.iter().map(|link| link.url.as_str()).collect();
-        assert_eq!(urls, vec!["https://example.org/story", "https://example.org/a_(b)", "http://example.net/x?y=1&z=2", "https://example.net/a", "https://example.net/b", "https://[::1]"]);
+        assert_eq!(
+            urls,
+            vec![
+                "https://example.org/story",
+                "https://example.org/a_(b)",
+                "http://example.net/x?y=1&z=2",
+                "https://example.net/a",
+                "https://example.net/b",
+                "https://[::1]"
+            ]
+        );
         let post = "https://www.facebook.com/a/posts/1";
-        let links = links_in_text(&format!("{post}/ {post} https://example.org/story"), Some(post));
+        let links = links_in_text(
+            &format!("{post}/ {post} https://example.org/story"),
+            Some(post),
+        );
         assert_eq!(links.len(), 2);
         assert_eq!(links[0].url, "https://example.org/story");
         assert_eq!(links[1].label, "Full post on Facebook");
@@ -3356,7 +3864,13 @@ mod tests {
 
     #[test]
     fn sending_blocks_duplicates_until_completion() {
-        let message = ChatSubmission { account: 0, chat: "Alice".into(), name: "Alice".into(), text: "Hi".into(), files: vec![] };
+        let message = ChatSubmission {
+            account: 0,
+            chat: "Alice".into(),
+            name: "Alice".into(),
+            text: "Hi".into(),
+            files: vec![],
+        };
         let mut pending = None;
         assert!(ChatSubmission::begin(&mut pending, message.clone()));
         assert!(!ChatSubmission::begin(&mut pending, message.clone()));
@@ -3367,7 +3881,11 @@ mod tests {
     #[test]
     fn old_account_completion_cannot_take_new_accounts_pending_message() {
         let mut pending = Some(ChatSubmission {
-            account: 1, chat: "Bob".into(), name: "Bob".into(), text: "New account draft".into(), files: vec![],
+            account: 1,
+            chat: "Bob".into(),
+            name: "Bob".into(),
+            text: "New account draft".into(),
+            files: vec![],
         });
         assert!(ChatSubmission::finish(&mut pending, 0).is_none());
         assert_eq!(pending.as_ref().unwrap().text, "New account draft");
@@ -3378,14 +3896,30 @@ mod tests {
     #[test]
     fn sent_message_preserves_new_text_files_and_other_chat_drafts() {
         let message = ChatSubmission {
-            account: 0, chat: "c2".into(), name: "Alice".into(), text: "First".into(), files: vec!["first.png".into()],
+            account: 0,
+            chat: "c2".into(),
+            name: "Alice".into(),
+            text: "First".into(),
+            files: vec!["first.png".into()],
         };
         let mut files = vec!["first.png".into(), "next.png".into()];
-        assert!(!message.clear_sent(&View::ChatWith("c1".into(), "Bob".into()), "First", &mut files));
+        assert!(!message.clear_sent(
+            &View::ChatWith("c1".into(), "Bob".into()),
+            "First",
+            &mut files
+        ));
         assert_eq!(files, ["next.png"]);
-        assert!(!message.clear_sent(&View::ChatWith("c2".into(), "Alice".into()), "Next draft", &mut files));
+        assert!(!message.clear_sent(
+            &View::ChatWith("c2".into(), "Alice".into()),
+            "Next draft",
+            &mut files
+        ));
         assert_eq!(files, ["next.png"]);
-        assert!(message.clear_sent(&View::ChatWith("c2".into(), "Alice".into()), "First", &mut files));
+        assert!(message.clear_sent(
+            &View::ChatWith("c2".into(), "Alice".into()),
+            "First",
+            &mut files
+        ));
         assert_eq!(files, ["next.png"]);
     }
 
@@ -3412,24 +3946,55 @@ mod tests {
 
     #[test]
     fn more_uses_feed_cursor_and_preserves_section_filters() {
-        assert_eq!(more_args(&View::Feed, &feed_args(PAGE, true, true, true), PAGE as usize, false),
-            Some(feed_args(PAGE, false, true, true)));
-        assert_eq!(more_args(&View::Chats, &chats_args(PAGE, true), 38, false),
-            Some(chats_args(PAGE * 2, true)));
-        assert_eq!(more_args(&View::SearchResults, &search_args("rust", Some("posts"), PAGE), 40, false),
-            Some(search_args("rust", Some("posts"), PAGE * 2)));
-        assert_eq!(more_args(&View::Notifications, &notifs_args(PAGE), 40, false),
-            Some(notifs_args(40 + PAGE)));
-        assert_eq!(more_args(&View::Groups, &groups_args(PAGE), 40, false),
-            Some(groups_args(PAGE * 2)));
+        assert_eq!(
+            more_args(
+                &View::Feed,
+                &feed_args(PAGE, true, true, true),
+                PAGE as usize,
+                false
+            ),
+            Some(feed_args(PAGE, false, true, true))
+        );
+        assert_eq!(
+            more_args(&View::Chats, &chats_args(PAGE, true), 38, false),
+            Some(chats_args(PAGE * 2, true))
+        );
+        assert_eq!(
+            more_args(
+                &View::SearchResults,
+                &search_args("rust", Some("posts"), PAGE),
+                40,
+                false
+            ),
+            Some(search_args("rust", Some("posts"), PAGE * 2))
+        );
+        assert_eq!(
+            more_args(&View::Notifications, &notifs_args(PAGE), 40, false),
+            Some(notifs_args(40 + PAGE))
+        );
+        assert_eq!(
+            more_args(&View::Groups, &groups_args(PAGE), 40, false),
+            Some(groups_args(PAGE * 2))
+        );
         assert_eq!(more_args(&View::Feed, &[], 0, false), None);
-        assert_eq!(more_args(&View::SearchResults, &search_args("new query", Some("posts"), PAGE), 40, true), None);
+        assert_eq!(
+            more_args(
+                &View::SearchResults,
+                &search_args("new query", Some("posts"), PAGE),
+                40,
+                true
+            ),
+            None
+        );
     }
 
     #[test]
     fn load_more_is_a_final_action_row_only_in_paged_sections() {
         assert_eq!(more_row_label(&View::Feed, 100), Some("Load more posts"));
-        assert_eq!(more_row_label(&View::Reels(ReelSource::Recommended), 20), Some("Load more reels"));
+        assert_eq!(
+            more_row_label(&View::Reels(ReelSource::Recommended), 20),
+            Some("Load more reels")
+        );
         assert!(more_row_label(&View::Feed, 0).is_none());
         assert_eq!(more_row_label(&View::Groups, 10), Some("Load more groups"));
         assert!(is_more_row(&View::Feed, 100, 100));
@@ -3443,10 +4008,22 @@ mod tests {
     #[test]
     fn a_video_title_fills_only_the_matching_reels_empty_caption() {
         let (mut rows, _) = reels::parse(r#"{"rows":[{"url":"https://www.facebook.com/reel/1/","author":"Rock Bottom","text":""},{"url":"https://www.facebook.com/reel/2/","author":"Other","text":"Original caption"}]}"#).unwrap();
-        assert!(!set_reel_title(&mut rows[1], "https://www.facebook.com/reel/1/", "Wrong reel"));
-        assert!(set_reel_title(&mut rows[0], "https://www.facebook.com/reel/1/", "Dedicated To Bart Simpson"));
+        assert!(!set_reel_title(
+            &mut rows[1],
+            "https://www.facebook.com/reel/1/",
+            "Wrong reel"
+        ));
+        assert!(set_reel_title(
+            &mut rows[0],
+            "https://www.facebook.com/reel/1/",
+            "Dedicated To Bart Simpson"
+        ));
         assert_eq!(rows[0].field(4), "Dedicated To Bart Simpson");
-        assert!(!set_reel_title(&mut rows[0], "https://www.facebook.com/reel/1/", "Replacement"));
+        assert!(!set_reel_title(
+            &mut rows[0],
+            "https://www.facebook.com/reel/1/",
+            "Replacement"
+        ));
         assert_eq!(rows[1].field(4), "Original caption");
     }
 
@@ -3460,6 +4037,44 @@ mod tests {
         assert_eq!(merged[1].field(0), "-");
         assert_eq!(record_key(&View::Feed, &merged[1]), merged[1].raw);
         assert_eq!(merged[2].field(0), "/a/posts/2");
+    }
+
+    #[test]
+    fn more_keeps_distinct_refless_chat_and_friend_rows() {
+        let rec = |fields: &[&str]| Record {
+            fields: fields.iter().map(|s| s.to_string()).collect(),
+            raw: fields.join("\t"),
+        };
+        let old = vec![rec(&["-", "", "1h", "Alice"])];
+        let new = vec![rec(&["-", "", "1h", "Alice"]), rec(&["-", "", "2h", "Bob"])];
+        let merged = merge_records(&View::Chats, old, new);
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[1].field(3), "Bob");
+        let old = vec![rec(&["Ann", "", "Friend"])];
+        let new = vec![rec(&["Ann", "", "Friend"]), rec(&["Ben", "", "Friend"])];
+        let merged = merge_records(&View::Friends, old, new);
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[1].field(0), "Ben");
+        // Rows WITH refs still dedupe on the ref.
+        let old = vec![rec(&["/messages/t/1", "", "1h", "Alice"])];
+        let new = vec![
+            rec(&["/messages/t/1", "", "2h", "Alice"]),
+            rec(&["/messages/t/2", "", "1h", "Bob"]),
+        ];
+        let merged = merge_records(&View::Chats, old, new);
+        assert_eq!(merged.len(), 2);
+    }
+
+    #[test]
+    fn a_commenter_ref_only_attaches_to_the_comment_right_after_it() {
+        let view = View::CommentsOf("post".to_owned());
+        let raw = "cu\t/alice\nPost body line\nc\tBob\t1h\tHello";
+        let (records, _) = parse_for(&view, raw).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].field(1), "");
+        let raw = "cu\t/alice\nc\tAlice\t1h\tHi";
+        let (records, _) = parse_for(&view, raw).unwrap();
+        assert_eq!(records[0].field(1), "/alice");
     }
 
     #[test]
@@ -3484,10 +4099,21 @@ mod tests {
         // Copy text keeps the plain label: the marker is a list affordance only.
         assert!(!display_for(&View::Feed, &ad).contains("(no link)"));
         // Chats are not post rows, so they never get the marker.
-        assert!(!list_label(&View::Chats, &row(&["c1", "-", "5m", "Bea", "hi"])).contains("no link"));
+        assert!(
+            !list_label(&View::Chats, &row(&["c1", "-", "5m", "Bea", "hi"])).contains("no link")
+        );
         assert_eq!(display_for(&View::Feed, &linked), "Alice. Hello. 5 min");
-        assert_eq!(display_for(&View::Feed, &row(&["/a/posts/2", "Carol", "1m", "0/0/0", ""])), "Carol. 1m");
-        assert_eq!(display_for(&View::Feed, &row(&["/a/posts/3", "Carol", "", "0/0/0", ""])), "Carol");
+        assert_eq!(
+            display_for(
+                &View::Feed,
+                &row(&["/a/posts/2", "Carol", "1m", "0/0/0", ""])
+            ),
+            "Carol. 1m"
+        );
+        assert_eq!(
+            display_for(&View::Feed, &row(&["/a/posts/3", "Carol", "", "0/0/0", ""])),
+            "Carol"
+        );
     }
 
     #[test]
@@ -3497,9 +4123,18 @@ mod tests {
             raw: String::new(),
         };
         let url = "https://www.facebook.com/a/posts/1";
-        assert_eq!(post_target(&View::Notifications, &row(&["1h", "!", "x", url])), Some(url));
-        assert_eq!(post_target(&View::Notifications, &row(&["1h", "!", "x", "2h"])), None);
-        assert_eq!(post_target(&View::Feed, &row(&["p3k9a", "A"])), Some("p3k9a"));
+        assert_eq!(
+            post_target(&View::Notifications, &row(&["1h", "!", "x", url])),
+            Some(url)
+        );
+        assert_eq!(
+            post_target(&View::Notifications, &row(&["1h", "!", "x", "2h"])),
+            None
+        );
+        assert_eq!(
+            post_target(&View::Feed, &row(&["p3k9a", "A"])),
+            Some("p3k9a")
+        );
         assert_eq!(post_target(&View::Feed, &row(&["-", "Ad"])), None);
         assert_eq!(post_target(&View::Chats, &row(&[url])), None);
         assert!(needs_messenger_unlock(

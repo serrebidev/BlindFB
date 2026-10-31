@@ -51,14 +51,19 @@ fn package() -> Result<(), Box<dyn Error>> {
     let version = env!("CARGO_PKG_VERSION");
     let dist = root.join("dist");
     fs::create_dir_all(&dist)?;
-    let exe_name = if cfg!(windows) { "blindfb.exe" } else { "blindfb" };
+    let exe_name = if cfg!(windows) {
+        "blindfb.exe"
+    } else {
+        "blindfb"
+    };
     let binary = root.join("target").join("release").join(exe_name);
     let readme = root.join("README.md");
 
     let asset = if cfg!(windows) {
         let out = dist.join(format!("{APP}.zip"));
         let mut zip = Zip::create(&out)?;
-        zip.file(&binary, "blindfb.exe")?.file(&readme, "README.md")?;
+        zip.file(&binary, "blindfb.exe")?
+            .file(&readme, "README.md")?;
         zip.finish()?;
         out
     } else if cfg!(target_os = "macos") {
@@ -120,7 +125,10 @@ fn sign_with(path: &Path, key: &str, password: Option<&str>) -> Result<(), Box<d
         Some(password) => boxed.into_secret_key(Some(password.to_owned())),
         None => boxed.into_unencrypted_secret_key(),
     }?;
-    let name = path.file_name().ok_or("path has no file name")?.to_string_lossy();
+    let name = path
+        .file_name()
+        .ok_or("path has no file name")?
+        .to_string_lossy();
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -157,8 +165,8 @@ fn verify() -> Result<(), Box<dyn Error>> {
     }
     let key = fs::read_to_string(root().join("app/assets/minisign.pub"))?;
     let key = key.lines().nth(1).unwrap_or_default().trim();
-    let public = minisign_verify::PublicKey::from_base64(key)
-        .map_err(|e| format!("public key: {e}"))?;
+    let public =
+        minisign_verify::PublicKey::from_base64(key).map_err(|e| format!("public key: {e}"))?;
     for file in files {
         let signature = fs::read_to_string(format!("{file}.minisig"))
             .map_err(|e| format!("{file}.minisig: {e}"))?;
@@ -197,12 +205,7 @@ fn update_check() -> Result<(), Box<dyn Error>> {
         .nth(2)
         .unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_owned());
     let key = fs::read_to_string(root().join("app/assets/minisign.pub"))?;
-    let key = key
-        .lines()
-        .nth(1)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
+    let key = key.lines().nth(1).unwrap_or_default().trim().to_owned();
     let config = ship_shape::UpdaterConfig::new(
         "serrebidev/BlindFB",
         APP,
@@ -259,15 +262,23 @@ mod tests {
         fs::write(&file, b"release contents").unwrap();
         let pair = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
         // An unset MINISIGN_PASSWORD in CI reaches us as Some("").
-        sign_with(&file, &pair.sk.to_box(None).unwrap().into_string(), Some("")).unwrap();
+        sign_with(
+            &file,
+            &pair.sk.to_box(None).unwrap().into_string(),
+            Some(""),
+        )
+        .unwrap();
 
         let public = pair.pk.to_box().unwrap().into_string();
-        let public = minisign_verify::PublicKey::from_base64(public.lines().nth(1).unwrap()).unwrap();
+        let public =
+            minisign_verify::PublicKey::from_base64(public.lines().nth(1).unwrap()).unwrap();
         let signature = minisign_verify::Signature::decode(
             &fs::read_to_string(dir.join("BlindFB.zip.minisig")).unwrap(),
         )
         .unwrap();
-        public.verify(&fs::read(&file).unwrap(), &signature, false).unwrap();
+        public
+            .verify(&fs::read(&file).unwrap(), &signature, false)
+            .unwrap();
         assert!(public.verify(b"tampered", &signature, false).is_err());
         fs::remove_dir_all(&dir).unwrap();
     }

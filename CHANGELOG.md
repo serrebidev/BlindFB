@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.6.16 - 2026-10-30
+
+A bug-audit release: every module was reviewed and the test suite extended; these are the fixes that came out of it.
+
+- Chat windows: Load more no longer throws away your place. Loading older messages used to rebuild the list and land you on the newest message; now the message you were reading stays selected, and a refresh that changes nothing leaves the list untouched. Refresh and sending still land on the newest message, as they should.
+- Chat windows: the Attach files dialog now opens over the chat window. Before, it belonged to the main window and could appear behind the chat, leaving the app looking hung.
+- Load more on the chat, friends and group lists no longer drops people: entries whose row has no link were treated as duplicates of each other and silently removed as the list grew.
+- Opening a second chat or group window while one is already open now says so in the status bar instead of doing nothing, and Enter on a group member with no profile link says why nothing happened.
+- A commenter's profile link can no longer attach itself to the wrong comment in the comments view.
+- README: an antivirus note explains the ESET NOD32 false positive (`Win64/HackTool.Agent.XJ`) — BlindFB is unsigned and copies your own browser session with your permission, which trips a heuristic — and how to verify a download with the minisign signature that ships beside every release.
+
 ## v0.6.15 - 2026-10-30
 
 - Controls now follow what you are doing: buttons that do not apply to the current view or selection are disabled instead of sitting there live. Post actions (Open, React, Comment) only work in post lists, Delete only in My Posts, a person's Profile, Posts and Message only where a person is selected, and the message box with its Attach, Attachments and Send buttons only inside a chat.

@@ -9,7 +9,8 @@ fn main() {
     shipfitter::build::embed_commit_info("BLINDFB");
     // The updater verifies every download with this key; its secret half signs releases.
     println!("cargo:rerun-if-changed=assets/minisign.pub");
-    let public = std::fs::read_to_string("assets/minisign.pub").expect("assets/minisign.pub is missing");
+    let public =
+        std::fs::read_to_string("assets/minisign.pub").expect("assets/minisign.pub is missing");
     println!(
         "cargo:rustc-env=BLINDFB_MINISIGN_PUBLIC_KEY={}",
         public.lines().nth(1).unwrap_or_default().trim()

@@ -21,7 +21,9 @@ const RELEASE_URL: &str =
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {
-    let Some(bin) = managed_bin().filter(|b| b.is_file()) else { return false };
+    let Some(bin) = managed_bin().filter(|b| b.is_file()) else {
+        return false;
+    };
     let mut command = std::process::Command::new(bin);
     #[cfg(windows)]
     {
@@ -38,7 +40,11 @@ fn version_outdated(success: bool, stdout: &[u8]) -> bool {
 }
 
 fn exe_name() -> &'static str {
-    if cfg!(windows) { "fb.exe" } else { "fb" }
+    if cfg!(windows) {
+        "fb.exe"
+    } else {
+        "fb"
+    }
 }
 
 /// BlindFB's per-user data directory: %LOCALAPPDATA%\BlindFB on Windows,
@@ -48,13 +54,21 @@ pub fn data_dir() -> Option<PathBuf> {
     if cfg!(windows) {
         std::env::var_os("LOCALAPPDATA").map(|base| PathBuf::from(base).join("BlindFB"))
     } else if cfg!(target_os = "macos") {
-        std::env::var_os("HOME")
-            .map(|home| PathBuf::from(home).join("Library").join("Application Support").join("BlindFB"))
+        std::env::var_os("HOME").map(|home| {
+            PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("BlindFB")
+        })
     } else {
         match std::env::var_os("XDG_DATA_HOME") {
             Some(base) if !base.is_empty() => Some(PathBuf::from(base).join("BlindFB")),
-            _ => std::env::var_os("HOME")
-                .map(|home| PathBuf::from(home).join(".local").join("share").join("BlindFB")),
+            _ => std::env::var_os("HOME").map(|home| {
+                PathBuf::from(home)
+                    .join(".local")
+                    .join("share")
+                    .join("BlindFB")
+            }),
         }
     }
 }
@@ -92,8 +106,7 @@ pub(crate) fn get(url: &str) -> Result<Vec<u8>, String> {
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
         .call()
         .map_err(|e| format!("download failed: {e}"))?;
-    crate::http::download_body(response.body_mut())
-        .map_err(|e| format!("download failed: {e}"))
+    crate::http::download_body(response.body_mut()).map_err(|e| format!("download failed: {e}"))
 }
 
 pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
@@ -120,7 +133,8 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
             let mut entry = zip
                 .by_index(i)
                 .map_err(|e| format!("could not read the backend download: {e}"))?;
-            let name = entry.name()
+            let name = entry
+                .name()
                 .map_err(|e| format!("bad backend download: {e}"))?
                 .replace('\\', "/");
             if name == want || name.ends_with(&format!("/{want}")) {
@@ -141,7 +155,9 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
         {
             let mut entry =
                 entry.map_err(|e| format!("could not read the backend download: {e}"))?;
-            let path = entry.path().map_err(|e| format!("bad backend download: {e}"))?;
+            let path = entry
+                .path()
+                .map_err(|e| format!("bad backend download: {e}"))?;
             let name = path.to_string_lossy().replace('\\', "/");
             if name == want || name.ends_with(&format!("/{want}")) {
                 let mut out = Vec::new();
@@ -162,8 +178,8 @@ pub fn install_or_update() -> Result<String, String> {
     let asset = asset_name().ok_or("no prebuilt backend for this platform")?;
     let target = managed_bin().ok_or("could not find a place to install the backend")?;
 
-    let json: serde_json::Value = serde_json::from_slice(&get(RELEASE_URL)?)
-        .map_err(|e| format!("download failed: {e}"))?;
+    let json: serde_json::Value =
+        serde_json::from_slice(&get(RELEASE_URL)?).map_err(|e| format!("download failed: {e}"))?;
     let tag = json
         .get("tag_name")
         .and_then(|v| v.as_str())
@@ -176,16 +192,22 @@ pub fn install_or_update() -> Result<String, String> {
     let url_of = |name: &str| -> Option<String> {
         assets.iter().find_map(|a| {
             (a.get("name").and_then(|v| v.as_str()) == Some(name))
-                .then(|| a.get("browser_download_url").and_then(|v| v.as_str()).map(str::to_owned))
+                .then(|| {
+                    a.get("browser_download_url")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned)
+                })
                 .flatten()
         })
     };
-    let asset_url = url_of(asset).ok_or("download failed: release has no build for this platform")?;
+    let asset_url =
+        url_of(asset).ok_or("download failed: release has no build for this platform")?;
     let sums_url = url_of("SHA256SUMS").ok_or("download failed: release has no checksums file")?;
 
     let bytes = get(&asset_url)?;
     let sums = String::from_utf8_lossy(&get(&sums_url)?).into_owned();
-    let expected = expected_hash(&sums, asset).ok_or("download failed: no checksum for this build")?;
+    let expected =
+        expected_hash(&sums, asset).ok_or("download failed: no checksum for this build")?;
     if sha256_hex(&bytes) != expected {
         return Err("the backend download failed its checksum — not installing it".to_owned());
     }
@@ -212,14 +234,22 @@ pub fn install_or_update() -> Result<String, String> {
     ))
 }
 
-fn replace_binary(source: &std::path::Path, target: &std::path::Path, timeout: Duration) -> std::io::Result<()> {
+fn replace_binary(
+    source: &std::path::Path,
+    target: &std::path::Path,
+    timeout: Duration,
+) -> std::io::Result<()> {
     let start = Instant::now();
     loop {
         match fs::rename(source, target) {
             Ok(()) => return Ok(()),
             // A daemon can return from quit just before Windows releases its executable.
-            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied && start.elapsed() < timeout =>
-                std::thread::sleep(Duration::from_millis(100)),
+            Err(error)
+                if error.kind() == std::io::ErrorKind::PermissionDenied
+                    && start.elapsed() < timeout =>
+            {
+                std::thread::sleep(Duration::from_millis(100))
+            }
             Err(error) => return Err(error),
         }
     }
@@ -239,7 +269,11 @@ mod tests {
         let source = dir.join("fb.exe.new");
         fs::write(&target, b"old").unwrap();
         fs::write(&source, b"new").unwrap();
-        let held = fs::OpenOptions::new().read(true).share_mode(0).open(&target).unwrap();
+        let held = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&target)
+            .unwrap();
         assert!(fs::rename(&source, &target).is_err());
         let release = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(150));
@@ -256,7 +290,11 @@ mod tests {
         use std::io::Write;
         let contents = b"backend executable";
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        zip.start_file(format!("release/{}", exe_name()), zip::write::SimpleFileOptions::default()).unwrap();
+        zip.start_file(
+            format!("release/{}", exe_name()),
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
         zip.write_all(contents).unwrap();
         let bytes = zip.finish().unwrap().into_inner();
         assert_eq!(extract("backend.zip", &bytes).unwrap(), contents);
@@ -267,7 +305,12 @@ mod tests {
         header.set_size(contents.len() as u64);
         header.set_mode(0o755);
         header.set_cksum();
-        tar.append_data(&mut header, format!("release/{}", exe_name()), &contents[..]).unwrap();
+        tar.append_data(
+            &mut header,
+            format!("release/{}", exe_name()),
+            &contents[..],
+        )
+        .unwrap();
         let bytes = tar.into_inner().unwrap().finish().unwrap();
         assert_eq!(extract("backend.tar.gz", &bytes).unwrap(), contents);
     }
@@ -284,7 +327,10 @@ mod tests {
     #[test]
     fn finds_expected_hash() {
         let sums = "abc123  fb-x86_64-linux.tar.gz\ndef456 *fb-x86_64-windows.zip\n";
-        assert_eq!(expected_hash(sums, "fb-x86_64-windows.zip").as_deref(), Some("def456"));
+        assert_eq!(
+            expected_hash(sums, "fb-x86_64-windows.zip").as_deref(),
+            Some("def456")
+        );
         assert_eq!(expected_hash(sums, "fb-aarch64-linux.tar.gz"), None);
     }
 

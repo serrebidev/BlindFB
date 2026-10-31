@@ -3,8 +3,8 @@
 //! shape as the group window. Messages load newest-last; the composer sends
 //! with Enter or the Send button, files attach, and Load more walks back
 //! through the history.
-use super::{Job, REACTIONS, Tag, Task, Ui, message_match_text, needs_messenger_unlock};
-use blindfb_core::fb::{Record, msg_react_args, read_args, reply_args, send_args};
+use super::{message_match_text, needs_messenger_unlock, Job, Tag, Task, Ui, REACTIONS};
+use blindfb_core::fb::{msg_react_args, read_args, reply_args, send_args, Record};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use wxdragon::prelude::*;
@@ -32,6 +32,49 @@ struct ChatState {
     files: Vec<String>,
     /// Text of the message the next send replies to (quotes).
     reply_to: Option<String>,
+    /// True when the next delivery should land on the newest message
+    /// (open, refresh, after sending). Load more sets it false: the reader
+    /// is walking history and must keep their place.
+    follow_tail: bool,
+}
+
+/// Where the selection lands after the message list is replaced.
+/// Following the tail (or no prior selection) means the newest message.
+/// Otherwise the previously selected line is found again in the new list:
+/// history loads prepend, so the same line sits further down by the growth,
+/// and a message whose text repeats resolves to the occurrence nearest that
+/// expected spot. A vanished line keeps its position, clamped to the list.
+fn restored_selection(
+    old: &[String],
+    new: &[String],
+    old_sel: Option<usize>,
+    follow_tail: bool,
+) -> Option<usize> {
+    if new.is_empty() {
+        return None;
+    }
+    let last = new.len() - 1;
+    let Some(old_sel) = old_sel.filter(|_| !follow_tail) else {
+        return Some(last);
+    };
+    let Some(line) = old.get(old_sel) else {
+        return Some(last);
+    };
+    let expected = if new.len() >= old.len() {
+        old_sel + (new.len() - old.len())
+    } else {
+        old_sel
+    }
+    .min(last);
+    if new[expected] == *line {
+        return Some(expected);
+    }
+    new.iter()
+        .enumerate()
+        .filter(|(_, candidate)| *candidate == line)
+        .map(|(index, _)| (index, index.abs_diff(expected)))
+        .min_by_key(|(_, distance)| *distance)
+        .map_or(Some(expected), |(index, _)| Some(index))
 }
 
 /// The conversation a chat row opens: its backend ref (field 0) is the
@@ -42,7 +85,14 @@ fn chat_target(record: &Record) -> Option<(String, String, bool)> {
     let id = record.field(0);
     let name = record.field(3);
     let (id, name) = if !id.is_empty() {
-        (id.to_owned(), if name.is_empty() { id.to_owned() } else { name.to_owned() })
+        (
+            id.to_owned(),
+            if name.is_empty() {
+                id.to_owned()
+            } else {
+                name.to_owned()
+            },
+        )
     } else if !name.is_empty() {
         (name.to_owned(), name.to_owned())
     } else {
@@ -71,7 +121,11 @@ impl ChatWindow {
         let text = self.compose.get_value();
         let (id, files, reply_to) = {
             let state = self.state.lock().unwrap();
-            (state.id.clone(), state.files.clone(), state.reply_to.clone())
+            (
+                state.id.clone(),
+                state.files.clone(),
+                state.reply_to.clone(),
+            )
         };
         if text.trim().is_empty() && files.is_empty() {
             return;
@@ -100,7 +154,11 @@ impl ChatWindow {
                 if let Some(index) = self.messages.get_selection() {
                     if let Some(line) = self.messages.get_string(index) {
                         let done = Clipboard::get().set_text(&line);
-                        self.note(if done { "Message copied." } else { "Could not copy." });
+                        self.note(if done {
+                            "Message copied."
+                        } else {
+                            "Could not copy."
+                        });
                     }
                 }
             }
@@ -143,6 +201,7 @@ impl ChatWindow {
 
 pub(super) fn open(ui: &Ui, record: &Record) {
     if ui.chat_window.lock().unwrap().is_some() {
+        ui.status("A chat window is already open. Close it to open another chat.");
         return;
     }
     let Some((id, name, group)) = chat_target(record) else {
@@ -150,7 +209,11 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         return;
     };
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
-    let title = if group { format!("Group chat: {name}") } else { format!("Chat: {name}") };
+    let title = if group {
+        format!("Group chat: {name}")
+    } else {
+        format!("Chat: {name}")
+    };
     let dialog = Dialog::builder(&ui.frame, &title)
         .with_size(900, 700)
         .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
@@ -171,14 +234,19 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     let manage = Button::builder(&dialog).with_label("A&ttachments…").build();
     manage.set_name("Attachments. Review or remove attached files");
     let send = Button::builder(&dialog).with_label("&Send").build();
-    let status_label = StaticText::builder(&dialog).with_label("Chat status").build();
+    let status_label = StaticText::builder(&dialog)
+        .with_label("Chat status")
+        .build();
     let status = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ReadOnly)
         .build();
     status.set_name("Chat status");
     status.enable_focus_from_keyboard();
     status.change_value("Loading messages…");
-    let close = Button::builder(&dialog).with_id(ID_CANCEL).with_label("C&lose").build();
+    let close = Button::builder(&dialog)
+        .with_id(ID_CANCEL)
+        .with_label("C&lose")
+        .build();
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     actions.add(&more, 0, SizerFlag::All, 4);
     actions.add(&refresh, 0, SizerFlag::All, 4);
@@ -206,6 +274,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             count: PAGE,
             files: Vec::new(),
             reply_to: None,
+            follow_tail: true,
         })),
     };
     *ui.chat_window.lock().unwrap() = Some(window.clone());
@@ -256,12 +325,16 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     send.on_click(move |_| w.send_message(&u));
     let (w, u) = (window.clone(), ui.clone());
     refresh.on_click(move |_| {
+        w.state.lock().unwrap().follow_tail = true;
         w.note("Refreshing…");
         w.load(&u);
     });
     let (w, u) = (window.clone(), ui.clone());
     more.on_click(move |_| {
-        w.state.lock().unwrap().count += PAGE;
+        let mut state = w.state.lock().unwrap();
+        state.count += PAGE;
+        state.follow_tail = false;
+        drop(state);
         w.note("Loading more…");
         w.load(&u);
     });
@@ -277,9 +350,11 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         w.state.lock().unwrap().files = files;
         w.note(&format!("{count} file(s) attached"));
     });
-    let (w, u) = (window.clone(), ui.clone());
+    let (w, parent) = (window.clone(), dialog);
     attach.on_click(move |_| {
-        let dialog = FileDialog::builder(&u.frame).build();
+        // Parented to this dialog, not the main frame: a file dialog owned by
+        // the frame can open behind this modal window and strand the user.
+        let dialog = FileDialog::builder(&parent).build();
         if dialog.show_modal() == ID_OK {
             if let Some(path) = dialog.get_path() {
                 let mut state = w.state.lock().unwrap();
@@ -309,13 +384,33 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
     };
     match result {
         Ok(raw) => {
-            let lines: Vec<&str> = raw.lines().filter(|l| !l.trim().is_empty()).collect();
-            window.messages.clear();
-            for line in &lines {
-                window.messages.append(line);
-            }
-            if !lines.is_empty() {
-                window.messages.set_selection((lines.len() - 1) as u32, true);
+            let lines: Vec<String> = raw
+                .lines()
+                .filter(|l| !l.trim().is_empty())
+                .map(str::to_owned)
+                .collect();
+            let old: Vec<String> = (0..window.messages.get_count())
+                .filter_map(|i| window.messages.get_string(i))
+                .collect();
+            let old_sel = window.messages.get_selection().map(|i| i as usize);
+            let follow_tail = window.state.lock().unwrap().follow_tail;
+            if old != lines {
+                // Update in place like the main window: rows that did not
+                // change are not touched, so a refresh with nothing new
+                // costs nothing and never moves the reader.
+                for (index, line) in lines.iter().enumerate() {
+                    if index >= window.messages.get_count() as usize {
+                        window.messages.append(line);
+                    } else if old.get(index) != Some(line) {
+                        window.messages.set_string(index as u32, line);
+                    }
+                }
+                while window.messages.get_count() as usize > lines.len() {
+                    window.messages.delete(window.messages.get_count() - 1);
+                }
+                if let Some(selected) = restored_selection(&old, &lines, old_sel, follow_tail) {
+                    window.messages.set_selection(selected as u32, true);
+                }
             }
             let name = window.state.lock().unwrap().name.clone();
             window.note(&format!("{name}: {} message(s).", lines.len()));
@@ -343,6 +438,7 @@ pub(super) fn deliver_sent(ui: &Ui, session: u64, result: Result<String, String>
             let mut state = window.state.lock().unwrap();
             state.files.clear();
             state.reply_to = None;
+            state.follow_tail = true;
             drop(state);
             window.note("Message sent.");
             window.load(ui);
@@ -396,5 +492,33 @@ mod tests {
     fn a_chat_row_with_nothing_opens_nothing() {
         assert!(chat_target(&record(&["", "", "", ""])).is_none());
         assert!(chat_target(&record(&[])).is_none());
+    }
+
+    fn lines(rows: &[&str]) -> Vec<String> {
+        rows.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn history_load_keeps_the_message_being_read() {
+        let old = lines(&["a", "b", "c"]);
+        let new = lines(&["x", "y", "a", "b", "c"]);
+        assert_eq!(restored_selection(&old, &new, Some(1), false), Some(3));
+        // Repeated text resolves to the occurrence at the expected offset.
+        let new = lines(&["b", "a", "b", "c"]);
+        let old = lines(&["a", "b", "c"]);
+        assert_eq!(restored_selection(&old, &new, Some(1), false), Some(2));
+        // A vanished line keeps its position, clamped.
+        let new = lines(&["a", "c"]);
+        assert_eq!(restored_selection(&old, &new, Some(1), false), Some(1));
+        assert_eq!(restored_selection(&old, &[], Some(1), false), None);
+    }
+
+    #[test]
+    fn the_tail_wins_when_following_or_unselected() {
+        let old = lines(&["a", "b"]);
+        let new = lines(&["x", "a", "b", "c"]);
+        assert_eq!(restored_selection(&old, &new, Some(0), true), Some(3));
+        assert_eq!(restored_selection(&old, &new, None, false), Some(3));
+        assert_eq!(restored_selection(&[], &new, None, false), Some(3));
     }
 }

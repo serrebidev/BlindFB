@@ -22,7 +22,9 @@ pub fn managed_bin() -> Option<PathBuf> {
 pub fn ensure() -> Result<PathBuf, String> {
     let target = managed_bin()
         .ok_or("the managed mpv player is available only on Windows with a local data folder")?;
-    let _lock = INSTALL_LOCK.lock().map_err(|_| "the mpv installer lock was poisoned")?;
+    let _lock = INSTALL_LOCK
+        .lock()
+        .map_err(|_| "the mpv installer lock was poisoned")?;
     if target.is_file() {
         return Ok(target);
     }
@@ -80,12 +82,16 @@ fn bundle_bytes(bytes: &[u8]) -> Result<Vec<u8>, String> {
     if zip.len() != 1 {
         return Err("unexpected mpv release archive contents".to_owned());
     }
-    let mut entry = zip.by_index(0).map_err(|e| format!("could not read the mpv download: {e}"))?;
+    let mut entry = zip
+        .by_index(0)
+        .map_err(|e| format!("could not read the mpv download: {e}"))?;
     if entry.name().map_err(|e| e.to_string())? != BUNDLE_NAME {
         return Err("unexpected mpv bundle name".to_owned());
     }
     let mut bundle = Vec::new();
-    entry.read_to_end(&mut bundle).map_err(|e| format!("could not read the mpv bundle: {e}"))?;
+    entry
+        .read_to_end(&mut bundle)
+        .map_err(|e| format!("could not read the mpv bundle: {e}"))?;
     Ok(bundle)
 }
 
@@ -93,27 +99,37 @@ fn safe_name(name: &str) -> bool {
     if name.is_empty() || name.starts_with(['/', '\\']) || name.contains(':') {
         return false;
     }
-    name.trim_end_matches(['/', '\\']).split(['/', '\\']).all(|part| {
-        let stem = part.split('.').next().unwrap_or("").to_ascii_uppercase();
-        !part.is_empty()
-            && part != "."
-            && part != ".."
-            && !part.ends_with(['.', ' '])
-            && !part.chars().any(|c| c.is_control() || "<>\"|?*".contains(c))
-            && !matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$")
-            && !(stem.chars().count() == 4
-                && (stem.starts_with("COM") || stem.starts_with("LPT"))
-                && matches!(stem.chars().last(), Some('1'..='9' | '¹' | '²' | '³')))
-    })
+    name.trim_end_matches(['/', '\\'])
+        .split(['/', '\\'])
+        .all(|part| {
+            let stem = part.split('.').next().unwrap_or("").to_ascii_uppercase();
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && !part.ends_with(['.', ' '])
+                && !part
+                    .chars()
+                    .any(|c| c.is_control() || "<>\"|?*".contains(c))
+                && !matches!(
+                    stem.as_str(),
+                    "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
+                )
+                && !(stem.chars().count() == 4
+                    && (stem.starts_with("COM") || stem.starts_with("LPT"))
+                    && matches!(stem.chars().last(), Some('1'..='9' | '¹' | '²' | '³')))
+        })
 }
 
 fn extract_bundle(bytes: &[u8], stage: &Path) -> Result<(), String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| format!("could not open the mpv bundle: {e}"))?;
     for index in 0..zip.len() {
-        let mut entry =
-            zip.by_index(index).map_err(|e| format!("could not read the mpv bundle: {e}"))?;
-        let name = entry.name().map_err(|e| format!("bad mpv archive name: {e}"))?;
+        let mut entry = zip
+            .by_index(index)
+            .map_err(|e| format!("could not read the mpv bundle: {e}"))?;
+        let name = entry
+            .name()
+            .map_err(|e| format!("bad mpv archive name: {e}"))?;
         if !safe_name(&name)
             || entry.unix_mode().is_some_and(|mode| {
                 let kind = mode & 0o170000;
@@ -122,7 +138,9 @@ fn extract_bundle(bytes: &[u8], stage: &Path) -> Result<(), String> {
         {
             return Err(format!("unsafe path in the mpv bundle: {name}"));
         }
-        let enclosed = entry.enclosed_name().ok_or("unsafe path in the mpv bundle")?;
+        let enclosed = entry
+            .enclosed_name()
+            .ok_or("unsafe path in the mpv bundle")?;
         let path = stage.join(enclosed);
         if entry.is_dir() {
             fs::create_dir_all(&path)
@@ -182,11 +200,9 @@ mod tests {
         let parent =
             std::env::temp_dir().join(format!("blindfb-mpv-bad-hash-{}", std::process::id()));
         assert!(!parent.exists());
-        assert!(
-            install(b"untrusted archive", &parent.join("mpv.exe"))
-                .unwrap_err()
-                .contains("checksum")
-        );
+        assert!(install(b"untrusted archive", &parent.join("mpv.exe"))
+            .unwrap_err()
+            .contains("checksum"));
         assert!(!parent.exists());
     }
 
@@ -196,19 +212,29 @@ mod tests {
         let stage = create_stage(&parent).unwrap();
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         for name in ["mpv.exe", "codec.dll", "licenses/COPYING"] {
-            zip.start_file(name, zip::write::SimpleFileOptions::default()).unwrap();
+            zip.start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
             zip.write_all(b"test contents").unwrap();
         }
         let bytes = zip.finish().unwrap().into_inner();
         extract_bundle(&bytes, &stage).unwrap();
-        assert_eq!(fs::read(stage.join("licenses/COPYING")).unwrap(), b"test contents");
+        assert_eq!(
+            fs::read(stage.join("licenses/COPYING")).unwrap(),
+            b"test contents"
+        );
         assert_eq!(fs::read(stage.join("codec.dll")).unwrap(), b"test contents");
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        zip.add_symlink("link", "../outside", zip::write::SimpleFileOptions::default()).unwrap();
+        zip.add_symlink(
+            "link",
+            "../outside",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
         assert!(extract_bundle(&zip.finish().unwrap().into_inner(), &stage).is_err());
         assert!(!stage.join("link").exists());
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        zip.start_file("../escape", zip::write::SimpleFileOptions::default()).unwrap();
+        zip.start_file("../escape", zip::write::SimpleFileOptions::default())
+            .unwrap();
         zip.write_all(b"must not escape").unwrap();
         assert!(extract_bundle(&zip.finish().unwrap().into_inner(), &stage).is_err());
         assert_eq!(stage.parent(), Some(parent.as_path()));

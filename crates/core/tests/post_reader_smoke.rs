@@ -1,9 +1,9 @@
 //! Live, read-only reader check. Never comments, reacts or sends.
-use blindfb_core::Fb;
 use blindfb_core::fb::{
     feed_args, notifs_args, parse_notifications, parse_records, recent_feed_args, web_url,
 };
 use blindfb_core::posts;
+use blindfb_core::Fb;
 
 #[test]
 #[ignore = "reads the signed-in Facebook account through the dedicated browser"]
@@ -17,7 +17,11 @@ fn reads_notifications_feeds_and_posts() {
     let mut targets: Vec<String> = notes.iter().map(|r| web_url(r.field(3))).collect();
     for args in [recent_feed_args(8), feed_args(8, false, true, true)] {
         let rows = parse_records(&run(args).unwrap());
-        targets.extend(rows.iter().filter(|r| r.field(0) != "-").map(|r| web_url(r.field(0))));
+        targets.extend(
+            rows.iter()
+                .filter(|r| r.field(0) != "-")
+                .map(|r| web_url(r.field(0))),
+        );
     }
     let page = "blindfb-smoke";
     let mut read = 0;

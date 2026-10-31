@@ -26,7 +26,11 @@ impl Record {
     /// display-only rows (ads and suggestions without a permalink yet).
     pub fn refr(&self) -> Option<&str> {
         let first = self.field(0).trim();
-        if first.is_empty() || first == "-" { None } else { Some(first) }
+        if first.is_empty() || first == "-" {
+            None
+        } else {
+            Some(first)
+        }
     }
 }
 
@@ -122,8 +126,16 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
 
 /// Stable identity for a normalized feed row, including alternate photo links.
 pub fn feed_record_key(record: &Record) -> String {
-    let text = record.field(4).trim_end_matches("… See more").split_whitespace().collect::<String>();
-    if text.is_empty() { record.raw.clone() } else { format!("{}\t{text}", record.field(1)) }
+    let text = record
+        .field(4)
+        .trim_end_matches("… See more")
+        .split_whitespace()
+        .collect::<String>();
+    if text.is_empty() {
+        record.raw.clone()
+    } else {
+        format!("{}\t{text}", record.field(1))
+    }
 }
 
 /// Keep notification post URLs instead of replacing them with daemon-local references.
@@ -134,7 +146,9 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
     if let Some(error) = value["err"].as_str() {
         return Err(error.to_owned());
     }
-    let rows = value["rows"].as_array().ok_or("The backend returned no notification list")?;
+    let rows = value["rows"]
+        .as_array()
+        .ok_or("The backend returned no notification list")?;
     rows.iter()
         .map(|row| {
             let cells = row
@@ -158,7 +172,10 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
             if let Some(metadata) = cells.get(4).filter(|value| value.is_object()) {
                 fields.push(metadata.to_string());
             }
-            Ok(Record { raw: fields.join("\t"), fields })
+            Ok(Record {
+                raw: fields.join("\t"),
+                fields,
+            })
         })
         .collect()
 }
@@ -270,7 +287,10 @@ impl Fb {
             command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         }
         if let Some(browser) = &self.engine {
-            if !matches!(args.first(), Some(&"stop" | &"quit" | &"help" | &"--version")) {
+            if !matches!(
+                args.first(),
+                Some(&"stop" | &"quit" | &"help" | &"--version")
+            ) {
                 let ((port, path), started) = crate::engine::ensure(browser, false)?;
                 if started {
                     self.run(&["stop"])?;
@@ -282,7 +302,10 @@ impl Fb {
     }
 
     fn login_visible(&self) -> Result<String, String> {
-        let browser = self.engine.as_ref().ok_or("no dedicated browser selected")?;
+        let browser = self
+            .engine
+            .as_ref()
+            .ok_or("no dedicated browser selected")?;
         self.run(&["stop"])?;
         crate::engine::close()?;
         let (endpoint, _) = crate::engine::ensure(browser, true)?;
@@ -359,7 +382,11 @@ fn collect(output: std::process::Output) -> Result<String, String> {
         Ok(stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = if stderr.trim().is_empty() { stdout.trim() } else { stderr.trim() };
+        let message = if stderr.trim().is_empty() {
+            stdout.trim()
+        } else {
+            stderr.trim()
+        };
         Err(if message.is_empty() {
             format!("fb exited with {}", output.status)
         } else {
@@ -414,7 +441,12 @@ pub fn posts_args(who: &str, count: u32, urls: bool) -> Vec<String> {
 }
 
 pub fn view_args(post: &str, comments: u32) -> Vec<String> {
-    vec!["view".to_owned(), post.to_owned(), "-n".to_owned(), comments.to_string()]
+    vec![
+        "view".to_owned(),
+        post.to_owned(),
+        "-n".to_owned(),
+        comments.to_string(),
+    ]
 }
 
 pub fn members_args(group: &str, count: u32, urls: bool) -> Vec<String> {
@@ -476,7 +508,12 @@ pub fn chats_args(count: u32, unread_only: bool) -> Vec<String> {
 }
 
 pub fn read_args(chat: &str, count: u32) -> Vec<String> {
-    vec!["read".to_owned(), chat.to_owned(), "-n".to_owned(), count.to_string()]
+    vec![
+        "read".to_owned(),
+        chat.to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+    ]
 }
 
 pub fn send_args(chat: &str, text: &str, files: &[String]) -> Vec<String> {
@@ -497,12 +534,7 @@ pub fn msg_react_args(chat: &str, reaction: &str, match_text: Option<&str>) -> V
     args
 }
 
-pub fn reply_args(
-    chat: &str,
-    text: &str,
-    files: &[String],
-    match_text: &str,
-) -> Vec<String> {
+pub fn reply_args(chat: &str, text: &str, files: &[String], match_text: &str) -> Vec<String> {
     let mut args = vec!["reply".to_owned(), chat.to_owned()];
     if !text.is_empty() {
         args.push(text.to_owned());
@@ -627,9 +659,13 @@ pub fn thread_url_from_profile_url(profile_url: &str) -> Option<String> {
 // and every post action works.
 
 pub fn groups_args(count: u32) -> Vec<String> {
-    vec!["groups".to_owned(), "-n".to_owned(), count.to_string(), "--urls".to_owned()]
+    vec![
+        "groups".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--urls".to_owned(),
+    ]
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -646,8 +682,21 @@ mod tests {
             ["msgreact", "/messages/t/42", "like"]
         );
         assert_eq!(
-            reply_args("/messages/t/42", "on my way", &["a.png".to_owned()], "see you"),
-            ["reply", "/messages/t/42", "on my way", "--match", "see you", "--file", "a.png"]
+            reply_args(
+                "/messages/t/42",
+                "on my way",
+                &["a.png".to_owned()],
+                "see you"
+            ),
+            [
+                "reply",
+                "/messages/t/42",
+                "on my way",
+                "--match",
+                "see you",
+                "--file",
+                "a.png"
+            ]
         );
         assert_eq!(
             reply_args("/messages/t/42", "", &[], "see you"),
@@ -681,7 +730,10 @@ mod tests {
                 "--urls"
             ]
         );
-        assert!(notifs_args(20).iter().any(|script| script.contains("window.__fb.notifs(20)") && script.contains("notificationNow")));
+        assert!(notifs_args(20)
+            .iter()
+            .any(|script| script.contains("window.__fb.notifs(20)")
+                && script.contains("notificationNow")));
     }
 
     #[test]
@@ -705,7 +757,10 @@ mod tests {
             summary,
             [
                 ("Kawaling Pinoy", "Skip takeout!"),
-                ("Steve Barclay", "Will David Eby go down as our FAFO premier?"),
+                (
+                    "Steve Barclay",
+                    "Will David Eby go down as our FAFO premier?"
+                ),
                 ("Johanne Foulds follows Scotiabank", "Saving? … See more"),
                 ("AI group / Abdul", "What fails? Let it."),
                 ("C", "I feel bad. Crying helps."),
@@ -728,7 +783,10 @@ mod tests {
     #[test]
     fn builds_send_with_files() {
         let args = send_args("Weekend plans", "on my way", &["a.pdf".to_owned()]);
-        assert_eq!(args, ["send", "Weekend plans", "on my way", "--file", "a.pdf"]);
+        assert_eq!(
+            args,
+            ["send", "Weekend plans", "on my way", "--file", "a.pdf"]
+        );
     }
 
     #[test]

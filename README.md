@@ -42,7 +42,11 @@ For a version-by-version history, see the [changelog](CHANGELOG.md).
 2. Extract or open it and run BlindFB. There is nothing else to install: on first run BlindFB downloads the matching `fb` backend release, verifies its SHA-256 checksum, and keeps it in its own app-data folder.
 3. Sign in: BlindFB asks which browser to copy your Facebook session from, with your default browser marked. Pick the browser you are signed in to Facebook in, or sign in directly in the separate browser window BlindFB offers.
 
-The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.5`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.5): upstream 0.1.5 plus hidden feed links ([#1](https://github.com/hieu-lee/facebook-cli/pull/1)), Messenger restore ([#2](https://github.com/hieu-lee/facebook-cli/pull/2)), complete feed reading, and shared author labels ([#7](https://github.com/hieu-lee/facebook-cli/pull/7)). Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
+The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.10`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.10): upstream 0.1.5 plus the BlindFB fixes that are in review upstream, including the staged Messenger history restore ([#15](https://github.com/hieu-lee/facebook-cli/pull/15)) and message reply/reactions with idle-tab freezing ([#16](https://github.com/hieu-lee/facebook-cli/pull/16)). Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
+
+### Antivirus false positives
+
+BlindFB is not code-signed yet, and one of its documented features is copying your Facebook session from your own browser with your permission. Some antivirus products flag that combination heuristically — ESET NOD32 has reported the Windows build as `Win64/HackTool.Agent.XJ`, which is a false positive. Every release asset is signed with minisign: verify the `.minisig` beside the archive before running it, and only download from this repository's Releases page. If your antivirus flags BlindFB, add an exclusion for the folder you extracted it to and consider reporting the file as a false positive to your vendor, which is how heuristic detections get removed.
 
 ## Requirements
 

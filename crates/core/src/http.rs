@@ -11,19 +11,21 @@ pub(crate) fn download_body(body: &mut ureq::Body) -> Result<Vec<u8>, ureq::Erro
 
 pub fn agent() -> ureq::Agent {
     static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
-    AGENT.get_or_init(|| {
-        let tls = ureq::tls::TlsConfig::builder()
-            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
-        ureq::Agent::config_builder()
-            .tls_config(tls)
-            .timeout_connect(Some(Duration::from_secs(15)))
-            .timeout_per_read(Some(Duration::from_secs(30)))
-            .timeout_per_write(Some(Duration::from_secs(30)))
-            .timeout_global(Some(Duration::from_secs(15 * 60)))
-            .build()
-            .into()
-    }).clone()
+    AGENT
+        .get_or_init(|| {
+            let tls = ureq::tls::TlsConfig::builder()
+                .root_certs(ureq::tls::RootCerts::PlatformVerifier)
+                .build();
+            ureq::Agent::config_builder()
+                .tls_config(tls)
+                .timeout_connect(Some(Duration::from_secs(15)))
+                .timeout_per_read(Some(Duration::from_secs(30)))
+                .timeout_per_write(Some(Duration::from_secs(30)))
+                .timeout_global(Some(Duration::from_secs(15 * 60)))
+                .build()
+                .into()
+        })
+        .clone()
 }
 
 #[cfg(test)]
@@ -42,7 +44,13 @@ mod tests {
         let first = agent();
         let second = agent();
         assert!(std::ptr::eq(first.config(), second.config()));
-        assert_eq!(first.config().timeout_per_read(), Some(Duration::from_secs(30)));
-        assert_eq!(first.config().timeouts().connect, Some(Duration::from_secs(15)));
+        assert_eq!(
+            first.config().timeout_per_read(),
+            Some(Duration::from_secs(30))
+        );
+        assert_eq!(
+            first.config().timeouts().connect,
+            Some(Duration::from_secs(15))
+        );
     }
 }

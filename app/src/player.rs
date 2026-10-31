@@ -29,7 +29,9 @@ mod platform {
 
     impl Player {
         pub fn new(parent: &impl WxWidget) -> Self {
-            let media = MediaCtrl::builder(parent).with_size(Size::new(320, 120)).build();
+            let media = MediaCtrl::builder(parent)
+                .with_size(Size::new(320, 120))
+                .build();
             media.set_name("Video display");
             media.disable_focus_from_keyboard();
             media.set_can_focus(false);
@@ -50,7 +52,9 @@ mod platform {
         pub fn load_uri(&self, uri: &str) -> bool {
             let loaded = !uri.contains('\0') && self.media.load_uri(uri);
             if !loaded {
-                self.events.borrow_mut().push(PlayerEvent::Error("The media backend could not load this video.".to_owned()));
+                self.events.borrow_mut().push(PlayerEvent::Error(
+                    "The media backend could not load this video.".to_owned(),
+                ));
             }
             loaded
         }
@@ -90,7 +94,7 @@ mod platform {
 #[cfg(target_os = "windows")]
 mod platform {
     use super::*;
-    use serde_json::{Value, json};
+    use serde_json::{json, Value};
     use std::{
         cell::RefCell,
         ffi::c_void,
@@ -100,9 +104,9 @@ mod platform {
         process::{Command, Stdio},
         rc::Rc,
         sync::{
-            Arc, Mutex,
             atomic::{AtomicU64, Ordering},
             mpsc::{self, Receiver, SyncSender},
+            Arc, Mutex,
         },
         thread,
         time::{Duration, Instant},
@@ -175,7 +179,11 @@ mod platform {
                 "file-loaded" => {
                     self.idle = false;
                     self.stopped = false;
-                    self.state = if self.paused { MediaState::Paused } else { MediaState::Playing };
+                    self.state = if self.paused {
+                        MediaState::Paused
+                    } else {
+                        MediaState::Playing
+                    };
                     Some(PlayerEvent::Loaded)
                 }
                 "property-change" => {
@@ -207,7 +215,11 @@ mod platform {
     }
 
     fn milliseconds(value: &Value) -> i64 {
-        value.as_f64().filter(|v| v.is_finite()).map(|v| (v.max(0.0) * 1000.0) as i64).unwrap_or(0)
+        value
+            .as_f64()
+            .filter(|v| v.is_finite())
+            .map(|v| (v.max(0.0) * 1000.0) as i64)
+            .unwrap_or(0)
     }
 
     enum Action {
@@ -324,7 +336,11 @@ mod platform {
             self.0.snapshot.borrow().duration
         }
         pub fn seek(&self, position: i64) -> i64 {
-            if self.send(Action::Seek(position.max(0))) { position.max(0) } else { -1 }
+            if self.send(Action::Seek(position.max(0))) {
+                position.max(0)
+            } else {
+                -1
+            }
         }
         pub fn poll(&self) -> Vec<PlayerEvent> {
             let mut events = Vec::new();
@@ -376,7 +392,12 @@ mod platform {
             }
         };
         let Some(binary) = blindfb_core::mpv::managed_bin() else {
-            report(snapshot, Some(PlayerEvent::Error("The video player is not installed.".into())));
+            report(
+                snapshot,
+                Some(PlayerEvent::Error(
+                    "The video player is not installed.".into(),
+                )),
+            );
             return;
         };
         static SERIAL: AtomicU64 = AtomicU64::new(0);
@@ -419,7 +440,9 @@ mod platform {
                 drop(guard);
                 report(
                     snapshot,
-                    Some(PlayerEvent::Error("The video player could not start.".into())),
+                    Some(PlayerEvent::Error(
+                        "The video player could not start.".into(),
+                    )),
                 );
                 return;
             }
@@ -443,8 +466,15 @@ mod platform {
                 }
             };
             let mut serial = 0;
-            for (id, name) in ["time-pos", "duration", "pause", "idle-active"].iter().enumerate() {
-                send_command(&mut pipe, &mut serial, json!(["observe_property", id, name]))?;
+            for (id, name) in ["time-pos", "duration", "pause", "idle-active"]
+                .iter()
+                .enumerate()
+            {
+                send_command(
+                    &mut pipe,
+                    &mut serial,
+                    json!(["observe_property", id, name]),
+                )?;
             }
             let mut pending = Some(first);
             let mut url = String::new();
@@ -600,17 +630,13 @@ mod platform {
                 Some(PlayerEvent::StateChanged)
             ));
             assert_eq!(state.state, MediaState::Playing);
-            assert!(
-                state
-                    .parse(&json!({"event":"property-change","name":"time-pos","data":1.25}))
-                    .is_none()
-            );
+            assert!(state
+                .parse(&json!({"event":"property-change","name":"time-pos","data":1.25}))
+                .is_none());
             assert_eq!(state.position, 1250);
-            assert!(
-                state
-                    .parse(&json!({"event":"property-change","name":"pause","data":false}))
-                    .is_none()
-            );
+            assert!(state
+                .parse(&json!({"event":"property-change","name":"pause","data":false}))
+                .is_none());
             assert!(matches!(
                 state.parse(&json!({"event":"end-file","reason":"eof"})),
                 Some(PlayerEvent::Finished)
@@ -621,7 +647,9 @@ mod platform {
         #[test]
         fn command_errors_and_load_errors_are_reported_without_private_urls() {
             let mut state = Snapshot::default();
-            assert!(state.parse(&json!({"request_id":1,"error":"success"})).is_none());
+            assert!(state
+                .parse(&json!({"request_id":1,"error":"success"}))
+                .is_none());
             assert!(matches!(
                 state.parse(&json!({"request_id":2,"error":"invalid parameter"})),
                 Some(PlayerEvent::CommandFailed(_))

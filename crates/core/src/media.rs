@@ -8,19 +8,22 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
 
-use crate::Fb;
 use crate::backend::{data_dir, expected_hash, get, sha256_hex};
+use crate::Fb;
 
 const RELEASES: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/";
 /// Facebook changes its pages often and yt-dlp follows; refresh a copy older than this.
 const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 /// mpv handles HD codecs on Windows; other system players prefer H.264 SD streams.
-const FORMAT: &str = if cfg!(windows) { "hd/sd/best[vcodec!=none][acodec!=none]" }
-    else { "sd/hd/best[vcodec!=none][acodec!=none]" };
+const FORMAT: &str = if cfg!(windows) {
+    "hd/sd/best[vcodec!=none][acodec!=none]"
+} else {
+    "sd/hd/best[vcodec!=none][acodec!=none]"
+};
 
 pub struct VideoStream {
     pub url: String,
@@ -28,19 +31,46 @@ pub struct VideoStream {
 }
 
 pub fn parse_stream(output: &str) -> Result<VideoStream, String> {
-    let data: serde_json::Value = serde_json::from_str(output).map_err(|_| "Invalid video metadata")?;
-    let url = data["url"].as_str().filter(|url| playable_url(true, url).is_some()
-        && !url.chars().any(|c| c.is_control() || c.is_whitespace()))
+    let data: serde_json::Value =
+        serde_json::from_str(output).map_err(|_| "Invalid video metadata")?;
+    let url = data["url"]
+        .as_str()
+        .filter(|url| {
+            playable_url(true, url).is_some()
+                && !url.chars().any(|c| c.is_control() || c.is_whitespace())
+        })
         .ok_or("Invalid video stream URL")?;
-    Ok(VideoStream {url: url.to_owned(), title: data["title"].as_str().unwrap_or("").split_whitespace().collect::<Vec<_>>().join(" ")})
+    Ok(VideoStream {
+        url: url.to_owned(),
+        title: data["title"]
+            .as_str()
+            .unwrap_or("")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" "),
+    })
 }
 
 fn video_command(program: &Path, video: &str, cookies: Option<&Path>) -> Command {
     let mut command = Command::new(program);
-    command.args(["--ignore-config", "--no-playlist", "--no-warnings",
-        "--socket-timeout", "15", "--retries", "1", "--extractor-retries", "1",
-        "-f", FORMAT, "--print", r#"{"url":%(url)j,"title":%(title)j}"#]);
-    if let Some(cookies) = cookies { command.arg("--cookies").arg(cookies); }
+    command.args([
+        "--ignore-config",
+        "--no-playlist",
+        "--no-warnings",
+        "--socket-timeout",
+        "15",
+        "--retries",
+        "1",
+        "--extractor-retries",
+        "1",
+        "-f",
+        FORMAT,
+        "--print",
+        r#"{"url":%(url)j,"title":%(title)j}"#,
+    ]);
+    if let Some(cookies) = cookies {
+        command.arg("--cookies").arg(cookies);
+    }
     command.args(["--", video]);
     #[cfg(windows)]
     {
@@ -73,7 +103,13 @@ fn asset_name() -> Option<&'static str> {
 
 /// Where the app-managed yt-dlp lives (whether or not it exists yet).
 pub fn managed_ytdlp() -> Option<PathBuf> {
-    data_dir().map(|dir| dir.join("bin").join(if cfg!(windows) { "yt-dlp.exe" } else { "yt-dlp" }))
+    data_dir().map(|dir| {
+        dir.join("bin").join(if cfg!(windows) {
+            "yt-dlp.exe"
+        } else {
+            "yt-dlp"
+        })
+    })
 }
 
 fn fresh(path: &Path) -> bool {
@@ -88,7 +124,9 @@ fn fresh(path: &Path) -> bool {
 /// refresh fails (offline, GitHub down). Blocking; call from a worker thread.
 pub fn ensure() -> Result<PathBuf, String> {
     static INSTALL: Mutex<()> = Mutex::new(());
-    let _install = INSTALL.lock().map_err(|_| "the video helper installer was interrupted")?;
+    let _install = INSTALL
+        .lock()
+        .map_err(|_| "the video helper installer was interrupted")?;
     let target = managed_ytdlp().ok_or("could not find a place to install the video helper")?;
     if fresh(&target) {
         return Ok(target);
@@ -150,7 +188,10 @@ fn netscape_cookies(cookies: &serde_json::Value) -> String {
         {
             continue;
         }
-        let expires = cookie["expires"].as_f64().filter(|e| *e > 0.0).map_or(0, |e| e as i64);
+        let expires = cookie["expires"]
+            .as_f64()
+            .filter(|e| *e > 0.0)
+            .map_or(0, |e| e as i64);
         let flag = |on: bool| if on { "TRUE" } else { "FALSE" };
         out.push_str(
             &[
@@ -205,7 +246,10 @@ impl Drop for CookieFile {
 }
 
 fn playable_url(success: bool, stdout: &str) -> Option<&str> {
-    let mut lines = stdout.lines().map(str::trim).filter(|line| !line.is_empty());
+    let mut lines = stdout
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty());
     let url = lines.next()?;
     (success
         && lines.next().is_none()
@@ -225,9 +269,13 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
             .open(&file.0)
             .map_err(|e| format!("could not capture the video helper output: {e}"))
     };
-    command.stdin(Stdio::null()).stdout(output_file(&stdout)?).stderr(output_file(&stderr)?);
-    let mut child =
-        command.spawn().map_err(|e| format!("could not start the video helper: {e}"))?;
+    command
+        .stdin(Stdio::null())
+        .stdout(output_file(&stdout)?)
+        .stderr(output_file(&stderr)?);
+    let mut child = command
+        .spawn()
+        .map_err(|e| format!("could not start the video helper: {e}"))?;
     let start = Instant::now();
     let status = loop {
         match child.try_wait() {
@@ -250,7 +298,11 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
             .map_err(|e| format!("could not read the video helper output: {e}"))?;
         Ok(bytes)
     };
-    Ok(Output { status, stdout: read_output(&stdout)?, stderr: read_output(&stderr)? })
+    Ok(Output {
+        status,
+        stdout: read_output(&stdout)?,
+        stderr: read_output(&stderr)?,
+    })
 }
 
 /// Resolve a Facebook video or reel to JSON stream metadata, with the session of the
@@ -278,22 +330,36 @@ pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String
         if let Ok(mut info) = parse_stream(&stdout) {
             // The signed-in reels page may omit a title that the public video page exposes.
             if generic_title(&info.title) {
-                if let Ok(public) = run_helper(&mut video_command(&program, video, None), Duration::from_secs(15)) {
+                if let Ok(public) = run_helper(
+                    &mut video_command(&program, video, None),
+                    Duration::from_secs(15),
+                ) {
                     if public.status.success() {
-                        if let Ok(metadata) = parse_stream(&String::from_utf8_lossy(&public.stdout)) {
-                            if !generic_title(&metadata.title) { info.title = metadata.title; }
+                        if let Ok(metadata) = parse_stream(&String::from_utf8_lossy(&public.stdout))
+                        {
+                            if !generic_title(&metadata.title) {
+                                info.title = metadata.title;
+                            }
                         }
                     }
                 }
-                if generic_title(&info.title) { info.title.clear(); }
+                if generic_title(&info.title) {
+                    info.title.clear();
+                }
             }
             return Ok(serde_json::json!({"url":info.url,"title":info.title}).to_string());
         }
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let reason =
-        stderr.lines().rev().find(|line| !line.trim().is_empty()).unwrap_or("no video found");
-    Err(format!("Facebook did not give a playable video. {}", reason.trim_start_matches("ERROR: ")))
+    let reason = stderr
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("no video found");
+    Err(format!(
+        "Facebook did not give a playable video. {}",
+        reason.trim_start_matches("ERROR: ")
+    ))
 }
 
 pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
@@ -306,7 +372,10 @@ mod tests {
 
     #[test]
     fn video_metadata_keeps_the_title_and_requires_one_https_stream() {
-        let info = parse_stream(r#"{"url":"https://video.fbcdn.net/movie.mp4","title":"Dedicated To Bart Simpson"}"#).unwrap();
+        let info = parse_stream(
+            r#"{"url":"https://video.fbcdn.net/movie.mp4","title":"Dedicated To Bart Simpson"}"#,
+        )
+        .unwrap();
         assert_eq!(info.title, "Dedicated To Bart Simpson");
         assert_eq!(info.url, "https://video.fbcdn.net/movie.mp4");
         assert!(parse_stream(r#"{"url":"file:///secret","title":"Title"}"#).is_err());
@@ -316,11 +385,15 @@ mod tests {
 
     #[test]
     fn only_facebook_pages_reach_the_helper() {
-        assert!(is_facebook_url("https://www.facebook.com/reel/1413444364110358/"));
+        assert!(is_facebook_url(
+            "https://www.facebook.com/reel/1413444364110358/"
+        ));
         assert!(is_facebook_url("https://m.facebook.com/page/videos/1/"));
         assert!(!is_facebook_url("https://www.facebook.com.evil/reel/1"));
         assert!(!is_facebook_url("file:///etc/passwd"));
-        assert!(!is_facebook_url("https://www.facebook.com/reel/1 --exec calc"));
+        assert!(!is_facebook_url(
+            "https://www.facebook.com/reel/1 --exec calc"
+        ));
     }
 
     #[test]
@@ -369,11 +442,18 @@ mod tests {
     fn session_file_is_private_and_removed_on_drop() {
         let file = CookieFile::create(&std::env::temp_dir(), "cookies").unwrap();
         let path = file.0.clone();
-        assert!(fs::OpenOptions::new().write(true).create_new(true).open(&path).is_err());
+        assert!(fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .is_err());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+            assert_eq!(
+                fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
         }
         drop(file);
         assert!(!path.exists());
@@ -384,7 +464,12 @@ mod tests {
         #[cfg(windows)]
         let mut command = {
             let mut command = Command::new("powershell.exe");
-            command.args(["-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 10"]);
+            command.args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Sleep -Seconds 10",
+            ]);
             command
         };
         #[cfg(not(windows))]
@@ -394,9 +479,9 @@ mod tests {
             command
         };
         let start = std::time::Instant::now();
-        assert!(
-            run_helper(&mut command, Duration::from_millis(50)).unwrap_err().contains("timed out")
-        );
+        assert!(run_helper(&mut command, Duration::from_millis(50))
+            .unwrap_err()
+            .contains("timed out"));
         assert!(start.elapsed() < Duration::from_secs(5));
     }
 
@@ -405,7 +490,11 @@ mod tests {
         #[cfg(windows)]
         let mut command = {
             let mut command = Command::new("cmd.exe");
-            command.args(["/D", "/C", "echo https://video.fbcdn.net/video.mp4& exit /b 1"]);
+            command.args([
+                "/D",
+                "/C",
+                "echo https://video.fbcdn.net/video.mp4& exit /b 1",
+            ]);
             command
         };
         #[cfg(not(windows))]
@@ -416,6 +505,8 @@ mod tests {
         };
         let output = run_helper(&mut command, Duration::from_secs(5)).unwrap();
         assert!(!output.status.success());
-        assert!(String::from_utf8_lossy(&output.stdout).contains("https://video.fbcdn.net/video.mp4"));
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("https://video.fbcdn.net/video.mp4")
+        );
     }
 }

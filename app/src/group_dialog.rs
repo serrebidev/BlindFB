@@ -2,9 +2,9 @@
 //! dialog. Opened by activating a group in the Groups list. Enter on a
 //! post opens it in the post reader; members carry the usual people
 //! actions (profile, message, friend request, web) on their context menu.
-use super::{Job, Tag, Task, Ui, View, load_view, open_url};
+use super::{load_view, open_url, Job, Tag, Task, Ui, View};
 use blindfb_core::fb::{
-    Record, friend_add_args, members_args, parse_feed, parse_records, posts_args,
+    friend_add_args, members_args, parse_feed, parse_records, posts_args, Record,
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -49,10 +49,13 @@ enum Pending {
 /// missing the field that action needs (so the window stays open and says why).
 fn member_view_action(id: i32, name: &str, url: &str) -> Option<Pending> {
     match id {
-        ID_MEMBER_PROFILE if !url.is_empty() => Some(Pending::View(View::ProfileOf(url.to_owned()))),
-        ID_MEMBER_MESSAGE if !name.is_empty() => {
-            Some(Pending::View(View::ChatWith(name.to_owned(), name.to_owned())))
+        ID_MEMBER_PROFILE if !url.is_empty() => {
+            Some(Pending::View(View::ProfileOf(url.to_owned())))
         }
+        ID_MEMBER_MESSAGE if !name.is_empty() => Some(Pending::View(View::ChatWith(
+            name.to_owned(),
+            name.to_owned(),
+        ))),
         _ => None,
     }
 }
@@ -78,12 +81,16 @@ impl GroupWindow {
                 Some(pending) => self.state.lock().unwrap().pending = Some(pending),
                 // The row lacks the field this action needs; say so instead of
                 // closing the window onto nothing.
-                None if id == ID_MEMBER_PROFILE => self.note("This member row has no profile link."),
+                None if id == ID_MEMBER_PROFILE => {
+                    self.note("This member row has no profile link.")
+                }
                 None => self.note("This member row has no name, so its chat cannot open."),
             },
             ID_MEMBER_FRIEND => {
                 if url.is_empty() {
-                    self.note("This member row has no profile link, so a friend request cannot be sent.");
+                    self.note(
+                        "This member row has no profile link, so a friend request cannot be sent.",
+                    );
                 } else {
                     self.note(&format!("Sending a friend request to {name}…"));
                     ui.send(Job {
@@ -117,6 +124,7 @@ impl GroupState {
 
 pub(super) fn open(ui: &Ui, record: &Record) {
     if ui.group_window.lock().unwrap().is_some() {
+        ui.status("A group window is already open. Close it to open another group.");
         return;
     }
     let name = record.field(0).to_owned();
@@ -140,14 +148,19 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     members.set_name(
         "Members of this group. Applications or Shift+F10 for profile, message and friend actions",
     );
-    let status_label = StaticText::builder(&dialog).with_label("Group status").build();
+    let status_label = StaticText::builder(&dialog)
+        .with_label("Group status")
+        .build();
     let status = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ReadOnly)
         .build();
     status.set_name("Group status");
     status.enable_focus_from_keyboard();
     status.change_value("Loading posts and members…");
-    let close = Button::builder(&dialog).with_id(ID_CANCEL).with_label("C&lose").build();
+    let close = Button::builder(&dialog)
+        .with_id(ID_CANCEL)
+        .with_label("C&lose")
+        .build();
     root.add(&posts_label, 0, SizerFlag::All, 4);
     root.add(&posts, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&members_label, 0, SizerFlag::All, 4);
@@ -191,10 +204,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     let d = dialog;
     dialog.on_char_hook(move |event| {
         if let WindowEventData::Keyboard(key) = &event {
-            if matches!(
-                key.get_key_code(),
-                Some(WXK_RETURN | WXK_NUMPAD_ENTER)
-            ) {
+            if matches!(key.get_key_code(), Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
                 if w.posts.has_focus() {
                     event.skip(false);
                     w.open_selected_post(&d);
@@ -208,6 +218,8 @@ pub(super) fn open(ui: &Ui, record: &Record) {
                     });
                     if w.state.lock().unwrap().pending.is_some() {
                         d.end_modal(ID_OK);
+                    } else if w.selected_member().is_some() {
+                        w.note("This member row has no profile link.");
                     }
                     return;
                 }
@@ -222,10 +234,22 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             return;
         }
         let mut menu = Menu::builder()
-            .append_item(ID_MEMBER_PROFILE, "View &profile", "Open this member's profile")
+            .append_item(
+                ID_MEMBER_PROFILE,
+                "View &profile",
+                "Open this member's profile",
+            )
             .append_item(ID_MEMBER_MESSAGE, "&Message", "Chat with this member")
-            .append_item(ID_MEMBER_FRIEND, "Add &friend", "Send this member a friend request")
-            .append_item(ID_MEMBER_WEB, "Open on &Facebook", "Open this member's profile on the web")
+            .append_item(
+                ID_MEMBER_FRIEND,
+                "Add &friend",
+                "Send this member a friend request",
+            )
+            .append_item(
+                ID_MEMBER_WEB,
+                "Open on &Facebook",
+                "Open this member's profile on the web",
+            )
             .build();
         w.members.popup_menu(&mut menu, None);
     });
@@ -270,13 +294,9 @@ impl GroupWindow {
         };
         let target = {
             let state = self.state.lock().unwrap();
-            state
-                .posts
-                .get(index as usize)
-                .and_then(|record| {
-                    super::post_target(&View::PostsOf(state.url.clone()), record)
-                        .map(str::to_owned)
-                })
+            state.posts.get(index as usize).and_then(|record| {
+                super::post_target(&View::PostsOf(state.url.clone()), record).map(str::to_owned)
+            })
         };
         match target {
             Some(target) => {
@@ -331,7 +351,9 @@ fn fill_members(window: &GroupWindow, raw: &str) {
         if info.is_empty() {
             window.members.append(record.field(0));
         } else {
-            window.members.append(&format!("{} — {}", record.field(0), info));
+            window
+                .members
+                .append(&format!("{} — {}", record.field(0), info));
         }
     }
     if !records.is_empty() {

@@ -8,7 +8,9 @@ mod player;
 use player::{Player, PlayerEvent};
 
 fn main() {
-    let target = std::env::args().nth(1).expect("provide a Facebook video or reel URL");
+    let target = std::env::args()
+        .nth(1)
+        .expect("provide a Facebook video or reel URL");
     let fb = blindfb_core::Fb::discover().expect("install the Facebook backend first");
     let page = format!("blindfb-playercheck-{}", std::process::id());
     let detail = blindfb_core::posts::load(&fb, &page, &target).expect("read video");
@@ -64,9 +66,15 @@ fn main() {
             } else if phase.get() == 3 && checked_media.get_state() == MediaState::Stopped {
                 assert!(checked_media.play());
                 phase.set(4);
-            } else if phase.get() == 4 && checked_media.tell() >= 1000 && checked_media.get_state() == MediaState::Playing {
+            } else if phase.get() == 4
+                && checked_media.tell() >= 1000
+                && checked_media.get_state() == MediaState::Playing
+            {
                 result.set(true);
-                println!("PASS: native controls player advanced; duration {} ms", checked_media.length());
+                println!(
+                    "PASS: native controls player advanced; duration {} ms",
+                    checked_media.length()
+                );
                 ticking.stop();
                 checked_media.shutdown();
                 frame.close(true);
@@ -82,7 +90,10 @@ fn main() {
             }
         });
         let closing_media = media.clone();
-        frame.on_destroy(move |_| { ticking.stop(); closing_media.shutdown(); });
+        frame.on_destroy(move |_| {
+            ticking.stop();
+            closing_media.shutdown();
+        });
         frame.show(true);
         assert!(media.load_uri(&stream), "native player rejected stream");
         timer.start(250, false);

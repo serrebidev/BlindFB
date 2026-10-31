@@ -25,8 +25,10 @@ impl ReelCache {
     }
 
     pub fn plan(&mut self, targets: &[String], now: Instant) -> Vec<String> {
-        self.ready.retain(|_, (_, at)| now.saturating_duration_since(*at) < STREAM_AGE);
-        self.attempted.retain(|_, at| now.saturating_duration_since(*at) < RETRY_DELAY);
+        self.ready
+            .retain(|_, (_, at)| now.saturating_duration_since(*at) < STREAM_AGE);
+        self.attempted
+            .retain(|_, at| now.saturating_duration_since(*at) < RETRY_DELAY);
         let mut jobs = Vec::new();
         for target in targets {
             if self.pending.len() >= 2 {
@@ -68,7 +70,10 @@ mod tests {
         assert_eq!(cache.plan(&targets, now), ["first", "next"]);
         assert!(cache.plan(&targets, now).is_empty());
         cache.finish("first", &Ok("https://video.example/first".into()), now);
-        assert_eq!(cache.ready("first", now), Some("https://video.example/first"));
+        assert_eq!(
+            cache.ready("first", now),
+            Some("https://video.example/first")
+        );
         assert_eq!(cache.plan(&targets, now), ["later"]);
     }
 
@@ -79,14 +84,21 @@ mod tests {
         let targets = vec!["first".into()];
         cache.plan(&targets, now);
         cache.finish("first", &Err("offline".into()), now);
-        assert!(cache.plan(&targets, now + Duration::from_secs(1)).is_empty());
-        assert_eq!(cache.plan(&targets, now + Duration::from_secs(31)), ["first"]);
+        assert!(cache
+            .plan(&targets, now + Duration::from_secs(1))
+            .is_empty());
+        assert_eq!(
+            cache.plan(&targets, now + Duration::from_secs(31)),
+            ["first"]
+        );
         cache.finish(
             "first",
             &Ok("https://video.example/first".into()),
             now + Duration::from_secs(31),
         );
-        assert!(cache.ready("first", now + Duration::from_secs(332)).is_none());
+        assert!(cache
+            .ready("first", now + Duration::from_secs(332))
+            .is_none());
         assert!(!ReelCache::default().is_preparing("first"));
     }
 }

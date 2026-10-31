@@ -1,6 +1,6 @@
 //! Recommended reels and exact multi-reel notifications, using isolated read-only pages.
-use crate::{Fb, Record, posts};
-use serde_json::{Value, json};
+use crate::{posts, Fb, Record};
+use serde_json::{json, Value};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
@@ -10,7 +10,12 @@ const BATCH_SIZE: usize = 20;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ReelSource {
     Recommended,
-    Notification { target: String, author: String, urls: Vec<String>, account: Option<String> },
+    Notification {
+        target: String,
+        author: String,
+        urls: Vec<String>,
+        account: Option<String>,
+    },
 }
 
 impl ReelSource {
@@ -30,7 +35,11 @@ pub fn notification_source(record: &Record) -> Option<ReelSource> {
     let metadata = serde_json::from_str::<Value>(record.field(4)).unwrap_or(Value::Null);
     Some(ReelSource::Notification {
         target: crate::fb::web_url(record.field(3)),
-        author: text.split(" posted ").next().unwrap_or("this account").to_owned(),
+        author: text
+            .split(" posted ")
+            .next()
+            .unwrap_or("this account")
+            .to_owned(),
         urls: metadata["urls"]
             .as_array()
             .into_iter()
@@ -38,7 +47,10 @@ pub fn notification_source(record: &Record) -> Option<ReelSource> {
             .filter_map(|value| value.as_str().filter(|url| is_reel(url)).map(str::to_owned))
             .take(20)
             .collect(),
-        account: metadata["account"].as_str().filter(|url| account_url(url)).map(str::to_owned),
+        account: metadata["account"]
+            .as_str()
+            .filter(|url| account_url(url))
+            .map(str::to_owned),
     })
 }
 
@@ -56,7 +68,9 @@ fn is_reel(target: &str) -> bool {
 pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
     let value: Value =
         serde_json::from_str(output).map_err(|_| "Facebook returned an unreadable reels list")?;
-    let rows = value["rows"].as_array().ok_or("Facebook returned no reels list")?;
+    let rows = value["rows"]
+        .as_array()
+        .ok_or("Facebook returned no reels list")?;
     let mut seen = std::collections::HashSet::new();
     let mut records = Vec::new();
     for row in rows {
@@ -74,9 +88,15 @@ pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
             String::new(),
             row["text"].as_str().unwrap_or("Reel").to_owned(),
         ];
-        records.push(Record { raw: fields.join("\t"), fields });
+        records.push(Record {
+            raw: fields.join("\t"),
+            fields,
+        });
     }
-    let notice = value["notice"].as_str().filter(|text| !text.is_empty()).map(str::to_owned);
+    let notice = value["notice"]
+        .as_str()
+        .filter(|text| !text.is_empty())
+        .map(str::to_owned);
     Ok((records, notice))
 }
 
@@ -110,7 +130,10 @@ pub fn page_name(source: &ReelSource) -> String {
 }
 
 pub fn close_all(fb: &Fb) {
-    let pages = PAGES.lock().map(|mut pages| std::mem::take(&mut *pages)).unwrap_or_default();
+    let pages = PAGES
+        .lock()
+        .map(|mut pages| std::mem::take(&mut *pages))
+        .unwrap_or_default();
     for (_, page) in pages {
         let _ = fb.run(&["page", &page, "close"]);
     }
@@ -123,12 +146,20 @@ fn owner_reels(url: &str) -> Option<String> {
     if !crate::media::is_facebook_url(url) {
         return None;
     }
-    let rest = ["https://www.facebook.com/", "https://facebook.com/", "https://m.facebook.com/"]
-        .iter()
-        .find_map(|prefix| url.strip_prefix(prefix))?;
+    let rest = [
+        "https://www.facebook.com/",
+        "https://facebook.com/",
+        "https://m.facebook.com/",
+    ]
+    .iter()
+    .find_map(|prefix| url.strip_prefix(prefix))?;
     let path = rest.split(['?', '#']).next()?.trim_end_matches('/');
     if path == "profile.php" {
-        let id = rest.split_once('?')?.1.split('&').find_map(|pair| pair.strip_prefix("id="))?;
+        let id = rest
+            .split_once('?')?
+            .1
+            .split('&')
+            .find_map(|pair| pair.strip_prefix("id="))?;
         return (!id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()))
             .then(|| format!("https://www.facebook.com/profile.php?id={id}&sk=reels_tab"));
     }
@@ -142,7 +173,9 @@ fn owner_reels(url: &str) -> Option<String> {
 pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String> {
     // Serialize browsing jobs, with a separate cursor for each cached source.
     static BROWSE: Mutex<()> = Mutex::new(());
-    let _browse = BROWSE.lock().map_err(|_| "Reel loading was interrupted. Refresh to retry.")?;
+    let _browse = BROWSE
+        .lock()
+        .map_err(|_| "Reel loading was interrupted. Refresh to retry.")?;
     let page = page_name(source);
     let key = source_id(source).to_string();
     let evicted = {
@@ -171,17 +204,33 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
         let _ = fb.run(&["page", &page, "close"]);
     }
     if append {
-        return eval(fb, &page, &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)));
+        return eval(
+            fb,
+            &page,
+            &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)),
+        );
     }
     let (url, mode, notice) = match source {
-        ReelSource::Recommended => {
-            ("https://www.facebook.com/reel/".to_owned(), "recommended", String::new())
-        }
-        ReelSource::Notification { target, author, urls: saved_urls, account: saved_account } => {
+        ReelSource::Recommended => (
+            "https://www.facebook.com/reel/".to_owned(),
+            "recommended",
+            String::new(),
+        ),
+        ReelSource::Notification {
+            target,
+            author,
+            urls: saved_urls,
+            account: saved_account,
+        } => {
             if !is_reel(target) {
                 return Err("This notification has no valid reel link".to_owned());
             }
-            fb.run(&["page", &page, "open", "https://www.facebook.com/notifications/"])?;
+            fb.run(&[
+                "page",
+                &page,
+                "open",
+                "https://www.facebook.com/notifications/",
+            ])?;
             initialize(fb, &page)?;
             let metadata: Value = if saved_urls.len() > 1 {
                 json!({"urls":saved_urls,"account":saved_account})
@@ -204,7 +253,11 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
             if urls.len() > 1
                 && urls.iter().any(|url| {
                     url.trim_end_matches('/')
-                        == target.split('?').next().unwrap_or(target).trim_end_matches('/')
+                        == target
+                            .split('?')
+                            .next()
+                            .unwrap_or(target)
+                            .trim_end_matches('/')
                 })
             {
                 eval(
@@ -229,7 +282,12 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
                 .as_str()
                 .filter(|url| account_url(url))
                 .map(str::to_owned)
-                .or_else(|| saved_account.as_ref().filter(|url| account_url(url)).cloned());
+                .or_else(|| {
+                    saved_account
+                        .as_ref()
+                        .filter(|url| account_url(url))
+                        .cloned()
+                });
             if account.is_none() {
                 let preview = format!("blindfb-reel-preview-{}", std::process::id());
                 let detail = posts::load(fb, &preview, target)
@@ -267,7 +325,11 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
             json!(notice)
         ),
     )?;
-    eval(fb, &page, &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)))
+    eval(
+        fb,
+        &page,
+        &format!("window.__blindfbReels.more({},{BATCH_SIZE})", json!(key)),
+    )
 }
 
 #[cfg(test)]
@@ -305,7 +367,10 @@ mod tests {
             panic!("expected a notification source")
         };
         assert_eq!(urls.len(), 3);
-        assert_eq!(account.as_deref(), Some("https://www.facebook.com/verge/reels/"));
+        assert_eq!(
+            account.as_deref(),
+            Some("https://www.facebook.com/verge/reels/")
+        );
     }
     #[test]
     fn reel_rows_keep_whole_captions_and_reject_unsafe_links() {
@@ -341,6 +406,8 @@ mod tests {
         assert_ne!(recommended, note);
         assert_eq!(recommended, page_name(&ReelSource::Recommended));
         assert!(note.len() <= 32);
-        assert!(note.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-'));
+        assert!(note
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-'));
     }
 }
