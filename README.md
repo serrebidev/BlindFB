@@ -25,10 +25,11 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - Groups you belong to, with their posts read and answered the same way as the feed.
 - Your own profile posts, and deleting your own posts.
 - Post to your profile with an audience (public, friends, only me) and optional images.
-- Search people, pages, groups, posts and events.
+- Search people, pages, groups, posts and events from one dialog with a filter combo box.
+- Marketplace: browse the listings feed (Enter opens a listing in your browser, Message seller from the context menu) and sell with photos or video.
 - Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored.
 - OCR an image file with the OCR engine built into your operating system.
-- F1 lists the keyboard commands; Ctrl+1 to Ctrl+8 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
+- F1 lists the keyboard commands; Ctrl+1 to Ctrl+9 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
 - Help, Check for updates downloads the new release, verifies its minisign signature, installs it and restarts.
 
 Some things the `fb` backend cannot do are linked out instead of faked: voice and video calls open the conversation in Messenger on the web, adding or removing friends opens the person's real profile, and posting into a group opens the group's web page. Photo albums open in your browser. A few feed rows (often ads and suggestions) never expose a link to Facebook's own scripts; BlindFB marks those "(no link)" and cannot open them.
@@ -42,7 +43,7 @@ For a version-by-version history, see the [changelog](CHANGELOG.md).
 2. Extract or open it and run BlindFB. There is nothing else to install: on first run BlindFB downloads the matching `fb` backend release, verifies its SHA-256 checksum, and keeps it in its own app-data folder.
 3. Sign in: BlindFB asks which browser to copy your Facebook session from, with your default browser marked. Pick the browser you are signed in to Facebook in, or sign in directly in the separate browser window BlindFB offers.
 
-The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.12`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.12): upstream 0.1.5 plus the BlindFB work that is in review upstream, including the staged Messenger history restore ([#15](https://github.com/hieu-lee/facebook-cli/pull/15)) that also finds restore entries shown as plain links or long banners, message reply/reactions with idle-tab freezing ([#16](https://github.com/hieu-lee/facebook-cli/pull/16)), full search (every filter type), group join/leave with membership-question answers, and Marketplace selling. Verified badges read as just "Verified". Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
+The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.14`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.14): upstream 0.1.5 plus the BlindFB work that is in review upstream, including the Messenger history restore that finds the real restore prompt — a single PIN field that submits itself when the PIN is complete ([#20](https://github.com/hieu-lee/facebook-cli/pull/20), on top of the staged restore in [#15](https://github.com/hieu-lee/facebook-cli/pull/15) and the link and long-banner entries in [#18](https://github.com/hieu-lee/facebook-cli/pull/18)), message reply/reactions with idle-tab freezing ([#16](https://github.com/hieu-lee/facebook-cli/pull/16)), full search (every filter type), group join/leave with membership-question answers, and Marketplace browsing and selling. Verified badges read as just "Verified". Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
 
 ### Antivirus false positives
 

@@ -34,10 +34,10 @@ use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
     chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
     group_apply_args, group_join_args, group_leave_args, groups_args, listing_message_args,
-    msg_react_args, notifs_args, parse_feed, parse_notifications, parse_records, post_args,
-    posts_args, profile_args, profile_url_from_post_url, react_args, read_args, recent_feed_args,
-    reply_args, search_args, sell_args, send_args, thread_url_from_profile_url, unsend_args,
-    view_args, web_url, Fb, Record,
+    marketplace_args, msg_react_args, notifs_args, parse_feed, parse_notifications, parse_records,
+    post_args, posts_args, profile_args, profile_url_from_post_url, react_args, read_args,
+    recent_feed_args, reply_args, search_args, sell_args, send_args, thread_url_from_profile_url,
+    unsend_args, view_args, web_url, Fb, Record,
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
@@ -55,6 +55,7 @@ const ID_GROUPS_VIEW: i32 = 10008;
 const ID_RECENT_FEED: i32 = 10009;
 const ID_MORE: i32 = 10016;
 const ID_REELS: i32 = 10017;
+const ID_MARKETPLACE: i32 = 10018;
 const ID_WEB_POST: i32 = 10080;
 const ID_WEB_PERSON: i32 = 10081;
 const ID_WEB_CHAT: i32 = 10082;
@@ -114,6 +115,7 @@ enum View {
     MyPosts,
     Chats,
     Groups,
+    Marketplace,
     SearchResults,
     PostsOf(String),
     CommentsOf(String),
@@ -135,6 +137,7 @@ impl View {
             View::MyPosts => "My posts".to_owned(),
             View::Chats => "Chats".to_owned(),
             View::Groups => "My groups".to_owned(),
+            View::Marketplace => "Marketplace".to_owned(),
             View::SearchResults => "Search results".to_owned(),
             View::PostsOf(who) => format!("Posts by {who}"),
             View::CommentsOf(_) => "Post and comments".to_owned(),
@@ -446,6 +449,7 @@ fn run() {
         "Groups",
         "Feeds (most recent)",
         "Reels",
+        "Marketplace",
     ] {
         views.append(name);
     }
@@ -624,6 +628,7 @@ fn run() {
                 5 => View::Groups,
                 6 => View::RecentFeed,
                 7 => View::Reels(ReelSource::Recommended),
+                8 => View::Marketplace,
                 _ => View::Chats,
             };
             load_view(&ui_views, view);
@@ -903,7 +908,8 @@ fn spawn_worker(
                 // The backend gives every command its own tab, so reads can
                 // run side by side — two at a time, so a burst of reads
                 // cannot pin the CPU (see ReadGate).
-                let (args, tag, done, gate) = (args.clone(), job.tag, done.clone(), read_gate.clone());
+                let (args, tag, done, gate) =
+                    (args.clone(), job.tag, done.clone(), read_gate.clone());
                 thread::spawn(move || {
                     let _permit = gate.acquire();
                     let result = fb.run(&refs(&args));
@@ -1152,6 +1158,11 @@ fn build_menus(frame: &Frame) {
             ID_REELS,
             "Re&els\tCtrl+8",
             "Browse reels with the accessible player",
+        )
+        .append_item(
+            ID_MARKETPLACE,
+            "&Marketplace\tCtrl+9",
+            "Browse Marketplace listings",
         )
         .append_item(
             ID_UNREAD_CHATS,
@@ -1431,6 +1442,7 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::MyPosts => posts_args("me", PAGE, true),
         View::Chats => chats_args(PAGE, false),
         View::Groups => groups_args(PAGE),
+        View::Marketplace => marketplace_args(PAGE),
         View::SearchResults | View::Reels(_) => return None,
         View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
@@ -1657,6 +1669,7 @@ fn more_args(
         | View::Friends
         | View::Chats
         | View::SearchResults
+        | View::Marketplace
         | View::Groups => {
             let mut args = previous.to_vec();
             let index = args.iter().position(|arg| arg == "-n")? + 1;
@@ -1775,8 +1788,12 @@ fn list_label(view: &View, record: &Record) -> String {
 }
 
 fn display_for(view: &View, record: &Record) -> String {
-    if *view == View::SearchResults && record.fields.len() >= 3 && record.fields.len() < 5 {
-        // Search rows read "Name — info"; the raw line would read the ref.
+    if matches!(view, View::SearchResults | View::Marketplace)
+        && record.fields.len() >= 3
+        && record.fields.len() < 5
+    {
+        // Search and listing rows read "Name — info"; the raw line would
+        // read the ref.
         let info = record.field(2);
         if info.is_empty() {
             return record.field(0).to_owned();
@@ -2237,6 +2254,7 @@ fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
         View::Notifications => Some("Load more notifications"),
         View::Friends => Some("Load more friends"),
         View::Groups => Some("Load more groups"),
+        View::Marketplace => Some("Load more listings"),
         View::Chats => Some("Load more conversations"),
         _ => None,
     }
@@ -2905,7 +2923,7 @@ fn open_selected(ui: &Ui) {
             return;
         }
     }
-    if view == View::SearchResults {
+    if matches!(view, View::SearchResults | View::Marketplace) {
         open_search_result(ui, &record);
         return;
     }
@@ -3445,6 +3463,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             load_view(ui, View::Reels(ReelSource::Recommended));
             ui.items.set_focus();
         }
+        ID_MARKETPLACE => load_view(ui, View::Marketplace),
         ID_WEB_POST => open_post_web(ui),
         ID_WEB_PERSON => open_person_web(ui),
         ID_WEB_CHAT => open_chat_web(ui),
@@ -3548,7 +3567,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 "Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
-                 Ctrl+1 through Ctrl+8: switch views. Ctrl+8 opens Reels. F5: refresh. Ctrl+L: load more.\n\
+                 Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. F5: refresh. Ctrl+L: load more.\n\
                  Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n\
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
@@ -3629,7 +3648,7 @@ fn show_item_menu(ui: &Ui) {
         }
     };
     match view {
-        View::SearchResults => {
+        View::SearchResults | View::Marketplace => {
             let (_, record) = selected(ui).unwrap();
             match record.field(3) {
                 "group" => add(
@@ -4077,32 +4096,24 @@ fn sell_dialog(ui: &Ui) {
     });
 }
 
-fn search_dialog(ui: &Ui) {
-    let Some(query) = prompt_text(&ui.frame, "Search for:", "Search Facebook") else {
-        return;
-    };
-    if query.trim().is_empty() {
-        return;
-    }
-    let labels = [
-        "Everything",
-        "Posts",
-        "People",
-        "Friends",
-        "Photos",
-        "Videos",
-        "Pages",
-        "Places",
-        "Groups",
-        "Events",
-        "Marketplace",
-    ];
-    let dialog =
-        SingleChoiceDialog::builder(&ui.frame, "Search in:", "Search Facebook", &labels).build();
-    if dialog.show_modal() != ID_OK {
-        return;
-    }
-    let kind = match dialog.get_selection() {
+/// The search filters, in combo-box order. Index 0 is the unfiltered
+/// "top" search (no --type).
+const SEARCH_FILTERS: [&str; 11] = [
+    "Everything",
+    "Posts",
+    "People",
+    "Friends",
+    "Photos",
+    "Videos",
+    "Pages",
+    "Places",
+    "Groups",
+    "Events",
+    "Marketplace",
+];
+
+fn search_kind(index: u32) -> Option<&'static str> {
+    match index {
         0 => None,
         1 => Some("posts"),
         2 => Some("people"),
@@ -4114,9 +4125,68 @@ fn search_dialog(ui: &Ui) {
         8 => Some("groups"),
         9 => Some("events"),
         10 => Some("marketplace"),
-        _ => return,
-    };
-    load_args(ui, View::SearchResults, search_args(&query, kind, PAGE));
+        _ => None,
+    }
+}
+
+/// One dialog for search (Brandon, 2026-10-31: "Search can be only one
+/// dialogue with filter combo box") — the query field and the filter
+/// combo together, replacing the old prompt-then-pick-list two-step.
+fn search_dialog(ui: &Ui) {
+    let dialog = Dialog::builder(&ui.frame, "Search Facebook")
+        .with_size(460, 210)
+        .with_style(DialogStyle::DefaultDialogStyle)
+        .build();
+    dialog.set_escape_id(ID_CANCEL);
+    let root = BoxSizer::builder(Orientation::Vertical).build();
+    let query_label = StaticText::builder(&dialog)
+        .with_label("Search &for:")
+        .build();
+    let query = TextCtrl::builder(&dialog)
+        .with_style(TextCtrlStyle::ProcessEnter)
+        .build();
+    query.set_name("Search for");
+    let filter_label = StaticText::builder(&dialog)
+        .with_label("Search &in:")
+        .build();
+    let filter = ComboBox::builder(&dialog)
+        .with_style(ComboBoxStyle::ReadOnly)
+        .with_string_choices(&SEARCH_FILTERS)
+        .build();
+    filter.set_name("Search in");
+    filter.set_selection(0);
+    let buttons = BoxSizer::builder(Orientation::Horizontal).build();
+    let search = Button::builder(&dialog)
+        .with_id(ID_OK)
+        .with_label("&Search")
+        .build();
+    search.set_name("Search");
+    search.set_default();
+    let cancel = Button::builder(&dialog)
+        .with_id(ID_CANCEL)
+        .with_label("Cancel")
+        .build();
+    cancel.set_name("Cancel");
+    buttons.add(&search, 0, SizerFlag::All, 4);
+    buttons.add(&cancel, 0, SizerFlag::All, 4);
+    root.add(&query_label, 0, SizerFlag::All, 4);
+    root.add(&query, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&filter_label, 0, SizerFlag::All, 4);
+    root.add(&filter, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add_sizer(&buttons, 0, SizerFlag::Expand, 4);
+    dialog.set_sizer(root, true);
+    query.set_focus();
+    if dialog.show_modal() != ID_OK {
+        dialog.destroy();
+        return;
+    }
+    let text = query.get_value();
+    let kind = filter.get_selection().and_then(search_kind);
+    dialog.destroy();
+    if text.trim().is_empty() {
+        return;
+    }
+    load_args(ui, View::SearchResults, search_args(&text, kind, PAGE));
 }
 
 fn ocr_dialog(ui: &Ui) {
@@ -4611,6 +4681,63 @@ mod tests {
             "Error: Messenger history prompt blocked input; use `fb unlock`"
         ));
         assert!(!needs_messenger_unlock("network error"));
+    }
+
+    #[test]
+    fn search_filter_combo_maps_every_label_to_a_backend_type() {
+        assert_eq!(SEARCH_FILTERS.len(), 11);
+        assert_eq!(SEARCH_FILTERS[0], "Everything");
+        assert_eq!(SEARCH_FILTERS[10], "Marketplace");
+        assert_eq!(search_kind(0), None);
+        assert_eq!(search_kind(1), Some("posts"));
+        assert_eq!(search_kind(3), Some("friends"));
+        assert_eq!(search_kind(10), Some("marketplace"));
+        for i in 0..SEARCH_FILTERS.len() as u32 {
+            // Every combo entry except Everything names a real --type.
+            assert!(i == 0 || search_kind(i).is_some(), "filter {i} unmapped");
+        }
+    }
+
+    #[test]
+    fn marketplace_rows_read_like_search_listings() {
+        let listing = Record {
+            fields: vec![
+                "Wooden chair".to_owned(),
+                "https://www.facebook.com/marketplace/item/555".to_owned(),
+                "$40 · Vancouver".to_owned(),
+                "listing".to_owned(),
+            ],
+            raw: String::new(),
+        };
+        assert_eq!(
+            display_for(&View::Marketplace, &listing),
+            "Wooden chair — $40 · Vancouver"
+        );
+        // Listings are not post targets: Enter opens them in the browser
+        // through the search-result dispatcher, and the row must not be
+        // badged "(no link)".
+        assert_eq!(post_target(&View::Marketplace, &listing), None);
+        assert_eq!(
+            list_label(&View::Marketplace, &listing),
+            "Wooden chair — $40 · Vancouver"
+        );
+        assert_eq!(
+            more_row_label(&View::Marketplace, 3),
+            Some("Load more listings")
+        );
+        assert_eq!(
+            default_args(&View::Marketplace),
+            Some(marketplace_args(PAGE))
+        );
+        assert_eq!(
+            more_args(
+                &View::Marketplace,
+                &marketplace_args(PAGE),
+                PAGE as usize,
+                false
+            ),
+            Some(marketplace_args(PAGE + PAGE))
+        );
     }
 
     #[test]

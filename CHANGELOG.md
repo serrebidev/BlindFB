@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.3 - 2026-10-31
+
+Three fixes from hands-on testing, verified against a real account this time.
+
+- Unlock works on the restore prompt Facebook actually shows: a single PIN field under the heading "Enter your PIN to restore your chats", with no dialog frame the old code could recognise and no Continue button — typing the full PIN is what submits it, and Facebook then shows "Verifying your PIN" while it restores in the background. Unlock now finds that prompt by its heading, types the PIN, and reads that verifying state as success instead of reporting failure. The secure-storage page the previous release walked is not a restore page at all (it redirects to an unrelated business page) and is no longer used. Backend v0.1.5-blindfb.14.
+- Marketplace is a view now: the Views list gains Marketplace, showing the listings feed with price and place on each row. Enter opens a listing in your browser, and the context menu offers Message seller. Selling was already there; browsing was the missing half.
+- Search is one dialog: the query box and the filter combo box (Everything, Posts, People, and the rest) sit in a single dialog, replacing the type-then-pick two-step.
+
 ## v0.7.2 - 2026-10-31
 
 Three fixes from hands-on testing.

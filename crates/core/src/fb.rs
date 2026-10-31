@@ -738,6 +738,10 @@ pub fn groups_args(count: u32) -> Vec<String> {
     ]
 }
 
+pub fn marketplace_args(count: u32) -> Vec<String> {
+    vec!["marketplace".to_owned(), "-n".to_owned(), count.to_string()]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
