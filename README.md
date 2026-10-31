@@ -28,7 +28,7 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - Search people, pages, groups, posts and events.
 - Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored.
 - OCR an image file with the OCR engine built into your operating system.
-- F1 lists the keyboard commands; Ctrl+1 to Ctrl+8 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+F searches.
+- F1 lists the keyboard commands; Ctrl+1 to Ctrl+8 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
 - Help, Check for updates downloads the new release, verifies its minisign signature, installs it and restarts.
 
 Some things the `fb` backend cannot do are linked out instead of faked: voice and video calls open the conversation in Messenger on the web, adding or removing friends opens the person's real profile, and posting into a group opens the group's web page. Photo albums open in your browser. A few feed rows (often ads and suggestions) never expose a link to Facebook's own scripts; BlindFB marks those "(no link)" and cannot open them.
@@ -42,7 +42,7 @@ For a version-by-version history, see the [changelog](CHANGELOG.md).
 2. Extract or open it and run BlindFB. There is nothing else to install: on first run BlindFB downloads the matching `fb` backend release, verifies its SHA-256 checksum, and keeps it in its own app-data folder.
 3. Sign in: BlindFB asks which browser to copy your Facebook session from, with your default browser marked. Pick the browser you are signed in to Facebook in, or sign in directly in the separate browser window BlindFB offers.
 
-The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.10`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.10): upstream 0.1.5 plus the BlindFB fixes that are in review upstream, including the staged Messenger history restore ([#15](https://github.com/hieu-lee/facebook-cli/pull/15)) and message reply/reactions with idle-tab freezing ([#16](https://github.com/hieu-lee/facebook-cli/pull/16)). Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
+The managed backend is [serrebidev/facebook-cli `v0.1.5-blindfb.11`](https://github.com/serrebidev/facebook-cli/releases/tag/v0.1.5-blindfb.11): upstream 0.1.5 plus the BlindFB work that is in review upstream, including the staged Messenger history restore ([#15](https://github.com/hieu-lee/facebook-cli/pull/15)), message reply/reactions with idle-tab freezing ([#16](https://github.com/hieu-lee/facebook-cli/pull/16)), and full search (every filter type), group join/leave with membership-question answers, and Marketplace selling. Backend, Install or update backend reinstalls it at any time. BlindFB also finds an `fb` you installed yourself; the `BLINDFB_FB` environment variable overrides every other location.
 
 ### Antivirus false positives
 

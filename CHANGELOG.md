@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.0 - 2026-10-30
+
+Search and Marketplace, end to end.
+
+- Search covers everything Facebook can search: Ctrl+/ (File, Search Facebook) now offers Everything (the default), Posts, People, Friends, Photos, Videos, Pages, Places, Groups, Events and Marketplace. Friends narrows the people results with Facebook's own Friends filter. Every result row knows what it is: Enter opens a post in the comments view, a person or page in their profile, a group in the group window, a photo or video in the reader, and a Marketplace listing in your browser. Results read as "Name — info" instead of reading out an internal reference.
+- Join groups from search results: the context menu on a group result has Join group. Public groups join at once; private groups send a request. If the group asks membership questions, BlindFB asks you each question and submits your answers — for a multiple-choice question, type the option's text.
+- Leave groups from the Groups list: the context menu has Leave group, with a confirmation. The list refreshes without the group afterwards.
+- Sell on Marketplace: File, Sell on Marketplace walks the listing form — title, price (0 means free), condition, category, description — and attaches the photos and videos you pick (up to 10). The details pane confirms with the new listing.
+- Message a seller: on a Marketplace search result, the context menu's Message seller sends your message from the listing page.
+- Posts take videos now: New post with media accepts photos and videos together, in any mix.
+- Fixed: pressing Enter (or React, Comment, Share) on a search result used to report "no link" for every row — search results were looked up in the wrong column. Search results now open and act properly.
+- Backend updated to facebook-cli 0.1.5-blindfb.11.
+
 ## v0.6.16 - 2026-10-30
 
 A bug-audit release: every module was reviewed and the test suite extended; these are the fixes that came out of it.

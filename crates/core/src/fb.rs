@@ -557,17 +557,88 @@ pub fn unsend_args(chat: &str, match_text: Option<&str>) -> Vec<String> {
     args
 }
 
-pub fn post_args(text: &str, audience: Option<&str>, images: &[String]) -> Vec<String> {
+pub fn post_args(
+    text: &str,
+    audience: Option<&str>,
+    images: &[String],
+    videos: &[String],
+) -> Vec<String> {
     let mut args = vec!["post".to_owned(), text.to_owned()];
     for image in images {
         args.push("--img".to_owned());
         args.push(image.clone());
+    }
+    for video in videos {
+        args.push("--video".to_owned());
+        args.push(video.clone());
     }
     if let Some(audience) = audience {
         args.push("--to".to_owned());
         args.push(audience.to_owned());
     }
     args
+}
+
+pub fn group_join_args(group: &str) -> Vec<String> {
+    vec!["group-join".to_owned(), group.to_owned()]
+}
+
+pub fn group_apply_args(group: &str, answers: &[String]) -> Vec<String> {
+    let mut args = vec!["group-apply".to_owned(), group.to_owned()];
+    args.extend(answers.iter().cloned());
+    args
+}
+
+pub fn group_leave_args(group: &str) -> Vec<String> {
+    vec!["group-leave".to_owned(), group.to_owned()]
+}
+
+/// One Marketplace listing. `files` are the photo/video paths (the backend
+/// requires 1–10); price "0" lists the item as free.
+pub fn sell_args(
+    title: &str,
+    price: &str,
+    condition: Option<&str>,
+    category: Option<&str>,
+    description: Option<&str>,
+    images: &[String],
+    videos: &[String],
+) -> Vec<String> {
+    let mut args = vec![
+        "sell".to_owned(),
+        title.to_owned(),
+        "--price".to_owned(),
+        price.to_owned(),
+    ];
+    if let Some(condition) = condition {
+        args.push("--condition".to_owned());
+        args.push(condition.to_owned());
+    }
+    if let Some(category) = category {
+        args.push("--category".to_owned());
+        args.push(category.to_owned());
+    }
+    if let Some(description) = description {
+        args.push("--desc".to_owned());
+        args.push(description.to_owned());
+    }
+    for image in images {
+        args.push("--img".to_owned());
+        args.push(image.clone());
+    }
+    for video in videos {
+        args.push("--video".to_owned());
+        args.push(video.clone());
+    }
+    args
+}
+
+pub fn listing_message_args(listing: &str, text: &str) -> Vec<String> {
+    vec![
+        "listing-message".to_owned(),
+        listing.to_owned(),
+        text.to_owned(),
+    ]
 }
 
 pub fn comment_args(post: &str, text: &str) -> Vec<String> {
@@ -819,5 +890,69 @@ mod tests {
     #[test]
     fn groups_command_args() {
         assert_eq!(groups_args(120), ["groups", "-n", "120", "--urls"]);
+    }
+
+    #[test]
+    fn group_join_apply_leave_args() {
+        assert_eq!(group_join_args("u1abc"), ["group-join", "u1abc"]);
+        assert_eq!(group_leave_args("u1abc"), ["group-leave", "u1abc"]);
+        assert_eq!(
+            group_apply_args("u1abc", &["because chairs".to_owned(), "Yes".to_owned()]),
+            ["group-apply", "u1abc", "because chairs", "Yes"]
+        );
+    }
+
+    #[test]
+    fn post_args_carry_photos_and_videos() {
+        let args = post_args(
+            "hello",
+            Some("friends"),
+            &["a.jpg".to_owned()],
+            &["b.mp4".to_owned()],
+        );
+        assert_eq!(
+            args,
+            ["post", "hello", "--img", "a.jpg", "--video", "b.mp4", "--to", "friends"]
+        );
+    }
+
+    #[test]
+    fn sell_and_listing_message_args() {
+        let args = sell_args(
+            "Wooden chair",
+            "40",
+            Some("good"),
+            Some("Furniture"),
+            Some("Solid oak"),
+            &["chair.jpg".to_owned()],
+            &["tour.mp4".to_owned()],
+        );
+        assert_eq!(
+            args,
+            [
+                "sell",
+                "Wooden chair",
+                "--price",
+                "40",
+                "--condition",
+                "good",
+                "--category",
+                "Furniture",
+                "--desc",
+                "Solid oak",
+                "--img",
+                "chair.jpg",
+                "--video",
+                "tour.mp4"
+            ]
+        );
+        assert_eq!(
+            listing_message_args("https://www.facebook.com/marketplace/item/5/", "Hi"),
+            [
+                "listing-message",
+                "https://www.facebook.com/marketplace/item/5/",
+                "Hi"
+            ]
+        );
     }
 }

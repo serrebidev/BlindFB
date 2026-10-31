@@ -32,11 +32,12 @@ use std::time::{Duration, Instant};
 
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args, groups_args,
+    chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
+    group_apply_args, group_join_args, group_leave_args, groups_args, listing_message_args,
     msg_react_args, notifs_args, parse_feed, parse_notifications, parse_records, post_args,
     posts_args, profile_args, profile_url_from_post_url, react_args, read_args, recent_feed_args,
-    reply_args, search_args, send_args, thread_url_from_profile_url, unsend_args, view_args,
-    web_url, Fb, Record,
+    reply_args, search_args, sell_args, send_args, thread_url_from_profile_url, unsend_args,
+    view_args, web_url, Fb, Record,
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
@@ -84,6 +85,11 @@ const ID_LOGIN: i32 = 10061;
 const ID_INSTALL_BACKEND: i32 = 10083;
 const ID_INSTALL_BROWSER: i32 = 10084;
 const ID_COMMENT_FRIEND: i32 = 10085;
+const ID_GROUP_JOIN: i32 = 10086;
+const ID_GROUP_LEAVE: i32 = 10087;
+const ID_LISTING_MESSAGE: i32 = 10088;
+const ID_SELL: i32 = 10089;
+const ID_LISTING_OPEN: i32 = 10092;
 const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
@@ -147,6 +153,14 @@ enum Tag {
         append: bool,
     },
     Text,
+    /// A group join finished: its output decides whether membership
+    /// questions need answers (the output starts with a questions line).
+    GroupJoin {
+        group: String,
+    },
+    /// A group leave finished: refresh the joined-groups list if it is on
+    /// screen, since the group is gone from it now.
+    GroupLeave,
     ReloadChat(String, String, u64),
     ChatSent(u64),
     UnlockRetry {
@@ -1032,13 +1046,18 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_NEW_POST, "&New post…\tCtrl+N", "Write a new post")
         .append_item(
             ID_NEW_POST_IMAGES,
-            "New post with &images…",
-            "Write a post with images attached",
+            "New post with &media…",
+            "Write a post with photos and videos attached",
+        )
+        .append_item(
+            ID_SELL,
+            "Sell on &Marketplace…",
+            "Create a Marketplace listing with photos or video",
         )
         .append_item(
             ID_SEARCH,
-            "&Search Facebook…\tCtrl+F",
-            "Search people, pages, groups, posts and events",
+            "&Search Facebook…\tCtrl+/",
+            "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace",
         )
         .append_item(
             ID_OCR,
@@ -1693,6 +1712,14 @@ fn list_label(view: &View, record: &Record) -> String {
 }
 
 fn display_for(view: &View, record: &Record) -> String {
+    if *view == View::SearchResults && record.fields.len() >= 3 && record.fields.len() < 5 {
+        // Search rows read "Name — info"; the raw line would read the ref.
+        let info = record.field(2);
+        if info.is_empty() {
+            return record.field(0).to_owned();
+        }
+        return format!("{} — {}", record.field(0), info);
+    }
     match view {
         View::Feed
         | View::RecentFeed
@@ -1777,6 +1804,13 @@ fn display_for(view: &View, record: &Record) -> String {
 }
 
 fn details_for(view: &View, record: &Record) -> String {
+    if *view == View::SearchResults && record.fields.len() >= 3 && record.fields.len() < 5 {
+        let info = record.field(2);
+        if info.is_empty() {
+            return record.field(0).to_owned();
+        }
+        return format!("{}\n{}", record.field(0), info);
+    }
     match view {
         View::Feed
         | View::RecentFeed
@@ -1836,14 +1870,27 @@ fn one_line(text: &str) -> String {
 }
 
 fn post_target<'a>(view: &View, record: &'a Record) -> Option<&'a str> {
+    if *view == View::SearchResults {
+        // Search rows are (name, target, info, kind): the target is a ref
+        // for posts, a full URL for photos and videos, and neither for the
+        // kinds other actions handle (profiles, groups, listings).
+        let value = record.field(1).trim();
+        if value.is_empty() {
+            return None;
+        }
+        return match record.field(3) {
+            "post" => Some(value),
+            "photo" | "video" => {
+                (value.starts_with("http") || value.starts_with('/')).then_some(value)
+            }
+            _ => None,
+        };
+    }
     let value = match view {
         View::Notifications => record.field(3),
-        View::Feed
-        | View::RecentFeed
-        | View::Reels(_)
-        | View::MyPosts
-        | View::PostsOf(_)
-        | View::SearchResults => record.field(0),
+        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) => {
+            record.field(0)
+        }
         _ => return None,
     }
     .trim();
@@ -2477,6 +2524,34 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
+        Tag::GroupJoin { group } => match done.result {
+            Ok(text) => {
+                let text = text.trim().to_owned();
+                if text.starts_with("questions\t") {
+                    answer_group_questions(ui, &group, &text);
+                } else {
+                    set_details(ui, &text, None);
+                    ui.status("Done");
+                }
+            }
+            Err(e) => {
+                ui.status("Error");
+                show_error(&ui.frame, &e, "Join group");
+            }
+        },
+        Tag::GroupLeave => match done.result {
+            Ok(text) => {
+                set_details(ui, text.trim(), None);
+                ui.status("Done");
+                if ui.state.borrow().view == View::Groups {
+                    load_view(ui, View::Groups);
+                }
+            }
+            Err(e) => {
+                ui.status("Error");
+                show_error(&ui.frame, &e, "Leave group");
+            }
+        },
         Tag::ChatSent(account) => {
             let submitted = ChatSubmission::finish(&mut ui.state.borrow_mut().sending, account);
             let Some(submitted) = submitted else { return };
@@ -2763,13 +2838,16 @@ fn open_selected(ui: &Ui) {
             return;
         }
     }
+    if view == View::SearchResults {
+        open_search_result(ui, &record);
+        return;
+    }
     match view {
         View::Feed
         | View::RecentFeed
         | View::Reels(_)
         | View::MyPosts
         | View::PostsOf(_)
-        | View::SearchResults
         | View::Notifications => {
             let Some(target) = post_target(&view, &record) else {
                 show_warning(
@@ -2958,6 +3036,7 @@ fn posts_selected(ui: &Ui) {
 fn message_target(view: &View, record: &Record) -> (String, String) {
     match view {
         View::Friends => (record.field(1).to_owned(), record.field(0).to_owned()),
+        View::SearchResults => (record.field(1).to_owned(), record.field(0).to_owned()),
         View::Chats => (record.field(0).to_owned(), record.field(3).to_owned()),
         View::CommentsOf(_) => {
             let id = record.field(1);
@@ -3337,6 +3416,19 @@ fn handle_menu(ui: &Ui, id: i32) {
         },
         ID_NEW_POST => new_post(ui, false),
         ID_NEW_POST_IMAGES => new_post(ui, true),
+        ID_SELL => sell_dialog(ui),
+        ID_GROUP_JOIN => group_join_selected(ui),
+        ID_GROUP_LEAVE => group_leave_selected(ui),
+        ID_LISTING_MESSAGE => listing_message_selected(ui),
+        ID_LISTING_OPEN => {
+            if let Some((_, record)) = selected(ui) {
+                let url = record.field(1).to_owned();
+                if url.starts_with("http") {
+                    open_url(&url);
+                    ui.status("Opened the listing in your browser.");
+                }
+            }
+        }
         ID_SEARCH => search_dialog(ui),
         ID_OCR => ocr_dialog(ui),
         ID_UPDATE => update::check(&ui.frame, ship_shape::ui::CheckTrigger::Manual),
@@ -3470,12 +3562,47 @@ fn show_item_menu(ui: &Ui) {
         }
     };
     match view {
-        View::Feed
-        | View::RecentFeed
-        | View::Reels(_)
-        | View::MyPosts
-        | View::PostsOf(_)
-        | View::SearchResults => {
+        View::SearchResults => {
+            let (_, record) = selected(ui).unwrap();
+            match record.field(3) {
+                "group" => add(
+                    &menu,
+                    &[
+                        (ID_OPEN, "&Open group"),
+                        (ID_GROUP_JOIN, "&Join group"),
+                        (ID_COPY_TEXT, "Cop&y text"),
+                    ],
+                ),
+                "profile" | "page" => add(
+                    &menu,
+                    &[
+                        (ID_PROFILE, "&Profile"),
+                        (ID_MESSAGE, "&Message"),
+                        (ID_COMMENT_FRIEND, "Add &friend"),
+                        (ID_COPY_TEXT, "Cop&y text"),
+                    ],
+                ),
+                "listing" => add(
+                    &menu,
+                    &[
+                        (ID_LISTING_OPEN, "&Open listing in browser"),
+                        (ID_LISTING_MESSAGE, "&Message seller…"),
+                        (ID_COPY_TEXT, "Cop&y text"),
+                    ],
+                ),
+                _ => add(
+                    &menu,
+                    &[
+                        (ID_OPEN, "&Open"),
+                        (ID_SHARE, "S&hare…"),
+                        (ID_COMMENT, "&Comment…"),
+                        (ID_COPY_TEXT, "Cop&y text"),
+                        (ID_COPY_LINK, "Copy &link"),
+                    ],
+                ),
+            }
+        }
+        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) => {
             add(
                 &menu,
                 &[
@@ -3581,6 +3708,8 @@ fn show_item_menu(ui: &Ui) {
                 (ID_OPEN, "&Open group"),
                 (ID_COPY_LINK, "Copy &link"),
                 (ID_WEB_PERSON, "Open group on &Facebook (web)"),
+                (0, ""),
+                (ID_GROUP_LEAVE, "&Leave group…"),
             ],
         ),
         _ => add(&menu, &[(ID_COPY_TEXT, "Cop&y text")]),
@@ -3588,23 +3717,52 @@ fn show_item_menu(ui: &Ui) {
     ui.items.popup_menu(&mut menu, None);
 }
 
-fn new_post(ui: &Ui, with_images: bool) {
+/// Pick photo/video files and split them by extension: the backend's post
+/// and sell commands take --img and --video separately.
+fn pick_media(ui: &Ui) -> Option<(Vec<String>, Vec<String>)> {
+    let dialog = FileDialog::builder(&ui.frame)
+        .with_style(FileDialogStyle::Multiple)
+        .build();
+    if dialog.show_modal() != ID_OK {
+        return None;
+    }
+    let paths = dialog.get_paths();
+    if paths.is_empty() {
+        return None;
+    }
+    let mut images = Vec::new();
+    let mut videos = Vec::new();
+    for path in paths {
+        if is_video_path(&path) {
+            videos.push(path);
+        } else {
+            images.push(path);
+        }
+    }
+    Some((images, videos))
+}
+
+fn is_video_path(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    [".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"]
+        .iter()
+        .any(|ext| lower.ends_with(ext))
+}
+
+fn new_post(ui: &Ui, with_media: bool) {
     let Some(text) = prompt_text(&ui.frame, "Post text:", "New post") else {
         return;
     };
     if text.trim().is_empty() {
         return;
     }
-    let mut images: Vec<String> = Vec::new();
-    if with_images {
-        let dialog = FileDialog::builder(&ui.frame).build();
-        if dialog.show_modal() != ID_OK {
-            return;
-        }
-        let Some(path) = dialog.get_path() else {
+    let (mut images, mut videos) = (Vec::new(), Vec::new());
+    if with_media {
+        let Some((picked_images, picked_videos)) = pick_media(ui) else {
             return;
         };
-        images.push(path);
+        images = picked_images;
+        videos = picked_videos;
     }
     let labels = ["Public", "Friends", "Only me"];
     let dialog =
@@ -3619,7 +3777,235 @@ fn new_post(ui: &Ui, with_images: bool) {
         _ => return,
     };
     ui.send(Job {
-        task: Task::Fb(post_args(&text, audience, &images), None),
+        task: Task::Fb(post_args(&text, audience, &images, &videos), None),
+        tag: Tag::Text,
+    });
+}
+
+/// Enter on a search result: what opens depends on the row's kind, which
+/// the backend stamps on every row (post, profile, page, group, photo,
+/// video, event, place, listing).
+fn open_search_result(ui: &Ui, record: &Record) {
+    let kind = record.field(3);
+    let target = record.field(1).to_owned();
+    match kind {
+        "profile" | "page" => profile_selected(ui),
+        "group" => group_dialog::open(ui, record),
+        "listing" => {
+            if target.starts_with("http") {
+                open_url(&target);
+                ui.status("Opened the listing in your browser.");
+            } else {
+                ui.status("This listing row has no link to open.");
+            }
+        }
+        "post" => {
+            if target.is_empty() {
+                show_warning(
+                    &ui.frame,
+                    "This row has no link, so there is no post to open.",
+                    "Open post",
+                );
+            } else {
+                load_view(ui, View::CommentsOf(target));
+            }
+        }
+        _ => {
+            if target.is_empty() {
+                show_warning(
+                    &ui.frame,
+                    "This row has no link, so it cannot be opened.",
+                    "Open",
+                );
+                return;
+            }
+            match blindfb_core::posts::reader_url(&target) {
+                Some(url) => post_dialog::open(ui, &url, false),
+                None => {
+                    if confirm(
+                        &ui.frame,
+                        "BlindFB cannot read this kind of item yet. Open it in your web browser?",
+                        "Open",
+                    ) {
+                        open_url(&web_url(&target));
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn group_join_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let group = record.field(1).to_owned();
+    if group.is_empty() {
+        ui.status("This group row has no link, so it cannot be joined.");
+        return;
+    }
+    ui.status(&format!("Joining {}…", record.field(0)));
+    ui.send(Job {
+        task: Task::Fb(group_join_args(&group), None),
+        tag: Tag::GroupJoin { group },
+    });
+}
+
+/// The backend's questions output: a "questions<TAB>n" line, then one
+/// "q<TAB>question" line per question. Ask each in turn and submit the
+/// answers as one group-apply.
+fn answer_group_questions(ui: &Ui, group: &str, output: &str) {
+    let questions: Vec<&str> = output
+        .lines()
+        .filter_map(|line| line.strip_prefix("q\t"))
+        .collect();
+    if questions.is_empty() {
+        set_details(ui, output, None);
+        ui.status("Done");
+        return;
+    }
+    let mut answers = Vec::new();
+    for question in &questions {
+        let Some(answer) = prompt_text(&ui.frame, &format!("{question}:"), "Membership questions")
+        else {
+            ui.status("Join cancelled: the membership questions were not answered.");
+            return;
+        };
+        answers.push(answer);
+    }
+    ui.status("Submitting your answers…");
+    ui.send(Job {
+        task: Task::Fb(group_apply_args(group, &answers), None),
+        tag: Tag::Text,
+    });
+}
+
+fn group_leave_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let group = record.field(1).to_owned();
+    if group.is_empty() {
+        ui.status("This group row has no link, so it cannot be left.");
+        return;
+    }
+    let name = record.field(0).to_owned();
+    if !confirm(
+        &ui.frame,
+        &format!("Leave the group {name}? You can rejoin later, but private groups will need approval again."),
+        "Leave group",
+    ) {
+        return;
+    }
+    ui.status(&format!("Leaving {name}…"));
+    ui.send(Job {
+        task: Task::Fb(group_leave_args(&group), None),
+        tag: Tag::GroupLeave,
+    });
+}
+
+fn listing_message_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let listing = record.field(1).to_owned();
+    if listing.is_empty() {
+        ui.status("This listing row has no link, so its seller cannot be messaged.");
+        return;
+    }
+    let Some(text) = prompt_text(
+        &ui.frame,
+        &format!("Message to the seller of {}:", record.field(0)),
+        "Message seller",
+    ) else {
+        return;
+    };
+    if text.trim().is_empty() {
+        return;
+    }
+    ui.status("Messaging the seller…");
+    ui.send(Job {
+        task: Task::Fb(listing_message_args(&listing, &text), None),
+        tag: Tag::Text,
+    });
+}
+
+/// The Marketplace sell form: title, price, condition, category,
+/// description and the photos/videos to attach (at least one file).
+fn sell_dialog(ui: &Ui) {
+    let Some(title) = prompt_text(&ui.frame, "Listing title:", "Sell on Marketplace") else {
+        return;
+    };
+    if title.trim().is_empty() {
+        return;
+    }
+    let Some(price) = prompt_text(
+        &ui.frame,
+        "Price (0 lists it as free):",
+        "Sell on Marketplace",
+    ) else {
+        return;
+    };
+    let price = price.trim().to_owned();
+    if price.is_empty() || !price.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        show_warning(
+            &ui.frame,
+            "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing.",
+            "Sell on Marketplace",
+        );
+        return;
+    }
+    let labels = ["New", "Used - like new", "Used - good", "Used - fair"];
+    let dialog =
+        SingleChoiceDialog::builder(&ui.frame, "Condition:", "Sell on Marketplace", &labels)
+            .build();
+    if dialog.show_modal() != ID_OK {
+        return;
+    }
+    let condition = match dialog.get_selection() {
+        0 => Some("new"),
+        1 => Some("like-new"),
+        2 => Some("good"),
+        3 => Some("fair"),
+        _ => return,
+    };
+    let category = prompt_text(
+        &ui.frame,
+        "Category (leave empty to skip):",
+        "Sell on Marketplace",
+    );
+    let category = category.filter(|c| !c.trim().is_empty());
+    let description = prompt_text(
+        &ui.frame,
+        "Description (leave empty to skip):",
+        "Sell on Marketplace",
+    );
+    let description = description.filter(|d| !d.trim().is_empty());
+    let Some((images, videos)) = pick_media(ui) else {
+        return;
+    };
+    if images.len() + videos.len() > 10 {
+        show_warning(
+            &ui.frame,
+            "Marketplace allows at most 10 photos and videos per listing.",
+            "Sell on Marketplace",
+        );
+        return;
+    }
+    ui.status(&format!("Listing {title} on Marketplace…"));
+    ui.send(Job {
+        task: Task::Fb(
+            sell_args(
+                title.trim(),
+                &price,
+                condition,
+                category.as_deref(),
+                description.as_deref(),
+                &images,
+                &videos,
+            ),
+            None,
+        ),
         tag: Tag::Text,
     });
 }
@@ -3631,7 +4017,19 @@ fn search_dialog(ui: &Ui) {
     if query.trim().is_empty() {
         return;
     }
-    let labels = ["Everything", "People", "Pages", "Groups", "Posts", "Events"];
+    let labels = [
+        "Everything",
+        "Posts",
+        "People",
+        "Friends",
+        "Photos",
+        "Videos",
+        "Pages",
+        "Places",
+        "Groups",
+        "Events",
+        "Marketplace",
+    ];
     let dialog =
         SingleChoiceDialog::builder(&ui.frame, "Search in:", "Search Facebook", &labels).build();
     if dialog.show_modal() != ID_OK {
@@ -3639,11 +4037,16 @@ fn search_dialog(ui: &Ui) {
     }
     let kind = match dialog.get_selection() {
         0 => None,
-        1 => Some("people"),
-        2 => Some("pages"),
-        3 => Some("groups"),
-        4 => Some("posts"),
-        5 => Some("events"),
+        1 => Some("posts"),
+        2 => Some("people"),
+        3 => Some("friends"),
+        4 => Some("photos"),
+        5 => Some("videos"),
+        6 => Some("pages"),
+        7 => Some("places"),
+        8 => Some("groups"),
+        9 => Some("events"),
+        10 => Some("marketplace"),
         _ => return,
     };
     load_args(ui, View::SearchResults, search_args(&query, kind, PAGE));
@@ -4141,5 +4544,56 @@ mod tests {
             "Error: Messenger history prompt blocked input; use `fb unlock`"
         ));
         assert!(!needs_messenger_unlock("network error"));
+    }
+
+    #[test]
+    fn search_rows_route_by_kind() {
+        let row = |fields: &[&str]| Record {
+            fields: fields.iter().map(|f| f.to_string()).collect(),
+            raw: String::new(),
+        };
+        // A post row's target is its ref; the row reads "Name — info".
+        let post = row(&["Alice", "u1abc", "Hello world", "post"]);
+        assert_eq!(post_target(&View::SearchResults, &post), Some("u1abc"));
+        assert_eq!(
+            display_for(&View::SearchResults, &post),
+            "Alice — Hello world"
+        );
+        // A photo row's target is its URL, so the reader can open it.
+        let photo_url = "https://www.facebook.com/photo.php?fbid=9";
+        let photo = row(&["Photo of a chair", photo_url, "", "photo"]);
+        assert_eq!(post_target(&View::SearchResults, &photo), Some(photo_url));
+        // Profiles, groups and listings are not post targets: their own
+        // actions (profile view, group window, browser) handle them.
+        assert_eq!(
+            post_target(
+                &View::SearchResults,
+                &row(&["Bea", "u2def", "Friend", "profile"])
+            ),
+            None
+        );
+        assert_eq!(
+            post_target(
+                &View::SearchResults,
+                &row(&["Chairs", "u3ghi", "Public group", "group"])
+            ),
+            None
+        );
+        assert_eq!(
+            post_target(
+                &View::SearchResults,
+                &row(&[
+                    "Wooden chair",
+                    "https://www.facebook.com/marketplace/item/5/",
+                    "$40",
+                    "listing"
+                ])
+            ),
+            None
+        );
+        // Rows from an older backend have no kind: no target, plain display.
+        let legacy = row(&["Carol", "u4jkl", "Page"]);
+        assert_eq!(post_target(&View::SearchResults, &legacy), None);
+        assert_eq!(display_for(&View::SearchResults, &legacy), "Carol — Page");
     }
 }
