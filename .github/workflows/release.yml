@@ -37,6 +37,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
+          # Jammy quirk (proven on the runner image): in one combined
+          # transaction apt refuses libgstreamer1.0-dev's libunwind-dev
+          # dependency; installing libunwind-dev on its own first
+          # anchors it and the full list then resolves.
+          sudo apt-get install -y libunwind-dev
           sudo apt-get install -y \
             libclang-dev pkg-config libgtk-3-dev libpng-dev libjpeg-dev \
             libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev \
