@@ -77,6 +77,15 @@ fn restored_selection(
         .map_or(Some(expected), |(index, _)| Some(index))
 }
 
+/// The backend prints a date header (`# Sep 5, 2026`) before each day's
+/// messages; the status line counts messages, so headers are not messages.
+fn message_count(lines: &[String]) -> usize {
+    lines
+        .iter()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .count()
+}
+
 /// The conversation a chat row opens: its backend ref (field 0) is the
 /// identity — names repeat and a name slot can hold a presence label — with
 /// the display name in field 3 and the group flag in field 1. A row with
@@ -413,7 +422,7 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
                 }
             }
             let name = window.state.lock().unwrap().name.clone();
-            window.note(&format!("{name}: {} message(s).", lines.len()));
+            window.note(&format!("{name}: {} message(s).", message_count(&lines)));
         }
         Err(e) => {
             if needs_messenger_unlock(&e) {
@@ -511,6 +520,18 @@ mod tests {
         let new = lines(&["a", "c"]);
         assert_eq!(restored_selection(&old, &new, Some(1), false), Some(1));
         assert_eq!(restored_selection(&old, &[], Some(1), false), None);
+    }
+
+    #[test]
+    fn date_headers_are_not_counted_as_messages() {
+        let rows = lines(&[
+            "# Sep 5, 2026",
+            "11:50 PM Richard: hi",
+            "# Sep 6, 2026",
+            "9:01 AM You: there",
+        ]);
+        assert_eq!(message_count(&rows), 2);
+        assert_eq!(message_count(&[]), 0);
     }
 
     #[test]

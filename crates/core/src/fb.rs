@@ -84,11 +84,24 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
             let mut author = String::new();
             let mut joined = true;
             let mut parts: Vec<&str> = Vec::new();
-            for part in record.fields[1].split(" / ").map(str::trim) {
+            // Facebook renders an author as its parts plus the assembled name
+            // ("Yury. Ai / and / Grok by SpaceXAI / Yury. Ai and Grok by
+            // SpaceXAI"). The assembled name repeats the parts, so a part
+            // contained in a longer one is that same author, not a second one.
+            let candidates: Vec<&str> = record.fields[1]
+                .split(" / ")
+                .map(str::trim)
+                .filter(|part| !part.is_empty())
+                .collect();
+            for part in candidates.iter().copied() {
+                let spelled_out = candidates
+                    .iter()
+                    .any(|other| other.len() > part.len() && other.contains(part));
                 let noise = part.is_empty()
                     || NOISE.contains(&part)
                     || part.bytes().all(|b| b.is_ascii_digit())
                     || (part.len() > 30 && text.contains(part))
+                    || spelled_out
                     || parts.contains(&part);
                 if noise {
                     continue;
@@ -149,35 +162,38 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
     let rows = value["rows"]
         .as_array()
         .ok_or("The backend returned no notification list")?;
-    rows.iter()
-        .map(|row| {
+    // One odd row must not empty the whole view: a notification without a
+    // target still has text worth reading, and a row whose shape this build
+    // does not know is skipped. Only a payload with nothing readable at all
+    // is an error.
+    let records: Vec<Record> = rows
+        .iter()
+        .filter_map(|row| {
             let cells = row
                 .as_array()
-                .filter(|cells| matches!(cells.len(), 4 | 5))
-                .ok_or("The backend returned a malformed notification")?;
-            let mut fields = Vec::new();
-            for cell in &cells[..3] {
-                fields.push(
-                    cell.as_str()
-                        .ok_or("The backend returned an unreadable notification field")?
-                        .to_owned(),
-                );
-            }
-            fields.push(
-                cells[3]["v"]
-                    .as_str()
-                    .ok_or("This notification has no Facebook target")?
-                    .to_owned(),
-            );
-            if let Some(metadata) = cells.get(4).filter(|value| value.is_object()) {
+                .filter(|cells| matches!(cells.len(), 4 | 5))?;
+            let text: Option<Vec<String>> = cells[..3]
+                .iter()
+                .map(|cell| cell.as_str().map(str::to_owned))
+                .collect();
+            let mut fields = text?;
+            // A notification with no Facebook target keeps an empty fourth
+            // field, which the list marks "(no link)" instead of dying.
+            fields.push(cells[3]["v"].as_str().unwrap_or("").to_owned());
+            let metadata = cells.get(4).filter(|value| value.is_object());
+            if let Some(metadata) = metadata {
                 fields.push(metadata.to_string());
             }
-            Ok(Record {
+            Some(Record {
                 raw: fields.join("\t"),
                 fields,
             })
         })
-        .collect()
+        .collect();
+    if records.is_empty() && !rows.is_empty() {
+        return Err("The backend returned no readable notifications. Refresh to retry.".to_owned());
+    }
+    Ok(records)
 }
 
 pub fn recent_feed_args(count: u32) -> Vec<String> {
@@ -793,6 +809,22 @@ mod tests {
     }
 
     #[test]
+    fn one_odd_notification_does_not_empty_the_list() {
+        // A row with no target keeps its text; the list marks it "(no link)".
+        let raw = r#"{"rows":[["1h","!","Liked your photo",{}],["2h","-","You approved a login",{"r":"p","v":"/x"}]]}"#;
+        let records = parse_notifications(raw).unwrap();
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].field(2), "Liked your photo");
+        assert_eq!(records[0].field(3), "");
+        assert_eq!(records[1].field(3), "/x");
+        // A shape this build does not know is skipped, not fatal.
+        let raw = r#"{"rows":[["1h","!","Fine",{"v":"/a"}],["short"],5]}"#;
+        let records = parse_notifications(raw).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].field(2), "Fine");
+    }
+
+    #[test]
     fn feeds_requests_full_chronological_facebook_view() {
         assert_eq!(
             recent_feed_args(20),
@@ -824,6 +856,7 @@ mod tests {
             "/photo/?fbid=1&set=a.9\tJeremy Smith\t\t0/0/0\tNormal people rearrange eggs",
             "/photo/?fbid=2&set=a.9\tJeremy Smith\t\t0/0/0\tNormal people rearrange eggs",
             "-\tEvan / is in / Vancouver\t\t0/0/0\tRadio Free Roscoe",
+            "-\tYury. Ai / and / Grok by SpaceXAI / Yury. Ai and Grok by SpaceXAI\t\t38/0/0\tBots all the way down",
         ]
         .join("\n");
         let rows = parse_feed(&out);
@@ -841,6 +874,7 @@ mod tests {
                 ("C", "I feel bad. Crying helps."),
                 ("Jeremy Smith", "Normal people rearrange eggs"),
                 ("Evan is in Vancouver", "Radio Free Roscoe"),
+                ("Yury. Ai and Grok by SpaceXAI", "Bots all the way down"),
             ]
         );
     }

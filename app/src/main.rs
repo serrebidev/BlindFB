@@ -1269,15 +1269,23 @@ fn activate_view(ui: &Ui, view: &View) {
     if clear {
         state.records.clear();
     }
-    state.view = view.clone();
-    if !matches!(view, View::ChatWith(..)) {
+    if !quote_follows_chat(&state.view, view) {
+        // A reply quote names a message in one conversation: opening another
+        // chat must not carry it over and quote the wrong thread.
         state.reply_to = None;
     }
+    state.view = view.clone();
     drop(state);
     if clear {
         ui.items.clear();
         set_details(ui, "", None);
     }
+}
+
+/// True while the view stays on the conversation a reply quote was made in.
+/// Leaving chats, or opening a different chat, drops the quote.
+fn quote_follows_chat(previous: &View, next: &View) -> bool {
+    matches!((previous, next), (View::ChatWith(a, _), View::ChatWith(b, _)) if a == b)
 }
 
 fn begin_list(ui: &Ui, view: &View) -> u64 {
@@ -2839,9 +2847,14 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
     })
 }
 
-/// The backend's error when Messenger's restore-history PIN prompt covers the page.
+/// The backend's errors while Messenger history is locked: the restore PIN
+/// prompt covering the page, or a thread that never loaded because of it.
+/// Any of them should offer the unlock dialog instead of a dead end.
 fn needs_messenger_unlock(error: &str) -> bool {
+    let error = error.to_ascii_lowercase();
     error.contains("history prompt blocked input")
+        || error.contains("e2ee chat locked")
+        || error.contains("messenger is locked")
 }
 
 /// Ask for the Messenger PIN (stdin only, never stored). With `retry`, the
@@ -4691,7 +4704,22 @@ mod tests {
         assert!(needs_messenger_unlock(
             "Error: Messenger history prompt blocked input; use `fb unlock`"
         ));
+        // A locked thread that never loaded reports this instead; it must
+        // offer the same unlock path rather than a bare error.
+        assert!(needs_messenger_unlock(
+            "thread did not load (e2ee chat locked? run `fb unlock`)"
+        ));
         assert!(!needs_messenger_unlock("network error"));
+    }
+
+    #[test]
+    fn a_reply_quote_never_follows_into_another_chat() {
+        let a = View::ChatWith("/messages/t/1".into(), "Alice".into());
+        let b = View::ChatWith("/messages/t/2".into(), "Bob".into());
+        assert!(quote_follows_chat(&a, &a.clone()));
+        assert!(!quote_follows_chat(&a, &b));
+        assert!(!quote_follows_chat(&a, &View::Chats));
+        assert!(!quote_follows_chat(&View::Chats, &a));
     }
 
     #[test]

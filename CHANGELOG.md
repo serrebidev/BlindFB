@@ -4,6 +4,18 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.5 - 2026-10-31
+
+A bug-audit release: chat history reads again, and four smaller faults found in the same pass are gone. Backend v0.1.5-blindfb.16.
+
+- Chat history reads again. Messenger labels any message older than today with its full date — "At September 5, 2026, 10:24 PM, You: ..." — and the backend split that label at the first comma, which is the date's own. Every dated message was thrown away, so a thread listed its dates and then blank `me:` lines with no sender and no text. That looked exactly like chats that could not be decrypted; they were decrypted, and their text is back ([#22](https://github.com/hieu-lee/facebook-cli/pull/22)).
+- Unlock says why it found nothing. When no restore prompt exists, the backend no longer returns a wall of your chat list — names and message previews read back inside an error — and it now explains that a profile which once answered "Don't restore messages" keeps that answer, so Facebook will not offer the PIN prompt there again. Chats that profile already restored still read.
+- A locked thread offers the unlock dialog. The backend reports a thread it could not open as "e2ee chat locked", which BlindFB did not recognise as a lock, so you got a dead-end error instead of the PIN prompt.
+- Feed authors read once. Facebook emits an author's parts plus the assembled name, so a page called "Grok by SpaceXAI" read as "Yury. Ai and Grok by SpaceXAI / Yury. Ai and Grok by SpaceXAI".
+- Notifications: one odd row no longer empties the list. A notification without a Facebook target keeps its text and reads "(no link)", and a row this build does not understand is skipped instead of failing the whole section.
+- A reply quote stays in its chat. Replying in one conversation and opening another carried the quote over, so the next send quoted a message from the wrong thread.
+- A chat window's status no longer counts its date headers as messages.
+
 ## v0.7.4 - 2026-10-31
 
 The unlock fix, finished. Two deeper faults kept Messenger history locked even with the right prompt finder, both found by auditing the whole read/unlock path end to end:
