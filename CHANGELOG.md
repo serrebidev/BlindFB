@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.9 - 2026-11-01
+
+Reactions land on the item you picked, group members show up, and the group window loads at news-feed speed. Backend v0.1.5-blindfb.18.
+
+- Reactions sometimes landed on the wrong thing, or nowhere, while BlindFB reported success. The reaction picker was chosen as the last toolbar on the page with enough buttons, so on busy post pages the click could go to the comment box's toolbar instead; and nothing checked the result. The picker is now the toolbar that appears after hovering the Like button, the wait polls instead of guessing a fixed delay, and the reaction is verified on the post before BlindFB says it landed — if it did not land, you get an honest error, not a false success. Removing a reaction is verified the same way.
+- Reacting to a message or replying to one always acted on the newest message with that text, so an older "ok", "thanks" or a link sent twice could not be picked — the newest copy got the reaction instead. Both the chat window and the Chats view now name the exact message you selected, counting duplicates from the newest.
+- Group members never appeared. Facebook links members in two shapes the backend did not recognise (a /people/ address, and an address inside the group's own path), and those members were silently dropped from the list. Both shapes now resolve, for every group.
+- The group window loads like the news feed: the first 10 posts and 50 members appear as soon as they are ready, then the rest (50 posts, up to 500 members) fills in behind you without moving your place in either list. Before, the window waited for everything — the full member scroll included — before showing anything.
+- The Linux download runs on current systems again. It was built on a runner so new that it refused to start on Debian 13 and Ubuntu 24.04 LTS (it demanded a newer system library than those ship). The Linux build is pinned to Ubuntu 22.04, whose binaries run on every current distribution.
+
 ## v0.7.8 - 2026-10-31
 
 Smaller live reads reduce loading delays, and recommended reels work with Facebook's counted Comment buttons. Backend unchanged, v0.1.5-blindfb.16.

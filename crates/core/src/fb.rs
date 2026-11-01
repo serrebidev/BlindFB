@@ -541,22 +541,43 @@ pub fn send_args(chat: &str, text: &str, files: &[String]) -> Vec<String> {
     args
 }
 
-pub fn msg_react_args(chat: &str, reaction: &str, match_text: Option<&str>) -> Vec<String> {
+pub fn msg_react_args(
+    chat: &str,
+    reaction: &str,
+    match_text: Option<&str>,
+    nth: usize,
+) -> Vec<String> {
     let mut args = vec!["msgreact".to_owned(), chat.to_owned(), reaction.to_owned()];
     if let Some(text) = match_text {
         args.push("--match".to_owned());
         args.push(text.to_owned());
     }
+    // --nth counts matches from the newest (0 = the newest): how a
+    // caller showing a list names an older duplicate exactly.
+    if nth > 0 {
+        args.push("--nth".to_owned());
+        args.push(nth.to_string());
+    }
     args
 }
 
-pub fn reply_args(chat: &str, text: &str, files: &[String], match_text: &str) -> Vec<String> {
+pub fn reply_args(
+    chat: &str,
+    text: &str,
+    files: &[String],
+    match_text: &str,
+    nth: usize,
+) -> Vec<String> {
     let mut args = vec!["reply".to_owned(), chat.to_owned()];
     if !text.is_empty() {
         args.push(text.to_owned());
     }
     args.push("--match".to_owned());
     args.push(match_text.to_owned());
+    if nth > 0 {
+        args.push("--nth".to_owned());
+        args.push(nth.to_string());
+    }
     for file in files {
         args.push("--file".to_owned());
         args.push(file.clone());
@@ -829,19 +850,33 @@ mod tests {
     #[test]
     fn message_action_args_target_the_matched_message() {
         assert_eq!(
-            msg_react_args("/messages/t/42", "love", Some("see you")),
+            msg_react_args("/messages/t/42", "love", Some("see you"), 0),
             ["msgreact", "/messages/t/42", "love", "--match", "see you"]
         );
         assert_eq!(
-            msg_react_args("/messages/t/42", "like", None),
+            msg_react_args("/messages/t/42", "like", None, 0),
             ["msgreact", "/messages/t/42", "like"]
+        );
+        // An older duplicate is named by its distance from the newest match.
+        assert_eq!(
+            msg_react_args("/messages/t/42", "wow", Some("ok"), 2),
+            [
+                "msgreact",
+                "/messages/t/42",
+                "wow",
+                "--match",
+                "ok",
+                "--nth",
+                "2"
+            ]
         );
         assert_eq!(
             reply_args(
                 "/messages/t/42",
                 "on my way",
                 &["a.png".to_owned()],
-                "see you"
+                "see you",
+                0
             ),
             [
                 "reply",
@@ -854,8 +889,20 @@ mod tests {
             ]
         );
         assert_eq!(
-            reply_args("/messages/t/42", "", &[], "see you"),
+            reply_args("/messages/t/42", "", &[], "see you", 0),
             ["reply", "/messages/t/42", "--match", "see you"]
+        );
+        assert_eq!(
+            reply_args("/messages/t/42", "mine", &[], "ok", 1),
+            [
+                "reply",
+                "/messages/t/42",
+                "mine",
+                "--match",
+                "ok",
+                "--nth",
+                "1"
+            ]
         );
     }
 

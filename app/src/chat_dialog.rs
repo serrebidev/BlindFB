@@ -31,7 +31,7 @@ struct ChatState {
     count: u32,
     files: Vec<String>,
     /// Text of the message the next send replies to (quotes).
-    reply_to: Option<String>,
+    reply_to: Option<(String, usize)>,
     /// True when the next delivery should land on the newest message
     /// (open, refresh, after sending). Load more sets it false: the reader
     /// is walking history and must keep their place.
@@ -141,7 +141,7 @@ impl ChatWindow {
         }
         self.note("Sending…");
         let args = match &reply_to {
-            Some(target) => reply_args(&id, &text, &files, target),
+            Some((target, nth)) => reply_args(&id, &text, &files, target, *nth),
             None => send_args(&id, &text, &files),
         };
         ui.send(Job {
@@ -150,11 +150,15 @@ impl ChatWindow {
         });
     }
 
-    fn selected_match(&self) -> Option<String> {
-        let index = self.messages.get_selection()?;
-        let line = self.messages.get_string(index)?;
-        let text = message_match_text(&line);
-        (!text.is_empty()).then_some(text)
+    fn selected_match(&self) -> Option<(String, usize)> {
+        let index = self.messages.get_selection()? as usize;
+        let mut texts = Vec::new();
+        let mut i = 0;
+        while let Some(line) = self.messages.get_string(i) {
+            texts.push(message_match_text(&line));
+            i += 1;
+        }
+        super::match_nth(&texts, index)
     }
 
     fn menu_action(&self, ui: &Ui, action: i32) {
@@ -177,11 +181,11 @@ impl ChatWindow {
                     self.note("Reply cancelled. Your next message sends normally.");
                     return;
                 }
-                let Some(text) = self.selected_match() else {
+                let Some((text, nth)) = self.selected_match() else {
                     self.note("That message has no text to reply to.");
                     return;
                 };
-                self.state.lock().unwrap().reply_to = Some(text.clone());
+                self.state.lock().unwrap().reply_to = Some((text.clone(), nth));
                 self.note(&format!(
                     "Replying to: {text}. Write your reply and send as usual."
                 ));
@@ -192,13 +196,13 @@ impl ChatWindow {
                 if reaction == "none" {
                     return;
                 }
-                let Some(text) = self.selected_match() else {
+                let Some((text, nth)) = self.selected_match() else {
                     self.note("That message has no text to react to.");
                     return;
                 };
                 let id = self.state.lock().unwrap().id.clone();
                 ui.send(Job {
-                    task: Task::Fb(msg_react_args(&id, reaction, Some(&text)), None),
+                    task: Task::Fb(msg_react_args(&id, reaction, Some(&text), nth), None),
                     tag: Tag::Text,
                 });
                 self.note(&format!("Reacting {reaction} to: {text}"));

@@ -16,6 +16,11 @@ const ID_MEMBER_MESSAGE: i32 = 12202;
 const ID_MEMBER_FRIEND: i32 = 12203;
 const ID_MEMBER_WEB: i32 = 12204;
 const MEMBER_CAP: u32 = 500;
+/// The window loads like the news feed: a small first page paints at
+/// once, then one background top-up fills the rest in.
+const POSTS_FIRST: u32 = 10;
+const POSTS_CAP: u32 = 50;
+const MEMBERS_FIRST: u32 = 50;
 
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 
@@ -35,6 +40,12 @@ struct GroupState {
     members: Vec<Record>,
     posts_count: Option<usize>,
     members_count: Option<usize>,
+    /// How many rows the latest posts/members fetch asked for; a full
+    /// page back means a background top-up to the cap is worthwhile.
+    posts_want: u32,
+    members_want: u32,
+    posts_loading: bool,
+    members_loading: bool,
     /// What to do in the main window once this dialog has closed.
     pending: Option<Pending>,
     close_requested: bool,
@@ -182,6 +193,10 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             members: Vec::new(),
             posts_count: None,
             members_count: None,
+            posts_want: POSTS_FIRST,
+            members_want: MEMBERS_FIRST,
+            posts_loading: true,
+            members_loading: true,
             pending: None,
             close_requested: false,
         })),
@@ -189,11 +204,11 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     *ui.group_window.lock().unwrap() = Some(window.clone());
 
     ui.send(Job {
-        task: Task::Fb(posts_args(&url, 50, true), None),
+        task: Task::Fb(posts_args(&url, POSTS_FIRST, true), None),
         tag: Tag::GroupPosts(session),
     });
     ui.send(Job {
-        task: Task::Fb(members_args(&url, MEMBER_CAP, true), None),
+        task: Task::Fb(members_args(&url, MEMBERS_FIRST, true), None),
         tag: Tag::GroupMembers(session),
     });
 
@@ -312,13 +327,21 @@ fn refresh_note(window: &GroupWindow) {
     let state = window.state.lock().unwrap();
     let posts = state
         .posts_count
-        .map(|n| format!("{n} posts"))
+        .map(|n| {
+            if state.posts_loading {
+                format!("{n} posts so far")
+            } else {
+                format!("{n} posts")
+            }
+        })
         .unwrap_or_else(|| "posts loading".to_owned());
     let members = state
         .members_count
         .map(|n| {
             if n >= MEMBER_CAP as usize {
                 format!("first {MEMBER_CAP} members (list capped)")
+            } else if state.members_loading {
+                format!("{n} members so far")
             } else {
                 format!("{n} members")
             }
@@ -327,40 +350,93 @@ fn refresh_note(window: &GroupWindow) {
     window.note(&format!("{}: {posts} · {members}.", state.name));
 }
 
+fn member_label(record: &Record) -> String {
+    let info = record.field(2);
+    if info.is_empty() {
+        record.field(0).to_owned()
+    } else {
+        format!("{} — {}", record.field(0), info)
+    }
+}
+
+/// First fill replaces; a staged top-up (which re-reads from the top)
+/// appends only rows not already shown, so the user's place in the
+/// list never moves while the rest loads behind them.
 fn fill_posts(window: &GroupWindow, raw: &str) {
     let records = parse_feed(raw);
-    window.posts.clear();
-    for record in &records {
-        window
+    let first = window.state.lock().unwrap().posts.is_empty();
+    if first {
+        window.posts.clear();
+        for record in &records {
+            window
+                .posts
+                .append(&super::display_for(&View::Feed, record));
+        }
+        if !records.is_empty() {
+            window.posts.set_selection(0, true);
+        }
+        let mut state = window.state.lock().unwrap();
+        state.posts_count = Some(records.len());
+        state.posts = records;
+    } else {
+        let known: std::collections::HashSet<String> = window
+            .state
+            .lock()
+            .unwrap()
             .posts
-            .append(&super::display_for(&View::Feed, record));
+            .iter()
+            .map(|r| r.raw.clone())
+            .collect();
+        let mut fresh = Vec::new();
+        for record in records {
+            if !known.contains(&record.raw) {
+                window
+                    .posts
+                    .append(&super::display_for(&View::Feed, &record));
+                fresh.push(record);
+            }
+        }
+        let mut state = window.state.lock().unwrap();
+        state.posts.extend(fresh);
+        state.posts_count = Some(state.posts.len());
     }
-    if !records.is_empty() {
-        window.posts.set_selection(0, true);
-    }
-    window.state.lock().unwrap().posts_count = Some(records.len());
-    window.state.lock().unwrap().posts = records;
     refresh_note(window);
 }
 
 fn fill_members(window: &GroupWindow, raw: &str) {
     let records = parse_records(raw);
-    window.members.clear();
-    for record in &records {
-        let info = record.field(2);
-        if info.is_empty() {
-            window.members.append(record.field(0));
-        } else {
-            window
-                .members
-                .append(&format!("{} — {}", record.field(0), info));
+    let first = window.state.lock().unwrap().members.is_empty();
+    if first {
+        window.members.clear();
+        for record in &records {
+            window.members.append(&member_label(record));
         }
+        if !records.is_empty() {
+            window.members.set_selection(0, true);
+        }
+        let mut state = window.state.lock().unwrap();
+        state.members_count = Some(records.len());
+        state.members = records;
+    } else {
+        let known: std::collections::HashSet<String> = window
+            .state
+            .lock()
+            .unwrap()
+            .members
+            .iter()
+            .map(|r| r.raw.clone())
+            .collect();
+        let mut fresh = Vec::new();
+        for record in records {
+            if !known.contains(&record.raw) {
+                window.members.append(&member_label(&record));
+                fresh.push(record);
+            }
+        }
+        let mut state = window.state.lock().unwrap();
+        state.members.extend(fresh);
+        state.members_count = Some(state.members.len());
     }
-    if !records.is_empty() {
-        window.members.set_selection(0, true);
-    }
-    window.state.lock().unwrap().members_count = Some(records.len());
-    window.state.lock().unwrap().members = records;
     refresh_note(window);
 }
 
@@ -370,7 +446,26 @@ pub(super) fn deliver_posts(ui: &Ui, session: u64, result: Result<String, String
         return;
     };
     match result {
-        Ok(raw) => fill_posts(&window, &raw),
+        Ok(raw) => {
+            let returned = parse_feed(&raw).len();
+            fill_posts(&window, &raw);
+            // A full first page means there may be more: top up to the
+            // cap in the background, like the feed's read-ahead.
+            let (want, url) = {
+                let state = window.state.lock().unwrap();
+                (state.posts_want, state.url.clone())
+            };
+            if returned >= want as usize && want < POSTS_CAP {
+                window.state.lock().unwrap().posts_want = POSTS_CAP;
+                ui.send(Job {
+                    task: Task::Fb(posts_args(&url, POSTS_CAP, true), None),
+                    tag: Tag::GroupPosts(session),
+                });
+            } else {
+                window.state.lock().unwrap().posts_loading = false;
+                refresh_note(&window);
+            }
+        }
         Err(e) => window.note(&format!("Posts could not load: {e}")),
     }
 }
@@ -381,7 +476,24 @@ pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, Stri
         return;
     };
     match result {
-        Ok(raw) => fill_members(&window, &raw),
+        Ok(raw) => {
+            let returned = parse_records(&raw).len();
+            fill_members(&window, &raw);
+            let (want, url) = {
+                let state = window.state.lock().unwrap();
+                (state.members_want, state.url.clone())
+            };
+            if returned >= want as usize && want < MEMBER_CAP {
+                window.state.lock().unwrap().members_want = MEMBER_CAP;
+                ui.send(Job {
+                    task: Task::Fb(members_args(&url, MEMBER_CAP, true), None),
+                    tag: Tag::GroupMembers(session),
+                });
+            } else {
+                window.state.lock().unwrap().members_loading = false;
+                refresh_note(&window);
+            }
+        }
         Err(e) => window.note(&format!("Members could not load: {e}")),
     }
 }

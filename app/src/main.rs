@@ -300,9 +300,9 @@ struct State {
     unlocking: bool,
     records: Vec<Record>,
     attachments: Vec<String>,
-    /// Text of the message the next send replies to (quotes), from the
-    /// message context menu's Reply.
-    reply_to: Option<String>,
+    /// (Text, --nth) of the message the next send replies to (quotes),
+    /// from the message context menu's Reply.
+    reply_to: Option<(String, usize)>,
     /// A selection whose details pane update is waiting out the debounce:
     /// arrowing fast should not rebuild the details and links per row.
     pending_details: Option<(usize, Instant)>,
@@ -3525,10 +3525,32 @@ fn message_match_text(line: &str) -> String {
     text.trim().to_owned()
 }
 
-fn selected_message_match(ui: &Ui) -> Option<String> {
-    let (_, record) = selected(ui)?;
-    let text = message_match_text(record.field(0));
-    (!text.is_empty()).then_some(text)
+/// The picked message's match text plus its `--nth`: how many NEWER
+/// messages (below it in the list) the backend's contains-match would
+/// count before reaching it. Duplicate texts ("ok", "thanks", a link
+/// sent twice) otherwise always act on the newest copy, not the picked
+/// one.
+fn match_nth(texts: &[String], index: usize) -> Option<(String, usize)> {
+    let target = texts.get(index)?.clone();
+    if target.is_empty() {
+        return None;
+    }
+    let nth = texts[index + 1..]
+        .iter()
+        .filter(|t| !t.is_empty() && t.contains(target.as_str()))
+        .count();
+    Some((target, nth))
+}
+
+fn selected_message_match(ui: &Ui) -> Option<(String, usize)> {
+    let (index, _) = selected(ui)?;
+    let state = ui.state.borrow();
+    let texts: Vec<String> = state
+        .records
+        .iter()
+        .map(|r| message_match_text(r.field(0)))
+        .collect();
+    match_nth(&texts, index)
 }
 
 fn reply_selected(ui: &Ui) {
@@ -3537,11 +3559,11 @@ fn reply_selected(ui: &Ui) {
         ui.status("Reply cancelled. Your next message sends normally.");
         return;
     }
-    let Some(text) = selected_message_match(ui) else {
+    let Some((text, nth)) = selected_message_match(ui) else {
         ui.status("That message has no text to reply to.");
         return;
     };
-    ui.state.borrow_mut().reply_to = Some(text.clone());
+    ui.state.borrow_mut().reply_to = Some((text.clone(), nth));
     ui.status(&format!(
         "Replying to: {text}. Write your reply in the message box and send as usual."
     ));
@@ -3552,12 +3574,12 @@ fn msg_react_selected(ui: &Ui, reaction: &str) {
     let View::ChatWith(chat, _) = ui.state.borrow().view.clone() else {
         return;
     };
-    let Some(text) = selected_message_match(ui) else {
+    let Some((text, nth)) = selected_message_match(ui) else {
         ui.status("That message has no text to react to.");
         return;
     };
     ui.send(Job {
-        task: Task::Fb(msg_react_args(&chat, reaction, Some(&text)), None),
+        task: Task::Fb(msg_react_args(&chat, reaction, Some(&text), nth), None),
         tag: Tag::Text,
     });
     ui.status(&format!("Reacting {reaction} to: {text}"));
@@ -3588,7 +3610,7 @@ fn send_composed(ui: &Ui) {
     }
     let reply_to = ui.state.borrow().reply_to.clone();
     let args = match &reply_to {
-        Some(target) => reply_args(&chat, &text, &files, target),
+        Some((target, nth)) => reply_args(&chat, &text, &files, target, *nth),
         None => send_args(&chat, &text, &files),
     };
     ui.send(Job {
@@ -4432,6 +4454,21 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn match_nth_counts_newer_duplicates() {
+        let texts: Vec<String> = ["ok", "later", "ok", "okay"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        // "okay" contains "ok", so the backend counts it as a match too.
+        assert_eq!(match_nth(&texts, 0), Some(("ok".to_string(), 2)));
+        assert_eq!(match_nth(&texts, 2), Some(("ok".to_string(), 1)));
+        assert_eq!(match_nth(&texts, 3), Some(("okay".to_string(), 0)));
+        assert_eq!(match_nth(&texts, 9), None);
+        let blank: Vec<String> = vec![String::new()];
+        assert_eq!(match_nth(&blank, 0), None);
+    }
 
     #[test]
     fn message_match_text_strips_time_sender_and_reactions() {
