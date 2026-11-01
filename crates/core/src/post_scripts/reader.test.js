@@ -7,7 +7,7 @@ const ARTICLE = '[role=article][aria-label]';
 const EDITOR = '[role=textbox][contenteditable=true],textarea';
 
 function fixture(mode = false) {
-  const watch = mode === true, isReel = mode === 'reel' || mode === 'untitled';
+  const watch = mode === true, isReel = mode === 'reel' || mode === 'reel-count' || mode === 'untitled';
   let comments = [], focus, editor;
   let opened = !watch, paused = false;
   let expanded = false;
@@ -19,7 +19,7 @@ function fixture(mode = false) {
   const author = {innerText: 'Reel author', href: 'https://www.facebook.com/author', closest: () => null, getAttribute: () => ''};
   const reelCard = {isConnected: true, closest: () => null, contains: () => true, querySelectorAll: selector => selector === 'a[href]' ? [author] : selector === '[role=button][aria-label]' ? [openComments] : selector === '[role=button],button' ? [expand] : []};
   video.parentElement = isReel ? reelCard : null;
-  const openComments = {getAttribute: () => isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
+  const openComments = {getAttribute: () => mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
   // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
   const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
@@ -101,6 +101,8 @@ function fixture(mode = false) {
   assert.equal(reeled.text, 'Entire reel caption');
   assert.equal(reeled.author, 'Reel author');
   assert.equal(reeled.video, 'https://www.facebook.com/reel/123/');
+  const counted = JSON.parse(await fixture('reel-count').api.initialize('https://www.facebook.com/reel/123/'));
+  assert.equal(counted.text, 'Entire reel caption');
   const untitled = fixture('untitled');
   assert.equal(JSON.parse(await untitled.api.initialize('https://www.facebook.com/reel/123/')).text, '');
   assert.equal(JSON.parse(await untitled.api.setTitle('Dedicated To Bart Simpson')).text, 'Dedicated To Bart Simpson');

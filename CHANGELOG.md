@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.8 - 2026-10-31
+
+Smaller live reads reduce loading delays, and recommended reels work with Facebook's counted Comment buttons. Backend unchanged, v0.1.5-blindfb.16.
+
+- Sections and searches open with 10 items; My posts opens with five. Reading several screens before showing the first one cost unnecessary scrolling. On this account, notifications fell from 6.26 seconds for 50 to 1.92 seconds for 10; My posts fell from 12.01 seconds for 20 to 3.75 seconds for five.
+- Load more adds 10 items instead of 50. On this account, the next My posts batch took 8.55 seconds instead of about 33 seconds. Existing items retain their order and reading position.
+- Reels loads five at a time instead of 20. A measured batch fell from about 22 seconds to eight seconds, including opening its page. Exact groups of reels from notifications retain all their known links.
+- Background prefetch leaves a read slot free for the section you open. Opening a queued prefetch promotes that same request, without starting it twice. Superseded requests are checked again before they reach Facebook.
+- Facebook now names some reel buttons “Comment, 6 comments” instead of “Comment.” Both the reels list and reader recognize those labels, which previously caused an empty list or a reader timeout.
+
 ## v0.7.7 - 2026-10-31
 
 Two fixes: videos shared from other sites now play, and arrowing through the Views list no longer starts a read for every section it passes. Backend unchanged, v0.1.5-blindfb.16.

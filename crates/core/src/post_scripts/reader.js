@@ -27,7 +27,7 @@
       return rect.height > 0 && rect.top >= -10 && rect.top < innerHeight / 2;
     });
     let element = video;
-    while (element && !buttonLabeled(element, /^Comment$/).length) element = element.parentElement;
+    while (element && !buttonLabeled(element, /^Comment(?:, \S+ comments?)?$/i).length) element = element.parentElement;
     // Until it shows its author the card is still loading, or is the next reel's.
     return element && [...element.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? element : null;
   }
@@ -400,7 +400,7 @@
         }
         const caption = lines.filter(text => text !== author && !/^(·|Follow|Following|Verified account|[\d.,]+[KMB]?)$/i.test(text));
         reel = {author, text: caption.join('\n'), links: links(card, card)};
-        const comment = buttonLabeled(card, /^Comment$/);
+        const comment = buttonLabeled(card, /^Comment(?:, \S+ comments?)?$/i);
         if (comment.length !== 1) throw Error('This reel has no unique Comment button.');
         comment[0].click();
         root = await F.waitFor(() => [...document.querySelectorAll('[role=complementary]')].find(element => F.visible(element) && element.querySelector(EDITOR + ',' + ARTICLE)), 10000);

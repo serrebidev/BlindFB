@@ -94,7 +94,7 @@
       return r.height > 0 && r.top >= -10 && r.top < innerHeight / 2;
     });
     let card = video;
-    while (card && ![...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && /^Comment$/i.test(label(b)))) card = card.parentElement;
+    while (card && ![...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && /^Comment(?:, \S+ comments?)?$/i.test(label(b)))) card = card.parentElement;
     return card && [...card.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? card : null;
   }
 

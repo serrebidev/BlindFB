@@ -21,3 +21,32 @@ const hydrated = {nested: story, get inaccessible() { throw Error('Do not evalua
 assert.equal(stories([hydrated]).length, 1);
 assert.deepEqual(stories([{...story, attachments: [{media: {shareable_url: 'https://facebook.com.evil/reel/123/'}}]}]), []);
 console.log('Reel fixtures passed: exact notification identity, three IDs, account fallback, full captions, trusted URLs.');
+
+// The live viewer includes its comment count in the button's accessible name.
+async function recommendedFixture(commentLabel) {
+  const vm = require('node:vm'), fs = require('node:fs');
+  const comment = {getAttribute: () => commentLabel};
+  const author = {innerText: 'Reel author'};
+  const card = {querySelectorAll: selector => selector === 'a[href]' ? [author] : [comment]};
+  const video = {parentElement: card, getBoundingClientRect: () => ({height: 100, top: 0}), querySelectorAll: () => [], pause() {}};
+  const document = {
+    querySelectorAll: selector => selector === 'video' ? [video] : [],
+    createTreeWalker: () => ({nextNode: () => null}),
+  };
+  const window = {__fb: {clean: text => text.trim(), visible: () => true,
+    waitFor: async predicate => predicate(), sleep: async () => {}}};
+  vm.runInNewContext(fs.readFileSync(__dirname + '/reels.js', 'utf8'),
+    {window, document, location: {href: 'https://www.facebook.com/reel/123/'}, URL, innerHeight: 800, NodeFilter: {SHOW_TEXT: 4}});
+  window.__blindfbReels.initialize('fixture', 'recommended');
+  const first = JSON.parse(await window.__blindfbReels.more('fixture', 1));
+  assert.equal(first.rows.length, 1, commentLabel);
+  assert.equal(first.rows[0].url, 'https://www.facebook.com/reel/123/');
+  assert.equal(first.rows[0].author, 'Reel author');
+  assert.deepEqual(JSON.parse(await window.__blindfbReels.more('fixture', 1)).rows, []);
+}
+(async () => {
+  for (const label of ['Comment', 'Comment, 1 comment', 'Comment, 6 comments', 'Comment, 1.2K comments']) {
+    await recommendedFixture(label);
+  }
+  console.log('Recommended reels fixtures passed: plain and counted comment buttons, no duplicate reels.');
+})().catch(error => {console.error(error); process.exitCode = 1;});

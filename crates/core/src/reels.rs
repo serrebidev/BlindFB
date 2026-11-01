@@ -5,7 +5,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 
-const BATCH_SIZE: usize = 20;
+const BATCH_SIZE: usize = 5;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ReelSource {

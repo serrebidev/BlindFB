@@ -100,16 +100,16 @@ const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
 ];
 /// One page of a list section. The backend scrolls a live Facebook page per
-/// item it has to add, so asking for 100 costs several times what asking for
-/// 50 does; Load more grows the request from here.
-const PAGE: u32 = 50;
+/// item it has to add, so asking for 50 costs several times what asking for
+/// 10 does; Load more grows the request from here.
+const PAGE: u32 = 10;
 /// The News feed opens with this many posts, then reads ahead while the user reads.
 const FEED_FIRST: u32 = 10;
 /// The read-ahead batch. A feed request re-scrolls from the top, so 30 more
 /// posts is nearly the same reading as 100 for the first screenful.
 const FEED_AHEAD: u32 = 30;
 /// Your own posts are few and the section is expensive to scroll, so it opens small.
-const MY_POSTS_FIRST: u32 = 20;
+const MY_POSTS_FIRST: u32 = 5;
 /// A cached section younger than this is shown without asking Facebook again.
 const FRESH: Duration = Duration::from_secs(60);
 /// A section picked in the Views list is read once the selection rests this
@@ -885,7 +885,7 @@ impl Ui {
 /// Slots are handed to reads the user is waiting for first: a background
 /// read never takes the last free slot while a foreground read is queued,
 /// so opening a section never waits behind a prefetch that was already
-/// running.
+/// running. Background reads also leave one slot free for the next foreground read.
 struct ReadGate {
     state: Mutex<GateState>,
     freed: std::sync::Condvar,
@@ -902,7 +902,7 @@ struct GateState {
 /// Whether a read may take a slot now. A background read stands aside while
 /// anything the user is waiting for is queued.
 fn gate_admits(taken: usize, max: usize, waiting: usize, background: bool) -> bool {
-    taken < max && (!background || waiting == 0)
+    taken < max && (!background || (waiting == 0 && taken < max.saturating_sub(1)))
 }
 
 impl ReadGate {
@@ -913,19 +913,29 @@ impl ReadGate {
             max,
         }
     }
-    fn acquire(&self, background: bool) -> ReadPermit<'_> {
+    fn acquire(&self, mut background: impl FnMut() -> bool) -> ReadPermit<'_> {
         let mut state = self.state.lock().unwrap();
-        if !background {
-            state.waiting += 1;
+        let mut foreground = false;
+        loop {
+            let now_foreground = !background();
+            if now_foreground != foreground {
+                if now_foreground {
+                    state.waiting += 1;
+                } else {
+                    state.waiting -= 1;
+                }
+                foreground = now_foreground;
+            }
+            if gate_admits(state.taken, self.max, state.waiting, !foreground) {
+                if foreground {
+                    state.waiting -= 1;
+                }
+                state.taken += 1;
+                return ReadPermit { gate: self };
+            }
+            // Opening a prefetched section can promote it while it waits for a slot.
+            state = self.freed.wait_timeout(state, Duration::from_millis(100)).unwrap().0;
         }
-        while !gate_admits(state.taken, self.max, state.waiting, background) {
-            state = self.freed.wait(state).unwrap();
-        }
-        if !background {
-            state.waiting -= 1;
-        }
-        state.taken += 1;
-        ReadPermit { gate: self }
     }
 }
 
@@ -978,14 +988,19 @@ fn spawn_worker(
                 // run side by side — two at a time, so a burst of reads
                 // cannot pin the CPU (see ReadGate). Background reads yield
                 // those slots to whatever the user just opened.
-                let background = match &job.tag {
-                    Tag::List { view, .. } => latest_list.lock().unwrap().background.contains(view),
-                    _ => false,
-                };
                 let (args, tag, done, gate) =
                     (args.clone(), job.tag, done.clone(), read_gate.clone());
+                let requests = latest_list.clone();
                 thread::spawn(move || {
-                    let _permit = gate.acquire(background);
+                    let _permit = gate.acquire(|| match &tag {
+                        Tag::List { view, .. } => requests.lock().unwrap().background.contains(view),
+                        _ => false,
+                    });
+                    if let Tag::List { view, request, .. } = &tag {
+                        if !requests.lock().unwrap().current(view, *request) {
+                            return;
+                        }
+                    }
                     let result = fb.run(&refs(&args));
                     let _ = done.send(Done { tag, result });
                 });
@@ -1338,6 +1353,7 @@ fn build_menus(frame: &Frame) {
 }
 
 fn activate_view(ui: &Ui, view: &View) {
+    ui.latest_list.lock().unwrap().background.remove(view);
     let mut state = ui.state.borrow_mut();
     let clear = state.records_view != *view;
     if clear {
@@ -4539,6 +4555,8 @@ mod tests {
     fn background_reads_stand_aside_for_anything_the_user_waits_for() {
         // A background read takes a free slot only while nothing is queued.
         assert!(gate_admits(0, 2, 0, true));
+        assert!(!gate_admits(1, 2, 0, true));
+        assert!(gate_admits(1, 2, 0, false));
         assert!(!gate_admits(0, 2, 1, true));
         assert!(gate_admits(0, 2, 1, false));
         // But it still respects the ceiling.
@@ -4547,29 +4565,76 @@ mod tests {
     }
 
     #[test]
+    fn queued_prefetch_can_use_the_reserved_slot_when_opened() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let gate = Arc::new(ReadGate::new(2));
+        let background = Arc::new(AtomicBool::new(true));
+        let active_prefetch = gate.acquire(|| true);
+        let (started, waiting) = std::sync::mpsc::channel();
+        let (admitted, ready) = std::sync::mpsc::channel();
+        let queued_gate = gate.clone();
+        let queued_background = background.clone();
+        let queued = thread::spawn(move || {
+            let _permit = queued_gate.acquire(|| {
+                let _ = started.send(());
+                queued_background.load(Ordering::SeqCst)
+            });
+            admitted.send(()).unwrap();
+        });
+        waiting.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(ready.try_recv().is_err());
+        background.store(false, Ordering::SeqCst);
+        ready.recv_timeout(Duration::from_secs(2)).unwrap();
+        drop(active_prefetch);
+        queued.join().unwrap();
+    }
+
+    #[test]
     fn opening_a_prefetched_section_makes_its_read_foreground() {
         let mut requests = ListRequests::default();
         let warm = requests.begin_background(&View::Chats);
         assert!(requests.background.contains(&View::Chats));
         // The user opens the section while the warm read is still running.
-        let opened = requests.begin(&View::Chats);
+        requests.background.remove(&View::Chats);
         assert!(!requests.background.contains(&View::Chats));
-        assert!(!requests.finish(&View::Chats, warm));
-        assert!(requests.finish(&View::Chats, opened));
+        assert!(requests.current(&View::Chats, warm));
+        assert!(requests.finish(&View::Chats, warm));
         assert!(requests.pending.is_empty());
     }
 
     #[test]
+    fn item_links_use_each_views_target_instead_of_its_label() {
+        let row = |fields: &[&str]| Record {fields: fields.iter().map(|s| (*s).to_owned()).collect(), raw: String::new()};
+        assert_eq!(item_link_target(&View::Marketplace, &row(&["A chair", "https://www.facebook.com/marketplace/item/123/", "$5", "listing"])).as_deref(), Some("https://www.facebook.com/marketplace/item/123/"));
+        assert_eq!(item_link_target(&View::SearchResults, &row(&["A person", "u1234", "", "profile"])).as_deref(), Some("u1234"));
+        assert_eq!(item_link_target(&View::Friends, &row(&["Alice", "u1234", "2 mutual friends"])).as_deref(), Some("u1234"));
+        assert_eq!(item_link_target(&View::Notifications, &row(&["now", "!", "A post", "/a/posts/1"])).as_deref(), Some("/a/posts/1"));
+        assert_eq!(item_link_target(&View::Chats, &row(&["c1234", "!", "now", "Alice", "Hi"])).as_deref(), Some("c1234"));
+        assert_eq!(item_link_target(&View::ProfileOf("u1234".into()), &row(&["name", "Alice"])).as_deref(), Some("u1234"));
+        assert!(item_link_target(&View::Feed, &row(&["-", "Sponsor", "", "", "Ad"])).is_none());
+        assert!(item_link_target(&View::SearchResults, &row(&["No link", "", "", "listing"])).is_none());
+        assert!(item_link_target(&View::CommentsOf("p1234".into()), &row(&["c", "u1234", "Alice", "now", "Hi"])).is_none());
+    }
+
+    #[test]
     fn a_page_is_small_enough_that_opening_a_section_is_not_a_long_scroll() {
-        const { assert!(PAGE == 50) };
-        const { assert!(FEED_FIRST < FEED_AHEAD && FEED_AHEAD < PAGE) };
+        const { assert!(PAGE == 10) };
+        const { assert!(FEED_FIRST == PAGE && FEED_AHEAD > PAGE) };
         const { assert!(MY_POSTS_FIRST < PAGE) };
         let args = default_args(&View::Feed).unwrap();
         assert!(args.windows(2).any(|w| w == ["-n", "10"]));
-        let args = default_args(&View::Chats).unwrap();
-        assert!(args.windows(2).any(|w| w == ["-n", "50"]));
+        for view in [
+            View::Chats, View::Friends, View::Groups, View::RecentFeed,
+            View::PostsOf("someone".into()), View::Marketplace,
+        ] {
+            let args = default_args(&view).unwrap();
+            assert!(args.windows(2).any(|w| w == ["-n", "10"]), "{view:?}");
+            let more = more_args(&view, &args, 10, false).unwrap();
+            assert!(more.windows(2).any(|w| w == ["-n", "20"]));
+        }
+        assert_eq!(default_args(&View::Notifications), Some(notifs_args(10)));
         let args = default_args(&View::MyPosts).unwrap();
-        assert!(args.windows(2).any(|w| w == ["-n", "20"]));
+        assert!(args.windows(2).any(|w| w == ["-n", "5"]));
     }
 
     #[test]
@@ -4928,7 +4993,7 @@ mod tests {
         );
         assert_eq!(
             default_args(&View::Marketplace),
-            Some(marketplace_args(PAGE))
+            Some(marketplace_args(10))
         );
         assert_eq!(
             more_args(
