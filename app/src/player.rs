@@ -410,25 +410,38 @@ mod platform {
         if guard.stopped {
             return;
         }
-        let child = Command::new(binary)
-            .args([
-                "--no-config",
-                "--idle=yes",
-                "--force-window=yes",
-                "--pause=yes",
-                "--osc=no",
-                "--osd-level=0",
-                "--input-default-bindings=no",
-                "--input-vo-keyboard=no",
-                "--input-cursor=no",
-                "--cursor-autohide=no",
-                "--terminal=no",
-                "--msg-level=all=no",
-                "--ytdl=no",
-                "--load-scripts=no",
-                &format!("--wid={hwnd}"),
-                &format!("--input-ipc-server={pipe_name}"),
-            ])
+        // mpv finds yt-dlp by name on PATH; the copy BlindFB manages is not there otherwise.
+        // With it, mpv resolves another site's video page (a YouTube clip shared into a post)
+        // itself, while direct Facebook stream URLs are played without the hook.
+        let path = blindfb_core::backend::data_dir().map(|dir| {
+            let mut value = dir.join("bin").into_os_string();
+            if let Some(existing) = std::env::var_os("PATH") {
+                value.push(";");
+                value.push(existing);
+            }
+            value
+        });
+        let mut command = Command::new(binary);
+        command.args([
+            "--no-config",
+            "--idle=yes",
+            "--force-window=yes",
+            "--pause=yes",
+            "--osc=no",
+            "--osd-level=0",
+            "--input-default-bindings=no",
+            "--input-vo-keyboard=no",
+            "--input-cursor=no",
+            "--cursor-autohide=no",
+            "--terminal=no",
+            "--msg-level=all=no",
+            &format!("--wid={hwnd}"),
+            &format!("--input-ipc-server={pipe_name}"),
+        ]);
+        if let Some(path) = path {
+            command.env("PATH", path);
+        }
+        let child = command
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())

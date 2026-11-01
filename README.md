@@ -15,7 +15,7 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - A post reader on Enter: the full post, its comments and replies, and a comment box; the context menu replies to, likes and copies the exact comment.
 - React with like, love, care, haha, wow, sad and angry, comment, and share through Facebook's own share dialog, which tells you the audience first and takes optional text.
 - Reels on Ctrl+8, in a cached list you can browse by caption; Enter plays, Escape returns to the same reel.
-- Videos and reels play in the reader, with Play/Pause, Stop, seek and a volume slider, and every control reachable with Tab.
+- Videos and reels play in the reader, with Play/Pause, Stop, seek and a volume slider, and every control reachable with Tab. A video shared from another site — a YouTube, Vimeo, Twitch or TikTok clip in a group post — plays there too; the player fetches that page itself and your Facebook session is never sent to it.
   Windows uses automatically installed mpv and its bundled codecs. Native NVDA controls keep the video surface out of Tab order.
 - File, Open Facebook link (Ctrl+O) opens a post, video or reel URL directly.
 - The final Load more list item (Enter, or Ctrl+L) appends the next posts, reels, results or chats and selects the first new item. Batches request 50 items (20 for My posts, 20 reels); Facebook may return fewer. The news feed opens with 10 posts and reads the next 30 ahead in the background, so its Load more is usually instant.

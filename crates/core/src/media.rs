@@ -159,6 +159,50 @@ fn install(target: &Path) -> Result<(), String> {
     fs::rename(&tmp.0, target).map_err(|e| format!("could not install the video helper: {e}"))
 }
 
+/// Video pages the player resolves without the Facebook session. Every one of them is a site
+/// yt-dlp supports and none of them needs — or may see — the browser's Facebook cookies.
+const EXTERNAL_HOSTS: [&str; 8] = [
+    "youtube.com",
+    "youtu.be",
+    "vimeo.com",
+    "dailymotion.com",
+    "twitch.tv",
+    "tiktok.com",
+    "streamable.com",
+    "rumble.com",
+];
+
+/// Whether `url` is a video page on one of those sites: a YouTube clip shared into a post,
+/// for instance, which has no Facebook video page behind it.
+pub fn is_external_video_url(url: &str) -> bool {
+    if url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return false;
+    }
+    let Ok(uri) = url.parse::<tungstenite::http::Uri>() else {
+        return false;
+    };
+    // Plain https only: yt-dlp is given this URL, and user info in it is not a site name.
+    if uri.scheme_str() != Some("https")
+        || uri
+            .authority()
+            .is_some_and(|authority| authority.as_str().contains('@'))
+    {
+        return false;
+    }
+    let Some(host) = uri.host() else {
+        return false;
+    };
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    EXTERNAL_HOSTS
+        .iter()
+        .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+}
+
+/// Anything the player knows how to resolve.
+pub fn is_playable_video_url(url: &str) -> bool {
+    is_facebook_url(url) || is_external_video_url(url)
+}
+
 /// Only Facebook pages go to yt-dlp, which would otherwise fetch anything it is given.
 pub fn is_facebook_url(url: &str) -> bool {
     [
@@ -309,9 +353,21 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
 /// browser tab `page` (the reader's own), so it is always the browser the backend really uses.
 /// Blocking.
 pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
-    if !is_facebook_url(video) {
-        return Err("This video is not on Facebook, so BlindFB will not play it.".to_owned());
+    if !is_playable_video_url(video) {
+        return Err("This video is not on Facebook or a video site BlindFB can play.".to_owned());
     }
+    // Another site's page is resolved by the player itself, which keeps its own yt-dlp. Nothing
+    // is fetched here, so a third-party site is never handed your Facebook session.
+    if !is_facebook_url(video) {
+        #[cfg(target_os = "windows")]
+        return Ok(serde_json::json!({"url": video, "title": ""}).to_string());
+        #[cfg(not(target_os = "windows"))]
+        return Err(
+            "Videos from other sites play in BlindFB's own player, which this build does not have."
+                .to_owned(),
+        );
+    }
+    // Only a Facebook video gets here, and only it carries the browser's session.
     let program = ensure()?;
     let cookies: serde_json::Value = serde_json::from_str(&fb.run(&[
         "page",
@@ -381,6 +437,52 @@ mod tests {
         assert!(parse_stream(r#"{"url":"file:///secret","title":"Title"}"#).is_err());
         assert!(parse_stream("{\"url\":\"https://video/test\\n\"}").is_err());
         assert!(parse_stream("{}\n{}").is_err());
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn a_shared_video_page_goes_to_the_player_without_the_facebook_session() {
+        // A program that cannot run: the call would fail if it asked the backend for anything,
+        // so this proves a third-party page is handed over untouched and cookie-less.
+        let fb = Fb::with_program(PathBuf::from("fb-that-is-never-run"));
+        let data = stream_details(&fb, "page", "https://www.youtube.com/watch?v=1").unwrap();
+        let info = parse_stream(&data).unwrap();
+        assert_eq!(info.url, "https://www.youtube.com/watch?v=1");
+        assert!(info.title.is_empty());
+        assert!(stream_details(&fb, "page", "https://example.org/video").is_err());
+    }
+
+    #[test]
+    fn shared_video_pages_play_without_a_facebook_session() {
+        for good in [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ",
+            "https://youtube.com/shorts/abc",
+            "https://m.youtube.com/watch?v=1",
+            "https://vimeo.com/12345",
+            "https://www.twitch.tv/videos/1",
+            "https://clips.twitch.tv/abc",
+            "https://www.tiktok.com/@a/video/1",
+        ] {
+            assert!(is_external_video_url(good), "{good}");
+            assert!(!is_facebook_url(good), "{good}");
+            assert!(is_playable_video_url(good), "{good}");
+        }
+        for bad in [
+            "https://youtube.com.evil/video",
+            "https://notyoutube.com/watch?v=1",
+            "http://www.youtube.com/watch?v=1",
+            "https://user:pass@youtube.com/watch?v=1",
+            "https://www.youtube.com/watch?v=1 --exec calc",
+            "https://example.org/video.mp4",
+            "file:///etc/passwd",
+            "",
+        ] {
+            assert!(!is_external_video_url(bad), "{bad}");
+            assert!(!is_playable_video_url(bad), "{bad}");
+        }
+        // The player may still open Facebook's own videos, which carry the session.
+        assert!(is_playable_video_url("https://www.facebook.com/reel/1/"));
     }
 
     #[test]

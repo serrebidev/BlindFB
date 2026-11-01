@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.7 - 2026-10-31
+
+Two fixes: videos shared from other sites now play, and arrowing through the Views list no longer starts a read for every section it passes. Backend unchanged, v0.1.5-blindfb.16.
+
+- A video shared from another site plays in the reader. A group post carrying a YouTube, Vimeo, Twitch or TikTok clip offered nothing: the reader only recognised Facebook video links, and the player refused any video that was not on facebook.com. The reader now offers the shared video as the post's video and lists its link with the others, and the player opens it. The player fetches that page itself with the yt-dlp it already keeps, so nothing about the video is resolved in the app — and your Facebook session is never handed to the other site. Sites the player accepts: YouTube, Vimeo, Dailymotion, Twitch, TikTok, Streamable and Rumble.
+- Arrowing down the Views list reads the section you stop on. Each selection change used to start its read immediately, so arrowing from News feed to Chats started reads for Notifications, Friends and My posts as well, and Chats then waited behind them — one keypress could cost half a minute. A section is now read once the selection rests a quarter of a second.
+
 ## v0.7.6 - 2026-10-31
 
 A speed release. Nothing here changes what BlindFB reads; it asks Facebook smaller questions at better times. Backend unchanged, v0.1.5-blindfb.16.

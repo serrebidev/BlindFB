@@ -21,10 +21,12 @@ function fixture(mode = false) {
   video.parentElement = isReel ? reelCard : null;
   const openComments = {getAttribute: () => isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
+  // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
+  const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
   const messages = mode === 'shared' || mode === 'shared-source' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
   if (mode === 'shared') messages.push({text: 'Hidden template', visible: false, closest: () => null, contains: () => false});
-  const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || comments.includes(e) || cards.includes(e), querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR && editor ? [editor] : []};
+  const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || comments.includes(e) || cards.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR && editor ? [editor] : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -104,6 +106,9 @@ function fixture(mode = false) {
   assert.equal(JSON.parse(await untitled.api.setTitle('Dedicated To Bart Simpson')).text, 'Dedicated To Bart Simpson');
   assert.equal(JSON.parse(await untitled.api.read()).text, 'Dedicated To Bart Simpson');
   assert.equal(JSON.parse(await reel.api.setTitle('Other title')).text, 'Entire reel caption');
+  const sharedVideo = JSON.parse(await fixture('external-video').api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(sharedVideo.video, 'https://www.youtube.com/watch?v=abc');
+  assert.deepEqual(sharedVideo.links, [{label: 'A video', url: 'https://www.youtube.com/watch?v=abc'}]);
   const watch = fixture(true);
   const watched = JSON.parse(await watch.api.initialize('https://www.facebook.com/page/videos/123/'));
   assert.equal(watched.author, 'Post author');

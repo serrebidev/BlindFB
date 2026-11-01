@@ -112,6 +112,17 @@ const FEED_AHEAD: u32 = 30;
 const MY_POSTS_FIRST: u32 = 20;
 /// A cached section younger than this is shown without asking Facebook again.
 const FRESH: Duration = Duration::from_secs(60);
+/// A section picked in the Views list is read once the selection rests this
+/// long, so arrowing from News feed to Chats does not read every section in
+/// between and make Chats wait for them.
+const VIEW_REST: Duration = Duration::from_millis(250);
+
+/// The section waiting out the Views-list debounce, once it has rested.
+fn rested_view(pending: Option<(View, Instant)>, rest: Duration) -> Option<View> {
+    pending
+        .filter(|(_, at)| at.elapsed() >= rest)
+        .map(|(view, _)| view)
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum View {
@@ -293,6 +304,10 @@ struct State {
     /// A selection whose details pane update is waiting out the debounce:
     /// arrowing fast should not rebuild the details and links per row.
     pending_details: Option<(usize, Instant)>,
+    /// A section picked in the Views list whose read is waiting out the
+    /// debounce: arrowing down the list passes over sections, and each one
+    /// passed over used to start a read that the resting one waited behind.
+    pending_view: Option<(View, Instant)>,
     sending: Option<ChatSubmission>,
     account: u64,
     reel_cache: reel_cache::ReelCache,
@@ -593,6 +608,7 @@ fn run() {
         attachments: Vec::new(),
         reply_to: None,
         pending_details: None,
+        pending_view: None,
         sending: None,
         account: 0,
         reel_cache: reel_cache::ReelCache::default(),
@@ -654,7 +670,7 @@ fn run() {
                 8 => View::Marketplace,
                 _ => View::Chats,
             };
-            load_view(&ui_views, view);
+            ui_views.state.borrow_mut().pending_view = Some((view, Instant::now()));
         }
     });
 
@@ -778,6 +794,11 @@ fn run() {
             if ui_tick.items.get_selection() == Some(index as u32) {
                 show_details(&ui_tick, index);
             }
+        }
+        let rested = rested_view(ui_tick.state.borrow().pending_view.clone(), VIEW_REST);
+        if let Some(view) = rested {
+            ui_tick.state.borrow_mut().pending_view = None;
+            load_view(&ui_tick, view);
         }
     });
     timer.start(120, false);
@@ -1369,6 +1390,8 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
 fn load_view(ui: &Ui, view: View) {
     {
         let mut state = ui.state.borrow_mut();
+        // Any navigation supersedes a section still waiting out the Views debounce.
+        state.pending_view = None;
         if state.back_nav {
             state.back_nav = false;
         } else if state.view != view && state.history.last() != Some(&state.view) {
@@ -4494,6 +4517,21 @@ mod tests {
         assert!(requests.current(&View::Friends, prefetch));
         assert!(requests.finish(&View::Friends, prefetch));
         assert!(!requests.pending.contains(&View::Friends));
+    }
+
+    #[test]
+    fn a_section_is_read_once_the_views_selection_rests() {
+        assert_eq!(rested_view(None, VIEW_REST), None);
+        // the selection just moved: wait
+        assert_eq!(
+            rested_view(Some((View::Chats, Instant::now())), VIEW_REST),
+            None
+        );
+        let rested = Instant::now() - (VIEW_REST + Duration::from_millis(50));
+        assert_eq!(
+            rested_view(Some((View::Chats, rested)), VIEW_REST),
+            Some(View::Chats)
+        );
     }
 
     #[test]

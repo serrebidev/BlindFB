@@ -169,9 +169,9 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
                 .collect()
         })
         .unwrap_or_default();
-    // The player hands this to yt-dlp, so it must be a Facebook URL.
-    let video =
-        optional_string(&value, "video")?.filter(|video| crate::media::is_facebook_url(video));
+    // The player hands this to yt-dlp, so it must be a Facebook video or a site the player knows.
+    let video = optional_string(&value, "video")?
+        .filter(|video| crate::media::is_playable_video_url(video));
     let links = ordered_links(links, &url);
     Ok(PostDetail {
         url,
@@ -530,7 +530,7 @@ mod tests {
     }
 
     #[test]
-    fn detail_exposes_web_links_and_only_facebook_video() {
+    fn detail_exposes_web_links_and_only_playable_video() {
         let mut data = json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"","text":"","comments":[],
             "links":[{"label":"Article","url":"https://example.org/story"},{"label":"Unsafe","url":"file:///secret"}],
             "video":"https://www.facebook.com/reel/123/"});
@@ -550,8 +550,23 @@ mod tests {
             detail.video.as_deref(),
             Some("https://www.facebook.com/reel/123/")
         );
-        data["video"] = "https://example.org/video".into();
-        assert!(parse_detail(&data.to_string()).unwrap().video.is_none());
+        // A YouTube clip shared into a post plays too, without the Facebook session.
+        data["video"] = "https://www.youtube.com/watch?v=1".into();
+        assert_eq!(
+            parse_detail(&data.to_string()).unwrap().video.as_deref(),
+            Some("https://www.youtube.com/watch?v=1")
+        );
+        for bad in [
+            "https://example.org/video",
+            "https://youtube.com.evil/watch?v=1",
+            "file:///etc/passwd",
+        ] {
+            data["video"] = bad.into();
+            assert!(
+                parse_detail(&data.to_string()).unwrap().video.is_none(),
+                "{bad}"
+            );
+        }
     }
 
     #[test]

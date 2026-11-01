@@ -32,12 +32,36 @@
     return element && [...element.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? element : null;
   }
 
+  // A video page on another site (a YouTube clip shared into a post, say) has no Facebook
+  // video behind it; the player fetches the page itself. Same sites the player accepts.
+  const EXTERNAL_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com', 'twitch.tv', 'tiktok.com', 'streamable.com', 'rumble.com'];
+  const externalVideo = url => {
+    if (url.protocol !== 'https:' || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase().replace(/\.$/, '');
+    return EXTERNAL_HOSTS.some(domain => host === domain || host.endsWith('.' + domain));
+  };
   // Where the post's media lives: a video link inside it, else the post itself when it plays one.
   function videoTarget(scope) {
     if (card) return target;
     const link = [...scope.querySelectorAll('a[href]')].filter(a => !a.closest(ARTICLE)).map(a => a.href).find(href => /facebook\.com\/(?:[^/?#]+\/videos\/|videos\/|reel\/|watch\/?\?v=)/.test(href));
     if (link) return F.canon(link) ? 'https://www.facebook.com' + F.canon(link) : link;
-    return scope.querySelector('video') ? target : null;
+    if (scope.querySelector('video')) return target;
+    // A link-preview card or an embedded player, unwrapped like any other link.
+    for (const a of scope.querySelectorAll('a[href]')) {
+      if (a.closest(ARTICLE)) continue;
+      let url;
+      try { url = new URL(a.href, location.href); } catch { continue; }
+      if (/^l\.facebook\.com$/.test(url.hostname) && url.searchParams.get('u')) {
+        try { url = new URL(url.searchParams.get('u')); } catch { continue; }
+      }
+      if (externalVideo(url)) return url.href;
+    }
+    for (const frame of scope.querySelectorAll('iframe[src]')) {
+      let url;
+      try { url = new URL(frame.src || frame.getAttribute('src'), location.href); } catch { continue; }
+      if (externalVideo(url)) return url.href;
+    }
+    return null;
   }
 
   // Links a reader would follow: anything in the message, and pages outside Facebook.
