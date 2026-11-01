@@ -32,12 +32,12 @@ use std::time::{Duration, Instant};
 
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    chats_args, comment_args, delete_args, feed_args, friend_add_args, friends_args,
-    group_apply_args, group_join_args, group_leave_args, groups_args, listing_message_args,
-    marketplace_args, msg_react_args, notifs_args, parse_feed, parse_notifications, parse_records,
-    post_args, posts_args, profile_args, profile_url_from_post_url, react_args, read_args,
-    recent_feed_args, reply_args, search_args, sell_args, send_args, thread_url_from_profile_url,
-    unsend_args, view_args, web_url, Fb, Record,
+    chats_args, comment_args, delete_args, facebook_share_url, feed_args, friend_add_args,
+    friends_args, group_apply_args, group_join_args, group_leave_args, groups_args, link_url,
+    listing_message_args, marketplace_args, msg_react_args, notifs_args, parse_feed,
+    parse_notifications, parse_records, post_args, posts_args, profile_args,
+    profile_url_from_post_url, react_args, read_args, recent_feed_args, reply_args, search_args,
+    sell_args, send_args, thread_url_from_profile_url, unsend_args, view_args, web_url, Fb, Record,
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
@@ -91,6 +91,7 @@ const ID_GROUP_LEAVE: i32 = 10087;
 const ID_LISTING_MESSAGE: i32 = 10088;
 const ID_SELL: i32 = 10089;
 const ID_LISTING_OPEN: i32 = 10092;
+const ID_SHARE_LINK: i32 = 10093;
 const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
@@ -934,7 +935,11 @@ impl ReadGate {
                 return ReadPermit { gate: self };
             }
             // Opening a prefetched section can promote it while it waits for a slot.
-            state = self.freed.wait_timeout(state, Duration::from_millis(100)).unwrap().0;
+            state = self
+                .freed
+                .wait_timeout(state, Duration::from_millis(100))
+                .unwrap()
+                .0;
         }
     }
 }
@@ -993,7 +998,9 @@ fn spawn_worker(
                 let requests = latest_list.clone();
                 thread::spawn(move || {
                     let _permit = gate.acquire(|| match &tag {
-                        Tag::List { view, .. } => requests.lock().unwrap().background.contains(view),
+                        Tag::List { view, .. } => {
+                            requests.lock().unwrap().background.contains(view)
+                        }
                         _ => false,
                     });
                     if let Tag::List { view, request, .. } = &tag {
@@ -3642,6 +3649,17 @@ fn handle_menu(ui: &Ui, id: i32) {
             Some(link) => copy_text(ui, &link, "Link copied."),
             None => show_warning(&ui.frame, "This item has no link to copy.", "Copy link"),
         },
+        ID_SHARE_LINK => match selected_share_url(ui) {
+            Some(url) => {
+                open_url(&url);
+                ui.status("Opened Facebook's share page in your browser.");
+            }
+            None => show_warning(
+                &ui.frame,
+                "This item has no link to share.",
+                "Share on Facebook",
+            ),
+        },
         ID_NEW_POST => new_post(ui, false),
         ID_NEW_POST_IMAGES => new_post(ui, true),
         ID_SELL => sell_dialog(ui),
@@ -3762,15 +3780,36 @@ fn copy_text(ui: &Ui, text: &str, done: &str) {
 }
 
 /// The selected item's web link, when it has one (short refs have none).
-fn selected_link(ui: &Ui) -> Option<String> {
-    let (_, record) = selected(ui)?;
-    let view = ui.state.borrow().view.clone();
+/// The target a list row points at, in the form its view stores it: a
+/// daemon ref (`u1234`, `c1234`), a Facebook path, or a full URL. Rows
+/// with no target of their own (comments) and rows still carrying the
+/// `-`/empty placeholder return None.
+fn item_link_target(view: &View, record: &Record) -> Option<String> {
     let target = match view {
+        View::CommentsOf(_) => return None,
+        View::ProfileOf(person) => person.as_str(),
         View::Notifications => record.field(3),
-        View::Groups => record.field(1),
+        View::Marketplace | View::SearchResults | View::Friends | View::Groups => record.field(1),
         _ => record.field(0),
     };
-    (target.starts_with("http") || target.starts_with('/')).then(|| web_url(target))
+    (!target.is_empty() && target != "-").then(|| target.to_owned())
+}
+
+fn selected_target(ui: &Ui) -> Option<String> {
+    let (_, record) = selected(ui)?;
+    let view = ui.state.borrow().view.clone();
+    item_link_target(&view, &record)
+}
+
+/// The selected item's target as a real web link, when it has one; daemon
+/// refs are not links (see `fb::link_url`).
+fn selected_link(ui: &Ui) -> Option<String> {
+    selected_target(ui).and_then(|target| link_url(&target))
+}
+
+/// Facebook's browser share composer for the selected item's link.
+fn selected_share_url(ui: &Ui) -> Option<String> {
+    selected_target(ui).and_then(|target| facebook_share_url(&target))
 }
 
 /// Applications / Shift+F10 on an item. The ids are the menu bar's, so `handle_menu` runs them.
@@ -3815,6 +3854,8 @@ fn show_item_menu(ui: &Ui) {
                     &[
                         (ID_LISTING_OPEN, "&Open listing in browser"),
                         (ID_LISTING_MESSAGE, "&Message seller…"),
+                        (ID_COPY_LINK, "Copy &link"),
+                        (ID_SHARE_LINK, "Share on &Facebook…"),
                         (ID_COPY_TEXT, "Cop&y text"),
                     ],
                 ),
@@ -4604,16 +4645,64 @@ mod tests {
 
     #[test]
     fn item_links_use_each_views_target_instead_of_its_label() {
-        let row = |fields: &[&str]| Record {fields: fields.iter().map(|s| (*s).to_owned()).collect(), raw: String::new()};
-        assert_eq!(item_link_target(&View::Marketplace, &row(&["A chair", "https://www.facebook.com/marketplace/item/123/", "$5", "listing"])).as_deref(), Some("https://www.facebook.com/marketplace/item/123/"));
-        assert_eq!(item_link_target(&View::SearchResults, &row(&["A person", "u1234", "", "profile"])).as_deref(), Some("u1234"));
-        assert_eq!(item_link_target(&View::Friends, &row(&["Alice", "u1234", "2 mutual friends"])).as_deref(), Some("u1234"));
-        assert_eq!(item_link_target(&View::Notifications, &row(&["now", "!", "A post", "/a/posts/1"])).as_deref(), Some("/a/posts/1"));
-        assert_eq!(item_link_target(&View::Chats, &row(&["c1234", "!", "now", "Alice", "Hi"])).as_deref(), Some("c1234"));
-        assert_eq!(item_link_target(&View::ProfileOf("u1234".into()), &row(&["name", "Alice"])).as_deref(), Some("u1234"));
+        let row = |fields: &[&str]| Record {
+            fields: fields.iter().map(|s| (*s).to_owned()).collect(),
+            raw: String::new(),
+        };
+        assert_eq!(
+            item_link_target(
+                &View::Marketplace,
+                &row(&[
+                    "A chair",
+                    "https://www.facebook.com/marketplace/item/123/",
+                    "$5",
+                    "listing"
+                ])
+            )
+            .as_deref(),
+            Some("https://www.facebook.com/marketplace/item/123/")
+        );
+        assert_eq!(
+            item_link_target(
+                &View::SearchResults,
+                &row(&["A person", "u1234", "", "profile"])
+            )
+            .as_deref(),
+            Some("u1234")
+        );
+        assert_eq!(
+            item_link_target(
+                &View::Friends,
+                &row(&["Alice", "u1234", "2 mutual friends"])
+            )
+            .as_deref(),
+            Some("u1234")
+        );
+        assert_eq!(
+            item_link_target(
+                &View::Notifications,
+                &row(&["now", "!", "A post", "/a/posts/1"])
+            )
+            .as_deref(),
+            Some("/a/posts/1")
+        );
+        assert_eq!(
+            item_link_target(&View::Chats, &row(&["c1234", "!", "now", "Alice", "Hi"])).as_deref(),
+            Some("c1234")
+        );
+        assert_eq!(
+            item_link_target(&View::ProfileOf("u1234".into()), &row(&["name", "Alice"])).as_deref(),
+            Some("u1234")
+        );
         assert!(item_link_target(&View::Feed, &row(&["-", "Sponsor", "", "", "Ad"])).is_none());
-        assert!(item_link_target(&View::SearchResults, &row(&["No link", "", "", "listing"])).is_none());
-        assert!(item_link_target(&View::CommentsOf("p1234".into()), &row(&["c", "u1234", "Alice", "now", "Hi"])).is_none());
+        assert!(
+            item_link_target(&View::SearchResults, &row(&["No link", "", "", "listing"])).is_none()
+        );
+        assert!(item_link_target(
+            &View::CommentsOf("p1234".into()),
+            &row(&["c", "u1234", "Alice", "now", "Hi"])
+        )
+        .is_none());
     }
 
     #[test]
@@ -4624,8 +4713,12 @@ mod tests {
         let args = default_args(&View::Feed).unwrap();
         assert!(args.windows(2).any(|w| w == ["-n", "10"]));
         for view in [
-            View::Chats, View::Friends, View::Groups, View::RecentFeed,
-            View::PostsOf("someone".into()), View::Marketplace,
+            View::Chats,
+            View::Friends,
+            View::Groups,
+            View::RecentFeed,
+            View::PostsOf("someone".into()),
+            View::Marketplace,
         ] {
             let args = default_args(&view).unwrap();
             assert!(args.windows(2).any(|w| w == ["-n", "10"]), "{view:?}");
@@ -4991,10 +5084,7 @@ mod tests {
             more_row_label(&View::Marketplace, 3),
             Some("Load more listings")
         );
-        assert_eq!(
-            default_args(&View::Marketplace),
-            Some(marketplace_args(10))
-        );
+        assert_eq!(default_args(&View::Marketplace), Some(marketplace_args(10)));
         assert_eq!(
             more_args(
                 &View::Marketplace,

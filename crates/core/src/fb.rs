@@ -688,11 +688,22 @@ pub fn web_url(path_or_url: &str) -> String {
 /// A real web link for copying or sharing; daemon references are not URLs.
 pub fn link_url(target: &str) -> Option<String> {
     let target = target.trim();
-    if target.is_empty() || target.starts_with("//") || target.chars().any(|c| c.is_whitespace() || c.is_control()) {
+    if target.is_empty()
+        || target.starts_with("//")
+        || target.chars().any(|c| c.is_whitespace() || c.is_control())
+    {
         return None;
     }
-    let url = if target.starts_with('/') { web_url(target) } else { target.to_owned() };
-    let uri = url.split('#').next()?.parse::<tungstenite::http::Uri>().ok()?;
+    let url = if target.starts_with('/') {
+        web_url(target)
+    } else {
+        target.to_owned()
+    };
+    let uri = url
+        .split('#')
+        .next()?
+        .parse::<tungstenite::http::Uri>()
+        .ok()?;
     (matches!(uri.scheme_str(), Some("http" | "https")) && uri.host().is_some()).then_some(url)
 }
 
@@ -708,7 +719,9 @@ pub fn facebook_share_url(target: &str) -> Option<String> {
             write!(encoded, "%{byte:02X}").expect("write to string");
         }
     }
-    Some(format!("https://www.facebook.com/sharer/sharer.php?u={encoded}"))
+    Some(format!(
+        "https://www.facebook.com/sharer/sharer.php?u={encoded}"
+    ))
 }
 
 /// The profile URL of a post's author, derived from the post URL that
@@ -790,9 +803,23 @@ mod tests {
 
     #[test]
     fn copyable_links_require_a_real_web_target() {
-        assert_eq!(link_url("/marketplace/item/123/?ref=share").as_deref(), Some("https://www.facebook.com/marketplace/item/123/?ref=share"));
-        assert_eq!(link_url("https://example.com/post?a=1&b=2#part").as_deref(), Some("https://example.com/post?a=1&b=2#part"));
-        for target in ["", "-", "p1234", "javascript:alert(1)", "//evil.example", "https://", "https://example.com/ bad"] {
+        assert_eq!(
+            link_url("/marketplace/item/123/?ref=share").as_deref(),
+            Some("https://www.facebook.com/marketplace/item/123/?ref=share")
+        );
+        assert_eq!(
+            link_url("https://example.com/post?a=1&b=2#part").as_deref(),
+            Some("https://example.com/post?a=1&b=2#part")
+        );
+        for target in [
+            "",
+            "-",
+            "p1234",
+            "javascript:alert(1)",
+            "//evil.example",
+            "https://",
+            "https://example.com/ bad",
+        ] {
             assert!(link_url(target).is_none(), "{target}");
         }
         assert_eq!(facebook_share_url("/marketplace/item/123/?a=1&b=2").as_deref(), Some("https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Fmarketplace%2Fitem%2F123%2F%3Fa%3D1%26b%3D2"));

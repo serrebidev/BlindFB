@@ -13,6 +13,7 @@ Smaller live reads reduce loading delays, and recommended reels work with Facebo
 - Reels loads five at a time instead of 20. A measured batch fell from about 22 seconds to eight seconds, including opening its page. Exact groups of reels from notifications retain all their known links.
 - Background prefetch leaves a read slot free for the section you open. Opening a queued prefetch promotes that same request, without starting it twice. Superseded requests are checked again before they reach Facebook.
 - Facebook now names some reel buttons “Comment, 6 comments” instead of “Comment.” Both the reels list and reader recognize those labels, which previously caused an empty list or a reader timeout.
+- Marketplace listings gain Copy link and Share on Facebook in the context menu. An item's link now comes from the field that holds its target, not its label — Copy link on a listing previously read the title field and never found a link. Share on Facebook opens Facebook's share page in your browser with the listing address filled in; items whose target is only an internal reference have no link to copy or share.
 
 ## v0.7.7 - 2026-10-31
 
