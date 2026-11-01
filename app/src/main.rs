@@ -114,8 +114,9 @@ const MY_POSTS_FIRST: u32 = 20;
 const FRESH: Duration = Duration::from_secs(60);
 /// A section picked in the Views list is read once the selection rests this
 /// long, so arrowing from News feed to Chats does not read every section in
-/// between and make Chats wait for them.
-const VIEW_REST: Duration = Duration::from_millis(250);
+/// between and make Chats wait for them. Long enough for a held arrow key to
+/// run its course, short enough that a deliberate pick never feels late.
+const VIEW_REST: Duration = Duration::from_millis(400);
 
 /// The section waiting out the Views-list debounce, once it has rested.
 fn rested_view(pending: Option<(View, Instant)>, rest: Duration) -> Option<View> {
