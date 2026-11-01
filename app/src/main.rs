@@ -99,9 +99,17 @@ const ID_GITHUB: i32 = 10071;
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
 ];
-const PAGE: u32 = 100;
-/// The News feed opens with this many posts, then loads a full page while the user reads.
+/// One page of a list section. The backend scrolls a live Facebook page per
+/// item it has to add, so asking for 100 costs several times what asking for
+/// 50 does; Load more grows the request from here.
+const PAGE: u32 = 50;
+/// The News feed opens with this many posts, then reads ahead while the user reads.
 const FEED_FIRST: u32 = 10;
+/// The read-ahead batch. A feed request re-scrolls from the top, so 30 more
+/// posts is nearly the same reading as 100 for the first screenful.
+const FEED_AHEAD: u32 = 30;
+/// Your own posts are few and the section is expensive to scroll, so it opens small.
+const MY_POSTS_FIRST: u32 = 20;
 /// A cached section younger than this is shown without asking Facebook again.
 const FRESH: Duration = Duration::from_secs(60);
 
@@ -307,14 +315,27 @@ struct ListRequests {
     next: u64,
     latest: HashMap<View, u64>,
     pending: HashSet<View>,
+    /// Sections being read without the user waiting for them (launch prefetch,
+    /// the feed's read-ahead). They give up the backend's read slots to any
+    /// read the user just asked for.
+    background: HashSet<View>,
 }
 
 impl ListRequests {
+    /// A read the user is waiting for: it outranks background work.
     fn begin(&mut self, view: &View) -> u64 {
         self.next = self.next.wrapping_add(1);
         self.latest.insert(view.clone(), self.next);
         self.pending.insert(view.clone());
+        self.background.remove(view);
         self.next
+    }
+
+    /// A read nobody is waiting for yet.
+    fn begin_background(&mut self, view: &View) -> u64 {
+        let request = self.begin(view);
+        self.background.insert(view.clone());
+        request
     }
 
     fn current(&self, view: &View, request: u64) -> bool {
@@ -326,12 +347,14 @@ impl ListRequests {
             return false;
         }
         self.pending.remove(view);
+        self.background.remove(view);
         true
     }
 
     fn invalidate(&mut self) {
         self.latest.clear();
         self.pending.clear();
+        self.background.clear();
     }
 }
 
@@ -834,28 +857,52 @@ impl Ui {
 
 /// Bounds concurrent backend reads. Every read is a tab on a live
 /// Facebook page in the backend's Chrome, and the launch burst (the
-/// first feed page, its Load more, and the five-section prefetch)
+/// first feed page, its read-ahead, and the section prefetch)
 /// otherwise runs them all at once and pins the CPU.
+///
+/// Slots are handed to reads the user is waiting for first: a background
+/// read never takes the last free slot while a foreground read is queued,
+/// so opening a section never waits behind a prefetch that was already
+/// running.
 struct ReadGate {
-    taken: Mutex<usize>,
+    state: Mutex<GateState>,
     freed: std::sync::Condvar,
     max: usize,
+}
+
+#[derive(Default)]
+struct GateState {
+    taken: usize,
+    /// Foreground reads waiting for a slot.
+    waiting: usize,
+}
+
+/// Whether a read may take a slot now. A background read stands aside while
+/// anything the user is waiting for is queued.
+fn gate_admits(taken: usize, max: usize, waiting: usize, background: bool) -> bool {
+    taken < max && (!background || waiting == 0)
 }
 
 impl ReadGate {
     fn new(max: usize) -> Self {
         Self {
-            taken: Mutex::new(0),
+            state: Mutex::new(GateState::default()),
             freed: std::sync::Condvar::new(),
             max,
         }
     }
-    fn acquire(&self) -> ReadPermit<'_> {
-        let mut taken = self.taken.lock().unwrap();
-        while *taken >= self.max {
-            taken = self.freed.wait(taken).unwrap();
+    fn acquire(&self, background: bool) -> ReadPermit<'_> {
+        let mut state = self.state.lock().unwrap();
+        if !background {
+            state.waiting += 1;
         }
-        *taken += 1;
+        while !gate_admits(state.taken, self.max, state.waiting, background) {
+            state = self.freed.wait(state).unwrap();
+        }
+        if !background {
+            state.waiting -= 1;
+        }
+        state.taken += 1;
         ReadPermit { gate: self }
     }
 }
@@ -866,8 +913,8 @@ struct ReadPermit<'a> {
 
 impl Drop for ReadPermit<'_> {
     fn drop(&mut self) {
-        *self.gate.taken.lock().unwrap() -= 1;
-        self.gate.freed.notify_one();
+        self.gate.state.lock().unwrap().taken -= 1;
+        self.gate.freed.notify_all();
     }
 }
 
@@ -907,11 +954,16 @@ fn spawn_worker(
             if let (true, Some(fb), Task::Fb(args, _)) = (read, fb.clone(), &job.task) {
                 // The backend gives every command its own tab, so reads can
                 // run side by side — two at a time, so a burst of reads
-                // cannot pin the CPU (see ReadGate).
+                // cannot pin the CPU (see ReadGate). Background reads yield
+                // those slots to whatever the user just opened.
+                let background = match &job.tag {
+                    Tag::List { view, .. } => latest_list.lock().unwrap().background.contains(view),
+                    _ => false,
+                };
                 let (args, tag, done, gate) =
                     (args.clone(), job.tag, done.clone(), read_gate.clone());
                 thread::spawn(move || {
-                    let _permit = gate.acquire();
+                    let _permit = gate.acquire(background);
                     let result = fb.run(&refs(&args));
                     let _ = done.send(Done { tag, result });
                 });
@@ -1396,22 +1448,20 @@ fn go_back(ui: &Ui) {
     }
 }
 
-/// Read every main section in the background once, so first visits are instant too.
+/// Warm the sections a session actually starts with, so first visits are
+/// instant too. Two of them are deliberately not prefetched: Recent feed and
+/// My posts each scroll a long tail (20 s or more on a real account), and
+/// spending that at launch delays every other read for no visible gain —
+/// they load on first visit like any other section.
 fn prefetch(ui: &Ui) {
-    for view in [
-        View::RecentFeed,
-        View::Notifications,
-        View::Friends,
-        View::MyPosts,
-        View::Chats,
-    ] {
+    for view in [View::Notifications, View::Friends, View::Chats] {
         if let Some(args) = default_args(&view) {
             let request = {
                 let mut requests = ui.latest_list.lock().unwrap();
                 if requests.pending.contains(&view) || ui.state.borrow().cache.contains_key(&view) {
                     continue;
                 }
-                requests.begin(&view)
+                requests.begin_background(&view)
             };
             let _ = ui.jobs.send(Job {
                 task: Task::Fb(args.clone(), None),
@@ -1446,8 +1496,8 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::Feed => feed_args(FEED_FIRST, false, true, true),
         View::RecentFeed => recent_feed_args(PAGE),
         View::Notifications => notifs_args(PAGE),
-        View::Friends => friends_args(None, 100),
-        View::MyPosts => posts_args("me", PAGE, true),
+        View::Friends => friends_args(None, PAGE),
+        View::MyPosts => posts_args("me", MY_POSTS_FIRST, true),
         View::Chats => chats_args(PAGE, false),
         View::Groups => groups_args(PAGE),
         View::Marketplace => marketplace_args(PAGE),
@@ -1739,6 +1789,29 @@ fn load_more(ui: &Ui) {
         },
     });
     ui.status(&format!("Loading more {}…", view.title()));
+}
+
+/// The News feed's read-ahead: the next posts arrive while the reader is still
+/// near the top, so reaching the end of the list does not stall. It stays
+/// background work, so a section the user opens goes first.
+fn load_feed_ahead(ui: &Ui) {
+    let view = View::Feed;
+    if ui.latest_list.lock().unwrap().pending.contains(&view) {
+        return;
+    }
+    let args = feed_args(FEED_AHEAD, false, true, true);
+    activate_view(ui, &view);
+    let request = ui.latest_list.lock().unwrap().begin_background(&view);
+    let _ = ui.jobs.send(Job {
+        task: Task::Fb(args.clone(), None),
+        tag: Tag::List {
+            view,
+            request,
+            args,
+            unlock_attempted: false,
+            append: true,
+        },
+    });
 }
 
 fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) -> Vec<Record> {
@@ -2458,12 +2531,17 @@ fn apply_done(ui: &Ui, done: Done) {
                             ui.state.borrow().records.len()
                         ));
                     }
-                    if view == View::Feed && !append && ui.items.get_count() > 0 {
-                        load_more(ui);
-                    } else if view == View::Feed && !ui.state.borrow().prefetched {
-                        // After the feed's second page, so other sections never slow the first ones.
-                        ui.state.borrow_mut().prefetched = true;
-                        prefetch(ui);
+                    if view == View::Feed && !append {
+                        // Warm the other sections first: the feed's read-ahead
+                        // re-scrolls the whole column, and a switch to Chats or
+                        // Notifications should not queue behind that scroll.
+                        if !ui.state.borrow().prefetched {
+                            ui.state.borrow_mut().prefetched = true;
+                            prefetch(ui);
+                        }
+                        if ui.items.get_count() > 0 {
+                            load_feed_ahead(ui);
+                        }
                     }
                 }
                 Err(e) => {
@@ -4416,6 +4494,51 @@ mod tests {
         assert!(requests.current(&View::Friends, prefetch));
         assert!(requests.finish(&View::Friends, prefetch));
         assert!(!requests.pending.contains(&View::Friends));
+    }
+
+    #[test]
+    fn background_reads_stand_aside_for_anything_the_user_waits_for() {
+        // A background read takes a free slot only while nothing is queued.
+        assert!(gate_admits(0, 2, 0, true));
+        assert!(!gate_admits(0, 2, 1, true));
+        assert!(gate_admits(0, 2, 1, false));
+        // But it still respects the ceiling.
+        assert!(!gate_admits(2, 2, 0, true));
+        assert!(!gate_admits(2, 2, 0, false));
+    }
+
+    #[test]
+    fn opening_a_prefetched_section_makes_its_read_foreground() {
+        let mut requests = ListRequests::default();
+        let warm = requests.begin_background(&View::Chats);
+        assert!(requests.background.contains(&View::Chats));
+        // The user opens the section while the warm read is still running.
+        let opened = requests.begin(&View::Chats);
+        assert!(!requests.background.contains(&View::Chats));
+        assert!(!requests.finish(&View::Chats, warm));
+        assert!(requests.finish(&View::Chats, opened));
+        assert!(requests.pending.is_empty());
+    }
+
+    #[test]
+    fn a_page_is_small_enough_that_opening_a_section_is_not_a_long_scroll() {
+        const { assert!(PAGE == 50) };
+        const { assert!(FEED_FIRST < FEED_AHEAD && FEED_AHEAD < PAGE) };
+        const { assert!(MY_POSTS_FIRST < PAGE) };
+        let args = default_args(&View::Feed).unwrap();
+        assert!(args.windows(2).any(|w| w == ["-n", "10"]));
+        let args = default_args(&View::Chats).unwrap();
+        assert!(args.windows(2).any(|w| w == ["-n", "50"]));
+        let args = default_args(&View::MyPosts).unwrap();
+        assert!(args.windows(2).any(|w| w == ["-n", "20"]));
+    }
+
+    #[test]
+    fn refresh_args_re_ask_for_the_same_page_as_the_first_load() {
+        for view in [View::Feed, View::Chats, View::Notifications] {
+            let args = default_args(&view).unwrap();
+            assert_eq!(refresh_args(&view, &args), Some(args));
+        }
     }
 
     #[test]

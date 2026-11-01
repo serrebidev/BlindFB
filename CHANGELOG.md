@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.6 - 2026-10-31
+
+A speed release. Nothing here changes what BlindFB reads; it asks Facebook smaller questions at better times. Backend unchanged, v0.1.5-blindfb.16.
+
+- Launch no longer drags. The background warm-up used to read five sections at 100 items each right after the first posts appeared — Feeds (most recent) and My posts each scroll a long Facebook tail, so they held both read slots for a minute or more while Notifications, Friends and Chats waited behind them. It now warms the three sections a session actually starts with, at 50 items. Measured on this account: everything warm in 41 s instead of 171 s.
+- First pages are half the size. The backend scrolls a live Facebook page per item it has to add, so a page of 100 costs several times a page of 50 — Friends took 7.5 s for 100 and 4.4 s for 50 on the same account. Every section now opens with 50 (My posts with 20; the news feed keeps its 10 and grows on demand).
+- Load more on the news feed is instant. The backend keeps a 60-post read-ahead buffer of its own, so asking for 50 fits inside it; asking for 100 spilled past the buffer and had to scroll. After a minute of reading, Load more went from 15.4 s to under a tenth of a second.
+- The feed's second page no longer blocks anything. It used to run as a normal read of 100 posts immediately after the first page — the whole load happened before anything else could use a slot. It is now a 30-post background read-ahead, which fills the list while you read the first posts.
+- A section you open outranks the warm-up. The two read slots now go to whatever you last asked for: a background prefetch stands aside rather than taking the last free slot, so opening Chats never waits behind a warm-up that was already running.
+
 ## v0.7.5 - 2026-10-31
 
 A bug-audit release: chat history reads again, and four smaller faults found in the same pass are gone. Backend v0.1.5-blindfb.16.
