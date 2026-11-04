@@ -35,7 +35,8 @@ use blindfb_core::fb::{
     chats_args, comment_args, delete_args, facebook_share_url, feed_args, friend_add_args,
     friends_args, group_apply_args, group_join_args, group_leave_args, groups_args, link_url,
     listing_message_args, marketplace_args, msg_react_args, notifs_args, parse_feed,
-    parse_notifications, parse_records, post_args, posts_args, profile_args,
+    parse_notifications, parse_records, post_args, post_done_message, post_unconfirmed_message,
+    posts_args, profile_args,
     profile_url_from_post_url, react_args, read_args, recent_feed_args, reply_args, search_args,
     sell_args, send_args, thread_url_from_profile_url, unsend_args, view_args, web_url, Fb, Record,
 };
@@ -171,6 +172,7 @@ impl View {
 }
 
 enum Tag {
+    Post,
     List {
         view: View,
         request: u64,
@@ -2777,6 +2779,20 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "Debug report");
             }
         },
+        Tag::Post => match done.result {
+            Ok(text) => {
+                let message = post_done_message(&text);
+                set_details(ui, message, None);
+                ui.status(message);
+            }
+            Err(e) => {
+                ui.status("Error");
+                match post_unconfirmed_message(&e) {
+                    Some(message) => show_warning(&ui.frame, message, "New post"),
+                    None => show_error(&ui.frame, &e, "BlindFB"),
+                }
+            }
+        },
         Tag::Text => match done.result {
             Ok(text) => {
                 set_details(ui, text.trim(), None);
@@ -4130,7 +4146,7 @@ fn new_post(ui: &Ui, with_media: bool) {
     };
     ui.send(Job {
         task: Task::Fb(post_args(&text, audience, &images, &videos), None),
-        tag: Tag::Text,
+        tag: Tag::Post,
     });
 }
 

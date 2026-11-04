@@ -638,6 +638,26 @@ pub fn post_args(
     args
 }
 
+/// What to tell the user after `post` printed `output`.
+pub fn post_done_message(output: &str) -> &'static str {
+    if output.trim_start().starts_with("pending") {
+        "Facebook accepted your post and is still publishing it. It should appear in My posts \
+         soon. You do not need to post it again."
+    } else {
+        "Your post is published."
+    }
+}
+
+/// What to tell the user when `post` failed. Some failures come after Post was pressed, when
+/// the post may exist; `None` means the backend's own error says it best.
+pub fn post_unconfirmed_message(error: &str) -> Option<&'static str> {
+    (error.contains("post may have been published") || error.contains("timed out after"))
+        .then_some(
+            "Facebook may have published your post, but BlindFB could not confirm it. Check My \
+             posts before posting it again.",
+        )
+}
+
 pub fn group_join_args(group: &str) -> Vec<String> {
     vec!["group-join".to_owned(), group.to_owned()]
 }
@@ -1071,6 +1091,21 @@ mod tests {
             group_apply_args("u1abc", &["because chairs".to_owned(), "Yes".to_owned()]),
             ["group-apply", "u1abc", "because chairs", "Yes"]
         );
+    }
+
+    #[test]
+    fn post_messages_tell_published_pending_and_unconfirmed_apart() {
+        assert_eq!(post_done_message("posted\tp1\t/a/posts/1\n"), "Your post is published.");
+        for output in ["pending\n", "pending\tp1\t/7/posts/1\n"] {
+            assert!(post_done_message(output).contains("still publishing"));
+        }
+        for error in [
+            "error: post may have been published, but no verified receipt: x; inspect `fb posts me` before retrying",
+            "error: timed out after 210s",
+        ] {
+            assert!(post_unconfirmed_message(error).unwrap().contains("Check My posts"));
+        }
+        assert_eq!(post_unconfirmed_message("Post button not found; nothing was posted"), None);
     }
 
     #[test]

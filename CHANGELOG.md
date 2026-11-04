@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.14 - 2026-11-04
+
+Posts that were published no longer come back as errors. Backend v0.1.5-blindfb.27.
+
+- A post could report "post may have been published, but no verified receipt: unique creation identity missing" and still publish. Facebook sometimes accepts a post and publishes it moments later, and the backend read that as a failure. It now waits up to a minute for the post to appear. If the post is still not there, BlindFB says Facebook accepted it and you do not need to post it again.
+- A post containing an emoji could report the same kind of error, because Facebook draws most emoji as pictures and the check compared only the text. The check now counts them. Post text in the news feed and the post reader keeps its emoji for the same reason.
+- If Facebook's first attempt to publish failed and Facebook retried by itself, the backend reported failure while the retry went through. It now waits for the retry.
+- When BlindFB really cannot confirm a post, the message now says in plain words to check My posts before posting again, instead of naming a command-line tool.
+- A successful post now says "Your post is published." instead of showing the backend's raw result line.
+
 ## v0.7.13 - 2026-11-03
 
 Posting opens the real composer on more accounts, and a new debug report makes other problems easier to fix. Backend v0.1.5-blindfb.22.
