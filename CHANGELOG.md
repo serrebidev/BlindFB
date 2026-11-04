@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.12 - 2026-11-03
+
+Reaction verification understands Facebook's author-qualified button labels. Backend v0.1.5-blindfb.21.
+
+- A successful Like could report "the reaction did not land" because Facebook now names both the reaction and the post's author in the button. Verification reads the reaction before the author's name, recognizes the neutral Like button, and keeps repeated Like and Remove reaction requests from toggling the state again. Removing a reaction succeeds only when the button returns to its neutral state. The exact reported RNC label has a regression test ([upstream PR #35](https://github.com/hieu-lee/facebook-cli/pull/35)).
+- Posting refocuses the editor before typing and checks that the draft matches the requested text before publication. Publish controls work with both native buttons and role buttons. A timeout distinguishes an empty composer, a missing or ambiguous Post button, a disabled button, and a visible progress indicator instead of guessing that an upload is running. The original intermittent posting timeout was not reproduced; these changes improve text entry, prevent changed drafts from being posted, and make any remaining failure diagnosable.
+
 ## v0.7.9 - 2026-11-01
 
 Reactions land on the item you picked, group members show up, and the group window loads at news-feed speed. Backend v0.1.5-blindfb.18.
