@@ -87,7 +87,7 @@ pub fn asset_name() -> Option<&'static str> {
     } else if cfg!(target_os = "macos") {
         match arch {
             "aarch64" => Some("fb-aarch64-darwin.tar.gz"),
-            _ => Some("fb-x86_64-darwin.tar.gz"),
+            _ => None,
         }
     } else if cfg!(target_os = "linux") {
         match arch {
