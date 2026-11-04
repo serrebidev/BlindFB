@@ -96,6 +96,8 @@ const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
 const ID_GITHUB: i32 = 10071;
+const ID_DEBUG_LOGGING: i32 = 10073;
+const ID_DEBUG_REPORT: i32 = 10074;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -177,6 +179,7 @@ enum Tag {
         append: bool,
     },
     Text,
+    DebugReport,
     /// A group join finished: its output decides whether membership
     /// questions need answers (the output starts with a questions line).
     GroupJoin {
@@ -235,6 +238,8 @@ enum Task {
     },
     /// Run the backend with these args (and optional stdin, for the PIN).
     Fb(Vec<String>, Option<String>),
+    /// Write the debug report to this path.
+    DebugReport(String),
     /// Download and install/update the managed backend binary.
     InstallBackend,
     /// Guided browser sign-in: import the session from the chosen browser,
@@ -1086,6 +1091,7 @@ fn spawn_worker(
                         },
                     }
                 }
+                Task::DebugReport(path) => blindfb_core::debug::write_report(fb.as_ref(), &path),
                 Task::PostLoad { page, target } => match &fb {
                     Some(fb) => blindfb_core::posts::load(fb, &page, &target),
                     None => Err("The Facebook backend is not installed".to_owned()),
@@ -1345,6 +1351,18 @@ fn build_menus(frame: &Frame) {
             "BlindFB on &GitHub",
             "Open the BlindFB repository",
         )
+        .append_separator()
+        .append_check_item(
+            ID_DEBUG_LOGGING,
+            "&Debug logging",
+            "Record what BlindFB runs and the errors it gets, for a bug report",
+        )
+        .append_item(
+            ID_DEBUG_REPORT,
+            "Save debug &report…",
+            "Save a file you can send to the developer",
+        )
+        .append_separator()
         .append_item(ID_ABOUT, "&About BlindFB", "About this program")
         .build();
 
@@ -1356,6 +1374,7 @@ fn build_menus(frame: &Frame) {
         .append(backend_menu, "&Backend")
         .append(help_menu, "&Help")
         .build();
+    menu_bar.check_item(ID_DEBUG_LOGGING, blindfb_core::debug::load());
     frame.set_menu_bar(menu_bar);
 }
 
@@ -2524,6 +2543,9 @@ fn refresh_controls(ui: &Ui) {
 }
 
 fn apply_done(ui: &Ui, done: Done) {
+    if let Err(error) = &done.result {
+        blindfb_core::debug::note_failure(error);
+    }
     match done.tag {
         Tag::List {
             view,
@@ -2743,6 +2765,18 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
         }
+        Tag::DebugReport => match done.result {
+            Ok(text) => {
+                ui.status("Debug report saved.");
+                let dialog = MessageDialog::builder(&ui.frame, &text, "Debug report").build();
+                dialog.show_modal();
+                dialog.destroy();
+            }
+            Err(e) => {
+                ui.status("Error");
+                show_error(&ui.frame, &e, "Debug report");
+            }
+        },
         Tag::Text => match done.result {
             Ok(text) => {
                 set_details(ui, text.trim(), None);
@@ -3778,6 +3812,33 @@ fn handle_menu(ui: &Ui, id: i32) {
                 .show();
         }
         ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
+        ID_DEBUG_LOGGING => {
+            let on = !blindfb_core::debug::enabled();
+            match blindfb_core::debug::set_enabled(on) {
+                Ok(()) if on => ui.status(
+                    "Debug logging on. Repeat what failed, then use Help, Save debug report.",
+                ),
+                Ok(()) => ui.status("Debug logging off."),
+                Err(error) => show_error(&ui.frame, &error, "Debug logging"),
+            }
+        }
+        ID_DEBUG_REPORT => {
+            let dialog = FileDialog::builder(&ui.frame)
+                .with_message("Save debug report")
+                .with_default_file("BlindFB-debug-report.txt")
+                .with_wildcard("Text files (*.txt)|*.txt")
+                .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
+                .build();
+            if dialog.show_modal() == ID_OK {
+                if let Some(path) = dialog.get_path() {
+                    ui.status("Saving the debug report…");
+                    ui.send(Job {
+                        task: Task::DebugReport(path),
+                        tag: Tag::DebugReport,
+                    });
+                }
+            }
+        }
         ID_MSG_REPLY => reply_selected(ui),
         _ => {
             if (ID_MSG_REACT_BASE..ID_MSG_REACT_BASE + REACTIONS.len() as i32).contains(&id) {

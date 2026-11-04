@@ -280,6 +280,21 @@ impl Fb {
     /// the CLI's own stderr/stdout text (its messages are short and meant to
     /// be relayed, e.g. "not logged in").
     pub fn run(&self, args: &[&str]) -> Result<String, String> {
+        let started = std::time::Instant::now();
+        let result = self.run_unlogged(args);
+        crate::debug::record(args, started, &result);
+        result
+    }
+
+    /// The browser the backend drives, for the debug report.
+    pub fn browser_description(&self) -> String {
+        match &self.engine {
+            Some(browser) => format!("{browser:?}"),
+            None => "the backend's own choice".to_owned(),
+        }
+    }
+
+    fn run_unlogged(&self, args: &[&str]) -> Result<String, String> {
         if self.engine.is_some() && args == ["login", "--visible"] {
             return self.login_visible();
         }
@@ -374,6 +389,13 @@ impl Fb {
     /// Run `fb` feeding `input` on stdin (used for `unlock -`, so a Messenger
     /// PIN never appears in a process list).
     pub fn run_stdin(&self, args: &[&str], input: &str) -> Result<String, String> {
+        let started = std::time::Instant::now();
+        let result = self.run_stdin_unlogged(args, input);
+        crate::debug::record(args, started, &result);
+        result
+    }
+
+    fn run_stdin_unlogged(&self, args: &[&str], input: &str) -> Result<String, String> {
         let mut child = self
             .command(args)?
             .args(args)

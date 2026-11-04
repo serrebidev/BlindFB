@@ -8,6 +8,7 @@
 
 pub mod backend;
 pub mod browsers;
+pub mod debug;
 mod engine;
 pub mod fb;
 pub mod http;

@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.13 - 2026-11-03
+
+Posting opens the real composer on more accounts, and a new debug report makes other problems easier to fix. Backend v0.1.5-blindfb.22.
+
+- Posting could fail with "Post button not found; nothing was posted", depending on how your profile is laid out. On some layouts the backend can open the "Share a thought" note dialog instead of the post composer. It now finds the composer by its layout in any language and refuses any other dialog before typing. The fix was reproduced and tested with a stand-in page, not on an affected account, so please report it if the error continues.
+- The Post button is found in any language, and a Next step before Post is followed. When a post can't continue, the error names the dialog, the page language and the visible buttons, never your text.
+- Help has a new Debug logging checkbox and Save debug report. Check the box, repeat what failed, save the report and send the file to the developer. It holds BlindFB's version, your system, what BlindFB ran, how long it took and the errors it got, plus Facebook links you opened or reacted to. It does not hold your post text, messages, file names or PIN.
+
 ## v0.7.12 - 2026-11-03
 
 Reaction verification understands Facebook's author-qualified button labels. Backend v0.1.5-blindfb.21.
