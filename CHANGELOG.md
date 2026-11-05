@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.18 - 2026-11-05
+
+Comments and replies with emoji are confirmed and read properly. Backend unchanged, v0.1.5-blindfb.29.
+
+- A comment or reply could go through while BlindFB said "Submission was not confirmed in the selected thread" and kept your draft. Facebook draws most emoji as pictures, so the text BlindFB read back was missing them and did not match what you wrote. If you saw this error, check the post before sending again: your comment is probably already there.
+- Confirmation now compares the words of your comment, so other changes Facebook makes don't cause the same error, such as turning :) into an emoji, shortening a link or cutting long text behind See more. It still waits until Facebook has accepted the comment, not just while it shows "Posting...".
+- Comments in the post reader keep their emoji. Before, they were dropped, an emoji in a sentence split it across two lines, and a comment that was only an emoji looked empty.
+- Tested by sending a real comment and a real reply with an emoji on live Facebook, then deleting them. Replying to someone else, where Facebook starts your reply with their name, was tested on live Facebook only up to the point of sending.
+
 ## v0.7.17 - 2026-11-04
 
 Cursor position, author actions and post details in the News feed. Backend v0.1.5-blindfb.29.

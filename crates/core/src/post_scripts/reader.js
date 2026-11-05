@@ -2,6 +2,7 @@
   const F = window.__fb;
   const ARTICLE = '[role=article][aria-label]';
   const EDITOR = '[role=textbox][contenteditable=true],textarea';
+  const EMOJI = /^[\p{Extended_Pictographic}\p{Emoji_Component}]+$/u;
   const own = (element, article) => element.closest(ARTICLE) === article;
   const label = element => F.clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '');
   const rawContents = element => element.value === undefined ? element.innerText || '' : element.value;
@@ -145,15 +146,22 @@
   function comment(article) {
     const id = identity(article);
     // Read only this article's text, excluding nested replies and editable drafts.
-    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
-    const lines = [];
+    // Facebook draws emoji as pictures; they stay on the line of the words around them.
+    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    const rows = [];
     let node;
     while ((node = walker.nextNode())) {
-      const element = node.parentElement;
+      const picture = node.nodeType === 1;
+      if (picture && !(node.tagName === 'IMG' && EMOJI.test(node.alt))) continue;
+      const element = picture ? node : node.parentElement;
       if (!own(element, article) || element.closest(EDITOR + ',script,style') || !F.visible(element)) continue;
-      const text = F.clean(node.nodeValue || '');
-      if (text) lines.push(text);
+      const block = element.closest('[dir=auto]'), last = rows[rows.length - 1];
+      const text = picture ? node.alt : node.nodeValue || '';
+      if (last && block && last.block === block && (picture || last.picture)) last.text += text;
+      else rows.push({block, text});
+      rows[rows.length - 1].picture = picture;
     }
+    const lines = rows.map(row => F.clean(row.text)).filter(Boolean);
     const author = lines[0] || article.getAttribute('aria-label') || '';
     const authorRef = F.profilePath ? [...article.querySelectorAll('a[href]')].filter(a => a.closest(ARTICLE) === article).map(a => F.profilePath(a.href !== undefined ? a.href : a.getAttribute('href'))).find(Boolean) || null : null;
     const ti = lines.findIndex((text, index) => index < 7 && time.test(text));
@@ -248,6 +256,9 @@
   }
 
   const flat = text => F.clean(text).replace(/\s+/g, ' ');
+  // The words of a comment. Facebook can turn :) into an emoji, trim a link's address and
+  // cut long text behind See more, so confirmation compares words and only their start.
+  const words = text => F.clean(text).replace(/https?:\/\/(www\.)?/g, '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
   // Returns the exact text to type at the caret, which is left after any prefilled name.
   async function prepare(parent, text) {
@@ -278,7 +289,7 @@
     if (!found) throw Error('The comment editor is ambiguous. Nothing was sent.');
     if (draft) { const selection = getSelection(); selection.selectAllChildren(editor); selection.collapseToEnd(); }
     const typed = draft && !/[  ]$/.test(rawContents(editor)) ? ' ' + text : text;
-    pending = {parent, thread, typed: flat(text), named: !!draft, text: flat(rawContents(editor) + typed), editor, before: new Set(collect().map(row => row.value.id))};
+    pending = {parent, thread, start: words(text).slice(0, 40), text: flat(rawContents(editor) + typed), editor, before: new Set(collect().map(row => row.value.id))};
     return JSON.stringify(typed);
   }
 
@@ -296,12 +307,9 @@
       current();
       // A reply's own box can vanish once sent; one that stays must have been emptied.
       if (sent.editor.isConnected && contents(sent.editor)) return false;
-      return collect().some(({value}) => {
-        if (!value.url || sent.before.has(value.id) || (value.parent_id !== sent.parent && value.parent_id !== sent.thread)) return false;
-        // A reply to a reply joins the thread's top comment, with the name at the start of its text.
-        const body = flat(value.text);
-        return body === sent.typed || (sent.named && body.endsWith(' ' + sent.typed));
-      });
+      // While posting, a comment's permalink holds a temporary client id, so it is not accepted yet.
+      // A reply to a reply joins the thread's top comment, with the name at the start of its text.
+      return collect().some(({value}) => value.url && !/^client:/.test(value.id) && !sent.before.has(value.id) && (value.parent_id === sent.parent || value.parent_id === sent.thread) && words(value.text).includes(sent.start));
     }, 12000);
     if (!confirmed) throw Error('Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically.');
     return read();

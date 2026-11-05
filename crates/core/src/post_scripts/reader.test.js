@@ -51,7 +51,11 @@ function fixture(mode = false) {
       return {nextNode() {
         if (index >= lines.length) return null;
         const at = index++;
-        return {nodeValue: lines[at], parentElement: article === reelCard && at >= 2 ? {closest: () => true} : article};
+        const line = lines[at];
+        // A line is plain text, or {text|alt, block} when it shares a text block with its neighbours.
+        if (line.alt) return {nodeType: 1, tagName: 'IMG', alt: line.alt, closest: selector => selector === '[dir=auto]' ? line.block : article.closest(selector), getAttribute: () => ''};
+        if (line.text !== undefined) return {nodeValue: line.text, parentElement: {closest: selector => selector === '[dir=auto]' ? line.block || null : article.closest(selector)}};
+        return {nodeValue: line, parentElement: article === reelCard && at >= 2 ? {closest: () => true} : article};
       }};
     },
     get activeElement() { return focus; }
@@ -111,7 +115,7 @@ function fixture(mode = false) {
   const snapshot = F.pageSnapshot;
   F.pageSnapshot = name => { F.lastName = name; return snapshot(name); };
   const window = {__fb: F};
-  vm.runInNewContext(source, {window, document, location: {href: 'https://www.facebook.com/a/posts/1'}, NodeFilter: {SHOW_TEXT: 4}, URL, innerHeight: 600,
+  vm.runInNewContext(source, {window, document, location: {href: 'https://www.facebook.com/a/posts/1'}, NodeFilter: {SHOW_TEXT: 4, SHOW_ELEMENT: 1}, URL, innerHeight: 600,
     getSelection: () => ({selectAllChildren() {}, collapseToEnd() { collapsed = true; }})});
   return {api: window.__blindfbPost, article, makeEditor, replyBox, replyAction, remove: e => {e.isConnected = false;}, snapshot: value => { named = value; }, get focused() {return focus;}, get collapsed() {return collapsed;}, set comments(value) {comments = value;}, get paused() {return paused;}};
 }
@@ -250,6 +254,54 @@ function fixture(mode = false) {
   await f.api.read();
   reply.actions = [f.replyAction(reply, named, 'my unsent words')];
   await assert.rejects(f.api.prepare('2', 'hello'), /already contains a draft/);
+
+  // Recorded live: Facebook draws emoji as pictures, so they are read back from the alt text.
+  const block = {};
+  const emojiLines = [{text: 'Comment author'}, {text: ' · '}, {text: '1h'}, {text: 'Nice work ', block}, {alt: '\u{1F44D}', block}, {text: ' thanks', block}, {text: 'Like'}, {text: 'Reply'}];
+  f = fixture(); parent = f.article('1');
+  const emojiBox = f.replyBox('Reply as Me');
+  f.makeEditor(null, 'Comment as Me');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  parent.actions = [f.replyAction(parent, emojiBox)];
+  await f.api.prepare('1', 'Nice work \u{1F44D} thanks');
+  const emojiReply = f.article('6', parent); emojiReply.lines = emojiLines;
+  assert.equal(JSON.parse(await f.api.confirm()).comments.find(c => c.id === '6').text, 'Nice work \u{1F44D} thanks');
+  // Only an emoji: the comment still has text.
+  const onlyEmoji = f.article('7'); onlyEmoji.lines = [{text: 'Comment author'}, {text: '1h'}, {alt: '\u{1F44D}', block}, {text: 'Like'}];
+  // A picture that is not an emoji stays out.
+  const pictured = f.article('8'); pictured.lines = [{text: 'Comment author'}, {text: '1h'}, {text: 'Look', block}, {alt: 'May be an image of a dog', block}];
+  const read = JSON.parse(await f.api.read()).comments;
+  assert.equal(read.find(c => c.id === '7').text, '\u{1F44D}');
+  assert.equal(read.find(c => c.id === '8').text, 'Look');
+
+  // Facebook can reshape what was typed; punctuation and emoji are not compared.
+  f = fixture(); parent = f.article('1');
+  const shaped = f.replyBox('Reply as Me');
+  f.makeEditor(null, 'Comment as Me');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  parent.actions = [f.replyAction(parent, shaped)];
+  await f.api.prepare('1', 'hi :) see https://example.com/a');
+  const converted = f.article('9', parent); converted.lines = [{text: 'Comment author'}, {text: '1h'}, {text: 'hi ', block}, {alt: '\u{1F642}', block}, {text: ' see example.com/a', block}];
+  assert.equal(JSON.parse(await f.api.confirm()).comments.find(c => c.id === '9').parent_id, '1');
+  // A long comment is cut off behind See more; its start is enough.
+  await f.api.read();
+  const long = 'a long reply '.repeat(20);
+  await f.api.prepare('1', long);
+  const cut = f.article('10', parent); cut.lines[2] = 'a long reply a long reply a long reply a long reply… See more';
+  assert.ok(JSON.parse(await f.api.confirm()).comments.find(c => c.id === '10'));
+  // Different words are still not this comment.
+  await f.api.read();
+  await f.api.prepare('1', 'hello');
+  const other = f.article('11', parent); other.lines[2] = 'somebody else';
+  await assert.rejects(f.api.confirm(), /not confirmed in the selected thread/);
+
+  // Recorded live: while "Posting..." the permalink holds a temporary client id, not yet accepted.
+  f = fixture();
+  f.makeEditor(null, 'Comment as Me');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  await f.api.prepare(null, 'hello');
+  const posting = f.article('client:483'); posting.lines = ['Comment author', 'hello', 'Posting...'];
+  await assert.rejects(f.api.confirm(), /not confirmed in the selected thread/);
 
   // Two open boxes can share one name; only the focused one is filled.
   f = fixture(); parent = f.article('1');
