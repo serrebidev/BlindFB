@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.20 - 2026-11-05
+
+Voice and sound alerts, and Author's profile can no longer open the wrong person. Backend v0.1.5-blindfb.34.
+
+- New: View > Voice alerts and View > Sound alerts (issue #11). While BlindFB is open, they tell you about new notifications and unread chats. Voice alerts read the notification or the message aloud with your system's voice, separately from your screen reader, and also show it in the status bar. Sound alerts play a short chime. Turn on either one, or both. Both start off, and each choice is remembered. Turning one on plays it once, so you know it works.
+- When an alert is on, BlindFB checks Facebook every two minutes in the background, and never ahead of something you opened. Nothing that was already there when you turned alerts on is read out. When several things arrive at once, the first three are read, then how many more. A check that fails, for example while Messenger is locked, stays silent and tries again later.
+- Author's profile and Author's posts could open the wrong person for a post whose author has no profile link. BlindFB took the first profile on the card, which could be someone named in the post or in a comment. Now only the post's header counts, and a post without an author link falls back to searching by name as before.
+- Alerts on Windows, including speech, sound and the checks, were tested on this release. On macOS and Linux they use the system's `say` and `afplay`, or `spd-say` and `canberra-gtk-play`, which were not tested there.
+
 ## v0.7.19 - 2026-11-05
 
 Comments and replies with emoji are confirmed and read properly. Backend v0.1.5-blindfb.31. This release also brings the fixes listed under v0.7.16 and v0.7.17, which were never published on their own because their backend builds failed.

@@ -30,6 +30,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
     chats_args, comment_args, delete_args, facebook_share_url, feed_args, friend_add_args,
@@ -99,6 +100,8 @@ const ID_ABOUT: i32 = 10070;
 const ID_GITHUB: i32 = 10071;
 const ID_DEBUG_LOGGING: i32 = 10073;
 const ID_DEBUG_REPORT: i32 = 10074;
+const ID_VOICE_ALERTS: i32 = 10075;
+const ID_SOUND_ALERTS: i32 = 10076;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -121,6 +124,11 @@ const FRESH: Duration = Duration::from_secs(60);
 /// between and make Chats wait for them. Long enough for a held arrow key to
 /// run its course, short enough that a deliberate pick never feels late.
 const VIEW_REST: Duration = Duration::from_millis(400);
+/// How often alerts check Facebook while they are on. Each check opens two
+/// live pages, so this stays gentle; it never runs while alerts are off.
+const ALERT_EVERY: Duration = Duration::from_secs(120);
+/// The first check waits out the launch burst of section reads.
+const ALERT_FIRST: Duration = Duration::from_secs(30);
 
 /// The section waiting out the Views-list debounce, once it has rested.
 fn rested_view(pending: Option<(View, Instant)>, rest: Duration) -> Option<View> {
@@ -182,6 +190,8 @@ enum Tag {
     },
     Text,
     DebugReport,
+    AlertNotifications,
+    AlertChats,
     /// A group join finished: its output decides whether membership
     /// questions need answers (the output starts with a questions line).
     GroupJoin {
@@ -300,6 +310,9 @@ struct Done {
 }
 
 struct State {
+    next_alert_check: Instant,
+    alert_notifications: blindfb_core::alerts::Watch,
+    alert_chats: blindfb_core::alerts::Watch,
     view: View,
     records_view: View,
     last_args: Vec<String>,
@@ -612,6 +625,9 @@ fn run() {
     startup_log("run: menus built");
 
     let state = Rc::new(RefCell::new(State {
+        next_alert_check: Instant::now() + ALERT_FIRST,
+        alert_notifications: Default::default(),
+        alert_chats: Default::default(),
         view: View::Feed,
         records_view: View::Feed,
         last_args: Vec::new(),
@@ -814,6 +830,7 @@ fn run() {
             ui_tick.state.borrow_mut().pending_view = None;
             load_view(&ui_tick, view);
         }
+        check_alerts_when_due(&ui_tick);
     });
     timer.start(120, false);
 
@@ -996,7 +1013,8 @@ fn spawn_worker(
                     continue;
                 }
             }
-            let read = matches!(job.tag, Tag::List { .. }) && matches!(job.task, Task::Fb(_, None));
+            let read = matches!(job.tag, Tag::List { .. } | Tag::AlertNotifications | Tag::AlertChats)
+                && matches!(job.task, Task::Fb(_, None));
             if read && fb.is_none() {
                 fb = Fb::discover();
             }
@@ -1013,6 +1031,8 @@ fn spawn_worker(
                         Tag::List { view, .. } => {
                             requests.lock().unwrap().background.contains(view)
                         }
+                        // Nobody is waiting on an alert check.
+                        Tag::AlertNotifications | Tag::AlertChats => true,
                         _ => false,
                     });
                     if let Tag::List { view, request, .. } = &tag {
@@ -1285,6 +1305,17 @@ fn build_menus(frame: &Frame) {
             "&Load more\tCtrl+L",
             "Append more items and keep your reading position",
         )
+        .append_separator()
+        .append_check_item(
+            ID_VOICE_ALERTS,
+            "&Voice alerts",
+            "Say new notifications and unread chats aloud",
+        )
+        .append_check_item(
+            ID_SOUND_ALERTS,
+            "&Sound alerts",
+            "Play a sound for new notifications and unread chats",
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -1382,7 +1413,71 @@ fn build_menus(frame: &Frame) {
         .append(help_menu, "&Help")
         .build();
     menu_bar.check_item(ID_DEBUG_LOGGING, blindfb_core::debug::load());
+    menu_bar.check_item(ID_VOICE_ALERTS, alerts::enabled(alerts::Kind::Voice));
+    menu_bar.check_item(ID_SOUND_ALERTS, alerts::enabled(alerts::Kind::Sound));
     frame.set_menu_bar(menu_bar);
+}
+
+/// Ask Facebook for anything new, when alerts are on and the wait is over.
+/// Sent straight to the worker: a background check must not say "Working…".
+fn check_alerts_when_due(ui: &Ui) {
+    if ui.state.borrow().next_alert_check > Instant::now() {
+        return;
+    }
+    ui.state.borrow_mut().next_alert_check = Instant::now() + ALERT_EVERY;
+    if !alerts::any_enabled() {
+        return;
+    }
+    let _ = ui.jobs.send(Job {
+        task: Task::Fb(notifs_args(PAGE), None),
+        tag: Tag::AlertNotifications,
+    });
+    let _ = ui.jobs.send(Job {
+        task: Task::Fb(chats_args(PAGE, true), None),
+        tag: Tag::AlertChats,
+    });
+}
+
+/// A failed check stays silent: alerts must not interrupt with errors, and
+/// the next check tries again. Locked Messenger chats fail here every time.
+fn alert_on_new(
+    ui: &Ui,
+    items: Result<Vec<(String, String)>, String>,
+    watch: impl FnOnce(&mut State) -> &mut alerts::Watch,
+) {
+    let Ok(items) = items else { return };
+    let new = watch(&mut ui.state.borrow_mut()).check(items);
+    let (voice, sound) = (alerts::enabled(alerts::Kind::Voice), alerts::enabled(alerts::Kind::Sound));
+    if new.is_empty() || !(voice || sound) {
+        return;
+    }
+    let words = alerts::spoken(&new);
+    ui.status(&words);
+    alerts::play(sound, voice.then_some(words));
+}
+
+fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
+    let on = !alerts::enabled(kind);
+    let was_on = alerts::any_enabled();
+    if let Err(error) = alerts::set_enabled(kind, on) {
+        show_error(&ui.frame, &error, "Alerts");
+        return;
+    }
+    let voice = kind == alerts::Kind::Voice;
+    let name = if voice { "Voice alerts" } else { "Sound alerts" };
+    ui.status(&format!("{name} {}.", if on { "on" } else { "off" }));
+    if !on {
+        return;
+    }
+    // Hearing the alert now proves it works; nothing else would for a while.
+    alerts::play(!voice, voice.then(|| "Voice alerts on.".to_owned()));
+    if !was_on {
+        // Alerts were off: anything since then is a backlog, not news.
+        let mut state = ui.state.borrow_mut();
+        state.alert_notifications = Default::default();
+        state.alert_chats = Default::default();
+        state.next_alert_check = Instant::now();
+    }
 }
 
 fn activate_view(ui: &Ui, view: &View) {
@@ -2818,6 +2913,14 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
         }
+        Tag::AlertNotifications => {
+            let items = done.result.and_then(|output| alerts::notifications(&output));
+            alert_on_new(ui, items, |state| &mut state.alert_notifications);
+        }
+        Tag::AlertChats => {
+            let items = done.result.map(|output| alerts::chats(&output));
+            alert_on_new(ui, items, |state| &mut state.alert_chats);
+        }
         Tag::DebugReport => match done.result {
             Ok(text) => {
                 ui.status("Debug report saved.");
@@ -3896,6 +3999,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                 .show();
         }
         ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
+        ID_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::Voice),
+        ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_DEBUG_LOGGING => {
             let on = !blindfb_core::debug::enabled();
             match blindfb_core::debug::set_enabled(on) {
