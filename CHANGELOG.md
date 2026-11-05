@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.17 - 2026-11-04
+
+Cursor position, author actions and post details in the News feed. Backend v0.1.5-blindfb.29.
+
+- Coming back to a list (Back, or returning from a post's comments) put the cursor on the first item instead of the item you were on (issue #15). Each list now remembers its selected item and restores it when you return.
+- Author's posts and Author's profile on a shared post in the News feed failed with "no person matches" (issue #14). The author line of a shared post names two people, and searching for the whole line matches nobody. The menu now acts on the poster, the first name. Posts whose author link the backend reads keep using that link directly, as since v0.7.16.
+- The details pane's Time line could be empty (issue #16). The backend now falls back to the timestamp link's own text when neither of its other time sources reads. The counts line now names each number: "Reactions: 0, comments: 0, shares: 0" instead of a bare "0/0/0".
+
 ## v0.7.16 - 2026-11-04
 
 Author's profile and Author's posts work on group posts in the News feed. Backend v0.1.5-blindfb.28.

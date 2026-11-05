@@ -327,6 +327,10 @@ struct State {
     cache: HashMap<View, (Vec<Record>, Instant, Vec<String>)>,
     /// Where Backspace/Escape in the list returns to, most recent last.
     history: Vec<View>,
+    /// Each list's selected record key, remembered when the list is left,
+    /// so coming back (Back, or returning from a post's comments) puts the
+    /// cursor on the item the user was on, not the first item (issue #15).
+    selection_memory: HashMap<View, String>,
     /// Set while a Back navigation loads, so it does not push itself.
     back_nav: bool,
     prefetched: bool,
@@ -624,6 +628,7 @@ fn run() {
         author_urls: HashMap::new(),
         cache: HashMap::new(),
         history: Vec::new(),
+        selection_memory: HashMap::new(),
         back_nav: false,
         prefetched: false,
         background: None,
@@ -2049,10 +2054,10 @@ fn details_for(view: &View, record: &Record) -> String {
         | View::SearchResults => {
             if record.fields.len() >= 5 {
                 format!(
-                    "Author: {}\nTime: {}\nReactions / comments / shares: {}\n\n{}",
+                    "Author: {}\nTime: {}\n{}\n\n{}",
                     record.field(1),
                     record.field(2),
-                    record.field(3),
+                    counts_label(record.field(3)),
                     record.fields[4..].join("\t")
                 )
             } else {
@@ -2409,6 +2414,26 @@ fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
     }
 }
 
+/// The feed's counts field is a bare "reactions/comments/shares" triple
+/// ("0/0/0"); in the details pane name each number, as Michal asked
+/// (issue #16). Anything that is not a numeric triple stays as it came.
+fn counts_label(raw: &str) -> String {
+    let parts: Vec<&str> = raw.split('/').map(str::trim).collect();
+    let numeric = |p: &str| {
+        !p.is_empty()
+            && p.chars()
+                .all(|c| c.is_ascii_digit() || matches!(c, '.' | ',' | 'K' | 'M' | 'k' | 'm'))
+    };
+    if parts.len() == 3 && parts.iter().all(|p| numeric(p)) {
+        format!(
+            "Reactions: {}, comments: {}, shares: {}",
+            parts[0], parts[1], parts[2]
+        )
+    } else {
+        format!("Reactions / comments / shares: {raw}")
+    }
+}
+
 fn is_more_row(view: &View, count: usize, index: usize) -> bool {
     index == count && more_row_label(view, count).is_some()
 }
@@ -2452,8 +2477,8 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         drop(state);
     }
     let old_index = ui.items.get_selection();
-    let (mut old_labels, selected_key, more_selected) = {
-        let state = ui.state.borrow();
+    let (mut old_labels, selected_key, more_selected, remembered_key) = {
+        let mut state = ui.state.borrow_mut();
         let labels: Vec<_> = state
             .records
             .iter()
@@ -2463,12 +2488,25 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
             .and_then(|i| state.records.get(i as usize))
             .map(|r| record_key(&state.records_view, r))
             .filter(|k| !k.is_empty() && k != "-");
+        // Leaving a list: remember where the cursor was, so returning to
+        // that list restores it instead of landing on the first item.
+        if state.records_view != *view {
+            if let Some(key) = &key {
+                let outgoing = state.records_view.clone();
+                state.selection_memory.insert(outgoing, key.clone());
+            }
+        }
+        let remembered = if state.records_view != *view {
+            state.selection_memory.get(view).cloned()
+        } else {
+            None
+        };
         let more_selected = if state.records_view == *view {
             more_selection(view, state.records.len(), old_index, records.len())
         } else {
             None
         };
-        (labels, key, more_selected)
+        (labels, key, more_selected, remembered)
     };
     if let Some(label) = more_row_label(&ui.state.borrow().records_view, old_labels.len()) {
         old_labels.push(label.to_owned());
@@ -2481,6 +2519,10 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     let selected = more_selected.or_else(|| {
         selected_key
             .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
+            .or_else(|| {
+                remembered_key
+                    .and_then(|key| records.iter().position(|r| record_key(view, r) == key))
+            })
             .or_else(|| (!records.is_empty()).then_some(0))
     });
     {
@@ -3257,6 +3299,14 @@ fn comment_selected(ui: &Ui) {
     }
 }
 
+/// The poster named by a feed author line. A joined line ("Sharer /
+/// Original author", a shared or "is with" post) names two people, so a
+/// name search for the whole line matches nobody and the backend answers
+/// "no person matches" (issue #14); the first name is the poster.
+fn poster_name(author: &str) -> &str {
+    author.split(" / ").next().unwrap_or(author).trim()
+}
+
 /// The person a selected record is about: a friend record's ref, a post's
 /// author name, or a chat's name.
 fn person_of(ui: &Ui, record: &Record) -> Option<String> {
@@ -3283,7 +3333,7 @@ fn person_of(ui: &Ui, record: &Record) -> Option<String> {
             if author.is_empty() {
                 None
             } else {
-                Some(author.to_owned())
+                Some(poster_name(author).to_owned())
             }
         }
     }
@@ -4585,6 +4635,45 @@ mod tests {
         assert_eq!(pop_previous(&mut history, &View::Chats), Some(View::Feed));
         assert!(history.is_empty());
         assert_eq!(pop_previous(&mut history, &View::Feed), None);
+    }
+
+    #[test]
+    fn poster_name_is_the_first_of_a_joined_author_line() {
+        // Issue #14: searching the whole joined line matched nobody.
+        assert_eq!(poster_name("Alice Smith / Bob Jones"), "Alice Smith");
+        assert_eq!(poster_name("Alice Smith"), "Alice Smith");
+    }
+
+    #[test]
+    fn feed_details_name_each_count() {
+        // Issue #16: the details pane showed a bare "0/0/0" after
+        // "Reactions / comments / shares:"; each count is now named.
+        assert_eq!(
+            counts_label("0/0/0"),
+            "Reactions: 0, comments: 0, shares: 0"
+        );
+        assert_eq!(
+            counts_label("12/3/1.2K"),
+            "Reactions: 12, comments: 3, shares: 1.2K"
+        );
+        // Not a numeric triple: shown as it came, never dropped.
+        assert_eq!(
+            counts_label("many"),
+            "Reactions / comments / shares: many"
+        );
+        let post = Record {
+            author_ref: None,
+            fields: vec![
+                "p1".into(),
+                "Alice".into(),
+                "2h".into(),
+                "4/5/6".into(),
+                "Hello".into(),
+            ],
+            raw: String::new(),
+        };
+        let details = details_for(&View::Feed, &post);
+        assert!(details.contains("Reactions: 4, comments: 5, shares: 6"));
     }
 
     #[test]
