@@ -392,9 +392,11 @@ pub fn send_comment(
             json!(text)
         ),
     )?;
-    let reference: String = serde_json::from_str(&prepared)
+    let typed: String = serde_json::from_str(&prepared)
         .map_err(|_| "Could not identify the selected comment editor".to_owned())?;
-    fb.run(&["page", page, "fill", &reference, text])?;
+    // Types at the caret: `page fill` would replace the name Facebook prefills in a reply.
+    let typed = json!({ "text": typed }).to_string();
+    fb.run(&["page", page, "cdp", "Input.insertText", &typed])?;
     eval(fb, page, "window.__blindfbPost.check()")?;
     fb.run(&["page", page, "key", "Enter"]).map_err(|_| "Submission could not be confirmed. Refresh before trying again; do not resend automatically.".to_owned())?;
     let output = eval(fb, page, "window.__blindfbPost.confirm()").map_err(|error| {

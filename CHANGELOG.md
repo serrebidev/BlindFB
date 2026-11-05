@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.15 - 2026-11-04
+
+Replying to a comment works again. Backend unchanged, v0.1.5-blindfb.27.
+
+- Replying could fail with "No unique editor inside the selected comment thread. Nothing was sent." Facebook now draws the reply box beside the comment instead of inside it, and BlindFB only looked inside. It now uses the box Facebook focuses when you press Reply, and refuses it unless it belongs to the thread you selected.
+- A top-level comment could fail with the same error when any reply box was open on the post, including one left open by a failed reply. BlindFB now tells the post's own comment box apart from reply boxes.
+- When you reply to someone who has replies under their comment, or to a reply, Facebook starts your reply with that person's name. BlindFB used to treat the name as an unsent draft. It now keeps the name, as Facebook does, and types your words after it. Text you left in the box yourself is still never overwritten.
+- A sent reply could be reported as unconfirmed when it landed under the thread's top comment, or when Facebook removed its reply box after sending. Both now count as sent.
+- All of this was checked on live Facebook up to the point of sending, on posts with and without open threads. No comment was actually published in testing, so please report it if a reply goes through but BlindFB says it could not confirm it.
+
 ## v0.7.14 - 2026-11-04
 
 Posts that were published no longer come back as errors. Backend v0.1.5-blindfb.27.

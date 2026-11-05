@@ -4,7 +4,8 @@
   const EDITOR = '[role=textbox][contenteditable=true],textarea';
   const own = (element, article) => element.closest(ARTICLE) === article;
   const label = element => F.clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '');
-  const contents = element => F.clean(element.value === undefined ? element.innerText || '' : element.value);
+  const rawContents = element => element.value === undefined ? element.innerText || '' : element.value;
+  const contents = element => F.clean(rawContents(element));
   const action = /^(Like|Reply|Edited|See translation|Thích|Trả lời|J’aime|Répondre)$/i;
   const time = F.TIME || /^(\d+\s*(s|m|h|d|w|y|min|hr|day|week)s?|Just now)$/i;
   let root, address, target, serial = 0, records = new Map(), pending;
@@ -219,40 +220,71 @@
     return row.element;
   }
 
-  function editors(parent) {
-    current();
-    const article = parent === null ? null : selected(parent);
-    return [...(article || root).querySelectorAll(EDITOR)].filter(element => F.visible(element) && F.enabled(element) && element.closest(ARTICLE) === article);
+  // Facebook draws reply boxes beside the comments, one per open thread, outside every article.
+  // The top-level box sits outside the comment list, so it alone encloses every other box.
+  function composer() {
+    const boxes = [...root.querySelectorAll(EDITOR)].filter(element => F.visible(element) && F.enabled(element) && !element.closest(ARTICLE));
+    const first = root.querySelectorAll(ARTICLE)[0];
+    const scope = box => { let element = first; while (!element.contains(box)) element = element.parentElement; return element; };
+    const found = boxes.length > 1 && first ? boxes.filter(box => boxes.every(other => other === box || (scope(box) !== scope(other) && scope(box).contains(scope(other))))) : boxes;
+    return found.length === 1 && !/^(Reply|Trả lời|Répondre)\b/i.test(label(found[0])) ? found[0] : null;
   }
 
+  // The box Facebook focused for this comment's Reply: it follows the comment, with only the
+  // same thread between them. Replies are not nested in the comment they answer.
+  function threadBox(article) {
+    const box = document.activeElement;
+    const allowed = [...root.querySelectorAll(EDITOR)].filter(element => F.visible(element) && F.enabled(element) && [null, article].includes(element.closest(ARTICLE)));
+    const follows = (a, b) => a.compareDocumentPosition(b) & 4;
+    if (!allowed.includes(box) || box === composer() || !follows(article, box)) return null;
+    const threadOf = value => value.parent_id || value.id;
+    const thread = threadOf(comment(article));
+    return collect().every(({element, value}) => !follows(article, element) || !follows(element, box) || threadOf(value) === thread) ? box : null;
+  }
+
+  function editorFor(parent) {
+    current();
+    return parent === null ? composer() : threadBox(selected(parent));
+  }
+
+  const flat = text => F.clean(text).replace(/\s+/g, ' ');
+
+  // Returns the exact text to type at the caret, which is left after any prefilled name.
   async function prepare(parent, text) {
     current();
     pending = null;
+    let thread = null;
     if (parent !== null) {
       const article = selected(parent);
       const replies = [...article.querySelectorAll('[role=button],button,a')].filter(element => own(element, article) && F.visible(element) && /^(Reply|Trả lời|Répondre)$/i.test(label(element) || F.clean(element.innerText || '')));
       if (replies.length !== 1) throw Error('The selected comment has no unique Reply action. Nothing was sent.');
+      const value = comment(article);
+      thread = value.parent_id || value.id;
+      // Blurred first, so the focus afterwards can only come from this Reply.
+      document.activeElement?.blur?.();
       replies[0].click();
     }
-    const boxes = await F.waitFor(() => { const boxes = editors(parent); return boxes.length === 1 ? boxes : null; }, 5000);
-    if (!boxes) throw Error('No unique editor inside the selected comment thread. Nothing was sent.');
-    const editor = boxes[0];
-    if (contents(editor)) throw Error('The Facebook editor already contains a draft. Nothing was overwritten.');
+    const editor = await F.waitFor(() => editorFor(parent), 5000);
+    if (!editor) throw Error(parent === null ? 'No unique comment box on this post. Nothing was sent.' : 'No unique editor inside the selected comment thread. Nothing was sent.');
+    // Replying inside an open thread prefills the person's name; the box's name says who it is.
+    const draft = contents(editor);
+    if (draft && (parent === null || !label(editor).includes(draft))) throw Error('The Facebook editor already contains a draft. Nothing was overwritten.');
     editor.scrollIntoView({block: 'center'});
     const name = label(editor);
     if (!name || name.length > 160) throw Error('The comment editor has no reliable accessible name. Nothing was sent.');
-    const snapshot = F.pageSnapshot(name);
-    const refs = snapshot.split('\n').map(line => line.split('\t')).filter(row => row[1] === 'textbox');
-    if (refs.length !== 1) throw Error('The comment editor is ambiguous. Nothing was sent.');
-    F.pageTarget(refs[0][0], 'fill', false);
-    if (document.activeElement !== editor) throw Error('The selected editor changed. Nothing was sent.');
-    pending = {parent, text: F.clean(text), editor, before: new Set(collect().map(row => row.value.id))};
-    return JSON.stringify(refs[0][0]);
+    const refs = F.pageSnapshot(name).split('\n').map(line => line.split('\t')).filter(row => row[1] === 'textbox');
+    // Two open boxes can share a name, so the one that takes focus is the one to fill.
+    const found = refs.some(row => { try { F.pageTarget(row[0], 'fill', false); } catch { return false; } return document.activeElement === editor; });
+    if (!found) throw Error('The comment editor is ambiguous. Nothing was sent.');
+    if (draft) { const selection = getSelection(); selection.selectAllChildren(editor); selection.collapseToEnd(); }
+    const typed = draft && !/[  ]$/.test(rawContents(editor)) ? ' ' + text : text;
+    pending = {parent, thread, typed: flat(text), named: !!draft, text: flat(rawContents(editor) + typed), editor, before: new Set(collect().map(row => row.value.id))};
+    return JSON.stringify(typed);
   }
 
   function check() {
     current();
-    if (!pending || !pending.editor.isConnected || document.activeElement !== pending.editor || contents(pending.editor) !== pending.text || editors(pending.parent).length !== 1 || editors(pending.parent)[0] !== pending.editor) throw Error('The selected comment editor changed. Nothing was sent.');
+    if (!pending || !pending.editor.isConnected || document.activeElement !== pending.editor || flat(contents(pending.editor)) !== pending.text || editorFor(pending.parent) !== pending.editor) throw Error('The selected comment editor changed. Nothing was sent.');
     return true;
   }
 
@@ -262,8 +294,14 @@
     if (!sent) throw Error('There is no pending submission.');
     const confirmed = await F.waitFor(() => {
       current();
-      if (!sent.editor.isConnected || contents(sent.editor)) return false;
-      return collect().some(({value}) => value.url && !sent.before.has(value.id) && value.parent_id === sent.parent && F.clean(value.text) === sent.text);
+      // A reply's own box can vanish once sent; one that stays must have been emptied.
+      if (sent.editor.isConnected && contents(sent.editor)) return false;
+      return collect().some(({value}) => {
+        if (!value.url || sent.before.has(value.id) || (value.parent_id !== sent.parent && value.parent_id !== sent.thread)) return false;
+        // A reply to a reply joins the thread's top comment, with the name at the start of its text.
+        const body = flat(value.text);
+        return body === sent.typed || (sent.named && body.endsWith(' ' + sent.typed));
+      });
     }, 12000);
     if (!confirmed) throw Error('Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically.');
     return read();
