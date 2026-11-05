@@ -15,7 +15,7 @@ use sha2::{Digest, Sha256};
 /// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
 /// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
 /// once those merge.
-pub const BACKEND_VERSION: &str = "0.1.5-blindfb.27";
+pub const BACKEND_VERSION: &str = "0.1.5-blindfb.28";
 const RELEASE_URL: &str =
     "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.27";
 

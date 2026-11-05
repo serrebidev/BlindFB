@@ -14,6 +14,11 @@ use std::process::{Command, Stdio};
 pub struct Record {
     pub fields: Vec<String>,
     pub raw: String,
+    /// A feed post author's profile path (/vanity or /profile.php?id=),
+    /// carried on the `au` line the backend prints before the post line.
+    /// The author name alone cannot resolve a group post's author: the
+    /// group name is merged into it.
+    pub author_ref: Option<String>,
 }
 
 impl Record {
@@ -42,6 +47,7 @@ pub fn parse_records(output: &str) -> Vec<Record> {
         .map(|line| Record {
             fields: line.split('\t').map(str::to_owned).collect(),
             raw: line.to_owned(),
+            author_ref: None,
         })
         .collect()
 }
@@ -62,7 +68,15 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
     let squash = |s: &str| s.split_whitespace().collect::<String>();
     let mut seen = std::collections::HashSet::new();
     let mut rows = Vec::new();
+    // An `au` line directly before a post line carries that post author's
+    // profile path; it is not a row of its own.
+    let mut pending_ref: Option<String> = None;
     for mut record in parse_records(output) {
+        if record.field(0) == "au" {
+            pending_ref = Some(record.field(1).to_owned()).filter(|r| !r.is_empty());
+            continue;
+        }
+        record.author_ref = pending_ref.take();
         if record.fields.len() >= 5 {
             let mut text = record.fields[4..].join(" ");
             // Text repeated back to back: keep the first half.
@@ -187,6 +201,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
             Some(Record {
                 raw: fields.join("\t"),
                 fields,
+                author_ref: None,
             })
         })
         .collect();
@@ -1030,6 +1045,19 @@ mod tests {
                 ("Yury. Ai and Grok by SpaceXAI", "Bots all the way down"),
             ]
         );
+    }
+
+    #[test]
+    fn feed_au_line_gives_the_post_its_author_ref() {
+        // A group post: the author name carries the group name, so only the
+        // `au` profile path identifies the poster (issues #12 and #13).
+        let out = "au\t/profile.php?id=456\nhttps://www.facebook.com/groups/123/posts/999\tMichal Suchy / Odyssey Group\t2h\t1/2/3\tHello group\np3k9a\tAlice\t5 min\t6/2/1\tHello world\n";
+        let rows = parse_feed(out);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].author_ref.as_deref(), Some("/profile.php?id=456"));
+        assert_eq!(rows[0].field(1), "Michal Suchy / Odyssey Group");
+        assert_eq!(rows[0].field(4), "Hello group");
+        assert_eq!(rows[1].author_ref, None);
     }
 
     #[test]

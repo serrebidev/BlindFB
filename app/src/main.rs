@@ -2435,7 +2435,16 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         for record in &records {
             let author = record.field(1);
             if !author.is_empty() {
-                if let Some(profile) = profile_url_from_post_url(record.field(0)) {
+                // The author's own profile path when the post carried one
+                // (group post URLs name the group, so they derive nothing);
+                // else the profile derived from the post URL.
+                let profile = record
+                    .author_ref
+                    .as_deref()
+                    .filter(|r| r.starts_with('/'))
+                    .map(|r| format!("https://www.facebook.com{r}"))
+                    .or_else(|| profile_url_from_post_url(record.field(0)));
+                if let Some(profile) = profile {
                     state.author_urls.insert(author.to_owned(), profile);
                 }
             }
@@ -2977,6 +2986,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record {
+                    author_ref: None,
                     fields: vec![l.to_owned()],
                     raw: l.to_owned(),
                 })
@@ -2996,6 +3006,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                     let mut fields: Vec<String> = line.split('\t').map(str::to_owned).collect();
                     fields.insert(1, std::mem::take(&mut pending_ref));
                     comments.push(Record {
+                        author_ref: None,
                         fields,
                         raw: line.to_owned(),
                     });
@@ -3012,6 +3023,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record {
+                    author_ref: None,
                     fields: vec![l.to_owned()],
                     raw: l.to_owned(),
                 })
@@ -3261,6 +3273,12 @@ fn person_of(ui: &Ui, record: &Record) -> Option<String> {
             }
         }
         _ => {
+            // A feed post's author ref is the person's identity: the name
+            // alone cannot resolve a group post's author (the group name is
+            // merged into it), and a name search can pick the wrong person.
+            if let Some(ref_) = record.author_ref.as_deref().filter(|r| !r.is_empty()) {
+                return Some(ref_.to_owned());
+            }
             let author = record.field(1);
             if author.is_empty() {
                 None
@@ -4573,11 +4591,13 @@ mod tests {
     fn chat_details_survive_a_short_row() {
         // A chats line with fewer than five fields must not panic the reader.
         let short = Record {
+            author_ref: None,
             fields: vec!["c1".into()],
             raw: "c1".into(),
         };
         assert_eq!(details_for(&View::Chats, &short), "c1");
         let full = Record {
+            author_ref: None,
             fields: vec![
                 "c1".into(),
                 "!".into(),
@@ -4596,6 +4616,7 @@ mod tests {
     fn messaging_addresses_a_person_by_ref_not_by_name() {
         // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
         let friend = Record {
+            author_ref: None,
             fields: vec![
                 "Alice Smith".into(),
                 "u1abc".into(),
@@ -4609,6 +4630,7 @@ mod tests {
         );
         // chats: ref, flags, time, name, preview.
         let chat = Record {
+            author_ref: None,
             fields: vec![
                 "c8x2f".into(),
                 "!".into(),
@@ -4760,6 +4782,7 @@ mod tests {
     #[test]
     fn item_links_use_each_views_target_instead_of_its_label() {
         let row = |fields: &[&str]| Record {
+            author_ref: None,
             fields: fields.iter().map(|s| (*s).to_owned()).collect(),
             raw: String::new(),
         };
@@ -5040,6 +5063,7 @@ mod tests {
     #[test]
     fn more_keeps_distinct_refless_chat_and_friend_rows() {
         let rec = |fields: &[&str]| Record {
+            author_ref: None,
             fields: fields.iter().map(|s| s.to_string()).collect(),
             raw: fields.join("\t"),
         };
@@ -5085,6 +5109,7 @@ mod tests {
     #[test]
     fn linkless_rows_say_so_without_touching_copied_text() {
         let row = |fields: &[&str]| Record {
+            author_ref: None,
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };
@@ -5117,6 +5142,7 @@ mod tests {
     #[test]
     fn routes_only_post_targets_and_detects_messenger_lock() {
         let row = |fields: &[&str]| Record {
+            author_ref: None,
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };
@@ -5174,6 +5200,7 @@ mod tests {
     #[test]
     fn marketplace_rows_read_like_search_listings() {
         let listing = Record {
+            author_ref: None,
             fields: vec![
                 "Wooden chair".to_owned(),
                 "https://www.facebook.com/marketplace/item/555".to_owned(),
@@ -5213,6 +5240,7 @@ mod tests {
     #[test]
     fn search_rows_route_by_kind() {
         let row = |fields: &[&str]| Record {
+            author_ref: None,
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };

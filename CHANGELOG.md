@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.16 - 2026-11-04
+
+Author's profile and Author's posts work on group posts in the News feed. Backend v0.1.5-blindfb.28.
+
+- On a group post in the News feed, Author's profile failed with "profile not found / not accessible" and Author's posts failed with "page did not load" (issues #12 and #13). A group post's author line merges the group name into the author's name, so looking the person up by that name could not work.
+- Feed posts now carry the author's own profile link, the same way comments already did. Author's profile, Author's posts, and Add friend use that link directly instead of searching by name, which also means a common name can no longer open the wrong person's profile or posts.
+
 ## v0.7.15 - 2026-11-04
 
 Replying to a comment works again. Backend unchanged, v0.1.5-blindfb.27.

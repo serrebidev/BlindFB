@@ -89,6 +89,7 @@ pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
             row["text"].as_str().unwrap_or("Reel").to_owned(),
         ];
         records.push(Record {
+            author_ref: None,
             raw: fields.join("\t"),
             fields,
         });
@@ -338,6 +339,7 @@ mod tests {
     #[test]
     fn grouped_reel_notification_keeps_its_identity() {
         let record = Record {
+            author_ref: None,
             fields: vec![
                 "3h".into(),
                 "!".into(),
