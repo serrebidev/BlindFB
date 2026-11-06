@@ -1,0 +1,44 @@
+# French translation of BlindFB.
+# Regenerate the msgids with `cargo xtask i18n`; fill in msgstr by hand.
+msgid ""
+msgstr ""
+"Project-Id-Version: BlindFB\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-06 17:58+0100\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: app/src/main.rs:1431
+msgid "Language: &system default"
+msgstr "Langue : celle du &système"
+
+#: app/src/main.rs:1432
+msgid "Use the system language when BlindFB has it, English otherwise"
+msgstr ""
+
+#: app/src/main.rs:4107
+msgid "Language saved. Restart BlindFB to use it."
+msgstr ""
+
+#: app/src/main.rs:4108
+msgid "Language"
+msgstr ""
+
+#: crates/core/src/i18n.rs:70
+msgid "could not find BlindFB's data folder"
+msgstr ""
+
+#: crates/core/src/i18n.rs:126
+#, rust-format
+msgid "Posts by {who}"
+msgstr ""
+
+#: crates/core/src/i18n.rs:127 crates/core/src/i18n.rs:128
+#, rust-format
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] "{n} élément"
+msgstr[1] "{n} éléments"

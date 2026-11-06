@@ -12,6 +12,7 @@ pub mod browsers;
 pub mod debug;
 mod engine;
 pub mod fb;
+pub mod i18n;
 pub mod http;
 pub mod labels;
 pub mod media;

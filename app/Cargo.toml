@@ -18,6 +18,7 @@ ship-shape = "0.5.0"
 native-ocr = "0.2.1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 serde_json = "1"
+patois = "0.2.4"
 
 [build-dependencies]
 shipfitter = { version = "0.2.4", features = ["windows-resources"] }

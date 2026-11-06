@@ -46,6 +46,13 @@ use blindfb_core::reels::{self, ReelSource};
 use wx_utils::{confirm, prompt_text, show_error, show_warning, AboutBoxBuilder};
 use wxdragon::prelude::*;
 
+use blindfb_core::i18n::{self, Language};
+use blindfb_core::{ntf, tf};
+use patois::t;
+
+// The translations in app/locale, compiled by build.rs and baked into the binary.
+patois::embed_domain!();
+
 const ID_FEED: i32 = 10001;
 const ID_NOTIFS: i32 = 10002;
 const ID_FRIENDS: i32 = 10003;
@@ -104,6 +111,9 @@ const ID_VOICE_ALERTS: i32 = 10075;
 const ID_SOUND_ALERTS: i32 = 10076;
 const ID_LIST_VOICE_ALERTS: i32 = 10077;
 const ID_LIST_SOUND_ALERTS: i32 = 10078;
+const ID_LANG_SYSTEM: i32 = 10094;
+const ID_LANG_ENGLISH: i32 = 10095;
+const ID_LANG_FRENCH: i32 = 10096;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -466,6 +476,8 @@ fn startup_log(line: &str) {
 
 fn main() {
     startup_log("main: starting");
+    // Before any window: every label below is looked up in the chosen language.
+    i18n::apply(i18n::saved());
     std::panic::set_hook(Box::new(|info| {
         startup_log(&format!("panic: {info}"));
     }));
@@ -1413,6 +1425,19 @@ fn build_menus(frame: &Frame) {
             "Save a file you can send to the developer",
         )
         .append_separator()
+        // Language names stay in their own language, so anyone can find theirs.
+        .append_radio_item(
+            ID_LANG_SYSTEM,
+            &t!("Language: &system default"),
+            &t!("Use the system language when BlindFB has it, English otherwise"),
+        )
+        .append_radio_item(ID_LANG_ENGLISH, "Language: &English", "Show BlindFB in English")
+        .append_radio_item(
+            ID_LANG_FRENCH,
+            "Langue : &français",
+            "Afficher BlindFB en français",
+        )
+        .append_separator()
         .append_item(ID_ABOUT, "&About BlindFB", "About this program")
         .build();
 
@@ -1425,6 +1450,14 @@ fn build_menus(frame: &Frame) {
         .append(help_menu, "&Help")
         .build();
     menu_bar.check_item(ID_DEBUG_LOGGING, blindfb_core::debug::load());
+    menu_bar.check_item(
+        match i18n::saved() {
+            Language::System => ID_LANG_SYSTEM,
+            Language::English => ID_LANG_ENGLISH,
+            Language::French => ID_LANG_FRENCH,
+        },
+        true,
+    );
     menu_bar.check_item(ID_VOICE_ALERTS, alerts::enabled(alerts::Kind::Voice));
     menu_bar.check_item(ID_SOUND_ALERTS, alerts::enabled(alerts::Kind::Sound));
     menu_bar.check_item(
@@ -4063,6 +4096,18 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),
         ID_LIST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ListSound),
+        ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH => {
+            let language = match id {
+                ID_LANG_ENGLISH => Language::English,
+                ID_LANG_FRENCH => Language::French,
+                _ => Language::System,
+            };
+            match i18n::save(language) {
+                // Menus and dialogs are built once, so the new language starts with the next launch.
+                Ok(()) => ui.status(&t!("Language saved. Restart BlindFB to use it.")),
+                Err(error) => show_error(&ui.frame, &error, &t!("Language")),
+            }
+        }
         ID_DEBUG_LOGGING => {
             let on = !blindfb_core::debug::enabled();
             match blindfb_core::debug::set_enabled(on) {
@@ -4765,6 +4810,34 @@ fn open_url(url: &str) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_french_catalog_is_embedded() {
+        assert!(patois::available_locales(i18n::DOMAIN).contains(&"fr"));
+    }
+
+    /// Every message in the French catalog has its translation; `cargo xtask i18n`
+    /// adds new English messages with an empty one, which this test then reports.
+    #[test]
+    fn every_french_message_is_translated() {
+        let po = include_str!("../locale/fr/LC_MESSAGES/blindfb.po");
+        let mut missing = Vec::new();
+        let mut id = String::new();
+        for block in po.split("\n\n") {
+            let lines: Vec<&str> = block.lines().filter(|l| !l.starts_with('#')).collect();
+            if let Some(first) = lines.iter().find(|l| l.starts_with("msgid ")) {
+                id = first.trim_start_matches("msgid ").to_owned();
+            }
+            let empty = lines.iter().any(|l| {
+                (l.starts_with("msgstr \"\"") || l.starts_with("msgstr[")
+                    && l.ends_with("\"\""))
+                    && !lines.iter().skip_while(|x| !x.starts_with("msgstr")).skip(1).any(|x| x.starts_with('"'))
+            });
+            if empty && id != "\"\"" {
+                missing.push(id.clone());
+            }
+        }
+        assert!(missing.is_empty(), "untranslated: {missing:?}");
+    }
     use super::*;
 
     #[test]

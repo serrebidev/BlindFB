@@ -4,6 +4,8 @@
 //! platform's updater (ship-shape) looks for: `dist/BlindFB.zip` on Windows,
 //! `dist/BlindFB.tar.gz` on Linux, and `dist/BlindFB-<arch>.dmg` on macOS.
 //! Each asset is signed with minisign when `MINISIGN_KEY` is set.
+//!
+//! `cargo xtask i18n` refreshes the messages of the French catalog from the code.
 
 use std::env;
 use std::error::Error;
@@ -23,8 +25,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some("verify") => verify(),
         Some("minisign-key") => minisign_key(),
         Some("update-check") => update_check(),
+        Some("i18n") => i18n(),
         _ => {
-            eprintln!("usage: cargo xtask package|sign <file>...|verify <file>...|minisign-key <dir>|update-check [version]");
+            eprintln!("usage: cargo xtask package|sign <file>...|verify <file>...|minisign-key <dir>|update-check [version]|i18n");
             std::process::exit(2);
         }
     }
@@ -282,4 +285,62 @@ mod tests {
         assert!(public.verify(b"tampered", &signature, false).is_err());
         fs::remove_dir_all(&dir).unwrap();
     }
+}
+
+/// Refresh the French catalog from the code: xgettext reads every `t!`, `tf!`,
+/// `nt!` and `ntf!`, then msgmerge adds new messages with an empty translation and
+/// marks removed ones obsolete. Needs GNU gettext 0.24 or newer (Rust support).
+fn i18n() -> Result<(), Box<dyn Error>> {
+    let root = root();
+    let mut sources = Vec::new();
+    for dir in ["app/src", "crates/core/src"] {
+        collect_rust(&root.join(dir), &mut sources)?;
+    }
+    sources.sort();
+    let template = root.join("target").join("blindfb.pot");
+    fs::create_dir_all(root.join("target"))?;
+    let status = Command::new("xgettext")
+        .current_dir(&root)
+        .args([
+            "--language=Rust",
+            "--from-code=UTF-8",
+            "--keyword=t!",
+            "--keyword=tf!",
+            "--keyword=nt!:1,2",
+            "--keyword=ntf!:1,2",
+            "--add-comments=TRANSLATORS:",
+            "--no-wrap",
+            "--sort-by-file",
+            "--package-name=BlindFB",
+            "-o",
+        ])
+        .arg(&template)
+        .args(sources.iter().map(|p| p.strip_prefix(&root).unwrap_or(p)))
+        .status()?;
+    if !status.success() {
+        return Err("xgettext failed".into());
+    }
+    let catalog = root.join("app/locale/fr/LC_MESSAGES/blindfb.po");
+    let status = Command::new("msgmerge")
+        .args(["--update", "--no-fuzzy-matching", "--no-wrap", "--backup=none"])
+        .arg(&catalog)
+        .arg(&template)
+        .status()?;
+    if !status.success() {
+        return Err("msgmerge failed".into());
+    }
+    println!("updated {}", catalog.display());
+    Ok(())
+}
+
+fn collect_rust(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
+    for entry in fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_rust(&path, out)?;
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            out.push(path);
+        }
+    }
+    Ok(())
 }

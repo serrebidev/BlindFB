@@ -1,3 +1,5 @@
 /target
 /dist
 *.user
+# Built from the .po catalogs by app/build.rs
+/app/locale/*/LC_MESSAGES/*.mo

@@ -260,6 +260,7 @@ dependencies = [
  "blindfb-core",
  "image",
  "native-ocr",
+ "patois",
  "serde_json",
  "ship-shape",
  "shipfitter",
@@ -272,6 +273,7 @@ name = "blindfb-core"
 version = "0.7.21"
 dependencies = [
  "flate2",
+ "patois",
  "rookie-cookies",
  "rusqlite",
  "serde_json",
