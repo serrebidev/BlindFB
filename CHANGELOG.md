@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.22 - 2026-11-06
+
+No console window on Windows. The app is now linked as a Windows GUI
+application, so launching it no longer opens a command prompt window
+beside it — the same fix as the other apps. Backend v0.1.5-blindfb.34
+(unchanged).
+
 ## v0.7.21 - 2026-11-05
 
 List-loaded voice and sound alerts. Backend v0.1.5-blindfb.34 (unchanged).

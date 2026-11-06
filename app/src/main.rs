@@ -1,3 +1,9 @@
+// Release builds are Windows GUI-subsystem programs: no
+// console window opens beside the app (Brandon's order,
+// 2026-11-06, the same fix as the other apps). Debug builds
+// keep the console.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 //! BlindFB: an accessible Facebook and Messenger client for screen reader
 //! users, built with wxDragon (native wxWidgets controls throughout, so
 //! lists, menus and dialogs are the real platform widgets) on top of the
