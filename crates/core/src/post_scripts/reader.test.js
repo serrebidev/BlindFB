@@ -27,10 +27,15 @@ function fixture(mode = false) {
   const cards = [{contains: () => false}, {contains: () => false}];
   // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
   const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
+  // A link-preview card: Facebook gives it a bare "?__cft__" href until it is focused.
+  let cardHref = '?__cft__[0]=x';
+  const linkCard = {get href() { return new URL(cardHref, 'https://www.facebook.com/a/posts/1').href; }, innerText: 'LOFT – Free Vintage Reverb Plugin',
+    getAttribute: name => name === 'href' ? cardHref : '', closest: () => null,
+    focus() { cardHref = 'https://13x.audio/products/loft?fbclid=abc'; }, blur() {}};
   const messages = mode === 'shared' || mode === 'shared-source' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
   if (mode === 'shared') messages.push({text: 'Hidden template', visible: false, closest: () => null, contains: () => false});
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -153,6 +158,8 @@ function fixture(mode = false) {
   const sharedVideo = JSON.parse(await fixture('external-video').api.initialize('https://www.facebook.com/a/posts/1'));
   assert.equal(sharedVideo.video, 'https://www.youtube.com/watch?v=abc');
   assert.deepEqual(sharedVideo.links, [{label: 'A video', url: 'https://www.youtube.com/watch?v=abc'}]);
+  const carded = JSON.parse(await fixture('card').api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.deepEqual(carded.links, [{label: 'LOFT – Free Vintage Reverb Plugin', url: 'https://13x.audio/products/loft'}]);
   const watch = fixture(true);
   const watched = JSON.parse(await watch.api.initialize('https://www.facebook.com/page/videos/123/'));
   assert.equal(watched.author, 'Post author');

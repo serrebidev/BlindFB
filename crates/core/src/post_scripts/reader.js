@@ -68,6 +68,17 @@
     return null;
   }
 
+  // Facebook leaves some links as a bare "?__cft__…" until they are focused: a link-preview
+  // card then points at its site (https://13x.audio/…), not at the post itself.
+  async function reveal(scope) {
+    for (const a of scope.querySelectorAll('a[href]')) {
+      if (a.closest(ARTICLE) || !F.visible(a) || !/^\?/.test(a.getAttribute('href') || '')) continue;
+      a.focus({preventScroll: true});
+      await F.waitFor(() => !/^\?/.test(a.getAttribute('href') || ''), 400, 30);
+      a.blur();
+    }
+  }
+
   // Links a reader would follow: anything in the message, and pages outside Facebook.
   function links(scope, message) {
     const found = new Map();
@@ -200,6 +211,7 @@
     if (card) {
       return JSON.stringify({url: target, ...reel, time: '', comments: rows.map(row => row.value), video: target});
     }
+    await reveal(root);
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
     const head = profile ? F.vtext(profile.parentElement.parentElement.parentElement) : [];
     const messages = [...root.querySelectorAll('[data-ad-rendering-role=story_message]')].filter(element => F.visible(element) && !element.closest(ARTICLE));
@@ -447,6 +459,7 @@
           if (text) lines.push(text);
         }
         const caption = lines.filter(text => text !== author && !W.captionNoise.test(text));
+        await reveal(card);
         reel = {author, text: caption.join('\n'), links: links(card, card)};
         const comment = buttonLabeled(card, W.comment);
         if (comment.length !== 1) throw Error('This reel has no unique Comment button.');
