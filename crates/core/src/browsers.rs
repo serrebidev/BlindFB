@@ -33,7 +33,10 @@ use std::time::Duration;
 #[cfg(not(windows))]
 use std::time::Instant;
 
+use patois::t;
+
 use crate::fb::Fb;
+use crate::tf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BrowserKind {
@@ -627,11 +630,11 @@ fn browser_running(kind: BrowserKind) -> bool {
 pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     let path = data_dir.join("Local State");
     let text = std::fs::read_to_string(&path)
-        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        .map_err(|e| tf!("cannot read {path}: {error}", path = path.display(), error = e))?;
     let mut root: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
     root["devtools"]["remote_debugging"]["user-enabled"] = serde_json::Value::Bool(true);
     std::fs::write(data_dir.join("Local State.blindfb-backup"), &text)
-        .map_err(|e| format!("cannot back up Local State: {e}"))?;
+        .map_err(|e| tf!("cannot back up Local State: {error}", error = e))?;
     let tmp = data_dir.join("Local State.blindfb-tmp");
     let write = std::fs::write(
         &tmp,
@@ -640,7 +643,7 @@ pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     .and_then(|()| std::fs::rename(&tmp, &path));
     write.map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
-        format!("cannot update Local State: {e}")
+        tf!("cannot update Local State: {error}", error = e)
     })
 }
 
@@ -649,7 +652,7 @@ fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
     let exe = browser
         .exe
         .clone()
-        .ok_or_else(|| format!("{} is not installed", browser.name()))?;
+        .ok_or_else(|| tf!("{browser} is not installed", browser = browser.name()))?;
     Command::new(&exe)
         .arg(url)
         .stdin(Stdio::null())
@@ -657,7 +660,7 @@ fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
         .stderr(Stdio::null())
         .spawn()
         .map(|_| ())
-        .map_err(|e| format!("cannot start {}: {e}", browser.name()))
+        .map_err(|e| tf!("cannot start {browser}: {error}", browser = browser.name(), error = e))
 }
 
 #[cfg(not(windows))]
@@ -697,9 +700,9 @@ pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
 fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, String> {
     let kind = browser.kind;
     let data_dir = browser.data_dir.clone().ok_or_else(|| {
-        format!(
-            "{} has not run yet — open it once, sign in to Facebook there, then try again",
-            browser.name()
+        tf!(
+            "{browser} has not run yet — open it once, sign in to Facebook there, then try again",
+            browser = browser.name()
         )
     })?;
 
@@ -719,10 +722,12 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
         wait_endpoint(&data_dir, 40)
     };
     let (port, _) = endpoint.ok_or_else(|| {
-        format!(
-            "{} did not offer a debugging endpoint — in {}, tick \"Allow remote debugging for this browser instance\", then try again",
-            browser.name(),
-            kind.inspect_url()
+        tf!(
+            // TRANSLATORS: {page} is the browser's inspect page address; "Allow remote debugging
+            // for this browser instance" is the browser's own checkbox, in its own language.
+            "{browser} did not offer a debugging endpoint — in {page}, tick \"Allow remote debugging for this browser instance\", then try again",
+            browser = browser.name(),
+            page = kind.inspect_url()
         )
     })?;
     let port = port.to_string();
@@ -731,9 +736,9 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
     if signed_in(&status) {
         Ok(status)
     } else {
-        Err(format!(
-            "{} is not signed in to Facebook — sign in there first, then try again",
-            browser.name()
+        Err(tf!(
+            "{browser} is not signed in to Facebook — sign in there first, then try again",
+            browser = browser.name()
         ))
     }
 }
@@ -743,7 +748,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
     let root = browser
         .data_dir
         .as_ref()
-        .ok_or("this browser has no profile yet; sign in to Facebook there first")?;
+        .ok_or_else(|| t!("this browser has no profile yet; sign in to Facebook there first"))?;
     let mut profiles = Vec::new();
     if let Ok(text) = std::fs::read_to_string(root.join("Local State")) {
         if let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) {
@@ -768,7 +773,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
         profiles.extend(others);
     }
     let mut tried = Vec::new();
-    let mut last_error = "no signed-in Facebook profile found".to_owned();
+    let mut last_error = t!("no signed-in Facebook profile found");
     for profile in profiles {
         if tried.contains(&profile) {
             continue;
@@ -805,15 +810,24 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
             }
             Err(error) => {
                 last_error = if error.code() == "source_inspection_failed" {
-                    "the cookie database could not be read; close this browser normally and retry"
-                        .to_owned()
+                    t!(
+                        "the cookie database could not be read; close this browser normally and retry"
+                    )
                 } else {
-                    format!("cookie extraction failed ({}): {error}", error.code())
+                    tf!(
+                        "cookie extraction failed ({code}): {error}",
+                        code = error.code(),
+                        error = error
+                    )
                 }
             }
         }
     }
-    Err(format!("Could not import {}: {last_error}. Sign in to Facebook there, or choose a new browser window.", browser.name()))
+    Err(tf!(
+        "Could not import {browser}: {error}. Sign in to Facebook there, or choose a new browser window.",
+        browser = browser.name(),
+        error = last_error
+    ))
 }
 
 fn valid_facebook_cookie(cookie: &FfCookie) -> bool {
@@ -835,7 +849,7 @@ fn has_facebook_session(cookies: &[FfCookie]) -> bool {
 
 fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
     if !has_facebook_session(cookies) || cookies.iter().any(|c| !valid_facebook_cookie(c)) {
-        return Err("The selected profile has no valid Facebook session. Sign in to Facebook in that browser first.".to_owned());
+        return Err(t!("The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."));
     }
     status(fb)?;
     let endpoint = fb.browser_endpoint()?;
@@ -850,7 +864,7 @@ fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
         fb.run(&["profile", "me"])?;
         Ok(current)
     } else {
-        Err("Facebook did not accept the imported session. Choose a new browser window to sign in directly.".to_owned())
+        Err(t!("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))
     }
 }
 
@@ -945,10 +959,9 @@ pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
 pub fn extract_firefox_cookies(profile: &Path) -> Result<Vec<FfCookie>, String> {
     let source = profile.join("cookies.sqlite");
     if !source.is_file() {
-        return Err(
+        return Err(t!(
             "this Firefox profile has no cookie database — sign in to Facebook in Firefox first"
-                .to_owned(),
-        );
+        ));
     }
     read_cookie_db(&source)
 }
@@ -956,13 +969,13 @@ pub fn extract_firefox_cookies(profile: &Path) -> Result<Vec<FfCookie>, String> 
 fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
     let conn =
         rusqlite::Connection::open_with_flags(db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .map_err(|e| format!("cannot open the Firefox cookie database: {e}"))?;
+            .map_err(|e| tf!("cannot open the Firefox cookie database: {error}", error = e))?;
     let mut stmt = conn
         .prepare(
             "SELECT name, value, host, path, expiry, isSecure, isHttpOnly, originAttributes \
              FROM moz_cookies WHERE host LIKE '%facebook.com'",
         )
-        .map_err(|e| format!("cannot query the Firefox cookie database: {e}"))?;
+        .map_err(|e| tf!("cannot query the Firefox cookie database: {error}", error = e))?;
     let rows = stmt
         .query_map([], |row| {
             Ok((
@@ -978,11 +991,11 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
                 row.get::<_, String>(7)?,
             ))
         })
-        .map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
+        .map_err(|e| tf!("cannot read the Firefox cookies: {error}", error = e))?;
     let mut groups: Vec<(String, Vec<FfCookie>)> = Vec::new();
     for row in rows {
         let (cookie, attributes) =
-            row.map_err(|e| format!("cannot read the Firefox cookies: {e}"))?;
+            row.map_err(|e| tf!("cannot read the Firefox cookies: {error}", error = e))?;
         if !valid_facebook_cookie(&cookie) {
             continue;
         }
@@ -1006,7 +1019,7 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
     match pick {
         Some((_, list)) => Ok(list.clone()),
         None => Err(
-            "Firefox is not signed in to Facebook — sign in there first, then try again".to_owned(),
+            t!("Firefox is not signed in to Facebook — sign in there first, then try again"),
         ),
     }
 }
@@ -1056,18 +1069,18 @@ pub(crate) fn cdp_call(
     let (port, path) = endpoint;
     let url = format!("ws://127.0.0.1:{port}{path}");
     let (mut socket, _) = tungstenite::connect(url.as_str())
-        .map_err(|e| format!("cannot reach the backend browser: {e}"))?;
+        .map_err(|e| tf!("cannot reach the backend browser: {error}", error = e))?;
     if let tungstenite::stream::MaybeTlsStream::Plain(stream) = socket.get_mut() {
         let _ = stream.set_read_timeout(Some(Duration::from_secs(20)));
     }
     let request = serde_json::json!({ "id": 1, "method": method, "params": params }).to_string();
     socket
         .send(tungstenite::Message::Text(request))
-        .map_err(|e| format!("cannot talk to the backend browser: {e}"))?;
+        .map_err(|e| tf!("cannot talk to the backend browser: {error}", error = e))?;
     loop {
         let message = socket
             .read()
-            .map_err(|e| format!("the backend browser did not answer: {e}"))?;
+            .map_err(|e| tf!("the backend browser did not answer: {error}", error = e))?;
         let tungstenite::Message::Text(text) = message else {
             continue;
         };
@@ -1078,7 +1091,11 @@ pub(crate) fn cdp_call(
             continue;
         }
         if let Some(error) = value.get("error") {
-            return Err(format!("the backend browser refused {method}: {error}"));
+            return Err(tf!(
+                "the backend browser refused {method}: {error}",
+                method = method,
+                error = error
+            ));
         }
         return Ok(value["result"].clone());
     }
@@ -1087,11 +1104,11 @@ pub(crate) fn cdp_call(
 /// Import the Facebook session from Firefox: extract its cookies, set
 /// them in the backend's browser, and verify with `fb status`.
 pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
-    let root = firefox.data_dir.clone().ok_or(
-        "Firefox has not run yet — open it once, sign in to Facebook there, then try again",
-    )?;
+    let root = firefox.data_dir.clone().ok_or_else(|| {
+        t!("Firefox has not run yet — open it once, sign in to Facebook there, then try again")
+    })?;
     let profile = firefox_profile(&root)
-        .ok_or("no Firefox profile found — sign in to Facebook in Firefox first")?;
+        .ok_or_else(|| t!("no Firefox profile found — sign in to Facebook in Firefox first"))?;
     let cookies = extract_firefox_cookies(&profile)?;
 
     import_cookies(fb, &cookies)
@@ -1106,9 +1123,9 @@ fn download(url: &str) -> Result<Vec<u8>, String> {
     let mut response = crate::http::agent()
         .get(url)
         .call()
-        .map_err(|e| format!("download of {url} failed: {e}"))?;
+        .map_err(|e| tf!("download of {url} failed: {error}", url = url, error = e))?;
     crate::http::download_body(response.body_mut())
-        .map_err(|e| format!("download of {url} failed: {e}"))
+        .map_err(|e| tf!("download of {url} failed: {error}", url = url, error = e))
 }
 
 #[cfg(windows)]
@@ -1128,12 +1145,13 @@ fn winget_install(id: &str) -> Result<String, String> {
             "--accept-package-agreements",
         ])
         .status()
-        .map_err(|e| format!("cannot run winget: {e}"))?;
+        .map_err(|e| tf!("cannot run winget: {error}", error = e))?;
     if status.success() {
-        Ok(format!("installed via winget ({id})"))
+        Ok(tf!("installed via winget ({id})", id = id))
     } else {
-        Err(format!(
-            "winget could not install {id} (it may have asked for administrator approval)"
+        Err(tf!(
+            "winget could not install {id} (it may have asked for administrator approval)",
+            id = id
         ))
     }
 }
@@ -1156,19 +1174,20 @@ fn installer_command(path: &Path) -> Command {
 fn download_and_run(url: &str, file_name: &str) -> Result<String, String> {
     let bytes = download(url)?;
     let path = std::env::temp_dir().join(file_name);
-    std::fs::write(&path, &bytes).map_err(|e| format!("cannot save the installer: {e}"))?;
+    std::fs::write(&path, &bytes)
+        .map_err(|e| tf!("cannot save the installer: {error}", error = e))?;
     installer_command(&path)
         .stdin(Stdio::null())
         .spawn()
-        .map(|_| "installer downloaded and started — follow its prompts, then try again".to_owned())
-        .map_err(|e| format!("cannot start the installer: {e}"))
+        .map(|_| t!("installer downloaded and started — follow its prompts, then try again"))
+        .map_err(|e| tf!("cannot start the installer: {error}", error = e))
 }
 
 #[cfg(target_os = "macos")]
 fn install_from_dmg(kind: BrowserKind, url: &str, app_name: &str) -> Result<String, String> {
     let bytes = download(url)?;
     let dmg = std::env::temp_dir().join(format!("blindfb-{}.dmg", kind.name()));
-    std::fs::write(&dmg, &bytes).map_err(|e| format!("cannot save the installer: {e}"))?;
+    std::fs::write(&dmg, &bytes).map_err(|e| tf!("cannot save the installer: {error}", error = e))?;
     let mount = std::env::temp_dir().join(format!("blindfb-mount-{}", kind.name()));
     let _ = std::fs::create_dir_all(&mount);
     let attached = Command::new("hdiutil")
@@ -1176,9 +1195,9 @@ fn install_from_dmg(kind: BrowserKind, url: &str, app_name: &str) -> Result<Stri
         .arg(&mount)
         .arg(&dmg)
         .status()
-        .map_err(|e| format!("cannot open the installer image: {e}"))?;
+        .map_err(|e| tf!("cannot open the installer image: {error}", error = e))?;
     if !attached.success() {
-        return Err("the installer image did not open".to_owned());
+        return Err(t!("the installer image did not open"));
     }
     let apps = home().join("Applications");
     let _ = std::fs::create_dir_all(&apps);
@@ -1192,13 +1211,13 @@ fn install_from_dmg(kind: BrowserKind, url: &str, app_name: &str) -> Result<Stri
         .arg(&mount)
         .status();
     match copied {
-        Ok(status) if status.success() => Ok(format!(
-            "{} installed to your Applications folder",
-            kind.name()
+        Ok(status) if status.success() => Ok(tf!(
+            "{browser} installed to your Applications folder",
+            browser = kind.name()
         )),
-        _ => Err(format!(
-            "could not copy {} into your Applications folder",
-            kind.name()
+        _ => Err(tf!(
+            "could not copy {browser} into your Applications folder",
+            browser = kind.name()
         )),
     }
 }
@@ -1234,10 +1253,9 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
                 "firefox-setup.exe",
             ),
             BrowserKind::Chromium => {
-                return Err(
+                return Err(t!(
                     "Chromium has no official Windows installer — install Google Chrome instead"
-                        .to_owned(),
-                )
+                ))
             }
         };
         if winget_available() {
@@ -1265,10 +1283,9 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
                 "Firefox.app",
             ),
             BrowserKind::Chromium => {
-                return Err(
+                return Err(t!(
                     "Chromium has no official macOS installer — install Google Chrome instead"
-                        .to_owned(),
-                )
+                ))
             }
         };
         return install_from_dmg(kind, url, app);
@@ -1276,18 +1293,27 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
         let package = match kind {
-            BrowserKind::Chrome => "google-chrome-stable (from Google's download page)",
-            BrowserKind::Chromium => "chromium",
-            BrowserKind::Brave => "brave-browser (from Brave's download page)",
-            BrowserKind::Edge => "microsoft-edge-stable (from Microsoft's download page)",
-            BrowserKind::Firefox => "firefox",
+            BrowserKind::Chrome => tf!(
+                "{package} (from Google's download page)",
+                package = "google-chrome-stable"
+            ),
+            BrowserKind::Chromium => "chromium".to_owned(),
+            BrowserKind::Brave => {
+                tf!("{package} (from Brave's download page)", package = "brave-browser")
+            }
+            BrowserKind::Edge => tf!(
+                "{package} (from Microsoft's download page)",
+                package = "microsoft-edge-stable"
+            ),
+            BrowserKind::Firefox => "firefox".to_owned(),
         };
-        return Err(format!(
-            "installing a browser on Linux needs the administrator — run your package manager to install {package}, then try again"
+        return Err(tf!(
+            "installing a browser on Linux needs the administrator — run your package manager to install {package}, then try again",
+            package = package
         ));
     }
     #[allow(unreachable_code)]
-    Err("browser installs are not supported on this system".to_owned())
+    Err(t!("browser installs are not supported on this system"))
 }
 
 #[cfg(test)]

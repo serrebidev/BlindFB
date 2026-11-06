@@ -10,7 +10,10 @@ use std::io::{Cursor, Read};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use patois::t;
 use sha2::{Digest, Sha256};
+
+use crate::tf;
 
 /// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
 /// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
@@ -105,8 +108,9 @@ pub(crate) fn get(url: &str) -> Result<Vec<u8>, String> {
         .get(url)
         .header("User-Agent", concat!("BlindFB/", env!("CARGO_PKG_VERSION")))
         .call()
-        .map_err(|e| format!("download failed: {e}"))?;
-    crate::http::download_body(response.body_mut()).map_err(|e| format!("download failed: {e}"))
+        .map_err(|e| tf!("download failed: {error}", error = e))?;
+    crate::http::download_body(response.body_mut())
+        .map_err(|e| tf!("download failed: {error}", error = e))
 }
 
 pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
@@ -128,46 +132,46 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
     let want = exe_name();
     if asset.ends_with(".zip") {
         let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-            .map_err(|e| format!("could not open the backend download: {e}"))?;
+            .map_err(|e| tf!("could not open the backend download: {error}", error = e))?;
         for i in 0..zip.len() {
             let mut entry = zip
                 .by_index(i)
-                .map_err(|e| format!("could not read the backend download: {e}"))?;
+                .map_err(|e| tf!("could not read the backend download: {error}", error = e))?;
             let name = entry
                 .name()
-                .map_err(|e| format!("bad backend download: {e}"))?
+                .map_err(|e| tf!("bad backend download: {error}", error = e))?
                 .replace('\\', "/");
             if name == want || name.ends_with(&format!("/{want}")) {
                 let mut out = Vec::new();
                 entry
                     .read_to_end(&mut out)
-                    .map_err(|e| format!("could not unpack the backend: {e}"))?;
+                    .map_err(|e| tf!("could not unpack the backend: {error}", error = e))?;
                 return Ok(out);
             }
         }
-        Err(format!("the backend download did not contain {want}"))
+        Err(tf!("the backend download did not contain {want}", want = want))
     } else {
         let decoder = flate2::read::GzDecoder::new(Cursor::new(bytes));
         let mut tar = tar::Archive::new(decoder);
         for entry in tar
             .entries()
-            .map_err(|e| format!("could not open the backend download: {e}"))?
+            .map_err(|e| tf!("could not open the backend download: {error}", error = e))?
         {
             let mut entry =
-                entry.map_err(|e| format!("could not read the backend download: {e}"))?;
+                entry.map_err(|e| tf!("could not read the backend download: {error}", error = e))?;
             let path = entry
                 .path()
-                .map_err(|e| format!("bad backend download: {e}"))?;
+                .map_err(|e| tf!("bad backend download: {error}", error = e))?;
             let name = path.to_string_lossy().replace('\\', "/");
             if name == want || name.ends_with(&format!("/{want}")) {
                 let mut out = Vec::new();
                 entry
                     .read_to_end(&mut out)
-                    .map_err(|e| format!("could not unpack the backend: {e}"))?;
+                    .map_err(|e| tf!("could not unpack the backend: {error}", error = e))?;
                 return Ok(out);
             }
         }
-        Err(format!("the backend download did not contain {want}"))
+        Err(tf!("the backend download did not contain {want}", want = want))
     }
 }
 
@@ -175,20 +179,20 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
 /// backend. Stops a running managed daemon first so the binary can be
 /// replaced. Blocking; call from a worker thread. Returns a summary line.
 pub fn install_or_update() -> Result<String, String> {
-    let asset = asset_name().ok_or("no prebuilt backend for this platform")?;
-    let target = managed_bin().ok_or("could not find a place to install the backend")?;
+    let asset = asset_name().ok_or_else(|| t!("no prebuilt backend for this platform"))?;
+    let target = managed_bin().ok_or_else(|| t!("could not find a place to install the backend"))?;
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&get(RELEASE_URL)?).map_err(|e| format!("download failed: {e}"))?;
+    let json: serde_json::Value = serde_json::from_slice(&get(RELEASE_URL)?)
+        .map_err(|e| tf!("download failed: {error}", error = e))?;
     let tag = json
         .get("tag_name")
         .and_then(|v| v.as_str())
-        .ok_or("download failed: no tag in the release response")?
+        .ok_or_else(|| t!("download failed: no tag in the release response"))?
         .to_owned();
     let assets = json
         .get("assets")
         .and_then(|v| v.as_array())
-        .ok_or("download failed: no assets in the release response")?;
+        .ok_or_else(|| t!("download failed: no assets in the release response"))?;
     let url_of = |name: &str| -> Option<String> {
         assets.iter().find_map(|a| {
             (a.get("name").and_then(|v| v.as_str()) == Some(name))
@@ -200,16 +204,17 @@ pub fn install_or_update() -> Result<String, String> {
                 .flatten()
         })
     };
-    let asset_url =
-        url_of(asset).ok_or("download failed: release has no build for this platform")?;
-    let sums_url = url_of("SHA256SUMS").ok_or("download failed: release has no checksums file")?;
+    let asset_url = url_of(asset)
+        .ok_or_else(|| t!("download failed: release has no build for this platform"))?;
+    let sums_url = url_of("SHA256SUMS")
+        .ok_or_else(|| t!("download failed: release has no checksums file"))?;
 
     let bytes = get(&asset_url)?;
     let sums = String::from_utf8_lossy(&get(&sums_url)?).into_owned();
-    let expected =
-        expected_hash(&sums, asset).ok_or("download failed: no checksum for this build")?;
+    let expected = expected_hash(&sums, asset)
+        .ok_or_else(|| t!("download failed: no checksum for this build"))?;
     if sha256_hex(&bytes) != expected {
-        return Err("the backend download failed its checksum — not installing it".to_owned());
+        return Err(t!("the backend download failed its checksum — not installing it"));
     }
     let binary = extract(asset, &bytes)?;
 
@@ -217,20 +222,22 @@ pub fn install_or_update() -> Result<String, String> {
         // Replacing a running daemon's binary fails on Windows; stop it first.
         let _ = crate::fb::Fb::with_program(target.clone()).run(&["quit"]);
     }
-    let dir = target.parent().ok_or("bad install path")?;
-    fs::create_dir_all(dir).map_err(|e| format!("could not create the install folder: {e}"))?;
+    let dir = target.parent().ok_or_else(|| t!("bad install path"))?;
+    fs::create_dir_all(dir)
+        .map_err(|e| tf!("could not create the install folder: {error}", error = e))?;
     let tmp = dir.join(format!("{}.new", exe_name()));
-    fs::write(&tmp, &binary).map_err(|e| format!("could not write the backend: {e}"))?;
+    fs::write(&tmp, &binary).map_err(|e| tf!("could not write the backend: {error}", error = e))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755));
     }
     replace_binary(&tmp, &target, Duration::from_secs(5))
-        .map_err(|e| format!("could not install the backend: {e}"))?;
-    Ok(format!(
-        "Installed the Facebook backend {tag} to {}",
-        target.display()
+        .map_err(|e| tf!("could not install the backend: {error}", error = e))?;
+    Ok(tf!(
+        "Installed the Facebook backend {version} to {path}",
+        version = tag,
+        path = target.display()
     ))
 }
 

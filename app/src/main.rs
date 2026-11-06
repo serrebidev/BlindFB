@@ -52,6 +52,8 @@ use patois::t;
 
 // The translations in app/locale, compiled by build.rs and baked into the binary.
 patois::embed_domain!();
+// wxWidgets' own words (OK, Cancel, file dialogs…) for the same languages.
+patois::embed_wx_translations!();
 
 const ID_FEED: i32 = 10001;
 const ID_NOTIFS: i32 = 10002;
@@ -118,6 +120,61 @@ const ID_LANG_FRENCH: i32 = 10096;
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
 ];
+/// The Post menu's item for a `REACTIONS` keyword, one whole label per
+/// reaction so a translation never has to agree with a separate word.
+fn react_menu_label(reaction: &str) -> String {
+    match reaction {
+        "like" => t!("React: like"),
+        "love" => t!("React: love"),
+        "care" => t!("React: care"),
+        "haha" => t!("React: haha"),
+        "wow" => t!("React: wow"),
+        "sad" => t!("React: sad"),
+        "angry" => t!("React: angry"),
+        "none" => t!("React: none"),
+        other => other.to_owned(),
+    }
+}
+
+/// A `REACTIONS` keyword as it reads in the React choice list and in
+/// "Reacting … to: …" (lower case in English).
+fn reaction_name(reaction: &str) -> String {
+    match reaction {
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "like" => t!("like"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "love" => t!("love"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "care" => t!("care"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "haha" => t!("haha"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "wow" => t!("wow"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "sad" => t!("sad"),
+        // TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+        "angry" => t!("angry"),
+        // TRANSLATORS: the choice that removes your reaction, in a list of reactions.
+        "none" => t!("none"),
+        other => other.to_owned(),
+    }
+}
+
+/// A `REACTIONS` keyword as a context-menu item.
+fn reaction_label(reaction: &str) -> String {
+    match reaction {
+        "like" => t!("Like"),
+        "love" => t!("Love"),
+        "care" => t!("Care"),
+        "haha" => t!("Haha"),
+        "wow" => t!("Wow"),
+        "sad" => t!("Sad"),
+        "angry" => t!("Angry"),
+        "none" => t!("Remove reaction"),
+        other => other.to_owned(),
+    }
+}
+
 /// One page of a list section. The backend scrolls a live Facebook page per
 /// item it has to add, so asking for 50 costs several times what asking for
 /// 10 does; Load more grows the request from here.
@@ -173,20 +230,20 @@ enum View {
 impl View {
     fn title(&self) -> String {
         match self {
-            View::Feed => "News feed".to_owned(),
-            View::RecentFeed => "Feeds (most recent)".to_owned(),
+            View::Feed => t!("News feed"),
+            View::RecentFeed => t!("Feeds (most recent)"),
             View::Reels(source) => source.title(),
-            View::Notifications => "Notifications".to_owned(),
-            View::Friends => "Friends".to_owned(),
-            View::MyPosts => "My posts".to_owned(),
-            View::Chats => "Chats".to_owned(),
-            View::Groups => "My groups".to_owned(),
-            View::Marketplace => "Marketplace".to_owned(),
-            View::SearchResults => "Search results".to_owned(),
-            View::PostsOf(who) => format!("Posts by {who}"),
-            View::CommentsOf(_) => "Post and comments".to_owned(),
-            View::ProfileOf(who) => format!("Profile of {who}"),
-            View::ChatWith(_, name) => format!("Chat with {name}"),
+            View::Notifications => t!("Notifications"),
+            View::Friends => t!("Friends"),
+            View::MyPosts => t!("My posts"),
+            View::Chats => t!("Chats"),
+            View::Groups => t!("My groups"),
+            View::Marketplace => t!("Marketplace"),
+            View::SearchResults => t!("Search results"),
+            View::PostsOf(who) => tf!("Posts by {who}", who = who),
+            View::CommentsOf(_) => t!("Post and comments"),
+            View::ProfileOf(who) => tf!("Profile of {who}", who = who),
+            View::ChatWith(_, name) => tf!("Chat with {name}", name = name),
         }
     }
 }
@@ -492,6 +549,16 @@ fn main() {
 }
 
 fn run() {
+    // wxWidgets' own buttons and dialogs follow the chosen language too.
+    let locale = i18n::saved().locale();
+    let language = locale.split('_').next().unwrap_or("en");
+    if language != "en" {
+        let translations = wxdragon::translations::Translations::new();
+        translations.set_loader(WxStdCatalogLoader);
+        translations.set_language_str(language);
+        translations.add_std_catalog();
+        wxdragon::translations::Translations::set_global(translations);
+    }
     startup_log("run: building the window");
     let fb = Fb::discover();
     let (job_tx, job_rx) = channel::<Job>();
@@ -505,10 +572,10 @@ fn run() {
         .build();
     frame.create_status_bar(1, 0, -1, "status");
     frame.set_status_text(
-        if fb.is_some() {
-            "Ready. Pick a view to start."
+        &if fb.is_some() {
+            t!("Ready. Pick a view to start.")
         } else {
-            "Setting up the Facebook backend…"
+            t!("Setting up the Facebook backend…")
         },
         0,
     );
@@ -516,57 +583,57 @@ fn run() {
     let panel = Panel::builder(&frame).build();
     let root = BoxSizer::builder(Orientation::Vertical).build();
 
-    let views_label = StaticText::builder(&panel).with_label("Views").build();
+    let views_label = StaticText::builder(&panel).with_label(&t!("Views")).build();
     let views = ListBox::builder(&panel).build();
     for name in [
-        "News feed",
-        "Notifications",
-        "Friends",
-        "My posts",
-        "Chats",
-        "Groups",
-        "Feeds (most recent)",
-        "Reels",
-        "Marketplace",
+        t!("News feed"),
+        t!("Notifications"),
+        t!("Friends"),
+        t!("My posts"),
+        t!("Chats"),
+        t!("Groups"),
+        t!("Feeds (most recent)"),
+        t!("Reels"),
+        t!("Marketplace"),
     ] {
-        views.append(name);
+        views.append(&name);
     }
     views.set_selection(0, true);
 
-    let items_label = StaticText::builder(&panel).with_label("Items").build();
+    let items_label = StaticText::builder(&panel).with_label(&t!("Items")).build();
     let items = ListBox::builder(&panel)
         .with_size(Size::new(-1, 260))
         .build();
 
     let links_label = StaticText::builder(&panel)
-        .with_label("Lin&ks in selected item")
+        .with_label(&t!("Lin&ks in selected item"))
         .build();
     let links = ListBox::builder(&panel)
         .with_size(Size::new(-1, 70))
         .build();
-    links.set_name("Links in selected item. Enter opens the selected link in your browser");
+    links.set_name(&t!("Links in selected item. Enter opens the selected link in your browser"));
     let open_link = Button::builder(&panel)
-        .with_label("Open selected &link")
+        .with_label(&t!("Open selected &link"))
         .build();
     open_link.enable(false);
 
-    let details_label = StaticText::builder(&panel).with_label("Details").build();
+    let details_label = StaticText::builder(&panel).with_label(&t!("Details")).build();
     let details = TextCtrl::builder(&panel)
         .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
         .with_size(Size::new(-1, 170))
         .build();
 
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
-    let refresh_btn = Button::builder(&panel).with_label("Refresh (F5)").build();
+    let refresh_btn = Button::builder(&panel).with_label(&t!("Refresh (F5)")).build();
     let open_btn = Button::builder(&panel)
-        .with_label("Open / read full post and links")
+        .with_label(&t!("Open / read full post and links"))
         .build();
-    let react_btn = Button::builder(&panel).with_label("React").build();
-    let comment_btn = Button::builder(&panel).with_label("Comment").build();
-    let profile_btn = Button::builder(&panel).with_label("Profile").build();
-    let posts_btn = Button::builder(&panel).with_label("Posts").build();
-    let message_btn = Button::builder(&panel).with_label("Message").build();
-    let delete_btn = Button::builder(&panel).with_label("Delete post").build();
+    let react_btn = Button::builder(&panel).with_label(&t!("React")).build();
+    let comment_btn = Button::builder(&panel).with_label(&t!("Comment")).build();
+    let profile_btn = Button::builder(&panel).with_label(&t!("Profile")).build();
+    let posts_btn = Button::builder(&panel).with_label(&t!("Posts")).build();
+    let message_btn = Button::builder(&panel).with_label(&t!("Message")).build();
+    let delete_btn = Button::builder(&panel).with_label(&t!("Delete post")).build();
     for b in [
         &refresh_btn,
         &open_btn,
@@ -581,16 +648,16 @@ fn run() {
     }
 
     let compose = BoxSizer::builder(Orientation::Horizontal).build();
-    let compose_label = StaticText::builder(&panel).with_label("Message").build();
+    let compose_label = StaticText::builder(&panel).with_label(&t!("Message")).build();
     let compose_box = TextCtrl::builder(&panel)
         .with_style(TextCtrlStyle::ProcessEnter)
         .build();
-    let attach_btn = Button::builder(&panel).with_label("Attach files").build();
+    let attach_btn = Button::builder(&panel).with_label(&t!("Attach files")).build();
     let attachments_btn = Button::builder(&panel)
-        .with_label("Attachments (0)")
+        .with_label(&tf!("Attachments ({count})", count = 0))
         .build();
-    attachments_btn.set_name("Attachments, 0 attached");
-    let send_btn = Button::builder(&panel).with_label("Send").build();
+    attachments_btn.set_name(&ntf!("Attachments, {n} attached", "Attachments, {n} attached", 0));
+    let send_btn = Button::builder(&panel).with_label(&t!("Send")).build();
     compose.add(
         &compose_label,
         0,
@@ -694,7 +761,7 @@ fn run() {
     // entirely, the SetupStatus result sends the installer; if it is there
     // but signed out, setup offers the browser sign-in. Signed in already:
     // straight to the feed.
-    ui.status("Checking the Facebook backend…");
+    ui.status(&t!("Checking the Facebook backend…"));
     ui.send(Job {
         task: Task::Fb(vec!["status".into()], None),
         tag: Tag::SetupStatus,
@@ -916,7 +983,7 @@ impl Ui {
         self.frame.set_status_text(text, 0);
     }
     fn send(&self, job: Job) {
-        self.status("Working…");
+        self.status(&t!("Working…"));
         let _ = self.jobs.send(job);
     }
 }
@@ -1065,7 +1132,7 @@ fn spawn_worker(
                 thread::spawn(move || {
                     let result = match fb {
                         Some(fb) => reels::load(&fb, &source, append),
-                        None => Err("The Facebook backend is not installed".to_owned()),
+                        None => Err(t!("The Facebook backend is not installed")),
                     };
                     let _ = done.send(Done { tag, result });
                 });
@@ -1086,7 +1153,7 @@ fn spawn_worker(
                             .and_then(|_| blindfb_core::media::stream_details(&fb, &page, &target)),
                         #[cfg(not(windows))]
                         Some(fb) => blindfb_core::media::stream_details(&fb, &page, &target),
-                        None => Err("The Facebook backend is not installed".to_owned()),
+                        None => Err(t!("The Facebook backend is not installed")),
                     };
                     let _ = done.send(Done { tag, result });
                 });
@@ -1106,7 +1173,7 @@ fn spawn_worker(
                         fb = Fb::discover();
                     }
                     match &fb {
-                        None => Err("the backend is not installed yet".to_owned()),
+                        None => Err(t!("the backend is not installed yet")),
                         Some(fb) => login_flow(fb, sign),
                     }
                 }
@@ -1122,10 +1189,9 @@ fn spawn_worker(
                         fb = Fb::discover();
                     }
                     match &fb {
-                        None => Err(
+                        None => Err(t!(
                             "the fb backend is not installed — use Backend → Install or update backend"
-                                .to_owned(),
-                        ),
+                        )),
                         Some(fb) => match &stdin {
                             Some(input) => fb.run_stdin(&refs(&args), input),
                             None => fb.run(&refs(&args)),
@@ -1135,34 +1201,34 @@ fn spawn_worker(
                 Task::DebugReport(path) => blindfb_core::debug::write_report(fb.as_ref(), &path),
                 Task::PostLoad { page, target } => match &fb {
                     Some(fb) => blindfb_core::posts::load(fb, &page, &target),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostVideo { .. } => unreachable!("video preparation runs independently"),
                 Task::PostReelReact { page, reaction } => match &fb {
                     Some(fb) => blindfb_core::posts::reel_react(fb, &page, &reaction),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostRefresh { page } => match &fb {
                     Some(fb) => blindfb_core::posts::refresh(fb, &page),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostSend { page, parent, text } => match &fb {
                     Some(fb) => {
                         blindfb_core::posts::send_comment(fb, &page, parent.as_deref(), &text)
                     }
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostLike { page, id } => match &fb {
                     Some(fb) => blindfb_core::posts::like_comment(fb, &page, &id),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostShareOpen { page } => match &fb {
                     Some(fb) => blindfb_core::posts::share_open(fb, &page),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostShare { page, text } => match &fb {
                     Some(fb) => blindfb_core::posts::share_now(fb, &page, &text),
-                    None => Err("The Facebook backend is not installed".to_owned()),
+                    None => Err(t!("The Facebook backend is not installed")),
                 },
                 Task::PostShareCancel { page } => match &fb {
                     Some(fb) => blindfb_core::posts::share_cancel(fb, &page),
@@ -1209,7 +1275,7 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
                     if browsers::signed_in(&status) {
                         Ok(status)
                     } else {
-                        visible_fallback(fb, "the Chrome sign-in did not finish".to_owned())
+                        visible_fallback(fb, t!("the Chrome sign-in did not finish"))
                     }
                 }
                 Err(why) => match browsers::import_chromium(fb, &browser) {
@@ -1226,7 +1292,7 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
             fb.run(&["login", "--visible"])?;
             fb.run(&["status"])
         }
-        SignIn::Install(_) => Err("install the browser first".to_owned()),
+        SignIn::Install(_) => Err(t!("install the browser first")),
     }
 }
 
@@ -1234,7 +1300,11 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
 /// the earlier failure when even that does not sign in.
 fn visible_fallback(fb: &Fb, why: String) -> Result<String, String> {
     fb.run(&["login", "--visible"]).map_err(|error| {
-        format!("Session import failed: {why}\n\nDirect sign-in failed: {error}")
+        tf!(
+            "Session import failed: {why}\n\nDirect sign-in failed: {error}",
+            why = why,
+            error = error
+        )
     })?;
     let status = fb.run(&["status"])?;
     if browsers::signed_in(&status) {
@@ -1252,177 +1322,177 @@ fn build_menus(frame: &Frame) {
     let file_menu = Menu::builder()
         .append_item(
             ID_OPEN_LINK,
-            "Open Facebook &link…\tCtrl+O",
-            "Open a Facebook post, video or reel link",
+            &t!("Open Facebook &link…\tCtrl+O"),
+            &t!("Open a Facebook post, video or reel link"),
         )
-        .append_item(ID_NEW_POST, "&New post…\tCtrl+N", "Write a new post")
+        .append_item(ID_NEW_POST, &t!("&New post…\tCtrl+N"), &t!("Write a new post"))
         .append_item(
             ID_NEW_POST_IMAGES,
-            "New post with &media…",
-            "Write a post with photos and videos attached",
+            &t!("New post with &media…"),
+            &t!("Write a post with photos and videos attached"),
         )
         .append_item(
             ID_SELL,
-            "Sell on &Marketplace…",
-            "Create a Marketplace listing with photos or video",
+            &t!("Sell on &Marketplace…"),
+            &t!("Create a Marketplace listing with photos or video"),
         )
         .append_item(
             ID_SEARCH,
-            "&Search Facebook…\tCtrl+/",
-            "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace",
+            &t!("&Search Facebook…\tCtrl+/"),
+            &t!("Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"),
         )
         .append_item(
             ID_OCR,
-            "&OCR an image…",
-            "Read the text in an image file with the operating system's OCR engine",
+            &t!("&OCR an image…"),
+            &t!("Read the text in an image file with the operating system's OCR engine"),
         )
         .append_item(
             ID_UPDATE,
-            "Check for &updates…",
-            "Check GitHub for a newer BlindFB",
+            &t!("Check for &updates…"),
+            &t!("Check GitHub for a newer BlindFB"),
         )
         .append_separator()
-        .append_item(ID_EXIT, "E&xit\tCtrl+Q", "Close BlindFB")
+        .append_item(ID_EXIT, &t!("E&xit\tCtrl+Q"), &t!("Close BlindFB"))
         .build();
 
     let view_menu = Menu::builder()
-        .append_item(ID_FEED, "News &feed\tCtrl+1", "Your news feed")
-        .append_item(ID_NOTIFS, "&Notifications\tCtrl+2", "Your notifications")
-        .append_item(ID_FRIENDS, "Fr&iends\tCtrl+3", "Your friends list")
-        .append_item(ID_MYPOSTS, "&My posts\tCtrl+4", "Posts on your own profile")
-        .append_item(ID_CHATS, "&Chats\tCtrl+5", "Messenger chats")
-        .append_item(ID_GROUPS_VIEW, "&Groups\tCtrl+6", "Groups you belong to")
+        .append_item(ID_FEED, &t!("News &feed\tCtrl+1"), &t!("Your news feed"))
+        .append_item(ID_NOTIFS, &t!("&Notifications\tCtrl+2"), &t!("Your notifications"))
+        .append_item(ID_FRIENDS, &t!("Fr&iends\tCtrl+3"), &t!("Your friends list"))
+        .append_item(ID_MYPOSTS, &t!("&My posts\tCtrl+4"), &t!("Posts on your own profile"))
+        .append_item(ID_CHATS, &t!("&Chats\tCtrl+5"), &t!("Messenger chats"))
+        .append_item(ID_GROUPS_VIEW, &t!("&Groups\tCtrl+6"), &t!("Groups you belong to"))
         .append_item(
             ID_RECENT_FEED,
-            "Feeds (most &recent)\tCtrl+7",
-            "Newest posts from followed friends, pages and groups",
+            &t!("Feeds (most &recent)\tCtrl+7"),
+            &t!("Newest posts from followed friends, pages and groups"),
         )
         .append_item(
             ID_REELS,
-            "Re&els\tCtrl+8",
-            "Browse reels with the accessible player",
+            &t!("Re&els\tCtrl+8"),
+            &t!("Browse reels with the accessible player"),
         )
         .append_item(
             ID_MARKETPLACE,
-            "&Marketplace\tCtrl+9",
-            "Browse Marketplace listings",
+            &t!("&Marketplace\tCtrl+9"),
+            &t!("Browse Marketplace listings"),
         )
         .append_item(
             ID_UNREAD_CHATS,
-            "&Unread chats only",
-            "Chats with unread messages",
+            &t!("&Unread chats only"),
+            &t!("Chats with unread messages"),
         )
         .append_separator()
-        .append_item(ID_REFRESH, "&Refresh\tF5", "Reload the current view")
+        .append_item(ID_REFRESH, &t!("&Refresh\tF5"), &t!("Reload the current view"))
         .append_item(
             ID_MORE,
-            "&Load more\tCtrl+L",
-            "Append more items and keep your reading position",
+            &t!("&Load more\tCtrl+L"),
+            &t!("Append more items and keep your reading position"),
         )
         .append_separator()
         .append_check_item(
             ID_VOICE_ALERTS,
-            "&Voice alerts",
-            "Say new notifications and unread chats aloud",
+            &t!("&Voice alerts"),
+            &t!("Say new notifications and unread chats aloud"),
         )
         .append_check_item(
             ID_SOUND_ALERTS,
-            "&Sound alerts",
-            "Play a sound for new notifications and unread chats",
+            &t!("&Sound alerts"),
+            &t!("Play a sound for new notifications and unread chats"),
         )
         .append_check_item(
             ID_LIST_VOICE_ALERTS,
-            "Voice alert when a &list loads",
-            "Say the name and size of a list when it finishes loading",
+            &t!("Voice alert when a &list loads"),
+            &t!("Say the name and size of a list when it finishes loading"),
         )
         .append_check_item(
             ID_LIST_SOUND_ALERTS,
-            "Sound alert when a list &loads",
-            "Play a sound when a list finishes loading",
+            &t!("Sound alert when a list &loads"),
+            &t!("Play a sound when a list finishes loading"),
         )
         .build();
 
     let mut post_menu = Menu::builder()
-        .append_item(ID_OPEN, "&Open post / comments", "Open the selected item; Enter in the items list")
-        .append_item(ID_SHARE, "S&hare…", "Share the selected post")
-        .append_item(ID_COMMENT, "&Comment…", "Comment on the selected post")
-        .append_item(ID_PROFILE, "Author &profile", "Show the profile of the selected item's author or owner")
-        .append_item(ID_AUTHOR_POSTS, "Author's p&osts", "Posts by the selected item's author")
-        .append_item(ID_MESSAGE, "&Message author / friend", "Open a Messenger chat with this person")
-        .append_item(ID_WEB_POST, "Open post on &Facebook (web)", "Open the selected post in your browser")
-        .append_item(ID_WEB_PERSON, "Open person or group on Fa&cebook (web)", "Open the selected person's profile (or the group) in your browser, where friend management lives")
+        .append_item(ID_OPEN, &t!("&Open post / comments"), &t!("Open the selected item; Enter in the items list"))
+        .append_item(ID_SHARE, &t!("S&hare…"), &t!("Share the selected post"))
+        .append_item(ID_COMMENT, &t!("&Comment…"), &t!("Comment on the selected post"))
+        .append_item(ID_PROFILE, &t!("Author &profile"), &t!("Show the profile of the selected item's author or owner"))
+        .append_item(ID_AUTHOR_POSTS, &t!("Author's p&osts"), &t!("Posts by the selected item's author"))
+        .append_item(ID_MESSAGE, &t!("&Message author / friend"), &t!("Open a Messenger chat with this person"))
+        .append_item(ID_WEB_POST, &t!("Open post on &Facebook (web)"), &t!("Open the selected post in your browser"))
+        .append_item(ID_WEB_PERSON, &t!("Open person or group on Fa&cebook (web)"), &t!("Open the selected person's profile (or the group) in your browser, where friend management lives"))
         .append_separator()
-        .append_item(ID_DELETE, "&Delete post…", "Delete the selected post (your own posts only)");
+        .append_item(ID_DELETE, &t!("&Delete post…"), &t!("Delete the selected post (your own posts only)"));
     for (i, reaction) in REACTIONS.iter().enumerate() {
         post_menu = post_menu.append_item(
             ID_REACT_BASE + i as i32,
-            &format!("React: {reaction}"),
-            "Set this reaction on the selected post",
+            &react_menu_label(reaction),
+            &t!("Set this reaction on the selected post"),
         );
     }
     let post_menu = post_menu.build();
 
     let chat_menu = Menu::builder()
-        .append_item(ID_OPEN, "&Open chat", "Open the selected chat")
+        .append_item(ID_OPEN, &t!("&Open chat"), &t!("Open the selected chat"))
         .append_item(
             ID_WEB_CHAT,
-            "Open chat in &Messenger (web)",
-            "Open this chat in your browser — voice and video calls live there",
+            &t!("Open chat in &Messenger (web)"),
+            &t!("Open this chat in your browser — voice and video calls live there"),
         )
         .append_item(
             ID_UNSEND,
-            "&Unsend my last message…",
-            "Remove your newest message in the open chat for everyone",
+            &t!("&Unsend my last message…"),
+            &t!("Remove your newest message in the open chat for everyone"),
         )
         .append_item(
             ID_UNLOCK,
-            "Unloc&k encrypted chats…",
-            "Enter your Messenger PIN to read end-to-end encrypted chats",
+            &t!("Unloc&k encrypted chats…"),
+            &t!("Enter your Messenger PIN to read end-to-end encrypted chats"),
         )
         .build();
 
     let backend_menu = Menu::builder()
         .append_item(
             ID_INSTALL_BACKEND,
-            "&Install or update backend…",
-            "Download BlindFB's supported facebook-cli backend from GitHub",
+            &t!("&Install or update backend…"),
+            &t!("Download BlindFB's supported facebook-cli backend from GitHub"),
         )
-        .append_item(ID_STATUS, "Backend &status", "Show fb daemon status")
-        .append_item(ID_LOGIN, "&Sign in…", "Sign in through your browser")
+        .append_item(ID_STATUS, &t!("Backend &status"), &t!("Show fb daemon status"))
+        .append_item(ID_LOGIN, &t!("&Sign in…"), &t!("Sign in through your browser"))
         .append_item(
             ID_INSTALL_BROWSER,
-            "Install a &browser…",
-            "Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)",
+            &t!("Install a &browser…"),
+            &t!("Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"),
         )
-        .append_item(ID_STOP_DAEMON, "S&top daemon", "Stop the fb daemon")
+        .append_item(ID_STOP_DAEMON, &t!("S&top daemon"), &t!("Stop the fb daemon"))
         .append_item(
             ID_QUIT_DAEMON,
-            "&Quit daemon and Chrome",
-            "Stop the daemon and close its hidden Chrome",
+            &t!("&Quit daemon and Chrome"),
+            &t!("Stop the daemon and close its hidden Chrome"),
         )
         .build();
 
     let help_menu = Menu::builder()
         .append_item(
             ID_KEYS,
-            "&Keyboard commands\tF1",
-            "Keyboard commands and reader controls",
+            &t!("&Keyboard commands\tF1"),
+            &t!("Keyboard commands and reader controls"),
         )
         .append_item(
             ID_GITHUB,
-            "BlindFB on &GitHub",
-            "Open the BlindFB repository",
+            &t!("BlindFB on &GitHub"),
+            &t!("Open the BlindFB repository"),
         )
         .append_separator()
         .append_check_item(
             ID_DEBUG_LOGGING,
-            "&Debug logging",
-            "Record what BlindFB runs and the errors it gets, for a bug report",
+            &t!("&Debug logging"),
+            &t!("Record what BlindFB runs and the errors it gets, for a bug report"),
         )
         .append_item(
             ID_DEBUG_REPORT,
-            "Save debug &report…",
-            "Save a file you can send to the developer",
+            &t!("Save debug &report…"),
+            &t!("Save a file you can send to the developer"),
         )
         .append_separator()
         // Language names stay in their own language, so anyone can find theirs.
@@ -1438,16 +1508,16 @@ fn build_menus(frame: &Frame) {
             "Afficher BlindFB en français",
         )
         .append_separator()
-        .append_item(ID_ABOUT, "&About BlindFB", "About this program")
+        .append_item(ID_ABOUT, &t!("&About BlindFB"), &t!("About this program"))
         .build();
 
     let menu_bar = MenuBar::builder()
-        .append(file_menu, "&File")
-        .append(view_menu, "&View")
-        .append(post_menu, "&Post")
-        .append(chat_menu, "&Chat")
-        .append(backend_menu, "&Backend")
-        .append(help_menu, "&Help")
+        .append(file_menu, &t!("&File"))
+        .append(view_menu, &t!("&View"))
+        .append(post_menu, &t!("&Post"))
+        .append(chat_menu, &t!("&Chat"))
+        .append(backend_menu, &t!("&Backend"))
+        .append(help_menu, &t!("&Help"))
         .build();
     menu_bar.check_item(ID_DEBUG_LOGGING, blindfb_core::debug::load());
     menu_bar.check_item(
@@ -1531,22 +1601,26 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     let on = !alerts::enabled(kind);
     let was_on = alerts::any_enabled();
     if let Err(error) = alerts::set_enabled(kind, on) {
-        show_error(&ui.frame, &error, "Alerts");
+        show_error(&ui.frame, &error, &t!("Alerts"));
         return;
     }
     let voice = matches!(kind, alerts::Kind::Voice | alerts::Kind::ListVoice);
-    let name = match kind {
-        alerts::Kind::Voice => "Voice alerts",
-        alerts::Kind::Sound => "Sound alerts",
-        alerts::Kind::ListVoice => "List voice alerts",
-        alerts::Kind::ListSound => "List sound alerts",
+    let words = match (kind, on) {
+        (alerts::Kind::Voice, true) => t!("Voice alerts on."),
+        (alerts::Kind::Voice, false) => t!("Voice alerts off."),
+        (alerts::Kind::Sound, true) => t!("Sound alerts on."),
+        (alerts::Kind::Sound, false) => t!("Sound alerts off."),
+        (alerts::Kind::ListVoice, true) => t!("List voice alerts on."),
+        (alerts::Kind::ListVoice, false) => t!("List voice alerts off."),
+        (alerts::Kind::ListSound, true) => t!("List sound alerts on."),
+        (alerts::Kind::ListSound, false) => t!("List sound alerts off."),
     };
-    ui.status(&format!("{name} {}.", if on { "on" } else { "off" }));
+    ui.status(&words);
     if !on {
         return;
     }
     // Hearing the alert now proves it works; nothing else would for a while.
-    alerts::play(!voice, voice.then(|| format!("{name} on.")));
+    alerts::play(!voice, voice.then_some(words));
     if matches!(kind, alerts::Kind::ListVoice | alerts::Kind::ListSound) {
         return;
     }
@@ -1608,7 +1682,8 @@ fn load_args(ui: &Ui, view: View, args: Vec<String>) {
             append: false,
         },
     });
-    ui.status(&format!("Loading {}…", view.title()));
+    // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+    ui.status(&tf!("Loading {view}…", view = view.title()));
 }
 
 fn load_view(ui: &Ui, view: View) {
@@ -1633,7 +1708,8 @@ fn load_view(ui: &Ui, view: View) {
         show_records(ui, &view, records.clone(), None);
     }
     if ui.latest_list.lock().unwrap().pending.contains(&view) {
-        ui.status(&format!("Loading {}…", view.title()));
+        // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+        ui.status(&tf!("Loading {view}…", view = view.title()));
         return;
     }
     if let Some((_, at, _)) = &cached {
@@ -1688,10 +1764,11 @@ fn go_back(ui: &Ui) {
     };
     match target {
         Some(view) => {
-            ui.status(&format!("Back to {}", view.title()));
+            // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+            ui.status(&tf!("Back to {view}", view = view.title()));
             load_view(ui, view);
         }
-        None => ui.status("No previous list to go back to."),
+        None => ui.status(&t!("No previous list to go back to.")),
     }
 }
 
@@ -1769,7 +1846,8 @@ fn load_reels(ui: &Ui, source: ReelSource, append: bool) {
             append,
         },
     });
-    ui.status(&format!("Loading {}…", view.title()));
+    // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+    ui.status(&tf!("Loading {view}…", view = view.title()));
 }
 
 /// Ask which browser to copy the Facebook session from. The user's
@@ -1785,8 +1863,8 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
     {
         if confirm(
             &ui.frame,
-            "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?",
-            "Sign in",
+            &t!("BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?"),
+            &t!("Sign in"),
         ) {
             return Some(SignIn::Install(BrowserKind::Chrome));
         }
@@ -1796,21 +1874,21 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
         .iter()
         .map(|browser| {
             if browser.is_default {
-                format!("{} (your default browser)", browser.name())
+                tf!("{browser} (your default browser)", browser = browser.name())
             } else {
                 browser.name().to_owned()
             }
         })
         .collect();
-    labels.push("Sign in in a new browser window".to_owned());
+    labels.push(t!("Sign in in a new browser window"));
     let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let dialog = SingleChoiceDialog::builder(
         &ui.frame,
-        "Sign in",
-        if cfg!(windows) {
-            "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly."
+        &t!("Sign in"),
+        &if cfg!(windows) {
+            t!("Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly.")
         } else {
-            "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks."
+            t!("Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks.")
         },
         &label_refs,
     )
@@ -1862,7 +1940,7 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
     ui.compose_box.clear();
     match sign {
         Some(SignIn::Install(kind)) => {
-            ui.status(&format!("Installing {}…", kind.name()));
+            ui.status(&tf!("Installing {browser}…", browser = kind.name()));
             ui.send(Job {
                 task: Task::InstallBrowser(kind),
                 tag: Tag::BrowserInstalled,
@@ -1874,7 +1952,7 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
                 task: Task::LoginFlow(sign),
                 tag,
             });
-            ui.status("Signing in through your browser…");
+            ui.status(&t!("Signing in through your browser…"));
             true
         }
         None => false,
@@ -1900,7 +1978,7 @@ fn install_browser_menu(ui: &Ui) {
         .iter()
         .map(|kind| {
             if detected.iter().any(|browser| browser.kind == *kind) {
-                format!("{} (installed)", kind.name())
+                tf!("{browser} (installed)", browser = kind.name())
             } else {
                 kind.name().to_owned()
             }
@@ -1909,8 +1987,8 @@ fn install_browser_menu(ui: &Ui) {
     let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let dialog = SingleChoiceDialog::builder(
         &ui.frame,
-        "Install a browser",
-        "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session.",
+        &t!("Install a browser"),
+        &t!("Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session."),
         &label_refs,
     )
     .build();
@@ -1918,7 +1996,7 @@ fn install_browser_menu(ui: &Ui) {
         let index = dialog.get_selection();
         if index >= 0 {
             let kind = kinds[index as usize];
-            ui.status(&format!("Installing {}…", kind.name()));
+            ui.status(&tf!("Installing {browser}…", browser = kind.name()));
             ui.send(Job {
                 task: Task::InstallBrowser(kind),
                 tag: Tag::BrowserInstalledMenu,
@@ -1932,7 +2010,7 @@ fn refresh(ui: &Ui) {
     if matches!(view, View::Feed | View::Reels(_))
         && ui.latest_list.lock().unwrap().pending.contains(&view)
     {
-        ui.status("Wait for this section to finish loading before refreshing.");
+        ui.status(&t!("Wait for this section to finish loading before refreshing."));
         return;
     }
     match view {
@@ -2000,9 +2078,9 @@ fn load_more(ui: &Ui) {
             .pending
             .contains(&ui.state.borrow().view)
         {
-            ui.status("Reels are already loading…");
+            ui.status(&t!("Reels are already loading…"));
         } else if !loaded {
-            ui.status("Load the reels list first, or refresh it to retry.");
+            ui.status(&t!("Load the reels list first, or refresh it to retry."));
         } else {
             load_reels(ui, source, true);
         }
@@ -2011,14 +2089,14 @@ fn load_more(ui: &Ui) {
     let (view, args) = {
         let state = ui.state.borrow();
         if state.records_view != state.view || state.records.is_empty() {
-            ui.status("Wait for this section to load before requesting more items.");
+            ui.status(&t!("Wait for this section to load before requesting more items."));
             return;
         }
         let loading = ui.latest_list.lock().unwrap().pending.contains(&state.view);
         let Some(args) = more_args(&state.view, &state.last_args, state.records.len(), loading)
         else {
-            ui.status(if loading { "Items are already loading…" } else {
-                "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
+            ui.status(&if loading { t!("Items are already loading…") } else {
+                t!("Load more is available for feeds, posts, search results, notifications, friends and chat lists.")
             });
             return;
         };
@@ -2035,7 +2113,8 @@ fn load_more(ui: &Ui) {
             append: true,
         },
     });
-    ui.status(&format!("Loading more {}…", view.title()));
+    // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+    ui.status(&tf!("Loading more {view}…", view = view.title()));
 }
 
 /// The News feed's read-ahead: the next posts arrive while the reader is still
@@ -2109,7 +2188,8 @@ fn list_label(view: &View, record: &Record) -> String {
             | View::SearchResults
     );
     if has_posts && post_target(view, record).is_none() {
-        format!("{label} (no link)")
+        // TRANSLATORS: {item} is a list row (a post); the mark says it has no link to open.
+        tf!("{item} (no link)", item = label)
     } else {
         label
     }
@@ -2157,16 +2237,13 @@ fn display_for(view: &View, record: &Record) -> String {
         }
         View::Notifications => {
             if record.fields.len() >= 3 {
-                format!(
-                    "{}{}. {}",
-                    if record.field(1) == "!" {
-                        "Unread. "
-                    } else {
-                        ""
-                    },
-                    record.field(2),
-                    record.field(0)
-                )
+                let notification = format!("{}. {}", record.field(2), record.field(0));
+                if record.field(1) == "!" {
+                    // TRANSLATORS: {notification} is a notification's text and time.
+                    tf!("Unread. {notification}", notification = notification)
+                } else {
+                    notification
+                }
             } else {
                 record.raw.clone()
             }
@@ -2181,13 +2258,19 @@ fn display_for(view: &View, record: &Record) -> String {
         View::Chats => {
             if record.fields.len() >= 5 {
                 let flags = record.field(1);
-                let marker = if flags.contains('!') { " (unread)" } else { "" };
-                let kind = if flags.contains('g') { " (group)" } else { "" };
+                let name = record.field(3);
+                let name = match (flags.contains('!'), flags.contains('g')) {
+                    // TRANSLATORS: {name} is a chat's name in the Chats list.
+                    (true, true) => tf!("{name} (unread) (group)", name = name),
+                    // TRANSLATORS: {name} is a chat's name in the Chats list.
+                    (true, false) => tf!("{name} (unread)", name = name),
+                    // TRANSLATORS: {name} is a chat's name in the Chats list.
+                    (false, true) => tf!("{name} (group)", name = name),
+                    (false, false) => name.to_owned(),
+                };
                 format!(
-                    "{}{}{} · {} — {}",
-                    record.field(3),
-                    marker,
-                    kind,
+                    "{} · {} — {}",
+                    name,
                     record.field(2),
                     record.fields[4..].join(" ")
                 )
@@ -2227,31 +2310,31 @@ fn details_for(view: &View, record: &Record) -> String {
         | View::PostsOf(_)
         | View::SearchResults => {
             if record.fields.len() >= 5 {
-                format!(
-                    "Author: {}\nTime: {}\n{}\n\n{}",
-                    record.field(1),
-                    record.field(2),
-                    counts_label(record.field(3)),
-                    record.fields[4..].join("\t")
+                tf!(
+                    "Author: {author}\nTime: {time}\n{counts}\n\n{text}",
+                    author = record.field(1),
+                    time = record.field(2),
+                    counts = counts_label(record.field(3)),
+                    text = record.fields[4..].join("\t")
                 )
             } else {
                 record.raw.clone()
             }
         }
-        View::Friends => format!(
-            "Name: {}\nRef: {}\n{}",
-            record.field(0),
-            record.field(1),
-            record.field(2)
+        View::Friends => tf!(
+            "Name: {name}\nRef: {reference}\n{info}",
+            name = record.field(0),
+            reference = record.field(1),
+            info = record.field(2)
         ),
         View::Chats => {
             if record.fields.len() >= 5 {
-                format!(
-                    "Chat: {}\nTime: {}\nFlags: {} (! unread, g group, e encrypted)\n\n{}",
-                    record.field(3),
-                    record.field(2),
-                    record.field(1),
-                    record.fields[4..].join("\t")
+                tf!(
+                    "Chat: {name}\nTime: {time}\nFlags: {flags} (! unread, g group, e encrypted)\n\n{text}",
+                    name = record.field(3),
+                    time = record.field(2),
+                    flags = record.field(1),
+                    text = record.fields[4..].join("\t")
                 )
             } else {
                 record.raw.clone()
@@ -2259,11 +2342,11 @@ fn details_for(view: &View, record: &Record) -> String {
         }
         View::Groups => {
             let info = record.field(2);
-            format!(
-                "Group: {}\n{}On the web: {}\n\nOpen the group for its window: its posts, and its full member list. Posting to a group, and group settings, live on the web page.",
-                record.field(0),
-                if info.is_empty() { String::new() } else { format!("{info}\n") },
-                record.field(1)
+            tf!(
+                "Group: {name}\n{info}On the web: {url}\n\nOpen the group for its window: its posts, and its full member list. Posting to a group, and group settings, live on the web page.",
+                name = record.field(0),
+                info = if info.is_empty() { String::new() } else { format!("{info}\n") },
+                url = record.field(1)
             )
         }
         _ => record.raw.clone(),
@@ -2333,7 +2416,7 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
     let mut links = Vec::new();
     if let Some(url) = post {
         links.push(Link {
-            label: "Full post on Facebook".to_owned(),
+            label: t!("Full post on Facebook"),
             url: url.to_owned(),
         });
     }
@@ -2454,7 +2537,7 @@ fn append_links_menu(menu: &Menu, links: &[Link]) {
             open_url(&link.url);
         }
     });
-    menu.append_submenu(submenu, "&Links", "Open a link in your browser");
+    menu.append_submenu(submenu, &t!("&Links"), &t!("Open a link in your browser"));
 }
 
 fn prepare_reels(ui: &Ui) {
@@ -2541,7 +2624,8 @@ fn show_details(ui: &Ui, index: usize) {
     let state = ui.state.borrow();
     if is_more_row(&state.records_view, state.records.len(), index) {
         let label = more_row_label(&state.records_view, state.records.len()).unwrap();
-        let text = format!("{label}. Press Enter to load the next batch.");
+        // TRANSLATORS: {action} is a "Load more…" row label such as "Load more posts".
+        let text = tf!("{action}. Press Enter to load the next batch.", action = label);
         drop(state);
         set_details(ui, &text, None);
         return;
@@ -2570,20 +2654,20 @@ fn selected_post_ref(ui: &Ui) -> Option<String> {
     post_target(&ui.state.borrow().view, &record).map(str::to_owned)
 }
 
-fn more_row_label(view: &View, count: usize) -> Option<&'static str> {
+fn more_row_label(view: &View, count: usize) -> Option<String> {
     if count == 0 {
         return None;
     }
     match view {
         View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
-            Some("Load more posts")
+            Some(t!("Load more posts"))
         }
-        View::Reels(_) => Some("Load more reels"),
-        View::Notifications => Some("Load more notifications"),
-        View::Friends => Some("Load more friends"),
-        View::Groups => Some("Load more groups"),
-        View::Marketplace => Some("Load more listings"),
-        View::Chats => Some("Load more conversations"),
+        View::Reels(_) => Some(t!("Load more reels")),
+        View::Notifications => Some(t!("Load more notifications")),
+        View::Friends => Some(t!("Load more friends")),
+        View::Groups => Some(t!("Load more groups")),
+        View::Marketplace => Some(t!("Load more listings")),
+        View::Chats => Some(t!("Load more conversations")),
         _ => None,
     }
 }
@@ -2604,12 +2688,14 @@ fn counts_label(raw: &str) -> String {
             })
     };
     if parts.len() == 3 && parts.iter().all(|p| numeric(p)) {
-        format!(
-            "Reactions: {}, comments: {}, shares: {}",
-            parts[0], parts[1], parts[2]
+        tf!(
+            "Reactions: {reactions}, comments: {comments}, shares: {shares}",
+            reactions = parts[0],
+            comments = parts[1],
+            shares = parts[2]
         )
     } else {
-        format!("Reactions / comments / shares: {raw}")
+        tf!("Reactions / comments / shares: {counts}", counts = raw)
     }
 }
 
@@ -2688,12 +2774,12 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
         (labels, key, more_selected, remembered)
     };
     if let Some(label) = more_row_label(&ui.state.borrow().records_view, old_labels.len()) {
-        old_labels.push(label.to_owned());
+        old_labels.push(label);
     }
     let count = records.len();
     let mut labels: Vec<_> = records.iter().map(|r| list_label(view, r)).collect();
     if let Some(label) = more_row_label(view, count) {
-        labels.push(label.to_owned());
+        labels.push(label);
     }
     let selected = more_selected.or_else(|| {
         selected_key
@@ -2729,9 +2815,10 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
     } else if ui.items.get_count() > 0 {
         show_details(ui, selected.unwrap_or(0));
     } else {
-        set_details(ui, "(nothing here)", None);
+        set_details(ui, &t!("(nothing here)"), None);
     }
-    ui.status(&format!("{} — {} item(s)", view.title(), count));
+    // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+    ui.status(&ntf!("{view} — {n} item", "{view} — {n} items", count, view = view.title()));
     refresh_controls(ui);
     prepare_reels(ui);
 }
@@ -2830,12 +2917,15 @@ fn apply_done(ui: &Ui, done: Done) {
                     let total = records.len();
                     show_records(ui, &view, records, body);
                     if !append && empty {
-                        ui.status(&format!("{}: no items to show.", view.title()));
+                        // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+                        ui.status(&tf!("{view}: no items to show.", view = view.title()));
                     }
                     if append {
+                        let total = ui.state.borrow().records.len();
                         ui.status(&format!(
-                            "{added} new item(s) loaded. {} item(s) total.",
-                            ui.state.borrow().records.len()
+                            "{} {}",
+                            ntf!("{n} new item loaded.", "{n} new items loaded.", added),
+                            ntf!("{n} item total.", "{n} items total.", total)
                         ));
                     }
                     if !background_read {
@@ -2871,35 +2961,36 @@ fn apply_done(ui: &Ui, done: Done) {
                                 append,
                             });
                             drop(state);
-                            ui.status("Messenger needs its history restored. Enter your PIN in the unlock dialog.");
+                            ui.status(&t!("Messenger needs its history restored. Enter your PIN in the unlock dialog."));
                         } else {
                             drop(state);
-                            ui.status("Messenger history is still locked. Use Chat → Unlock encrypted chats to retry.");
+                            ui.status(&t!("Messenger history is still locked. Use Chat → Unlock encrypted chats to retry."));
                             if unlock_attempted {
                                 show_error(
                                     &ui.frame,
-                                    "Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry.",
-                                    "Messenger history",
+                                    t!("Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry."),
+                                    &t!("Messenger history"),
                                 );
                             }
                         }
                         return;
                     }
                     if ui.state.borrow().background == Some(request) {
-                        ui.status(&format!(
-                            "Could not update {}. Showing earlier results.",
-                            view.title()
+                        // TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+                        ui.status(&tf!(
+                            "Could not update {view}. Showing earlier results.",
+                            view = view.title()
                         ));
                         return;
                     }
-                    ui.status("Error");
+                    ui.status(&t!("Error"));
                     show_error(&ui.frame, &e, "BlindFB");
                 }
             }
         }
         Tag::PostVideo(session, request) => post_dialog::stream(ui, session, request, done.result),
         Tag::PostReelReacted(session) => {
-            post_dialog::apply(ui, session, done.result, "Reaction set.", false)
+            post_dialog::apply(ui, session, done.result, &t!("Reaction set."), false)
         }
         Tag::ReelPrepared { account, target } => {
             {
@@ -2927,32 +3018,32 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
         Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {
-            post_dialog::apply(ui, session, done.result, "Post ready.", false)
+            post_dialog::apply(ui, session, done.result, &t!("Post ready."), false)
         }
         Tag::PostSent(session) => {
-            post_dialog::apply(ui, session, done.result, "Comment sent.", true)
+            post_dialog::apply(ui, session, done.result, &t!("Comment sent."), true)
         }
         Tag::PostLiked(session) => {
-            post_dialog::apply(ui, session, done.result, "Like changed.", false)
+            post_dialog::apply(ui, session, done.result, &t!("Like changed."), false)
         }
         Tag::PostShareReady(session) => post_dialog::share_ready(ui, session, done.result),
         Tag::PostShared(session) => post_dialog::note(
             ui,
             session,
-            done.result.map(|_| "Shared to your feed.".to_owned()),
+            done.result.map(|_| t!("Shared to your feed.")),
             true,
         ),
         Tag::PostShareClosed(session) => post_dialog::note(
             ui,
             session,
             done.result
-                .map(|_| "Share cancelled. Nothing was shared.".to_owned()),
+                .map(|_| t!("Share cancelled. Nothing was shared.")),
             true,
         ),
         Tag::PostNote(session) => post_dialog::note(
             ui,
             session,
-            done.result.map(|_| "Reaction set.".to_owned()),
+            done.result.map(|_| t!("Reaction set.")),
             false,
         ),
         Tag::Silent => {}
@@ -2979,29 +3070,30 @@ fn apply_done(ui: &Ui, done: Done) {
                     // The backend distinguishes a finished restore from a
                     // PIN Facebook accepted and is still verifying: report
                     // the second honestly instead of promising chats now.
-                    ui.status(if text.contains("still restoring") {
-                        "PIN accepted. Facebook is still restoring your chat history — loading your chats…"
+                    ui.status(&if text.contains("still restoring") {
+                        t!("PIN accepted. Facebook is still restoring your chat history — loading your chats…")
                     } else {
-                        "Messenger unlocked. Loading your chats…"
+                        t!("Messenger unlocked. Loading your chats…")
                     });
                 }
                 Ok(text) => {
                     ui.latest_list.lock().unwrap().finish(&view, request);
-                    ui.status(if text.contains("still restoring") {
-                        "PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes."
+                    ui.status(&if text.contains("still restoring") {
+                        t!("PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes.")
                     } else {
-                        "Messenger unlocked."
+                        t!("Messenger unlocked.")
                     });
                 }
                 Err(e) => {
                     ui.latest_list.lock().unwrap().finish(&view, request);
-                    ui.status("Messenger could not be unlocked.");
+                    ui.status(&t!("Messenger could not be unlocked."));
                     show_error(
                         &ui.frame,
-                        format!(
-                            "Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n\n{e}"
+                        tf!(
+                            "Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n\n{error}",
+                            error = e
                         ),
-                        "Unlock encrypted chats",
+                        &t!("Unlock encrypted chats"),
                     );
                 }
             }
@@ -3016,26 +3108,26 @@ fn apply_done(ui: &Ui, done: Done) {
         }
         Tag::DebugReport => match done.result {
             Ok(text) => {
-                ui.status("Debug report saved.");
-                let dialog = MessageDialog::builder(&ui.frame, &text, "Debug report").build();
+                ui.status(&t!("Debug report saved."));
+                let dialog = MessageDialog::builder(&ui.frame, &text, &t!("Debug report")).build();
                 dialog.show_modal();
                 dialog.destroy();
             }
             Err(e) => {
-                ui.status("Error");
-                show_error(&ui.frame, &e, "Debug report");
+                ui.status(&t!("Error"));
+                show_error(&ui.frame, &e, &t!("Debug report"));
             }
         },
         Tag::Post => match done.result {
             Ok(text) => {
                 let message = post_done_message(&text);
-                set_details(ui, message, None);
-                ui.status(message);
+                set_details(ui, &message, None);
+                ui.status(&message);
             }
             Err(e) => {
-                ui.status("Error");
+                ui.status(&t!("Error"));
                 match post_unconfirmed_message(&e) {
-                    Some(message) => show_warning(&ui.frame, message, "New post"),
+                    Some(message) => show_warning(&ui.frame, message, &t!("New post")),
                     None => show_error(&ui.frame, &e, "BlindFB"),
                 }
             }
@@ -3043,10 +3135,10 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::Text => match done.result {
             Ok(text) => {
                 set_details(ui, text.trim(), None);
-                ui.status("Done");
+                ui.status(&t!("Done"));
             }
             Err(e) => {
-                ui.status("Error");
+                ui.status(&t!("Error"));
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
@@ -3057,25 +3149,25 @@ fn apply_done(ui: &Ui, done: Done) {
                     answer_group_questions(ui, &group, &text);
                 } else {
                     set_details(ui, &text, None);
-                    ui.status("Done");
+                    ui.status(&t!("Done"));
                 }
             }
             Err(e) => {
-                ui.status("Error");
-                show_error(&ui.frame, &e, "Join group");
+                ui.status(&t!("Error"));
+                show_error(&ui.frame, &e, &t!("Join group"));
             }
         },
         Tag::GroupLeave => match done.result {
             Ok(text) => {
                 set_details(ui, text.trim(), None);
-                ui.status("Done");
+                ui.status(&t!("Done"));
                 if ui.state.borrow().view == View::Groups {
                     load_view(ui, View::Groups);
                 }
             }
             Err(e) => {
-                ui.status("Error");
-                show_error(&ui.frame, &e, "Leave group");
+                ui.status(&t!("Error"));
+                show_error(&ui.frame, &e, &t!("Leave group"));
             }
         },
         Tag::ChatSent(account) => {
@@ -3101,7 +3193,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     }
                     refresh_attachment_count(ui);
                     ui.state.borrow_mut().reply_to = None;
-                    ui.status("Sent");
+                    ui.status(&t!("Sent"));
                     if current {
                         load_view(
                             ui,
@@ -3111,12 +3203,12 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
                 Err(e) => {
                     let kept = ui.state.borrow().attachments.len();
-                    ui.status(if kept > 0 {
-                        "Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
+                    ui.status(&if kept > 0 {
+                        t!("Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit.")
                     } else {
-                        "Message could not be sent. Your draft has been kept."
+                        t!("Message could not be sent. Your draft has been kept.")
                     });
-                    show_error(&ui.frame, &e, "Send message");
+                    show_error(&ui.frame, &e, &t!("Send message"));
                 }
             }
         }
@@ -3126,13 +3218,13 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             match done.result {
                 Ok(_) => {
-                    ui.status("Message removed");
+                    ui.status(&t!("Message removed"));
                     if matches!(&ui.state.borrow().view, View::ChatWith(id, _) if id == &chat) {
                         load_view(ui, View::ChatWith(chat, name));
                     }
                 }
                 Err(e) => {
-                    ui.status("Error");
+                    ui.status(&t!("Error"));
                     show_error(&ui.frame, &e, "BlindFB");
                 }
             }
@@ -3145,22 +3237,22 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(_) => {
                 // Installed but signed out: offer the browser sign-in once.
                 startup_log("setup: backend present, signed out — offering sign-in");
-                ui.status("The backend is installed but not signed in.");
+                ui.status(&t!("The backend is installed but not signed in."));
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    ui.status("Signed out. Use Backend → Sign in when ready.");
+                    ui.status(&t!("Signed out. Use Backend → Sign in when ready."));
                 }
             }
             Err(_) if Fb::discover().is_none() => {
                 startup_log("setup: backend missing — installing");
-                ui.status("Installing the Facebook backend…");
+                ui.status(&t!("Installing the Facebook backend…"));
                 ui.send(Job {
                     task: Task::InstallBackend,
                     tag: Tag::SetupInstall,
                 });
             }
             Err(error) => {
-                ui.status("The Facebook backend could not start.");
-                show_error(&ui.frame, error, "Backend startup");
+                ui.status(&t!("The Facebook backend could not start."));
+                show_error(&ui.frame, error, &t!("Backend startup"));
                 offer_sign_in(ui, Tag::SetupLogin);
             }
         },
@@ -3168,49 +3260,50 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(summary) => {
                 ui.status(&summary);
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    ui.status("Signed out. Use Backend → Sign in when ready.");
+                    ui.status(&t!("Signed out. Use Backend → Sign in when ready."));
                 }
             }
             Err(error) => {
                 show_error(
                     &ui.frame,
-                    format!(
-                        "The backend could not be installed automatically: {error}\nYou can retry from Backend → Install or update backend."
+                    tf!(
+                        "The backend could not be installed automatically: {error}\nYou can retry from Backend → Install or update backend.",
+                        error = error
                     ),
-                    "Backend install failed",
+                    &t!("Backend install failed"),
                 );
             }
         },
         Tag::SetupLogin => match done.result {
             Ok(out) if out.contains("logged in") && !out.contains("not logged in") => {
-                ui.status("Signed in.");
+                ui.status(&t!("Signed in."));
                 load_view(ui, View::Feed);
             }
             Ok(out) => {
                 set_details(ui, out.trim(), None);
-                ui.status("Sign-in did not finish — see the details, or try Backend → Sign in.");
-                show_warning(&ui.frame, out.trim(), "Sign-in did not finish");
+                ui.status(&t!("Sign-in did not finish — see the details, or try Backend → Sign in."));
+                show_warning(&ui.frame, out.trim(), &t!("Sign-in did not finish"));
             }
             Err(error) => {
-                show_error(&ui.frame, error, "Sign in");
-                ui.status("Sign-in failed. Use Backend → Sign in to retry.");
+                show_error(&ui.frame, error, &t!("Sign in"));
+                ui.status(&t!("Sign-in failed. Use Backend → Sign in to retry."));
             }
         },
         Tag::BrowserInstalled => match done.result {
             Ok(summary) => {
                 ui.status(&summary);
                 if !offer_sign_in(ui, Tag::SetupLogin) {
-                    ui.status("Signed out. Use Backend → Sign in when ready.");
+                    ui.status(&t!("Signed out. Use Backend → Sign in when ready."));
                 }
             }
             Err(error) => {
-                show_error(&ui.frame, error, "Browser install");
-                ui.status("Browser installation failed.");
+                show_error(&ui.frame, error, &t!("Browser install"));
+                ui.status(&t!("Browser installation failed."));
             }
         },
         Tag::BrowserInstalledMenu => match done.result {
             Ok(summary) => ui.status(&summary),
-            Err(error) => show_error(&ui.frame, error, "Browser install"),
+            Err(error) => show_error(&ui.frame, error, &t!("Browser install")),
         },
     }
 }
@@ -3285,7 +3378,7 @@ fn needs_messenger_unlock(error: &str) -> bool {
 /// Ask for the Messenger PIN (stdin only, never stored). With `retry`, the
 /// failed list request runs once more after a successful unlock.
 fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
-    let dialog = TextEntryDialog::builder(&ui.frame, "Messenger PIN:", "Unlock encrypted chats")
+    let dialog = TextEntryDialog::builder(&ui.frame, &t!("Messenger PIN:"), &t!("Unlock encrypted chats"))
         .password()
         .build();
     let pin = (dialog.show_modal() == ID_OK)
@@ -3294,7 +3387,7 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
     dialog.destroy();
     let Some(pin) = pin.filter(|p| !p.is_empty()) else {
         ui.state.borrow_mut().unlocking = false;
-        ui.status("Unlock cancelled.");
+        ui.status(&t!("Unlock cancelled."));
         return;
     };
     // The automatic path passes the load it was resuming. The manual menu item
@@ -3317,7 +3410,7 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
         }
     });
     ui.state.borrow_mut().unlocking = true;
-    ui.status("Unlocking Messenger…");
+    ui.status(&t!("Unlocking Messenger…"));
     ui.send(Job {
         task: Task::Fb(vec!["unlock".into(), "-".into()], Some(format!("{pin}\n"))),
         tag: Tag::UnlockRetry {
@@ -3332,8 +3425,8 @@ fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
 fn open_facebook_link(ui: &Ui) {
     let dialog = TextEntryDialog::builder(
         &ui.frame,
-        "Facebook post, video or reel link (full https:// URL):",
-        "Open Facebook link",
+        &t!("Facebook post, video or reel link (full https:// URL):"),
+        &t!("Open Facebook link"),
     )
     .build();
     let target = (dialog.show_modal() == ID_OK)
@@ -3346,8 +3439,8 @@ fn open_facebook_link(ui: &Ui) {
         (true, Some(url)) => post_dialog::open(ui, &url, false),
         _ => show_error(
             &ui.frame,
-            "Paste a full https:// Facebook post, video or reel link. This link is invalid or unsupported.",
-            "Open Facebook link",
+            t!("Paste a full https:// Facebook post, video or reel link. This link is invalid or unsupported."),
+            &t!("Open Facebook link"),
         ),
     }
 }
@@ -3386,8 +3479,8 @@ fn open_selected(ui: &Ui) {
             let Some(target) = post_target(&view, &record) else {
                 show_warning(
                     &ui.frame,
-                    "This row has no link, so there is no post to open. Sponsored and suggested rows usually have none.",
-                    "Open post",
+                    t!("This row has no link, so there is no post to open. Sponsored and suggested rows usually have none."),
+                    &t!("Open post"),
                 );
                 return;
             };
@@ -3413,14 +3506,14 @@ fn open_selected(ui: &Ui) {
                 Some(url) => post_dialog::open(ui, &url, false),
                 None if view == View::Notifications => {
                     open_url(&web_url(target));
-                    ui.status("Opened notification on Facebook.");
+                    ui.status(&t!("Opened notification on Facebook."));
                 }
                 None => {
                     // Photo albums and other pages the reader cannot parse yet.
                     if confirm(
                         &ui.frame,
-                        "BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?",
-                        "Open post",
+                        &t!("BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?"),
+                        &t!("Open post"),
                     ) {
                         open_url(&web_url(target));
                     }
@@ -3439,9 +3532,9 @@ fn post_or_warn(ui: &Ui, title: &str) -> Option<String> {
     let post = selected_post_ref(ui);
     if post.is_none() {
         let why = if selected(ui).is_some() {
-            "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
+            t!("This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none.")
         } else {
-            "Select a post first."
+            t!("Select a post first.")
         };
         show_warning(&ui.frame, why, title);
     }
@@ -3449,11 +3542,13 @@ fn post_or_warn(ui: &Ui, title: &str) -> Option<String> {
 }
 
 fn react_popup(ui: &Ui) {
-    let Some(post) = post_or_warn(ui, "React") else {
+    let Some(post) = post_or_warn(ui, &t!("React")) else {
         return;
     };
-    let labels: Vec<&str> = REACTIONS.to_vec();
-    let dialog = SingleChoiceDialog::builder(&ui.frame, "Reaction", "React", &labels).build();
+    let names: Vec<String> = REACTIONS.iter().map(|reaction| reaction_name(reaction)).collect();
+    let labels: Vec<&str> = names.iter().map(String::as_str).collect();
+    let dialog =
+        SingleChoiceDialog::builder(&ui.frame, &t!("Reaction"), &t!("React"), &labels).build();
     let reaction = if dialog.show_modal() == ID_OK {
         let index = dialog.get_selection();
         (index >= 0).then(|| REACTIONS[index as usize])
@@ -3478,14 +3573,14 @@ fn react_to(ui: &Ui, post: &str, reaction: &str) {
 }
 
 fn comment_selected(ui: &Ui) {
-    let Some(post) = post_or_warn(ui, "Comment") else {
+    let Some(post) = post_or_warn(ui, &t!("Comment")) else {
         return;
     };
     if post_dialog::is_video_page(&post) {
         post_dialog::comment(ui, &post);
         return;
     }
-    if let Some(text) = prompt_text(&ui.frame, "Your comment:", "Comment") {
+    if let Some(text) = prompt_text(&ui.frame, &t!("Your comment:"), &t!("Comment")) {
         if !text.trim().is_empty() {
             ui.send(Job {
                 task: Task::Fb(comment_args(&post, &text), None),
@@ -3561,7 +3656,7 @@ fn friend_selected(ui: &Ui) {
         View::CommentsOf(_) => record.field(2).to_owned(),
         _ => who.clone(),
     };
-    ui.status(&format!("Sending a friend request to {name}…"));
+    ui.status(&tf!("Sending a friend request to {name}…", name = name));
     ui.send(Job {
         task: Task::Fb(friend_add_args(&who), None),
         tag: Tag::Text,
@@ -3624,8 +3719,8 @@ fn open_post_web(ui: &Ui) {
     } else {
         show_warning(
             &ui.frame,
-            "This row has no web link (it is a suggestion or ad row).",
-            "Open on Facebook",
+            t!("This row has no web link (it is a suggestion or ad row)."),
+            &t!("Open on Facebook"),
         );
     }
 }
@@ -3679,8 +3774,8 @@ fn open_chat_web(ui: &Ui) {
         _ => {
             show_warning(
                 &ui.frame,
-                "Select or open a chat first.",
-                "Open in Messenger",
+                t!("Select or open a chat first."),
+                &t!("Open in Messenger"),
             );
             return;
         }
@@ -3699,13 +3794,13 @@ fn open_chat_web(ui: &Ui) {
 
 fn delete_selected(ui: &Ui) {
     let Some(post) = selected_post_ref(ui) else {
-        show_warning(&ui.frame, "Select one of your posts first.", "Delete post");
+        show_warning(&ui.frame, t!("Select one of your posts first."), &t!("Delete post"));
         return;
     };
     if confirm(
         &ui.frame,
-        "Delete this post? Facebook moves it to the trash (permanent removal after 30 days).",
-        "Delete post",
+        &t!("Delete this post? Facebook moves it to the trash (permanent removal after 30 days)."),
+        &t!("Delete post"),
     ) {
         ui.send(Job {
             task: Task::Fb(delete_args(&post), None),
@@ -3720,7 +3815,7 @@ fn attach_files(ui: &Ui) {
         if let Some(path) = dialog.get_path() {
             let mut state = ui.state.borrow_mut();
             state.attachments.push(path);
-            ui.status(&format!("{} file(s) attached", state.attachments.len()));
+            ui.status(&ntf!("{n} file attached", "{n} files attached", state.attachments.len()));
         }
     }
     refresh_attachment_count(ui);
@@ -3734,17 +3829,17 @@ fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
     if files.is_empty() {
         return;
     }
-    let dialog = Dialog::builder(parent, "Attached files")
+    let dialog = Dialog::builder(parent, &t!("Attached files"))
         .with_size(640, 420)
         .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
     let label = StaticText::builder(&dialog)
-        .with_label("Attached &files")
+        .with_label(&t!("Attached &files"))
         .build();
     let list = ListBox::builder(&dialog).build();
-    list.set_name("Attached files");
+    list.set_name(&t!("Attached files"));
     let fill = |list: &ListBox, files: &[String]| {
         list.clear();
         for path in files {
@@ -3760,12 +3855,12 @@ fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
     };
     fill(&list, files);
     let remove = Button::builder(&dialog)
-        .with_label("&Remove selected")
+        .with_label(&t!("&Remove selected"))
         .build();
-    let remove_all = Button::builder(&dialog).with_label("Remove &all").build();
+    let remove_all = Button::builder(&dialog).with_label(&t!("Remove &all")).build();
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
-        .with_label("C&lose")
+        .with_label(&t!("C&lose"))
         .build();
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     actions.add(&remove, 0, SizerFlag::All, 4);
@@ -3806,22 +3901,22 @@ fn manage_files_dialog(parent: &dyn WxWidget, files: &mut Vec<String>) {
 fn manage_attachments(ui: &Ui) {
     let mut files = ui.state.borrow().attachments.clone();
     if files.is_empty() {
-        ui.status("No files are attached.");
+        ui.status(&t!("No files are attached."));
         return;
     }
     manage_files_dialog(&ui.frame, &mut files);
     let count = files.len();
     ui.state.borrow_mut().attachments = files;
     refresh_attachment_count(ui);
-    ui.status(&format!("{count} file(s) attached"));
+    ui.status(&ntf!("{n} file attached", "{n} files attached", count));
 }
 
 fn refresh_attachment_count(ui: &Ui) {
     let count = ui.state.borrow().attachments.len();
     ui.attachments_btn
-        .set_label(&format!("Attachments ({count})"));
+        .set_label(&tf!("Attachments ({count})", count = count));
     ui.attachments_btn
-        .set_name(&format!("Attachments, {count} attached"));
+        .set_name(&ntf!("Attachments, {n} attached", "Attachments, {n} attached", count));
 }
 
 /// The message text a chat line is matched by: `fb read` lines are
@@ -3870,16 +3965,17 @@ fn selected_message_match(ui: &Ui) -> Option<(String, usize)> {
 fn reply_selected(ui: &Ui) {
     if ui.state.borrow().reply_to.is_some() {
         ui.state.borrow_mut().reply_to = None;
-        ui.status("Reply cancelled. Your next message sends normally.");
+        ui.status(&t!("Reply cancelled. Your next message sends normally."));
         return;
     }
     let Some((text, nth)) = selected_message_match(ui) else {
-        ui.status("That message has no text to reply to.");
+        ui.status(&t!("That message has no text to reply to."));
         return;
     };
     ui.state.borrow_mut().reply_to = Some((text.clone(), nth));
-    ui.status(&format!(
-        "Replying to: {text}. Write your reply in the message box and send as usual."
+    ui.status(&tf!(
+        "Replying to: {text}. Write your reply in the message box and send as usual.",
+        text = text
     ));
     ui.compose_box.set_focus();
 }
@@ -3889,20 +3985,24 @@ fn msg_react_selected(ui: &Ui, reaction: &str) {
         return;
     };
     let Some((text, nth)) = selected_message_match(ui) else {
-        ui.status("That message has no text to react to.");
+        ui.status(&t!("That message has no text to react to."));
         return;
     };
     ui.send(Job {
         task: Task::Fb(msg_react_args(&chat, reaction, Some(&text), nth), None),
         tag: Tag::Text,
     });
-    ui.status(&format!("Reacting {reaction} to: {text}"));
+    ui.status(&tf!(
+        "Reacting {reaction} to: {text}",
+        reaction = reaction_name(reaction),
+        text = text
+    ));
 }
 
 fn send_composed(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
     let View::ChatWith(chat, name) = view else {
-        show_warning(&ui.frame, "Open a chat first, then write and send.", "Send");
+        show_warning(&ui.frame, t!("Open a chat first, then write and send."), &t!("Send"));
         return;
     };
     let text = ui.compose_box.get_value();
@@ -3919,7 +4019,7 @@ fn send_composed(ui: &Ui) {
         files: files.clone(),
     };
     if !ChatSubmission::begin(&mut ui.state.borrow_mut().sending, submitted) {
-        ui.status("Wait for your message to finish sending.");
+        ui.status(&t!("Wait for your message to finish sending."));
         return;
     }
     let reply_to = ui.state.borrow().reply_to.clone();
@@ -3959,13 +4059,13 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_OPEN_LINK => open_facebook_link(ui),
         ID_COMMENT => comment_selected(ui),
         ID_SHARE => {
-            if let Some(post) = post_or_warn(ui, "Share") {
+            if let Some(post) = post_or_warn(ui, &t!("Share")) {
                 match blindfb_core::posts::reader_url(&post) {
                     Some(url) => post_dialog::open(ui, &url, true),
                     None => show_warning(
                         &ui.frame,
-                        "BlindFB cannot share this kind of item yet. Open it on Facebook to share it.",
-                        "Share post",
+                        t!("BlindFB cannot share this kind of item yet. Open it on Facebook to share it."),
+                        &t!("Share post"),
                     ),
                 }
             }
@@ -3978,22 +4078,22 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_COPY_TEXT => {
             if let Some((_, record)) = selected(ui) {
                 let text = display_for(&ui.state.borrow().view, &record);
-                copy_text(ui, &text, "Text copied.");
+                copy_text(ui, &text, &t!("Text copied."));
             }
         }
         ID_COPY_LINK => match selected_link(ui) {
-            Some(link) => copy_text(ui, &link, "Link copied."),
-            None => show_warning(&ui.frame, "This item has no link to copy.", "Copy link"),
+            Some(link) => copy_text(ui, &link, &t!("Link copied.")),
+            None => show_warning(&ui.frame, t!("This item has no link to copy."), &t!("Copy link")),
         },
         ID_SHARE_LINK => match selected_share_url(ui) {
             Some(url) => {
                 open_url(&url);
-                ui.status("Opened Facebook's share page in your browser.");
+                ui.status(&t!("Opened Facebook's share page in your browser."));
             }
             None => show_warning(
                 &ui.frame,
-                "This item has no link to share.",
-                "Share on Facebook",
+                t!("This item has no link to share."),
+                &t!("Share on Facebook"),
             ),
         },
         ID_NEW_POST => new_post(ui, false),
@@ -4007,7 +4107,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 let url = record.field(1).to_owned();
                 if url.starts_with("http") {
                     open_url(&url);
-                    ui.status("Opened the listing in your browser.");
+                    ui.status(&t!("Opened the listing in your browser."));
                 }
             }
         }
@@ -4027,7 +4127,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             tag: Tag::Text,
         }),
         ID_INSTALL_BACKEND => {
-            ui.status("Downloading the Facebook backend…");
+            ui.status(&t!("Downloading the Facebook backend…"));
             ui.send(Job {
                 task: Task::InstallBackend,
                 tag: Tag::Text,
@@ -4045,8 +4145,8 @@ fn handle_menu(ui: &Ui, id: i32) {
             if let View::ChatWith(chat, name) = view {
                 if confirm(
                     &ui.frame,
-                    "Remove your newest message in this chat for everyone?",
-                    "Unsend",
+                    &t!("Remove your newest message in this chat for everyone?"),
+                    &t!("Unsend"),
                 ) {
                     ui.send(Job {
                         task: Task::Fb(unsend_args(&chat, None), None),
@@ -4054,13 +4154,13 @@ fn handle_menu(ui: &Ui, id: i32) {
                     });
                 }
             } else {
-                show_warning(&ui.frame, "Open a chat first.", "Unsend");
+                show_warning(&ui.frame, t!("Open a chat first."), &t!("Unsend"));
             }
         }
         ID_KEYS => {
             let dialog = MessageDialog::builder(
                 &ui.frame,
-                "Ctrl+O: open a Facebook post, video or reel link.\n\
+                &t!("Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
                  Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. F5: refresh. Ctrl+L: load more.\n\
@@ -4071,8 +4171,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
                  Arrow keys on Video volume change its percentage.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
-                 Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback.",
-                "Keyboard commands",
+                 Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."),
+                &t!("Keyboard commands"),
             ).build();
             dialog.show_modal();
             dialog.destroy();
@@ -4081,10 +4181,10 @@ fn handle_menu(ui: &Ui, id: i32) {
             AboutBoxBuilder::new(&ui.frame)
                 .name("BlindFB")
                 .version(env!("CARGO_PKG_VERSION"))
-                .description(
+                .description(t!(
                     "An accessible Facebook and Messenger client for screen reader users.\n\
-                     Built with wxDragon on the facebook-cli (fb) backend.",
-                )
+                     Built with wxDragon on the facebook-cli (fb) backend."
+                ))
                 .copyright("Copyright (c) 2026 Brandon Bracey")
                 .website("https://github.com/serrebidev/BlindFB")
                 .licence("MIT")
@@ -4111,23 +4211,24 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_DEBUG_LOGGING => {
             let on = !blindfb_core::debug::enabled();
             match blindfb_core::debug::set_enabled(on) {
-                Ok(()) if on => ui.status(
-                    "Debug logging on. Repeat what failed, then use Help, Save debug report.",
-                ),
-                Ok(()) => ui.status("Debug logging off."),
-                Err(error) => show_error(&ui.frame, &error, "Debug logging"),
+                Ok(()) if on => ui.status(&t!(
+                    "Debug logging on. Repeat what failed, then use Help, Save debug report."
+                )),
+                Ok(()) => ui.status(&t!("Debug logging off.")),
+                Err(error) => show_error(&ui.frame, &error, &t!("Debug logging")),
             }
         }
         ID_DEBUG_REPORT => {
             let dialog = FileDialog::builder(&ui.frame)
-                .with_message("Save debug report")
+                .with_message(&t!("Save debug report"))
                 .with_default_file("BlindFB-debug-report.txt")
-                .with_wildcard("Text files (*.txt)|*.txt")
+                // TRANSLATORS: a file-type filter; translate "Text files" only, keep "(*.txt)|*.txt".
+                .with_wildcard(&t!("Text files (*.txt)|*.txt"))
                 .with_style(FileDialogStyle::Save | FileDialogStyle::OverwritePrompt)
                 .build();
             if dialog.show_modal() == ID_OK {
                 if let Some(path) = dialog.get_path() {
-                    ui.status("Saving the debug report…");
+                    ui.status(&t!("Saving the debug report…"));
                     ui.send(Job {
                         task: Task::DebugReport(path),
                         tag: Tag::DebugReport,
@@ -4141,7 +4242,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                 let reaction = REACTIONS[(id - ID_MSG_REACT_BASE) as usize];
                 msg_react_selected(ui, reaction);
             } else if (ID_REACT_BASE..ID_REACT_BASE + REACTIONS.len() as i32).contains(&id) {
-                if let Some(post) = post_or_warn(ui, "React") {
+                if let Some(post) = post_or_warn(ui, &t!("React")) {
                     let reaction = REACTIONS[(id - ID_REACT_BASE) as usize];
                     react_to(ui, &post, reaction);
                 }
@@ -4154,7 +4255,7 @@ fn copy_text(ui: &Ui, text: &str, done: &str) {
     if Clipboard::get().set_text(text) {
         ui.status(done);
     } else {
-        show_error(&ui.frame, "Could not copy to the clipboard.", "Copy");
+        show_error(&ui.frame, t!("Could not copy to the clipboard."), &t!("Copy"));
     }
 }
 
@@ -4198,12 +4299,12 @@ fn show_item_menu(ui: &Ui) {
     }
     let view = ui.state.borrow().view.clone();
     let mut menu = Menu::builder().build();
-    let add = |menu: &Menu, items: &[(i32, &str)]| {
-        for &(id, label) in items {
-            if id == 0 {
+    let add = |menu: &Menu, items: &[(i32, String)]| {
+        for (id, label) in items {
+            if *id == 0 {
                 menu.append_separator();
             } else {
-                menu.append(id, label, "", ItemKind::Normal);
+                menu.append(*id, label, "", ItemKind::Normal);
             }
         }
     };
@@ -4214,38 +4315,38 @@ fn show_item_menu(ui: &Ui) {
                 "group" => add(
                     &menu,
                     &[
-                        (ID_OPEN, "&Open group"),
-                        (ID_GROUP_JOIN, "&Join group"),
-                        (ID_COPY_TEXT, "Cop&y text"),
+                        (ID_OPEN, t!("&Open group")),
+                        (ID_GROUP_JOIN, t!("&Join group")),
+                        (ID_COPY_TEXT, t!("Cop&y text")),
                     ],
                 ),
                 "profile" | "page" => add(
                     &menu,
                     &[
-                        (ID_PROFILE, "&Profile"),
-                        (ID_MESSAGE, "&Message"),
-                        (ID_COMMENT_FRIEND, "Add &friend"),
-                        (ID_COPY_TEXT, "Cop&y text"),
+                        (ID_PROFILE, t!("&Profile")),
+                        (ID_MESSAGE, t!("&Message")),
+                        (ID_COMMENT_FRIEND, t!("Add &friend")),
+                        (ID_COPY_TEXT, t!("Cop&y text")),
                     ],
                 ),
                 "listing" => add(
                     &menu,
                     &[
-                        (ID_LISTING_OPEN, "&Open listing in browser"),
-                        (ID_LISTING_MESSAGE, "&Message seller…"),
-                        (ID_COPY_LINK, "Copy &link"),
-                        (ID_SHARE_LINK, "Share on &Facebook…"),
-                        (ID_COPY_TEXT, "Cop&y text"),
+                        (ID_LISTING_OPEN, t!("&Open listing in browser")),
+                        (ID_LISTING_MESSAGE, t!("&Message seller…")),
+                        (ID_COPY_LINK, t!("Copy &link")),
+                        (ID_SHARE_LINK, t!("Share on &Facebook…")),
+                        (ID_COPY_TEXT, t!("Cop&y text")),
                     ],
                 ),
                 _ => add(
                     &menu,
                     &[
-                        (ID_OPEN, "&Open"),
-                        (ID_SHARE, "S&hare…"),
-                        (ID_COMMENT, "&Comment…"),
-                        (ID_COPY_TEXT, "Cop&y text"),
-                        (ID_COPY_LINK, "Copy &link"),
+                        (ID_OPEN, t!("&Open")),
+                        (ID_SHARE, t!("S&hare…")),
+                        (ID_COMMENT, t!("&Comment…")),
+                        (ID_COPY_TEXT, t!("Cop&y text")),
+                        (ID_COPY_LINK, t!("Copy &link")),
                     ],
                 ),
             }
@@ -4254,64 +4355,60 @@ fn show_item_menu(ui: &Ui) {
             add(
                 &menu,
                 &[
-                    (ID_OPEN, "&Open post and comments"),
-                    (ID_SHARE, "S&hare…"),
-                    (ID_COMMENT, "&Comment…"),
+                    (ID_OPEN, t!("&Open post and comments")),
+                    (ID_SHARE, t!("S&hare…")),
+                    (ID_COMMENT, t!("&Comment…")),
                 ],
             );
             let react = Menu::builder().build();
             for (i, reaction) in REACTIONS.iter().enumerate() {
-                let label = if *reaction == "none" {
-                    "Remove reaction".to_owned()
-                } else {
-                    reaction[..1].to_uppercase() + &reaction[1..]
-                };
+                let label = reaction_label(reaction);
                 react.append(ID_REACT_BASE + i as i32, &label, "", ItemKind::Normal);
             }
-            menu.append_submenu(react, "&React", "");
+            menu.append_submenu(react, &t!("&React"), "");
             append_links_menu(&menu, &ui.link_targets.borrow());
             add(
                 &menu,
                 &[
-                    (0, ""),
-                    (ID_PROFILE, "Author &profile"),
-                    (ID_AUTHOR_POSTS, "Author's p&osts"),
-                    (ID_MESSAGE, "&Message author"),
-                    (0, ""),
-                    (ID_COPY_TEXT, "Cop&y text"),
-                    (ID_COPY_LINK, "Copy &link"),
-                    (ID_WEB_POST, "Open post on &Facebook (web)"),
-                    (ID_WEB_PERSON, "Open author on Fa&cebook (web)"),
+                    (0, String::new()),
+                    (ID_PROFILE, t!("Author &profile")),
+                    (ID_AUTHOR_POSTS, t!("Author's p&osts")),
+                    (ID_MESSAGE, t!("&Message author")),
+                    (0, String::new()),
+                    (ID_COPY_TEXT, t!("Cop&y text")),
+                    (ID_COPY_LINK, t!("Copy &link")),
+                    (ID_WEB_POST, t!("Open post on &Facebook (web)")),
+                    (ID_WEB_PERSON, t!("Open author on Fa&cebook (web)")),
                 ],
             );
             if view == View::MyPosts {
-                add(&menu, &[(0, ""), (ID_DELETE, "&Delete post…")]);
+                add(&menu, &[(0, String::new()), (ID_DELETE, t!("&Delete post…"))]);
             }
         }
         View::Notifications => add(
             &menu,
             &[
-                (ID_OPEN, "&Open"),
-                (ID_SHARE, "S&hare…"),
-                (ID_COPY_TEXT, "Cop&y text"),
-                (ID_COPY_LINK, "Copy &link"),
-                (ID_WEB_POST, "Open on &Facebook (web)"),
+                (ID_OPEN, t!("&Open")),
+                (ID_SHARE, t!("S&hare…")),
+                (ID_COPY_TEXT, t!("Cop&y text")),
+                (ID_COPY_LINK, t!("Copy &link")),
+                (ID_WEB_POST, t!("Open on &Facebook (web)")),
             ],
         ),
         View::Friends => add(
             &menu,
             &[
-                (ID_PROFILE, "&Profile"),
-                (ID_AUTHOR_POSTS, "P&osts"),
-                (ID_MESSAGE, "&Message"),
-                (ID_WEB_PERSON, "Open on &Facebook (web)"),
+                (ID_PROFILE, t!("&Profile")),
+                (ID_AUTHOR_POSTS, t!("P&osts")),
+                (ID_MESSAGE, t!("&Message")),
+                (ID_WEB_PERSON, t!("Open on &Facebook (web)")),
             ],
         ),
         View::Chats => add(
             &menu,
             &[
-                (ID_OPEN, "&Open chat"),
-                (ID_WEB_CHAT, "Open in &Messenger (web)"),
+                (ID_OPEN, t!("&Open chat")),
+                (ID_WEB_CHAT, t!("Open in &Messenger (web)")),
             ],
         ),
         View::ChatWith(..) => {
@@ -4320,7 +4417,7 @@ fn show_item_menu(ui: &Ui) {
                 &menu,
                 &[(
                     ID_MSG_REPLY,
-                    if replying { "Cancel &reply" } else { "&Reply" },
+                    if replying { t!("Cancel &reply") } else { t!("&Reply") },
                 )],
             );
             let react = Menu::builder().build();
@@ -4328,39 +4425,39 @@ fn show_item_menu(ui: &Ui) {
                 if *reaction == "none" {
                     continue;
                 }
-                let label = reaction[..1].to_uppercase() + &reaction[1..];
+                let label = reaction_label(reaction);
                 react.append(ID_MSG_REACT_BASE + i as i32, &label, "", ItemKind::Normal);
             }
-            menu.append_submenu(react, "Re&act", "React to this message");
+            menu.append_submenu(react, &t!("Re&act"), &t!("React to this message"));
             add(
                 &menu,
                 &[
-                    (ID_COPY_TEXT, "Cop&y message"),
-                    (ID_UNSEND, "&Unsend my last message…"),
-                    (ID_WEB_CHAT, "Open in &Messenger (web)"),
+                    (ID_COPY_TEXT, t!("Cop&y message")),
+                    (ID_UNSEND, t!("&Unsend my last message…")),
+                    (ID_WEB_CHAT, t!("Open in &Messenger (web)")),
                 ],
             );
         }
         View::CommentsOf(_) => add(
             &menu,
             &[
-                (ID_PROFILE, "Commenter &profile"),
-                (ID_COMMENT_FRIEND, "Add &friend"),
-                (ID_MESSAGE, "&Message commenter"),
-                (ID_COPY_TEXT, "Cop&y text"),
+                (ID_PROFILE, t!("Commenter &profile")),
+                (ID_COMMENT_FRIEND, t!("Add &friend")),
+                (ID_MESSAGE, t!("&Message commenter")),
+                (ID_COPY_TEXT, t!("Cop&y text")),
             ],
         ),
         View::Groups => add(
             &menu,
             &[
-                (ID_OPEN, "&Open group"),
-                (ID_COPY_LINK, "Copy &link"),
-                (ID_WEB_PERSON, "Open group on &Facebook (web)"),
-                (0, ""),
-                (ID_GROUP_LEAVE, "&Leave group…"),
+                (ID_OPEN, t!("&Open group")),
+                (ID_COPY_LINK, t!("Copy &link")),
+                (ID_WEB_PERSON, t!("Open group on &Facebook (web)")),
+                (0, String::new()),
+                (ID_GROUP_LEAVE, t!("&Leave group…")),
             ],
         ),
-        _ => add(&menu, &[(ID_COPY_TEXT, "Cop&y text")]),
+        _ => add(&menu, &[(ID_COPY_TEXT, t!("Cop&y text"))]),
     }
     ui.items.popup_menu(&mut menu, None);
 }
@@ -4398,7 +4495,7 @@ fn is_video_path(path: &str) -> bool {
 }
 
 fn new_post(ui: &Ui, with_media: bool) {
-    let Some(text) = prompt_text(&ui.frame, "Post text:", "New post") else {
+    let Some(text) = prompt_text(&ui.frame, &t!("Post text:"), &t!("New post")) else {
         return;
     };
     if text.trim().is_empty() {
@@ -4412,9 +4509,11 @@ fn new_post(ui: &Ui, with_media: bool) {
         images = picked_images;
         videos = picked_videos;
     }
-    let labels = ["Public", "Friends", "Only me"];
+    let labels = [t!("Public"), t!("Friends"), t!("Only me")];
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     let dialog =
-        SingleChoiceDialog::builder(&ui.frame, "Who can see this?", "Audience", &labels).build();
+        SingleChoiceDialog::builder(&ui.frame, &t!("Who can see this?"), &t!("Audience"), &labels)
+            .build();
     if dialog.show_modal() != ID_OK {
         return;
     }
@@ -4442,17 +4541,17 @@ fn open_search_result(ui: &Ui, record: &Record) {
         "listing" => {
             if target.starts_with("http") {
                 open_url(&target);
-                ui.status("Opened the listing in your browser.");
+                ui.status(&t!("Opened the listing in your browser."));
             } else {
-                ui.status("This listing row has no link to open.");
+                ui.status(&t!("This listing row has no link to open."));
             }
         }
         "post" => {
             if target.is_empty() {
                 show_warning(
                     &ui.frame,
-                    "This row has no link, so there is no post to open.",
-                    "Open post",
+                    t!("This row has no link, so there is no post to open."),
+                    &t!("Open post"),
                 );
             } else {
                 load_view(ui, View::CommentsOf(target));
@@ -4462,8 +4561,8 @@ fn open_search_result(ui: &Ui, record: &Record) {
             if target.is_empty() {
                 show_warning(
                     &ui.frame,
-                    "This row has no link, so it cannot be opened.",
-                    "Open",
+                    t!("This row has no link, so it cannot be opened."),
+                    &t!("Open"),
                 );
                 return;
             }
@@ -4472,8 +4571,8 @@ fn open_search_result(ui: &Ui, record: &Record) {
                 None => {
                     if confirm(
                         &ui.frame,
-                        "BlindFB cannot read this kind of item yet. Open it in your web browser?",
-                        "Open",
+                        &t!("BlindFB cannot read this kind of item yet. Open it in your web browser?"),
+                        &t!("Open"),
                     ) {
                         open_url(&web_url(&target));
                     }
@@ -4489,10 +4588,10 @@ fn group_join_selected(ui: &Ui) {
     };
     let group = record.field(1).to_owned();
     if group.is_empty() {
-        ui.status("This group row has no link, so it cannot be joined.");
+        ui.status(&t!("This group row has no link, so it cannot be joined."));
         return;
     }
-    ui.status(&format!("Joining {}…", record.field(0)));
+    ui.status(&tf!("Joining {group}…", group = record.field(0)));
     ui.send(Job {
         task: Task::Fb(group_join_args(&group), None),
         tag: Tag::GroupJoin { group },
@@ -4509,19 +4608,21 @@ fn answer_group_questions(ui: &Ui, group: &str, output: &str) {
         .collect();
     if questions.is_empty() {
         set_details(ui, output, None);
-        ui.status("Done");
+        ui.status(&t!("Done"));
         return;
     }
     let mut answers = Vec::new();
     for question in &questions {
-        let Some(answer) = prompt_text(&ui.frame, &format!("{question}:"), "Membership questions")
+        let Some(answer) =
+            // TRANSLATORS: {question} is a group's membership question, asked in a text box.
+            prompt_text(&ui.frame, &tf!("{question}:", question = question), &t!("Membership questions"))
         else {
-            ui.status("Join cancelled: the membership questions were not answered.");
+            ui.status(&t!("Join cancelled: the membership questions were not answered."));
             return;
         };
         answers.push(answer);
     }
-    ui.status("Submitting your answers…");
+    ui.status(&t!("Submitting your answers…"));
     ui.send(Job {
         task: Task::Fb(group_apply_args(group, &answers), None),
         tag: Tag::Text,
@@ -4534,18 +4635,21 @@ fn group_leave_selected(ui: &Ui) {
     };
     let group = record.field(1).to_owned();
     if group.is_empty() {
-        ui.status("This group row has no link, so it cannot be left.");
+        ui.status(&t!("This group row has no link, so it cannot be left."));
         return;
     }
     let name = record.field(0).to_owned();
     if !confirm(
         &ui.frame,
-        &format!("Leave the group {name}? You can rejoin later, but private groups will need approval again."),
-        "Leave group",
+        &tf!(
+            "Leave the group {name}? You can rejoin later, but private groups will need approval again.",
+            name = name
+        ),
+        &t!("Leave group"),
     ) {
         return;
     }
-    ui.status(&format!("Leaving {name}…"));
+    ui.status(&tf!("Leaving {name}…", name = name));
     ui.send(Job {
         task: Task::Fb(group_leave_args(&group), None),
         tag: Tag::GroupLeave,
@@ -4558,20 +4662,20 @@ fn listing_message_selected(ui: &Ui) {
     };
     let listing = record.field(1).to_owned();
     if listing.is_empty() {
-        ui.status("This listing row has no link, so its seller cannot be messaged.");
+        ui.status(&t!("This listing row has no link, so its seller cannot be messaged."));
         return;
     }
     let Some(text) = prompt_text(
         &ui.frame,
-        &format!("Message to the seller of {}:", record.field(0)),
-        "Message seller",
+        &tf!("Message to the seller of {listing}:", listing = record.field(0)),
+        &t!("Message seller"),
     ) else {
         return;
     };
     if text.trim().is_empty() {
         return;
     }
-    ui.status("Messaging the seller…");
+    ui.status(&t!("Messaging the seller…"));
     ui.send(Job {
         task: Task::Fb(listing_message_args(&listing, &text), None),
         tag: Tag::Text,
@@ -4581,7 +4685,7 @@ fn listing_message_selected(ui: &Ui) {
 /// The Marketplace sell form: title, price, condition, category,
 /// description and the photos/videos to attach (at least one file).
 fn sell_dialog(ui: &Ui) {
-    let Some(title) = prompt_text(&ui.frame, "Listing title:", "Sell on Marketplace") else {
+    let Some(title) = prompt_text(&ui.frame, &t!("Listing title:"), &t!("Sell on Marketplace")) else {
         return;
     };
     if title.trim().is_empty() {
@@ -4589,24 +4693,35 @@ fn sell_dialog(ui: &Ui) {
     }
     let Some(price) = prompt_text(
         &ui.frame,
-        "Price (0 lists it as free):",
-        "Sell on Marketplace",
+        &t!("Price (0 lists it as free):"),
+        &t!("Sell on Marketplace"),
     ) else {
         return;
     };
-    let price = price.trim().to_owned();
+    // A French price reads "12,50": the decimal comma becomes the point the backend expects.
+    let price = price.trim().replace(',', ".");
     if price.is_empty() || !price.chars().all(|c| c.is_ascii_digit() || c == '.') {
         show_warning(
             &ui.frame,
-            "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing.",
-            "Sell on Marketplace",
+            t!("Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing."),
+            &t!("Sell on Marketplace"),
         );
         return;
     }
-    let labels = ["New", "Used - like new", "Used - good", "Used - fair"];
-    let dialog =
-        SingleChoiceDialog::builder(&ui.frame, "Condition:", "Sell on Marketplace", &labels)
-            .build();
+    let labels = [
+        t!("New"),
+        t!("Used - like new"),
+        t!("Used - good"),
+        t!("Used - fair"),
+    ];
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let dialog = SingleChoiceDialog::builder(
+        &ui.frame,
+        &t!("Condition:"),
+        &t!("Sell on Marketplace"),
+        &labels,
+    )
+    .build();
     if dialog.show_modal() != ID_OK {
         return;
     }
@@ -4619,14 +4734,14 @@ fn sell_dialog(ui: &Ui) {
     };
     let category = prompt_text(
         &ui.frame,
-        "Category (leave empty to skip):",
-        "Sell on Marketplace",
+        &t!("Category (leave empty to skip):"),
+        &t!("Sell on Marketplace"),
     );
     let category = category.filter(|c| !c.trim().is_empty());
     let description = prompt_text(
         &ui.frame,
-        "Description (leave empty to skip):",
-        "Sell on Marketplace",
+        &t!("Description (leave empty to skip):"),
+        &t!("Sell on Marketplace"),
     );
     let description = description.filter(|d| !d.trim().is_empty());
     let Some((images, videos)) = pick_media(ui) else {
@@ -4635,12 +4750,12 @@ fn sell_dialog(ui: &Ui) {
     if images.len() + videos.len() > 10 {
         show_warning(
             &ui.frame,
-            "Marketplace allows at most 10 photos and videos per listing.",
-            "Sell on Marketplace",
+            t!("Marketplace allows at most 10 photos and videos per listing."),
+            &t!("Sell on Marketplace"),
         );
         return;
     }
-    ui.status(&format!("Listing {title} on Marketplace…"));
+    ui.status(&tf!("Listing {title} on Marketplace…", title = title));
     ui.send(Job {
         task: Task::Fb(
             sell_args(
@@ -4658,21 +4773,24 @@ fn sell_dialog(ui: &Ui) {
     });
 }
 
-/// The search filters, in combo-box order. Index 0 is the unfiltered
-/// "top" search (no --type).
-const SEARCH_FILTERS: [&str; 11] = [
-    "Everything",
-    "Posts",
-    "People",
-    "Friends",
-    "Photos",
-    "Videos",
-    "Pages",
-    "Places",
-    "Groups",
-    "Events",
-    "Marketplace",
-];
+/// The search filters' display labels, in combo-box order; `search_kind`
+/// maps each index to its backend type. Index 0 is the unfiltered "top"
+/// search (no --type).
+fn search_filters() -> [String; 11] {
+    [
+        t!("Everything"),
+        t!("Posts"),
+        t!("People"),
+        t!("Friends"),
+        t!("Photos"),
+        t!("Videos"),
+        t!("Pages"),
+        t!("Places"),
+        t!("Groups"),
+        t!("Events"),
+        t!("Marketplace"),
+    ]
+}
 
 fn search_kind(index: u32) -> Option<&'static str> {
     match index {
@@ -4695,40 +4813,42 @@ fn search_kind(index: u32) -> Option<&'static str> {
 /// dialogue with filter combo box") — the query field and the filter
 /// combo together, replacing the old prompt-then-pick-list two-step.
 fn search_dialog(ui: &Ui) {
-    let dialog = Dialog::builder(&ui.frame, "Search Facebook")
+    let dialog = Dialog::builder(&ui.frame, &t!("Search Facebook"))
         .with_size(460, 210)
         .with_style(DialogStyle::DefaultDialogStyle)
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
     let query_label = StaticText::builder(&dialog)
-        .with_label("Search &for:")
+        .with_label(&t!("Search &for:"))
         .build();
     let query = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ProcessEnter)
         .build();
-    query.set_name("Search for");
+    query.set_name(&t!("Search for"));
     let filter_label = StaticText::builder(&dialog)
-        .with_label("Search &in:")
+        .with_label(&t!("Search &in:"))
         .build();
+    let filters = search_filters();
+    let filters: Vec<&str> = filters.iter().map(String::as_str).collect();
     let filter = ComboBox::builder(&dialog)
         .with_style(ComboBoxStyle::ReadOnly)
-        .with_string_choices(&SEARCH_FILTERS)
+        .with_string_choices(&filters)
         .build();
-    filter.set_name("Search in");
+    filter.set_name(&t!("Search in"));
     filter.set_selection(0);
     let buttons = BoxSizer::builder(Orientation::Horizontal).build();
     let search = Button::builder(&dialog)
         .with_id(ID_OK)
-        .with_label("&Search")
+        .with_label(&t!("&Search"))
         .build();
-    search.set_name("Search");
+    search.set_name(&t!("Search"));
     search.set_default();
     let cancel = Button::builder(&dialog)
         .with_id(ID_CANCEL)
-        .with_label("Cancel")
+        .with_label(&t!("Cancel"))
         .build();
-    cancel.set_name("Cancel");
+    cancel.set_name(&t!("Cancel"));
     buttons.add(&search, 0, SizerFlag::All, 4);
     buttons.add(&cancel, 0, SizerFlag::All, 4);
     root.add(&query_label, 0, SizerFlag::All, 4);
@@ -4755,8 +4875,8 @@ fn ocr_dialog(ui: &Ui) {
     if !native_ocr::is_available() {
         show_warning(
             &ui.frame,
-            "No OCR engine is available on this system. On Linux, install tesseract-ocr.",
-            "OCR an image",
+            t!("No OCR engine is available on this system. On Linux, install tesseract-ocr."),
+            &t!("OCR an image"),
         );
         return;
     }
@@ -4768,7 +4888,7 @@ fn ocr_dialog(ui: &Ui) {
         return;
     };
     let done_tx = ui.done_tx.clone();
-    ui.status("Reading image text…");
+    ui.status(&t!("Reading image text…"));
     thread::spawn(move || {
         let result = ocr_file(&path);
         let _ = done_tx.send(Done {
@@ -4779,10 +4899,12 @@ fn ocr_dialog(ui: &Ui) {
 }
 
 fn ocr_file(path: &str) -> Result<String, String> {
-    let img = image::open(PathBuf::from(path)).map_err(|e| format!("could not open image: {e}"))?;
+    let img = image::open(PathBuf::from(path))
+        .map_err(|e| tf!("could not open image: {error}", error = e))?;
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
-    native_ocr::recognize_rgba(rgba.as_raw(), width, height).map_err(|e| format!("OCR failed: {e}"))
+    native_ocr::recognize_rgba(rgba.as_raw(), width, height)
+        .map_err(|e| tf!("OCR failed: {error}", error = e))
 }
 
 /// Open a link in the default browser. Facebook paths are made absolute
@@ -5345,13 +5467,13 @@ mod tests {
 
     #[test]
     fn load_more_is_a_final_action_row_only_in_paged_sections() {
-        assert_eq!(more_row_label(&View::Feed, 100), Some("Load more posts"));
+        assert_eq!(more_row_label(&View::Feed, 100).as_deref(), Some("Load more posts"));
         assert_eq!(
-            more_row_label(&View::Reels(ReelSource::Recommended), 20),
+            more_row_label(&View::Reels(ReelSource::Recommended), 20).as_deref(),
             Some("Load more reels")
         );
         assert!(more_row_label(&View::Feed, 0).is_none());
-        assert_eq!(more_row_label(&View::Groups, 10), Some("Load more groups"));
+        assert_eq!(more_row_label(&View::Groups, 10).as_deref(), Some("Load more groups"));
         assert!(is_more_row(&View::Feed, 100, 100));
         assert!(!is_more_row(&View::Feed, 100, 99));
         assert!(!is_more_row(&View::Feed, 100, 101));
@@ -5518,14 +5640,15 @@ mod tests {
 
     #[test]
     fn search_filter_combo_maps_every_label_to_a_backend_type() {
-        assert_eq!(SEARCH_FILTERS.len(), 11);
-        assert_eq!(SEARCH_FILTERS[0], "Everything");
-        assert_eq!(SEARCH_FILTERS[10], "Marketplace");
+        let filters = search_filters();
+        assert_eq!(filters.len(), 11);
+        assert_eq!(filters[0], "Everything");
+        assert_eq!(filters[10], "Marketplace");
         assert_eq!(search_kind(0), None);
         assert_eq!(search_kind(1), Some("posts"));
         assert_eq!(search_kind(3), Some("friends"));
         assert_eq!(search_kind(10), Some("marketplace"));
-        for i in 0..SEARCH_FILTERS.len() as u32 {
+        for i in 0..filters.len() as u32 {
             // Every combo entry except Everything names a real --type.
             assert!(i == 0 || search_kind(i).is_some(), "filter {i} unmapped");
         }
@@ -5556,7 +5679,7 @@ mod tests {
             "Wooden chair — $40 · Vancouver"
         );
         assert_eq!(
-            more_row_label(&View::Marketplace, 3),
+            more_row_label(&View::Marketplace, 3).as_deref(),
             Some("Load more listings")
         );
         assert_eq!(default_args(&View::Marketplace), Some(marketplace_args(10)));

@@ -1,6 +1,7 @@
 //! Isolated Facebook post readers and verified, thread-scoped comments.
 
-use crate::Fb;
+use crate::{tf, Fb};
+use patois::t;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 
@@ -42,7 +43,7 @@ pub fn ordered_links(mut links: Vec<Link>, post: &str) -> Vec<Link> {
     links.retain(|link| facebook_link_key(&link.url).is_none_or(|key| Some(key) != current));
     links.sort_by_key(|link| facebook_link_key(&link.url).is_some());
     links.push(Link {
-        label: "Full post on Facebook".to_owned(),
+        label: t!("Full post on Facebook"),
         url: post.to_owned(),
     });
     links
@@ -87,31 +88,31 @@ fn string(value: &Value, field: &str) -> Result<String, String> {
     value[field]
         .as_str()
         .map(str::to_owned)
-        .ok_or_else(|| format!("Invalid post detail: {field} must be text"))
+        .ok_or_else(|| tf!("Invalid post detail: {field} must be text", field = field))
 }
 
 fn optional_string(value: &Value, field: &str) -> Result<Option<String>, String> {
     match &value[field] {
         Value::Null => Ok(None),
         Value::String(text) if !text.is_empty() => Ok(Some(text.clone())),
-        _ => Err(format!("Invalid post detail: {field}")),
+        _ => Err(tf!("Invalid post detail: {field}", field = field)),
     }
 }
 
 pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
     let value: Value = serde_json::from_str(output)
-        .map_err(|_| "The post reader returned invalid JSON".to_owned())?;
+        .map_err(|_| t!("The post reader returned invalid JSON"))?;
     let url = string(&value, "url")?;
     validate_target(&url)?;
     let rows = value["comments"]
         .as_array()
-        .ok_or("Invalid post detail: comments must be a list")?;
+        .ok_or_else(|| t!("Invalid post detail: comments must be a list"))?;
     let mut comments = Vec::with_capacity(rows.len());
     let mut ids = HashSet::new();
     for row in rows {
         let id = string(row, "id")?;
         if id.is_empty() || !ids.insert(id.clone()) {
-            return Err("Invalid post detail: empty or duplicate comment identity".to_owned());
+            return Err(t!("Invalid post detail: empty or duplicate comment identity"));
         }
         let url = optional_string(row, "url")?;
         if let Some(url) = &url {
@@ -140,11 +141,11 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
                 break;
             }
             if !seen.insert(current.id.as_str()) {
-                return Err("Invalid post detail: cyclic comment thread".to_owned());
+                return Err(t!("Invalid post detail: cyclic comment thread"));
             }
             current = by_id
                 .get(parent.as_str())
-                .ok_or("Invalid post detail: missing parent comment")?;
+                .ok_or_else(|| t!("Invalid post detail: missing parent comment"))?;
         }
         validated.extend(seen);
     }
@@ -302,10 +303,9 @@ pub fn validate_target(target: &str) -> Result<(), String> {
             return Ok(());
         }
     }
-    Err(
+    Err(t!(
         "This item has no supported Facebook post URL. Refresh the list and open the post again."
-            .to_owned(),
-    )
+    ))
 }
 
 fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
@@ -383,7 +383,7 @@ pub fn send_comment(
     text: &str,
 ) -> Result<String, String> {
     if text.trim().is_empty() {
-        return Err("Enter a comment before sending".to_owned());
+        return Err(t!("Enter a comment before sending"));
     }
     // Every stage revalidates the same DOM editor and thread; no retry after Enter.
     let prepared = eval(
@@ -396,14 +396,20 @@ pub fn send_comment(
         ),
     )?;
     let typed: String = serde_json::from_str(&prepared)
-        .map_err(|_| "Could not identify the selected comment editor".to_owned())?;
+        .map_err(|_| t!("Could not identify the selected comment editor"))?;
     // Types at the caret: `page fill` would replace the name Facebook prefills in a reply.
     let typed = json!({ "text": typed }).to_string();
     fb.run(&["page", page, "cdp", "Input.insertText", &typed])?;
     eval(fb, page, "window.__blindfbPost.check()")?;
-    fb.run(&["page", page, "key", "Enter"]).map_err(|_| "Submission could not be confirmed. Refresh before trying again; do not resend automatically.".to_owned())?;
+    fb.run(&["page", page, "key", "Enter"])
+        .map_err(|_| {
+            t!("Submission could not be confirmed. Refresh before trying again; do not resend automatically.")
+        })?;
     let output = eval(fb, page, "window.__blindfbPost.confirm()").map_err(|error| {
-        format!("Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}")
+        tf!(
+            "Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}",
+            error = error
+        )
     })?;
     parse_detail(&output)?;
     Ok(output)
@@ -436,11 +442,11 @@ pub fn reel_react(fb: &Fb, page: &str, reaction: &str) -> Result<String, String>
 pub fn share_open(fb: &Fb, page: &str) -> Result<String, String> {
     let output = eval(fb, page, "window.__blindfbPost.shareOpen()")?;
     let value: Value = serde_json::from_str(&output)
-        .map_err(|_| "Could not read Facebook's share audience. Nothing was shared.".to_owned())?;
+        .map_err(|_| t!("Could not read Facebook's share audience. Nothing was shared."))?;
     value["audience"]
         .as_str()
         .map(str::to_owned)
-        .ok_or_else(|| "Could not read Facebook's share audience. Nothing was shared.".to_owned())
+        .ok_or_else(|| t!("Could not read Facebook's share audience. Nothing was shared."))
 }
 
 /// Share the post to the feed, with optional text, from the dialog `share_open` opened.
@@ -453,7 +459,7 @@ pub fn share_now(fb: &Fb, page: &str, text: &str) -> Result<String, String> {
                 &format!("window.__blindfbPost.shareFill({})", json!(text)),
             )?;
             let reference: String = serde_json::from_str(&prepared).map_err(|_| {
-                "Could not identify the share text box. Nothing was shared.".to_owned()
+                t!("Could not identify the share text box. Nothing was shared.")
             })?;
             fb.run(&["page", page, "fill", &reference, text])?;
         }

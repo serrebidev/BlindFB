@@ -5,6 +5,10 @@ use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use patois::t;
+
+use crate::tf;
+
 const RELEASE_URL: &str = "https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-w64-mingw32.zip";
 const RELEASE_SHA256: &str = "a49811c0752c108b8260636f9c6f6fcb97406641c98b30f1e7b500dfb20177de";
 const BUNDLE_NAME: &str = "mpv-git-2025-12-21-41f6a64-x86_64.zip";
@@ -21,10 +25,12 @@ pub fn managed_bin() -> Option<PathBuf> {
 /// Install the complete verified bundle on first use. Never replaces a running version.
 pub fn ensure() -> Result<PathBuf, String> {
     let target = managed_bin()
-        .ok_or("the managed mpv player is available only on Windows with a local data folder")?;
+        .ok_or_else(|| {
+            t!("the managed mpv player is available only on Windows with a local data folder")
+        })?;
     let _lock = INSTALL_LOCK
         .lock()
-        .map_err(|_| "the mpv installer lock was poisoned")?;
+        .map_err(|_| t!("the mpv installer lock was poisoned"))?;
     if target.is_file() {
         return Ok(target);
     }
@@ -36,30 +42,30 @@ pub fn ensure() -> Result<PathBuf, String> {
 fn install(bytes: &[u8], target: &Path) -> Result<(), String> {
     // Authenticate the outer archive before interpreting either archive's contents.
     if crate::backend::sha256_hex(bytes) != RELEASE_SHA256 {
-        return Err("the mpv download failed its checksum; it was not installed".to_owned());
+        return Err(t!("the mpv download failed its checksum; it was not installed"));
     }
     let bundle = bundle_bytes(bytes)?;
-    let destination = target.parent().ok_or("bad mpv install path")?;
-    let parent = destination.parent().ok_or("bad mpv install path")?;
+    let destination = target.parent().ok_or_else(|| t!("bad mpv install path"))?;
+    let parent = destination.parent().ok_or_else(|| t!("bad mpv install path"))?;
     fs::create_dir_all(parent)
-        .map_err(|e| format!("could not create the mpv install folder: {e}"))?;
+        .map_err(|e| tf!("could not create the mpv install folder: {error}", error = e))?;
     let stage = create_stage(parent)?;
     let result = (|| {
         extract_bundle(&bundle, &stage)?;
         if !stage.join("mpv.exe").is_file() {
-            return Err("the mpv download did not contain mpv.exe".to_owned());
+            return Err(t!("the mpv download did not contain mpv.exe"));
         }
         match fs::rename(&stage, destination) {
             Ok(()) => Ok(()),
             // Another app process may have completed the same pinned installation.
             Err(_) if target.is_file() => Ok(()),
-            Err(e) => Err(format!("could not install mpv: {e}")),
+            Err(e) => Err(tf!("could not install mpv: {error}", error = e)),
         }
     })();
     // stage was created exclusively beneath parent and is never an existing install.
     if stage.parent() == Some(parent) && stage.is_dir() {
         fs::remove_dir_all(&stage)
-            .map_err(|e| format!("could not remove the mpv staging folder: {e}"))?;
+            .map_err(|e| tf!("could not remove the mpv staging folder: {error}", error = e))?;
     }
     result
 }
@@ -70,28 +76,30 @@ fn create_stage(parent: &Path) -> Result<PathBuf, String> {
         match fs::create_dir(&stage) {
             Ok(()) => return Ok(stage),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(format!("could not create the mpv staging folder: {e}")),
+            Err(e) => {
+                return Err(tf!("could not create the mpv staging folder: {error}", error = e))
+            }
         }
     }
-    Err("could not find an unused mpv staging folder".to_owned())
+    Err(t!("could not find an unused mpv staging folder"))
 }
 
 fn bundle_bytes(bytes: &[u8]) -> Result<Vec<u8>, String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| format!("could not open the mpv download: {e}"))?;
+        .map_err(|e| tf!("could not open the mpv download: {error}", error = e))?;
     if zip.len() != 1 {
-        return Err("unexpected mpv release archive contents".to_owned());
+        return Err(t!("unexpected mpv release archive contents"));
     }
     let mut entry = zip
         .by_index(0)
-        .map_err(|e| format!("could not read the mpv download: {e}"))?;
+        .map_err(|e| tf!("could not read the mpv download: {error}", error = e))?;
     if entry.name().map_err(|e| e.to_string())? != BUNDLE_NAME {
-        return Err("unexpected mpv bundle name".to_owned());
+        return Err(t!("unexpected mpv bundle name"));
     }
     let mut bundle = Vec::new();
     entry
         .read_to_end(&mut bundle)
-        .map_err(|e| format!("could not read the mpv bundle: {e}"))?;
+        .map_err(|e| tf!("could not read the mpv bundle: {error}", error = e))?;
     Ok(bundle)
 }
 
@@ -122,41 +130,41 @@ fn safe_name(name: &str) -> bool {
 
 fn extract_bundle(bytes: &[u8], stage: &Path) -> Result<(), String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| format!("could not open the mpv bundle: {e}"))?;
+        .map_err(|e| tf!("could not open the mpv bundle: {error}", error = e))?;
     for index in 0..zip.len() {
         let mut entry = zip
             .by_index(index)
-            .map_err(|e| format!("could not read the mpv bundle: {e}"))?;
+            .map_err(|e| tf!("could not read the mpv bundle: {error}", error = e))?;
         let name = entry
             .name()
-            .map_err(|e| format!("bad mpv archive name: {e}"))?;
+            .map_err(|e| tf!("bad mpv archive name: {error}", error = e))?;
         if !safe_name(&name)
             || entry.unix_mode().is_some_and(|mode| {
                 let kind = mode & 0o170000;
                 kind != 0 && kind != 0o100000 && kind != 0o040000
             })
         {
-            return Err(format!("unsafe path in the mpv bundle: {name}"));
+            return Err(tf!("unsafe path in the mpv bundle: {name}", name = name));
         }
         let enclosed = entry
             .enclosed_name()
-            .ok_or("unsafe path in the mpv bundle")?;
+            .ok_or_else(|| t!("unsafe path in the mpv bundle"))?;
         let path = stage.join(enclosed);
         if entry.is_dir() {
             fs::create_dir_all(&path)
-                .map_err(|e| format!("could not create an mpv folder: {e}"))?;
+                .map_err(|e| tf!("could not create an mpv folder: {error}", error = e))?;
         } else {
             if let Some(parent) = path.parent() {
                 fs::create_dir_all(parent)
-                    .map_err(|e| format!("could not create an mpv folder: {e}"))?;
+                    .map_err(|e| tf!("could not create an mpv folder: {error}", error = e))?;
             }
             let mut file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
                 .open(&path)
-                .map_err(|e| format!("could not create an mpv file: {e}"))?;
+                .map_err(|e| tf!("could not create an mpv file: {error}", error = e))?;
             std::io::copy(&mut entry, &mut file)
-                .map_err(|e| format!("could not unpack mpv: {e}"))?;
+                .map_err(|e| tf!("could not unpack mpv: {error}", error = e))?;
         }
     }
     Ok(())

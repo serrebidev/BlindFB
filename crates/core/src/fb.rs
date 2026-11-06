@@ -9,6 +9,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use patois::t;
+
+use crate::tf;
+
 /// One line of `fb` output: the tab-separated fields plus the raw line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
@@ -157,14 +161,14 @@ pub fn feed_record_key(record: &Record) -> String {
 /// Keep notification post URLs instead of replacing them with daemon-local references.
 pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
     let value: serde_json::Value = serde_json::from_str(output).map_err(|_| {
-        "The backend returned unreadable notifications. Refresh to retry.".to_owned()
+        t!("The backend returned unreadable notifications. Refresh to retry.")
     })?;
     if let Some(error) = value["err"].as_str() {
         return Err(error.to_owned());
     }
     let rows = value["rows"]
         .as_array()
-        .ok_or("The backend returned no notification list")?;
+        .ok_or_else(|| t!("The backend returned no notification list"))?;
     // One odd row must not empty the whole view: a notification without a
     // target still has text worth reading, and a row whose shape this build
     // does not know is skipped. Only a payload with nothing readable at all
@@ -195,7 +199,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
         })
         .collect();
     if records.is_empty() && !rows.is_empty() {
-        return Err("The backend returned no readable notifications. Refresh to retry.".to_owned());
+        return Err(t!("The backend returned no readable notifications. Refresh to retry."));
     }
     Ok(records)
 }
@@ -270,14 +274,14 @@ impl Fb {
 
     pub(crate) fn browser_endpoint(&self) -> Result<(u16, String), String> {
         if std::env::var_os("FB_CDP").is_some() {
-            return Err("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead.".to_owned());
+            return Err(t!("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."));
         }
         if self.engine.is_some() {
             crate::engine::endpoint()
         } else {
             crate::browsers::fb_browser_endpoint()
         }
-        .ok_or_else(|| "the backend browser is not running".to_owned())
+        .ok_or_else(|| t!("the backend browser is not running"))
     }
 
     /// Run `fb` with `args` and return stdout. On non-zero exit the error is
@@ -306,7 +310,13 @@ impl Fb {
             .command(args)?
             .args(args)
             .output()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         let result = collect(output);
         if self.engine.is_some() && args == ["quit"] {
             crate::engine::close()?;
@@ -340,7 +350,7 @@ impl Fb {
         let browser = self
             .engine
             .as_ref()
-            .ok_or("no dedicated browser selected")?;
+            .ok_or_else(|| t!("no dedicated browser selected"))?;
         self.run(&["stop"])?;
         crate::engine::close()?;
         let (endpoint, _) = crate::engine::ensure(browser, true)?;
@@ -370,7 +380,7 @@ impl Fb {
         let mut last_error = String::new();
         while std::time::Instant::now() < deadline {
             if crate::engine::endpoint().is_none() {
-                return Err("Sign-in was cancelled: the browser window was closed".to_owned());
+                return Err(t!("Sign-in was cancelled: the browser window was closed"));
             }
             let status = self.run(&["status"])?;
             if crate::browsers::signed_in(&status) {
@@ -385,8 +395,10 @@ impl Fb {
             }
             std::thread::sleep(std::time::Duration::from_secs(3));
         }
-        Err(format!(
-            "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {last_error}"
+        Err(tf!(
+            // TRANSLATORS: "Backend → Sign in" is a menu path; {error} is the backend's last error.
+            "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {error}",
+            error = last_error
         ))
     }
 
@@ -407,13 +419,25 @@ impl Fb {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         if let Some(mut stdin) = child.stdin.take() {
             let _ = stdin.write_all(input.as_bytes());
         }
         let output = child
             .wait_with_output()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         collect(output)
     }
 }
@@ -430,7 +454,7 @@ fn collect(output: std::process::Output) -> Result<String, String> {
             stderr.trim()
         };
         Err(if message.is_empty() {
-            format!("fb exited with {}", output.status)
+            tf!("fb exited with {status}", status = output.status)
         } else {
             message.to_owned()
         })
@@ -643,23 +667,25 @@ pub fn post_args(
 }
 
 /// What to tell the user after `post` printed `output`.
-pub fn post_done_message(output: &str) -> &'static str {
+pub fn post_done_message(output: &str) -> String {
     if output.trim_start().starts_with("pending") {
-        "Facebook accepted your post and is still publishing it. It should appear in My posts \
-         soon. You do not need to post it again."
+        // TRANSLATORS: "My posts" is a view name in BlindFB.
+        t!("Facebook accepted your post and is still publishing it. It should appear in My posts \
+            soon. You do not need to post it again.")
     } else {
-        "Your post is published."
+        t!("Your post is published.")
     }
 }
 
 /// What to tell the user when `post` failed. Some failures come after Post was pressed, when
 /// the post may exist; `None` means the backend's own error says it best.
-pub fn post_unconfirmed_message(error: &str) -> Option<&'static str> {
+pub fn post_unconfirmed_message(error: &str) -> Option<String> {
     (error.contains("post may have been published") || error.contains("timed out after"))
-        .then_some(
-            "Facebook may have published your post, but BlindFB could not confirm it. Check My \
-             posts before posting it again.",
-        )
+        .then(|| {
+            // TRANSLATORS: "My posts" is a view name in BlindFB.
+            t!("Facebook may have published your post, but BlindFB could not confirm it. Check My \
+                posts before posting it again.")
+        })
 }
 
 pub fn group_join_args(group: &str) -> Vec<String> {

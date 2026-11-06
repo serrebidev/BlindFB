@@ -15,6 +15,9 @@ use std::path::PathBuf;
 
 pub use patois::{nt, t};
 
+// The extractor (xgettext) only sees unqualified `tf!(…)` calls.
+use crate::tf;
+
 /// The catalog domain every crate falls back to.
 pub const DOMAIN: &str = "blindfb";
 
@@ -69,10 +72,11 @@ pub fn saved() -> Language {
 pub fn save(language: Language) -> Result<(), String> {
     let path = setting_path().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
     if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| crate::tf!("could not save the setting: {error}", error = e))?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
     }
     std::fs::write(&path, language.code())
-        .map_err(|e| crate::tf!("could not save the setting: {error}", error = e))
+        .map_err(|e| tf!("could not save the setting: {error}", error = e))
 }
 
 /// Activate a language for every later `t!`. Call once at startup, before any window.
@@ -82,12 +86,35 @@ pub fn apply(language: Language) {
 }
 
 /// Translate `msgid` and fill its `{name}` placeholders.
+/// Placeholders are read from the translated text only, in one pass, so a value
+/// that itself contains "{name}" (a post's text, say) is never filled in again.
 #[doc(hidden)]
-pub fn __fill(mut text: String, values: &[(&str, String)]) -> String {
-    for (name, value) in values {
-        text = text.replace(&format!("{{{name}}}"), value);
+pub fn __fill(text: String, values: &[(&str, String)]) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text.as_str();
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let filled = after.find('}').and_then(|close| {
+            let name = &after[..close];
+            values
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (value, close))
+        });
+        match filled {
+            Some((value, close)) => {
+                out.push_str(value);
+                rest = &after[close + 1..];
+            }
+            None => {
+                out.push('{');
+                rest = after;
+            }
+        }
     }
-    text
+    out.push_str(rest);
+    out
 }
 
 /// `t!` with named `{placeholders}`: `tf!("Chat with {name}", name = who)`.
@@ -124,6 +151,15 @@ mod tests {
             "Chat with Ann, Ann"
         );
         assert_eq!(crate::tf!("Posts by {who}", who = "Bo"), "Posts by Bo");
+        // A value is never filled in again, whatever it contains.
+        assert_eq!(
+            __fill(
+                "{name}: {text}".to_owned(),
+                &[("name", "{text}".to_owned()), ("text", "hi {name}".to_owned())]
+            ),
+            "{text}: hi {name}"
+        );
+        assert_eq!(__fill("{unknown} {".to_owned(), &[]), "{unknown} {");
         assert_eq!(crate::ntf!("{n} item", "{n} items", 1), "1 item");
         assert_eq!(crate::ntf!("{n} item", "{n} items", 3), "3 items");
     }

@@ -6,8 +6,11 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 
+use patois::t;
+
 use crate::backend::data_dir;
 use crate::fb::{parse_notifications, parse_records};
+use crate::{ntf, tf};
 
 /// Speech and sound are one at a time, so two alerts never talk over each other.
 static PLAYING: Mutex<()> = Mutex::new(());
@@ -47,39 +50,37 @@ pub fn any_list_enabled() -> bool {
     enabled(Kind::ListVoice) || enabled(Kind::ListSound)
 }
 
-fn items(count: usize) -> String {
-    if count == 1 {
-        "1 item".to_owned()
-    } else {
-        format!("{count} items")
-    }
-}
-
 /// The words for a list that just finished loading: its name and how much
 /// arrived, so nobody has to poll the status bar to know it is ready (#17).
 pub fn loaded(title: &str, total: usize, added: usize, append: bool) -> String {
     if append {
-        let fresh = if added == 1 {
-            "1 new item".to_owned()
-        } else {
-            format!("{added} new items")
-        };
-        format!("{title}: {fresh} loaded. {} total.", items(total))
+        // Two whole sentences, each with its own count.
+        let fresh = ntf!(
+            "{view}: {n} new item loaded.",
+            "{view}: {n} new items loaded.",
+            added,
+            view = title
+        );
+        let all = ntf!("{n} item total.", "{n} items total.", total);
+        format!("{fresh} {all}")
     } else if total == 0 {
-        format!("{title}: no items to show.")
+        tf!("{view}: no items to show.", view = title)
     } else {
-        format!("{title} loaded. {}.", items(total))
+        ntf!("{view} loaded. {n} item.", "{view} loaded. {n} items.", total, view = title)
     }
 }
 
 pub fn set_enabled(kind: Kind, on: bool) -> Result<(), String> {
-    let path = marker(kind).ok_or("could not find BlindFB's data folder")?;
+    let path = marker(kind).ok_or_else(|| t!("could not find BlindFB's data folder"))?;
     if on {
-        let dir = path.parent().ok_or("could not find BlindFB's data folder")?;
-        std::fs::create_dir_all(dir).map_err(|e| format!("could not save the setting: {e}"))?;
-        std::fs::write(&path, "").map_err(|e| format!("could not save the setting: {e}"))?;
+        let dir = path.parent().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
+        std::fs::write(&path, "")
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
     } else if path.is_file() {
-        std::fs::remove_file(&path).map_err(|e| format!("could not save the setting: {e}"))?;
+        std::fs::remove_file(&path)
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
     }
     Ok(())
 }
@@ -134,8 +135,14 @@ pub fn spoken(new: &[String]) -> String {
     let shown: Vec<String> =
         new.iter().take(MOST_ITEMS).map(|text| text.chars().take(MOST_CHARS).collect()).collect();
     let more = new.len().saturating_sub(MOST_ITEMS);
-    let tail = if more > 0 { format!(". And {more} more") } else { String::new() };
-    format!("Facebook: {}{tail}.", shown.join(". "))
+    // The "Facebook: " start stays untranslated: whatever the language, the
+    // text never starts with "-".
+    let words = format!("Facebook: {}.", shown.join(". "));
+    if more > 0 {
+        format!("{words} {}", ntf!("And {n} more.", "And {n} more.", more))
+    } else {
+        words
+    }
 }
 
 /// Play the sound and say the words, on their own thread. A system without the

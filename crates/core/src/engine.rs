@@ -4,12 +4,15 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use patois::t;
+
 use crate::browsers::{cdp_call, devtools_endpoint, Browser};
+use crate::tf;
 
 fn profile() -> Result<PathBuf, String> {
     crate::backend::data_dir()
         .map(|dir| dir.join("browser"))
-        .ok_or_else(|| "cannot find BlindFB's browser data folder".to_owned())
+        .ok_or_else(|| t!("cannot find BlindFB's browser data folder"))
 }
 
 pub(crate) fn endpoint() -> Option<(u16, String)> {
@@ -28,17 +31,17 @@ pub(crate) fn ensure(browser: &Browser, visible: bool) -> Result<((u16, String),
     }
     let profile = profile()?;
     std::fs::create_dir_all(&profile)
-        .map_err(|e| format!("cannot create the browser profile: {e}"))?;
+        .map_err(|e| tf!("cannot create the browser profile: {error}", error = e))?;
     let active_port = profile.join("DevToolsActivePort");
     match std::fs::remove_file(active_port) {
         Ok(()) => (),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        Err(e) => return Err(format!("cannot clear the stopped browser endpoint: {e}")),
+        Err(e) => return Err(tf!("cannot clear the stopped browser endpoint: {error}", error = e)),
     }
     let exe = browser
         .exe
         .as_ref()
-        .ok_or("the selected browser is not installed")?;
+        .ok_or_else(|| t!("the selected browser is not installed"))?;
     let mut command = Command::new(exe);
     command
         .arg(format!("--user-data-dir={}", profile.display()))
@@ -64,7 +67,7 @@ pub(crate) fn ensure(browser: &Browser, visible: bool) -> Result<((u16, String),
     }
     let mut child = command
         .spawn()
-        .map_err(|e| format!("cannot start {}: {e}", browser.name()))?;
+        .map_err(|e| tf!("cannot start {browser}: {error}", browser = browser.name(), error = e))?;
     let deadline = Instant::now() + Duration::from_secs(40);
     while Instant::now() < deadline {
         if let Some(endpoint) = endpoint() {
@@ -75,18 +78,19 @@ pub(crate) fn ensure(browser: &Browser, visible: bool) -> Result<((u16, String),
             return Ok((endpoint, true));
         }
         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
-            return Err(format!(
-                "{} exited before its browser connection was ready: {status}",
-                browser.name()
+            return Err(tf!(
+                "{browser} exited before its browser connection was ready: {status}",
+                browser = browser.name(),
+                status = status
             ));
         }
         std::thread::sleep(Duration::from_millis(200));
     }
     let _ = child.kill();
     let _ = child.wait();
-    Err(format!(
-        "{} did not start its dedicated BlindFB browser within 40 seconds",
-        browser.name()
+    Err(tf!(
+        "{browser} did not start its dedicated BlindFB browser within 40 seconds",
+        browser = browser.name()
     ))
 }
 
@@ -105,5 +109,5 @@ pub(crate) fn close() -> Result<(), String> {
         }
         std::thread::sleep(Duration::from_millis(200));
     }
-    Err("BlindFB's dedicated browser did not close; close its window and retry sign-in".to_owned())
+    Err(t!("BlindFB's dedicated browser did not close; close its window and retry sign-in"))
 }

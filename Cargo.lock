@@ -1979,6 +1979,7 @@ dependencies = [
  "miniz_oxide 0.9.1",
  "patois-macros",
  "sys-locale",
+ "wxdragon",
 ]
 
 [[package]]

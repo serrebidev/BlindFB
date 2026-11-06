@@ -76,7 +76,8 @@ fn package() -> Result<(), Box<dyn Error>> {
             executable: "blindfb",
             version,
             icon: None,
-            extra: "",
+            // Lets macOS draw its own panels (Save, Open) in French when BlindFB is.
+            extra: "\t<key>CFBundleDevelopmentRegion</key>\n\t<string>en</string>\n\t<key>CFBundleLocalizations</key>\n\t<array>\n\t\t<string>en</string>\n\t\t<string>fr</string>\n\t</array>\n",
         };
         let bundle = app.bundle(&dist, &binary, &[], &[])?;
         // Ad-hoc: BlindFB is distributed unsigned, so the updater offers the image
@@ -253,40 +254,6 @@ fn update_check() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_signed_asset_verifies_and_a_tampered_one_does_not() {
-        let dir = std::env::temp_dir().join(format!("blindfb-sign-{}", std::process::id()));
-        fs::create_dir_all(&dir).unwrap();
-        let file = dir.join("BlindFB.zip");
-        fs::write(&file, b"release contents").unwrap();
-        let pair = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
-        // An unset MINISIGN_PASSWORD in CI reaches us as Some("").
-        sign_with(
-            &file,
-            &pair.sk.to_box(None).unwrap().into_string(),
-            Some(""),
-        )
-        .unwrap();
-
-        let public = pair.pk.to_box().unwrap().into_string();
-        let public =
-            minisign_verify::PublicKey::from_base64(public.lines().nth(1).unwrap()).unwrap();
-        let signature = minisign_verify::Signature::decode(
-            &fs::read_to_string(dir.join("BlindFB.zip.minisig")).unwrap(),
-        )
-        .unwrap();
-        public
-            .verify(&fs::read(&file).unwrap(), &signature, false)
-            .unwrap();
-        assert!(public.verify(b"tampered", &signature, false).is_err());
-        fs::remove_dir_all(&dir).unwrap();
-    }
-}
-
 /// Refresh the French catalog from the code: xgettext reads every `t!`, `tf!`,
 /// `nt!` and `ntf!`, then msgmerge adds new messages with an empty translation and
 /// marks removed ones obsolete. Needs GNU gettext 0.24 or newer (Rust support).
@@ -343,4 +310,38 @@ fn collect_rust(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Box<dyn Error>
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_signed_asset_verifies_and_a_tampered_one_does_not() {
+        let dir = std::env::temp_dir().join(format!("blindfb-sign-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("BlindFB.zip");
+        fs::write(&file, b"release contents").unwrap();
+        let pair = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
+        // An unset MINISIGN_PASSWORD in CI reaches us as Some("").
+        sign_with(
+            &file,
+            &pair.sk.to_box(None).unwrap().into_string(),
+            Some(""),
+        )
+        .unwrap();
+
+        let public = pair.pk.to_box().unwrap().into_string();
+        let public =
+            minisign_verify::PublicKey::from_base64(public.lines().nth(1).unwrap()).unwrap();
+        let signature = minisign_verify::Signature::decode(
+            &fs::read_to_string(dir.join("BlindFB.zip.minisig")).unwrap(),
+        )
+        .unwrap();
+        public
+            .verify(&fs::read(&file).unwrap(), &signature, false)
+            .unwrap();
+        assert!(public.verify(b"tampered", &signature, false).is_err());
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }

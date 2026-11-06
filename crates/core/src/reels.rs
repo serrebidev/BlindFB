@@ -1,5 +1,6 @@
 //! Recommended reels and exact multi-reel notifications, using isolated read-only pages.
-use crate::{posts, Fb, Record};
+use crate::{posts, tf, Fb, Record};
+use patois::t;
 use serde_json::{json, Value};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -21,8 +22,8 @@ pub enum ReelSource {
 impl ReelSource {
     pub fn title(&self) -> String {
         match self {
-            Self::Recommended => "Reels".to_owned(),
-            Self::Notification { author, .. } => format!("Reels from {author}"),
+            Self::Recommended => t!("Reels"),
+            Self::Notification { author, .. } => tf!("Reels from {author}", author = author),
         }
     }
 }
@@ -63,17 +64,17 @@ fn is_reel(target: &str) -> bool {
 
 pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
     let value: Value =
-        serde_json::from_str(output).map_err(|_| "Facebook returned an unreadable reels list")?;
+        serde_json::from_str(output).map_err(|_| t!("Facebook returned an unreadable reels list"))?;
     let rows = value["rows"]
         .as_array()
-        .ok_or("Facebook returned no reels list")?;
+        .ok_or_else(|| t!("Facebook returned no reels list"))?;
     let mut seen = std::collections::HashSet::new();
     let mut records = Vec::new();
     for row in rows {
         let url = row["url"]
             .as_str()
             .filter(|url| is_reel(url))
-            .ok_or("Facebook returned an invalid reel link")?;
+            .ok_or_else(|| t!("Facebook returned an invalid reel link"))?;
         if !seen.insert(url.to_owned()) {
             continue;
         }
@@ -82,7 +83,7 @@ pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
             row["author"].as_str().unwrap_or("").to_owned(),
             String::new(),
             String::new(),
-            row["text"].as_str().unwrap_or("Reel").to_owned(),
+            row["text"].as_str().map_or_else(|| t!("Reel"), str::to_owned),
         ];
         records.push(Record {
             author_ref: None,
@@ -180,14 +181,14 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
     static BROWSE: Mutex<()> = Mutex::new(());
     let _browse = BROWSE
         .lock()
-        .map_err(|_| "Reel loading was interrupted. Refresh to retry.")?;
+        .map_err(|_| t!("Reel loading was interrupted. Refresh to retry."))?;
     let page = page_name(source);
     let key = source_id(source).to_string();
     let evicted = {
-        let mut pages = PAGES.lock().map_err(|_| "Reel loading was interrupted")?;
+        let mut pages = PAGES.lock().map_err(|_| t!("Reel loading was interrupted"))?;
         let existing = pages.iter().position(|(saved, _)| saved == source);
         if append && existing.is_none() {
-            return Err("This older reels list expired. Refresh it to load more.".to_owned());
+            return Err(t!("This older reels list expired. Refresh it to load more."));
         }
         if let Some(index) = existing {
             pages.remove(index);
@@ -228,7 +229,7 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
             account: saved_account,
         } => {
             if !is_reel(target) {
-                return Err("This notification has no valid reel link".to_owned());
+                return Err(t!("This notification has no valid reel link"));
             }
             fb.run(&[
                 "page",
@@ -245,7 +246,7 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
                     &page,
                     &format!("window.__blindfbReels.notification({})", json!(target)),
                 )?)
-                .map_err(|_| "Could not read the notification's reels")?
+                .map_err(|_| t!("Could not read the notification's reels"))?
             };
             let urls: Vec<_> = metadata["urls"]
                 .as_array()
@@ -277,8 +278,8 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
                         .and_then(|output| posts::parse_detail(&output));
                     let _ = posts::close(fb, &preview);
                     rows.push(match detail {
-                        Ok(detail) => json!({"url":url,"author":detail.author,"text":if detail.text.is_empty() {format!("Reel {}",index+1)} else {detail.text}}),
-                        Err(_) => json!({"url":url,"author":author,"text":format!("Reel {}. Preview unavailable; open this reel to retry.",index+1)}),
+                        Ok(detail) => json!({"url":url,"author":detail.author,"text":if detail.text.is_empty() {tf!("Reel {number}", number = index + 1)} else {detail.text}}),
+                        Err(_) => json!({"url":url,"author":author,"text":tf!("Reel {number}. Preview unavailable; open this reel to retry.", number = index + 1)}),
                     });
                 }
                 return Ok(json!({"rows":rows}).to_string());
@@ -311,10 +312,14 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
                 });
             }
             (
-                account
-                    .ok_or("Facebook did not expose the other reels or the account's reels page")?,
+                account.ok_or_else(|| {
+                    t!("Facebook did not expose the other reels or the account's reels page")
+                })?,
                 "account",
-                format!("Facebook did not expose the exact set. Showing {author}'s reels instead."),
+                tf!(
+                    "Facebook did not expose the exact set. Showing {author}'s reels instead.",
+                    author = author
+                ),
             )
         }
     };
