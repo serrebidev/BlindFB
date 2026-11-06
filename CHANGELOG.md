@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.21 - 2026-11-05
+
+List-loaded voice and sound alerts. Backend v0.1.5-blindfb.34 (unchanged).
+
+- New: View > Voice alert when a list loads and View > Sound alert when a list loads (issue #17, thanks Michal). When a list you opened finishes loading, the voice alert says its name and how many items it has — for Load more, how many new items arrived and the new total — and the sound alert plays a short chime. Turn on either one, or both, separately from the notification alerts. Both start off, and each choice is remembered. Turning one on plays it once, so you know it works.
+- Background reads never announce: sections warming up at launch, the News feed reading ahead, and a cached section refreshing itself all stay silent. Only a list you are waiting for announces.
+
 ## v0.7.20 - 2026-11-05
 
 Voice and sound alerts, and Author's profile can no longer open the wrong person. Backend v0.1.5-blindfb.34.

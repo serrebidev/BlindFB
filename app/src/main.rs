@@ -102,6 +102,8 @@ const ID_DEBUG_LOGGING: i32 = 10073;
 const ID_DEBUG_REPORT: i32 = 10074;
 const ID_VOICE_ALERTS: i32 = 10075;
 const ID_SOUND_ALERTS: i32 = 10076;
+const ID_LIST_VOICE_ALERTS: i32 = 10077;
+const ID_LIST_SOUND_ALERTS: i32 = 10078;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -1316,6 +1318,16 @@ fn build_menus(frame: &Frame) {
             "&Sound alerts",
             "Play a sound for new notifications and unread chats",
         )
+        .append_check_item(
+            ID_LIST_VOICE_ALERTS,
+            "Voice alert when a &list loads",
+            "Say the name and size of a list when it finishes loading",
+        )
+        .append_check_item(
+            ID_LIST_SOUND_ALERTS,
+            "Sound alert when a list &loads",
+            "Play a sound when a list finishes loading",
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -1415,6 +1427,14 @@ fn build_menus(frame: &Frame) {
     menu_bar.check_item(ID_DEBUG_LOGGING, blindfb_core::debug::load());
     menu_bar.check_item(ID_VOICE_ALERTS, alerts::enabled(alerts::Kind::Voice));
     menu_bar.check_item(ID_SOUND_ALERTS, alerts::enabled(alerts::Kind::Sound));
+    menu_bar.check_item(
+        ID_LIST_VOICE_ALERTS,
+        alerts::enabled(alerts::Kind::ListVoice),
+    );
+    menu_bar.check_item(
+        ID_LIST_SOUND_ALERTS,
+        alerts::enabled(alerts::Kind::ListSound),
+    );
     frame.set_menu_bar(menu_bar);
 }
 
@@ -1456,6 +1476,24 @@ fn alert_on_new(
     alerts::play(sound, voice.then_some(words));
 }
 
+/// A list the user asked for just finished loading: say or chime it, when
+/// the list alerts are on (#17). Background reads (prefetch, feed read-ahead,
+/// a cached section refreshing itself) never reach here.
+fn alert_list_loaded(ui: &Ui, view: &View, total: usize, added: usize, append: bool) {
+    let (voice, sound) = (
+        alerts::enabled(alerts::Kind::ListVoice),
+        alerts::enabled(alerts::Kind::ListSound),
+    );
+    if !(voice || sound) {
+        return;
+    }
+    let words = alerts::loaded(&view.title(), total, added, append);
+    if voice {
+        ui.status(&words);
+    }
+    alerts::play(sound, voice.then_some(words));
+}
+
 fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     let on = !alerts::enabled(kind);
     let was_on = alerts::any_enabled();
@@ -1463,14 +1501,22 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         show_error(&ui.frame, &error, "Alerts");
         return;
     }
-    let voice = kind == alerts::Kind::Voice;
-    let name = if voice { "Voice alerts" } else { "Sound alerts" };
+    let voice = matches!(kind, alerts::Kind::Voice | alerts::Kind::ListVoice);
+    let name = match kind {
+        alerts::Kind::Voice => "Voice alerts",
+        alerts::Kind::Sound => "Sound alerts",
+        alerts::Kind::ListVoice => "List voice alerts",
+        alerts::Kind::ListSound => "List sound alerts",
+    };
     ui.status(&format!("{name} {}.", if on { "on" } else { "off" }));
     if !on {
         return;
     }
     // Hearing the alert now proves it works; nothing else would for a while.
-    alerts::play(!voice, voice.then(|| "Voice alerts on.".to_owned()));
+    alerts::play(!voice, voice.then(|| format!("{name} on.")));
+    if matches!(kind, alerts::Kind::ListVoice | alerts::Kind::ListSound) {
+        return;
+    }
     if !was_on {
         // Alerts were off: anything since then is a backlog, not news.
         let mut state = ui.state.borrow_mut();
@@ -2703,6 +2749,11 @@ fn apply_done(ui: &Ui, done: Done) {
             append,
         } => {
             let current = current_list(ui, &view, request);
+            // Captured before finish() clears it: background reads (prefetch,
+            // feed read-ahead) and a cached section refreshing itself must
+            // not announce a list nobody is waiting for (#17).
+            let background_read = ui.latest_list.lock().unwrap().background.contains(&view)
+                || ui.state.borrow().background == Some(request);
             if !ui.latest_list.lock().unwrap().finish(&view, request) {
                 return;
             }
@@ -2738,6 +2789,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     }
                     ui.state.borrow_mut().last_args = args;
                     let empty = records.is_empty();
+                    let total = records.len();
                     show_records(ui, &view, records, body);
                     if !append && empty {
                         ui.status(&format!("{}: no items to show.", view.title()));
@@ -2747,6 +2799,9 @@ fn apply_done(ui: &Ui, done: Done) {
                             "{added} new item(s) loaded. {} item(s) total.",
                             ui.state.borrow().records.len()
                         ));
+                    }
+                    if !background_read {
+                        alert_list_loaded(ui, &view, total, added, append);
                     }
                     if view == View::Feed && !append {
                         // Warm the other sections first: the feed's read-ahead
@@ -4001,6 +4056,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
         ID_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::Voice),
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
+        ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),
+        ID_LIST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ListSound),
         ID_DEBUG_LOGGING => {
             let on = !blindfb_core::debug::enabled();
             match blindfb_core::debug::set_enabled(on) {

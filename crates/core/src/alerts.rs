@@ -19,12 +19,18 @@ const MOST_ITEMS: usize = 3;
 pub enum Kind {
     Voice,
     Sound,
+    /// A list finished loading, spoken (issue #17).
+    ListVoice,
+    /// A list finished loading, chimed (issue #17).
+    ListSound,
 }
 
 fn marker(kind: Kind) -> Option<PathBuf> {
     let name = match kind {
         Kind::Voice => "alerts-voice-on",
         Kind::Sound => "alerts-sound-on",
+        Kind::ListVoice => "alerts-list-voice-on",
+        Kind::ListSound => "alerts-list-sound-on",
     };
     data_dir().map(|dir| dir.join(name))
 }
@@ -35,6 +41,35 @@ pub fn enabled(kind: Kind) -> bool {
 
 pub fn any_enabled() -> bool {
     enabled(Kind::Voice) || enabled(Kind::Sound)
+}
+
+pub fn any_list_enabled() -> bool {
+    enabled(Kind::ListVoice) || enabled(Kind::ListSound)
+}
+
+fn items(count: usize) -> String {
+    if count == 1 {
+        "1 item".to_owned()
+    } else {
+        format!("{count} items")
+    }
+}
+
+/// The words for a list that just finished loading: its name and how much
+/// arrived, so nobody has to poll the status bar to know it is ready (#17).
+pub fn loaded(title: &str, total: usize, added: usize, append: bool) -> String {
+    if append {
+        let fresh = if added == 1 {
+            "1 new item".to_owned()
+        } else {
+            format!("{added} new items")
+        };
+        format!("{title}: {fresh} loaded. {} total.", items(total))
+    } else if total == 0 {
+        format!("{title}: no items to show.")
+    } else {
+        format!("{title} loaded. {}.", items(total))
+    }
 }
 
 pub fn set_enabled(kind: Kind, on: bool) -> Result<(), String> {
@@ -211,6 +246,21 @@ mod tests {
     #[test]
     fn group_chat_flags_still_count_as_unread() {
         assert_eq!(chats("c1\t!g\t1m\tTeam\thello\n").len(), 1);
+    }
+
+    #[test]
+    fn a_loaded_list_is_named_with_its_size() {
+        assert_eq!(loaded("News feed", 25, 25, false), "News feed loaded. 25 items.");
+        assert_eq!(loaded("Chats", 1, 1, false), "Chats loaded. 1 item.");
+        assert_eq!(loaded("Friends", 0, 0, false), "Friends: no items to show.");
+        assert_eq!(
+            loaded("News feed", 30, 5, true),
+            "News feed: 5 new items loaded. 30 items total."
+        );
+        assert_eq!(
+            loaded("Chats", 11, 1, true),
+            "Chats: 1 new item loaded. 11 items total."
+        );
     }
 
     #[test]

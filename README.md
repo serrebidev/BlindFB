@@ -76,6 +76,8 @@ Linux build dependencies for wxWidgets are the usual GTK set (see `.github/workf
 
 View > Voice alerts and View > Sound alerts tell you about new notifications and unread chats while BlindFB is open. Both start off. When one is on, BlindFB checks Facebook every two minutes. Voice alerts read the notification or message aloud with your system's voice, separately from your screen reader. Sound alerts play a short chime. Nothing that was already there when you turned alerts on is read out. On Linux they use `spd-say` and `canberra-gtk-play` when installed.
 
+View > Voice alert when a list loads and View > Sound alert when a list loads do the same for lists: when a list you opened finishes loading, the voice one says its name and how many items it has, and the sound one chimes, so you do not have to check the status bar. Turn on either one, or both; both start off and each choice is remembered. Background reads, like sections warming up at launch, never announce.
+
 ## Debug logging
 
 BlindFB writes a `startup.log` in its app-data folder as the window opens, recording each startup step. If the app ever runs without showing a window, the last line of that log names the step it reached.
