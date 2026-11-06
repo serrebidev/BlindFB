@@ -18,6 +18,7 @@ pub enum PlayerEvent {
 #[cfg(not(target_os = "windows"))]
 mod platform {
     use super::*;
+    use patois::t;
     use std::{cell::RefCell, rc::Rc};
     use wxdragon::widgets::media_ctrl::SeekMode;
 
@@ -32,7 +33,7 @@ mod platform {
             let media = MediaCtrl::builder(parent)
                 .with_size(Size::new(320, 120))
                 .build();
-            media.set_name("Video display");
+            media.set_name(&t!("Video display"));
             media.disable_focus_from_keyboard();
             media.set_can_focus(false);
             media.show_player_controls(MediaCtrlPlayerControls::None);
@@ -53,7 +54,7 @@ mod platform {
             let loaded = !uri.contains('\0') && self.media.load_uri(uri);
             if !loaded {
                 self.events.borrow_mut().push(PlayerEvent::Error(
-                    "The media backend could not load this video.".to_owned(),
+                    t!("The media backend could not load this video."),
                 ));
             }
             loaded
@@ -94,6 +95,7 @@ mod platform {
 #[cfg(target_os = "windows")]
 mod platform {
     use super::*;
+    use patois::t;
     use serde_json::{json, Value};
     use std::{
         cell::RefCell,
@@ -171,7 +173,7 @@ mod platform {
                 return match message["error"].as_str() {
                     Some("success") | None => None,
                     Some(_) => Some(PlayerEvent::CommandFailed(
-                        "The video player could not complete that action.".into(),
+                        t!("The video player could not complete that action."),
                     )),
                 };
             }
@@ -205,7 +207,9 @@ mod platform {
                     Some("error") => {
                         self.stopped = true;
                         self.state = MediaState::Stopped;
-                        Some(PlayerEvent::Error("The video could not be played. Try another video or check your connection.".into()))
+                        Some(PlayerEvent::Error(t!(
+                            "The video could not be played. Try another video or check your connection."
+                        )))
                     }
                     _ => None,
                 },
@@ -279,7 +283,7 @@ mod platform {
                 .with_style(PanelStyle::BorderNone)
                 .with_size(Size::new(320, 120))
                 .build();
-            surface.set_name("Video display");
+            surface.set_name(&t!("Video display"));
             surface.disable_focus_from_keyboard();
             surface.set_can_focus(false);
             // mpv creates a child window; disabling the display also prevents mouse focus there.
@@ -395,7 +399,7 @@ mod platform {
             report(
                 snapshot,
                 Some(PlayerEvent::Error(
-                    "The video player is not installed.".into(),
+                    t!("The video player is not installed."),
                 )),
             );
             return;
@@ -454,7 +458,7 @@ mod platform {
                 report(
                     snapshot,
                     Some(PlayerEvent::Error(
-                        "The video player could not start.".into(),
+                        t!("The video player could not start."),
                     )),
                 );
                 return;
@@ -617,7 +621,7 @@ mod platform {
             report(
                 snapshot,
                 Some(PlayerEvent::Error(
-                    "The video player disconnected. Close this post and try again.".into(),
+                    t!("The video player disconnected. Close this post and try again."),
                 )),
             );
         }

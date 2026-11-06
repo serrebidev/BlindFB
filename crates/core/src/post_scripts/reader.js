@@ -7,8 +7,10 @@
   const label = element => F.clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '');
   const rawContents = element => element.value === undefined ? element.innerText || '' : element.value;
   const contents = element => F.clean(rawContents(element));
-  const action = /^(Like|Reply|Edited|See translation|Thích|Trả lời|J’aime|Répondre)$/i;
-  const time = F.TIME || /^(\d+\s*(s|m|h|d|w|y|min|hr|day|week)s?|Just now)$/i;
+  // Facebook's words per language: labels.js, injected before this script.
+  const W = window.__blindfbLabels;
+  const action = W.commentAction;
+  const time = F.TIME || W.time;
   let root, address, target, serial = 0, records = new Map(), pending;
   // A reel has no post dialog: its card holds the caption and actions, a side panel the comments.
   // Opening its comments hides the card's author and caption, so they are read before that.
@@ -29,7 +31,7 @@
       return rect.height > 0 && rect.top >= -10 && rect.top < innerHeight / 2;
     });
     let element = video;
-    while (element && !buttonLabeled(element, /^Comment(?:, \S+ comments?)?$/i).length) element = element.parentElement;
+    while (element && !buttonLabeled(element, W.comment).length) element = element.parentElement;
     // Until it shows its author the card is still loading, or is the next reel's.
     return element && [...element.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? element : null;
   }
@@ -64,6 +66,17 @@
       if (externalVideo(url)) return url.href;
     }
     return null;
+  }
+
+  // Facebook leaves some links as a bare "?__cft__…" until they are focused: a link-preview
+  // card then points at its site (https://13x.audio/…), not at the post itself.
+  async function reveal(scope) {
+    for (const a of scope.querySelectorAll('a[href]')) {
+      if (a.closest(ARTICLE) || !F.visible(a) || !/^\?/.test(a.getAttribute('href') || '')) continue;
+      a.focus({preventScroll: true});
+      await F.waitFor(() => !/^\?/.test(a.getAttribute('href') || ''), 400, 30);
+      a.blur();
+    }
   }
 
   // Links a reader would follow: anything in the message, and pages outside Facebook.
@@ -165,7 +178,7 @@
     const author = lines[0] || article.getAttribute('aria-label') || '';
     const authorRef = F.profilePath ? [...article.querySelectorAll('a[href]')].filter(a => a.closest(ARTICLE) === article).map(a => F.profilePath(a.href !== undefined ? a.href : a.getAttribute('href'))).find(Boolean) || null : null;
     const ti = lines.findIndex((text, index) => index < 7 && time.test(text));
-    const body = lines.slice(1).filter((text, index) => index + 1 !== ti && !action.test(text) && !/^((by )?author|Top fan|Follow|·)$/i.test(text));
+    const body = lines.slice(1).filter((text, index) => index + 1 !== ti && !action.test(text) && !W.commentBadge.test(text));
     // A bare number after the text is the reaction count.
     if (body.length > 1 && /^\d+$/.test(body[body.length - 1])) body.pop();
     const ancestor = article.parentElement.closest(ARTICLE);
@@ -188,16 +201,17 @@
   async function read() {
     current();
     const watch = /\/videos\/|^\/watch\/?/.test(new URL(target).pathname);
-    const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && /^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(F.clean(element.innerText || '') || label(element)) && (watch || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
+    const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)) && (watch || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
     for (const button of expand) {
       if (button.isConnected) button.click();
     }
-    if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !/^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
+    if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
     const rows = collect();
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {
       return JSON.stringify({url: target, ...reel, time: '', comments: rows.map(row => row.value), video: target});
     }
+    await reveal(root);
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
     const head = profile ? F.vtext(profile.parentElement.parentElement.parentElement) : [];
     const messages = [...root.querySelectorAll('[data-ad-rendering-role=story_message]')].filter(element => F.visible(element) && !element.closest(ARTICLE));
@@ -235,7 +249,7 @@
     const first = root.querySelectorAll(ARTICLE)[0];
     const scope = box => { let element = first; while (!element.contains(box)) element = element.parentElement; return element; };
     const found = boxes.length > 1 && first ? boxes.filter(box => boxes.every(other => other === box || (scope(box) !== scope(other) && scope(box).contains(scope(other))))) : boxes;
-    return found.length === 1 && !/^(Reply|Trả lời|Répondre)\b/i.test(label(found[0])) ? found[0] : null;
+    return found.length === 1 && !W.replyStart.test(label(found[0])) ? found[0] : null;
   }
 
   // The box Facebook focused for this comment's Reply: it follows the comment, with only the
@@ -267,7 +281,7 @@
     let thread = null;
     if (parent !== null) {
       const article = selected(parent);
-      const replies = [...article.querySelectorAll('[role=button],button,a')].filter(element => own(element, article) && F.visible(element) && /^(Reply|Trả lời|Répondre)$/i.test(label(element) || F.clean(element.innerText || '')));
+      const replies = [...article.querySelectorAll('[role=button],button,a')].filter(element => own(element, article) && F.visible(element) && W.reply.test(label(element) || F.clean(element.innerText || '')));
       if (replies.length !== 1) throw Error('The selected comment has no unique Reply action. Nothing was sent.');
       const value = comment(article);
       thread = value.parent_id || value.id;
@@ -318,7 +332,7 @@
   // Like or unlike one exact comment; confirmed by its Like button changing state.
   async function like(id) {
     const article = selected(id);
-    const buttons = [...article.querySelectorAll('[role=button],button')].filter(element => own(element, article) && F.visible(element) && /^(Like|Remove Like|Unlike)$/i.test(label(element) || F.clean(element.innerText || '')));
+    const buttons = [...article.querySelectorAll('[role=button],button')].filter(element => own(element, article) && F.visible(element) && W.commentLike.test(label(element) || F.clean(element.innerText || '')));
     if (buttons.length !== 1) throw Error('The selected comment has no unique Like button. Nothing was changed.');
     const button = buttons[0];
     const state = () => [label(button), button.getAttribute('aria-pressed'), F.clean(button.innerText || ''), button.className].join('|');
@@ -329,22 +343,54 @@
   }
 
   let sharing = null;
-  const shareNowButton = dialog => [...dialog.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && /^Share now$/i.test(label(element) || F.clean(element.innerText || '')));
+  // Facebook answers some buttons (Share) only to a full pointer sequence, not a bare click().
+  const activate = element => (F.press ? F.press(element) : element.click());
+  const shareNowButton = dialog => [...dialog.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.shareNow.test(label(element) || F.clean(element.innerText || '')));
+
+  function shareButton() {
+    current();
+    const buttons = [...(card || root).querySelectorAll('[role=button],button')].filter(element => !element.closest(ARTICLE) && F.visible(element) && W.share.test(label(element)));
+    if (buttons.length !== 1) throw Error('This post has no unique Share button. Nothing was shared.');
+    return buttons[0];
+  }
+
+  // Facebook ignores script clicks on Share inside a post dialog, so the backend clicks it for
+  // real (`page click`). This is the post's Share button as a page-snapshot reference, or null.
+  // Buttons with the same name (the same post behind the dialog) are told apart by their order,
+  // which is the snapshot's order.
+  function shareTarget() {
+    const button = shareButton();
+    const name = label(button);
+    if (!F.pageSnapshot || !name) return JSON.stringify(null);
+    const same = [...document.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && label(element) === name);
+    const rows = F.pageSnapshot(name).split('\n').map(line => line.split('\t')).filter(row => row[1] === 'button' && row[2] === name);
+    const index = same.indexOf(button);
+    return JSON.stringify(index >= 0 && rows.length === same.length ? rows[index][0] : null);
+  }
 
   // Open Facebook's own share dialog for this post and report its audience; nothing is shared yet.
-  async function shareOpen() {
-    current();
-    const buttons = [...(card || root).querySelectorAll('[role=button],button')].filter(element => !element.closest(ARTICLE) && F.visible(element) && /^Share\b/i.test(label(element)));
-    if (buttons.length !== 1) throw Error('This post has no unique Share button. Nothing was shared.');
-    buttons[0].click();
+  // `clicked`: the backend already clicked Share (see shareTarget); otherwise press it here.
+  async function shareOpen(clicked = false) {
+    const button = shareButton();
+    if (!clicked) activate(button);
+    let toFeed = null;
     const dialog = await F.waitFor(() => {
-      const found = [...document.querySelectorAll('[role=dialog]')].filter(element => element !== root && !element.contains(root) && F.visible(element) && shareNowButton(element).length === 1);
-      return found.length === 1 ? found[0] : null;
-    }, 8000);
+      const dialogs = [...document.querySelectorAll('[role=dialog]')].filter(element => element !== root && !element.contains(root) && F.visible(element));
+      const found = dialogs.filter(element => shareNowButton(element).length === 1);
+      if (found.length === 1) return found[0];
+      // French Facebook asks where to share first ("Options de partage"); the feed opens the editor.
+      const options = dialogs.find(element => W.shareOptions.test(label(element)));
+      const feed = options ? [...options.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.shareToFeed.test(F.clean(element.innerText || '') || label(element))) : [];
+      if (feed.length === 1 && toFeed !== feed[0]) {
+        toFeed = feed[0];
+        activate(toFeed);
+      }
+      return null;
+    }, 10000);
     if (!dialog) throw Error('Facebook did not open its share dialog. Nothing was shared.');
-    const privacy = [...dialog.querySelectorAll('[role=button],button')].map(label).find(text => /^Edit privacy/i.test(text)) || '';
+    const privacy = [...dialog.querySelectorAll('[role=button],button')].map(label).find(text => W.editPrivacy.test(text)) || '';
     sharing = {dialog, text: ''};
-    return JSON.stringify({audience: (privacy.match(/Sharing with (.+?)\.?$/i) || [])[1] || 'Facebook default'});
+    return JSON.stringify({audience: (privacy.match(W.sharingWith) || [])[1] || 'Facebook default'});
   }
 
   function shareDialog() {
@@ -381,49 +427,53 @@
     return 'shared';
   }
 
-  function shareClose() {
+  // Close the unsent share; when Facebook asks about the draft, drop it (nothing was shared).
+  async function shareClose() {
     const dialog = sharing && sharing.dialog;
     sharing = null;
-    const close = dialog && dialog.isConnected && [...dialog.querySelectorAll('[role=button],button')].find(element => /^Close$/i.test(label(element)));
-    if (close) close.click();
+    const close = dialog && dialog.isConnected && [...dialog.querySelectorAll('[role=button],button')].find(element => W.close.test(label(element)));
+    if (!close) return 'closed';
+    close.click();
+    const discard = await F.waitFor(() => [...document.querySelectorAll('[role=button],button')].find(element => F.visible(element) && W.discardDraft.test(F.clean(element.innerText || '') || label(element))), 2000);
+    if (discard) discard.click();
     return 'closed';
   }
 
   // React to a reel from its card (the backend's react command only knows post layouts).
-  // The Like button reads "Like" with no reaction, "Remove <reaction>" otherwise.
+  // The Like button reads "Like" with no reaction, "Remove <reaction>" otherwise; in French
+  // "J’aime, 28 réactions". W.reelReaction reads either into 'none' or a reaction keyword.
   async function reelReact(kind) {
     current();
     if (!['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry', 'none'].includes(kind)) throw Error('Unknown reaction. Nothing was changed.');
     const scope = card || root;
+    const reaction = element => W.reelReaction(label(element), element.getAttribute('aria-pressed'));
     const like = () => {
-      const found = buttonLabeled(scope, /^(Like|Remove \w+)$/i).filter(element => !element.closest(ARTICLE));
+      const found = [...scope.querySelectorAll('[role=button][aria-label]')].filter(element => F.visible(element) && !element.closest(ARTICLE) && reaction(element) !== null);
       return found.length === 1 ? found[0] : null;
     };
     const button = like();
     if (!button) throw Error('This reel has no Like button. Nothing was changed.');
-    const before = label(button);
-    const want = kind === 'none' ? 'Like' : 'Remove ' + kind[0].toUpperCase() + kind.slice(1);
-    if (before.toLowerCase() === want.toLowerCase()) return read();
+    if (reaction(button) === kind) return read();
     if (kind === 'none') button.click();
     else {
-      const open = buttonLabeled(scope, /^React$/).filter(element => !element.closest(ARTICLE));
+      const open = buttonLabeled(scope, W.react).filter(element => !element.closest(ARTICLE));
       if (open.length !== 1) throw Error('This reel has no unique React button. Nothing was changed.');
       open[0].click();
       const choice = await F.waitFor(() => {
-        const dialog = [...document.querySelectorAll('[role=dialog]')].find(element => F.visible(element) && /^Reactions$/i.test(label(element)));
-        const found = dialog && buttonLabeled(dialog, new RegExp('^' + kind + '$', 'i'));
+        const dialog = [...document.querySelectorAll('[role=dialog]')].find(element => F.visible(element) && W.reactionsDialog.test(label(element)));
+        const found = dialog && buttonLabeled(dialog, W.reactionName(kind));
         return found && found.length === 1 ? found[0] : null;
       }, 5000);
       if (!choice) throw Error('Facebook did not show its reactions. Nothing was changed.');
       choice.click();
     }
-    if (!await F.waitFor(() => { const now = like(); return now && label(now).toLowerCase() === want.toLowerCase(); }, 8000)) throw Error('Facebook did not confirm the reaction. Refresh to check.');
+    if (!await F.waitFor(() => { const now = like(); return now && reaction(now) === kind; }, 8000)) throw Error('Facebook did not confirm the reaction. Refresh to check.');
     return read();
   }
 
   window.__blindfbPost = {
     setTitle(title) { current(); if (card && !reel.text) reel.text = title; return read(); },
-    like, shareOpen, shareFill, shareNow, shareClose, reelReact,
+    like, shareTarget, shareOpen, shareFill, shareNow, shareClose, reelReact,
     async initialize(url) {
       target = url;
       if (/^\/reel\//.test(new URL(url).pathname)) {
@@ -431,9 +481,9 @@
         if (!card) throw Error('The reel could not be read.');
         // BlindFB plays the reel itself; a playing page would move on to the next reel.
         for (const video of document.querySelectorAll('video')) { video.muted = true; video.pause(); }
-        const expand = [...card.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && /^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(F.clean(element.innerText || '') || label(element)));
+        const expand = [...card.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)));
         for (const button of expand) if (button.isConnected) button.click();
-        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !/^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh the reader to retry.');
+        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh the reader to retry.');
         const author = [...card.querySelectorAll('a[href]')].map(a => F.clean(a.innerText || '')).find(Boolean) || '';
         // Caption lines, without the author, badges, Follow and the reaction, comment and share counts.
         const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT), lines = [];
@@ -444,20 +494,25 @@
           const text = F.clean(node.nodeValue || '');
           if (text) lines.push(text);
         }
-        const caption = lines.filter(text => text !== author && !/^(·|Follow|Following|Verified account|[\d.,]+[KMB]?)$/i.test(text));
+        const caption = lines.filter(text => text !== author && !W.captionNoise.test(text));
+        await reveal(card);
         reel = {author, text: caption.join('\n'), links: links(card, card)};
-        const comment = buttonLabeled(card, /^Comment(?:, \S+ comments?)?$/i);
+        const comment = buttonLabeled(card, W.comment);
         if (comment.length !== 1) throw Error('This reel has no unique Comment button.');
+        // "Commenter, 2 commentaires": the button says whether there are comments to wait for.
+        const counted = /,\s*(?!0\b)\d/.test(label(comment[0]));
         comment[0].click();
         root = await F.waitFor(() => [...document.querySelectorAll('[role=complementary]')].find(element => F.visible(element) && element.querySelector(EDITOR + ',' + ARTICLE)), 10000);
         if (!root) throw Error("The reel's comments could not be opened.");
+        // The panel shows its comment box before its comments.
+        if (counted) await F.waitFor(() => root.querySelector(ARTICLE), 5000);
         address = location.href;
         return read();
       }
       // Watch only exposes the full post after opening its comments dialog.
       if (/\/videos\/|^\/watch\/?/.test(new URL(url).pathname)) {
         const button = await F.waitFor(() => {
-          const found = buttonLabeled(document, /^Leave a comment$/);
+          const found = buttonLabeled(document, W.leaveComment);
           return found.length === 1 ? found[0] : null;
         }, 15000);
         if (!button) throw Error('The video comments could not be opened.');

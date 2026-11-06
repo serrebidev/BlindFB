@@ -9,6 +9,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use patois::t;
+
+use crate::tf;
+
 /// One line of `fb` output: the tab-separated fields plus the raw line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
@@ -56,15 +60,6 @@ pub fn parse_records(output: &str) -> Vec<Record> {
 /// text in the author, posts repeated by the feed scroller, or text the
 /// page rendered twice back to back.
 pub fn parse_feed(output: &str) -> Vec<Record> {
-    const NOISE: [&str; 7] = [
-        "Online status indicator",
-        "Active",
-        "Verified account",
-        "Suggested for you",
-        "Shared with Public",
-        "Follow",
-        "View more comments",
-    ];
     let squash = |s: &str| s.split_whitespace().collect::<String>();
     let mut seen = std::collections::HashSet::new();
     let mut rows = Vec::new();
@@ -104,7 +99,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
             // contained in a longer one is that same author, not a second one.
             let candidates: Vec<&str> = record.fields[1]
                 .split(" / ")
-                .map(str::trim)
+                .map(crate::labels::without_follow)
                 .filter(|part| !part.is_empty())
                 .collect();
             for part in candidates.iter().copied() {
@@ -112,7 +107,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     .iter()
                     .any(|other| other.len() > part.len() && other.contains(part));
                 let noise = part.is_empty()
-                    || NOISE.contains(&part)
+                    || crate::labels::feed_noise(part)
                     || part.bytes().all(|b| b.is_ascii_digit())
                     || (part.len() > 30 && text.contains(part))
                     || spelled_out
@@ -121,7 +116,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     continue;
                 }
                 parts.push(part);
-                if matches!(part, "and" | "follows" | "is with" | "is in" | "is at") {
+                if crate::labels::AUTHOR_JOINERS.contains(&part) {
                     author.push(' ');
                     author.push_str(part);
                     joined = true;
@@ -153,9 +148,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
 
 /// Stable identity for a normalized feed row, including alternate photo links.
 pub fn feed_record_key(record: &Record) -> String {
-    let text = record
-        .field(4)
-        .trim_end_matches("… See more")
+    let text = crate::labels::without_see_more(record.field(4))
         .split_whitespace()
         .collect::<String>();
     if text.is_empty() {
@@ -168,14 +161,14 @@ pub fn feed_record_key(record: &Record) -> String {
 /// Keep notification post URLs instead of replacing them with daemon-local references.
 pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
     let value: serde_json::Value = serde_json::from_str(output).map_err(|_| {
-        "The backend returned unreadable notifications. Refresh to retry.".to_owned()
+        t!("The backend returned unreadable notifications. Refresh to retry.")
     })?;
     if let Some(error) = value["err"].as_str() {
         return Err(error.to_owned());
     }
     let rows = value["rows"]
         .as_array()
-        .ok_or("The backend returned no notification list")?;
+        .ok_or_else(|| t!("The backend returned no notification list"))?;
     // One odd row must not empty the whole view: a notification without a
     // target still has text worth reading, and a row whose shape this build
     // does not know is skipped. Only a payload with nothing readable at all
@@ -206,7 +199,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
         })
         .collect();
     if records.is_empty() && !rows.is_empty() {
-        return Err("The backend returned no readable notifications. Refresh to retry.".to_owned());
+        return Err(t!("The backend returned no readable notifications. Refresh to retry."));
     }
     Ok(records)
 }
@@ -281,14 +274,14 @@ impl Fb {
 
     pub(crate) fn browser_endpoint(&self) -> Result<(u16, String), String> {
         if std::env::var_os("FB_CDP").is_some() {
-            return Err("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead.".to_owned());
+            return Err(t!("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."));
         }
         if self.engine.is_some() {
             crate::engine::endpoint()
         } else {
             crate::browsers::fb_browser_endpoint()
         }
-        .ok_or_else(|| "the backend browser is not running".to_owned())
+        .ok_or_else(|| t!("the backend browser is not running"))
     }
 
     /// Run `fb` with `args` and return stdout. On non-zero exit the error is
@@ -317,7 +310,13 @@ impl Fb {
             .command(args)?
             .args(args)
             .output()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         let result = collect(output);
         if self.engine.is_some() && args == ["quit"] {
             crate::engine::close()?;
@@ -351,7 +350,7 @@ impl Fb {
         let browser = self
             .engine
             .as_ref()
-            .ok_or("no dedicated browser selected")?;
+            .ok_or_else(|| t!("no dedicated browser selected"))?;
         self.run(&["stop"])?;
         crate::engine::close()?;
         let (endpoint, _) = crate::engine::ensure(browser, true)?;
@@ -381,7 +380,7 @@ impl Fb {
         let mut last_error = String::new();
         while std::time::Instant::now() < deadline {
             if crate::engine::endpoint().is_none() {
-                return Err("Sign-in was cancelled: the browser window was closed".to_owned());
+                return Err(t!("Sign-in was cancelled: the browser window was closed"));
             }
             let status = self.run(&["status"])?;
             if crate::browsers::signed_in(&status) {
@@ -396,8 +395,10 @@ impl Fb {
             }
             std::thread::sleep(std::time::Duration::from_secs(3));
         }
-        Err(format!(
-            "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {last_error}"
+        Err(tf!(
+            // TRANSLATORS: "Backend → Sign in" is a menu path; {error} is the backend's last error.
+            "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {error}",
+            error = last_error
         ))
     }
 
@@ -418,13 +419,25 @@ impl Fb {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         if let Some(mut stdin) = child.stdin.take() {
             let _ = stdin.write_all(input.as_bytes());
         }
         let output = child
             .wait_with_output()
-            .map_err(|e| format!("could not run {}: {e}", self.program.display()))?;
+            .map_err(|e| {
+                tf!(
+                    "could not run {program}: {error}",
+                    program = self.program.display(),
+                    error = e
+                )
+            })?;
         collect(output)
     }
 }
@@ -441,7 +454,7 @@ fn collect(output: std::process::Output) -> Result<String, String> {
             stderr.trim()
         };
         Err(if message.is_empty() {
-            format!("fb exited with {}", output.status)
+            tf!("fb exited with {status}", status = output.status)
         } else {
             message.to_owned()
         })
@@ -548,7 +561,7 @@ pub fn notifs_args(count: u32) -> Vec<String> {
     vec![
         "eval".to_owned(),
         "https://www.facebook.com/notifications/".to_owned(),
-        format!("{};window.__fb.notifs({count}).then(out=>JSON.stringify({{...out,rows:out.rows.map(row=>{{if(!row[2].toLowerCase().includes(' new reels'))return row;const metadata=window.__blindfbReels.notificationNow(new URL(row[3].v,window.location.origin).href);return metadata?[...row,metadata]:row}})}}))", include_str!("reels.js")),
+        format!("{};window.__fb.notifs({count}).then(out=>JSON.stringify({{...out,rows:out.rows.map(row=>{{if(!window.__blindfbLabels.manyReels.test(row[2]))return row;const metadata=window.__blindfbReels.notificationNow(new URL(row[3].v,window.location.origin).href);return metadata?[...row,metadata]:row}})}}))", concat!(include_str!("post_scripts/labels.js"), include_str!("reels.js"))),
     ]
 }
 
@@ -654,23 +667,25 @@ pub fn post_args(
 }
 
 /// What to tell the user after `post` printed `output`.
-pub fn post_done_message(output: &str) -> &'static str {
+pub fn post_done_message(output: &str) -> String {
     if output.trim_start().starts_with("pending") {
-        "Facebook accepted your post and is still publishing it. It should appear in My posts \
-         soon. You do not need to post it again."
+        // TRANSLATORS: "My posts" is a view name in BlindFB.
+        t!("Facebook accepted your post and is still publishing it. It should appear in My posts \
+            soon. You do not need to post it again.")
     } else {
-        "Your post is published."
+        t!("Your post is published.")
     }
 }
 
 /// What to tell the user when `post` failed. Some failures come after Post was pressed, when
 /// the post may exist; `None` means the backend's own error says it best.
-pub fn post_unconfirmed_message(error: &str) -> Option<&'static str> {
+pub fn post_unconfirmed_message(error: &str) -> Option<String> {
     (error.contains("post may have been published") || error.contains("timed out after"))
-        .then_some(
-            "Facebook may have published your post, but BlindFB could not confirm it. Check My \
-             posts before posting it again.",
-        )
+        .then(|| {
+            // TRANSLATORS: "My posts" is a view name in BlindFB.
+            t!("Facebook may have published your post, but BlindFB could not confirm it. Check My \
+                posts before posting it again.")
+        })
 }
 
 pub fn group_join_args(group: &str) -> Vec<String> {
@@ -1010,6 +1025,26 @@ mod tests {
             .any(|script| script.contains("window.__fb.notifs(20)")
                 && script.contains("notificationNow")));
     }
+    #[test]
+    fn french_feed_rows_drop_french_badges() {
+        // Rows as the backend printed them on a French Facebook account.
+        let out = [
+            "/Ohmymag/posts/1\tOh My Mag / Compte vérifié / Suivre / Oh My Mag · Suivre\til y a 10 heures\t0/738/34\tVous le préférez ?",
+            "-\tAnne / suit / Radio FG\t\t0/0/0\tOn a un problème… En voir plus",
+            "-\tAnne / suit / Radio FG\t\t0/0/0\tOn a un problème… En voir plus",
+        ]
+        .join("\n");
+        let rows = parse_feed(&out);
+        let summary: Vec<(&str, &str)> = rows.iter().map(|r| (r.field(1), r.field(4))).collect();
+        assert_eq!(
+            summary,
+            [
+                ("Oh My Mag", "Vous le préférez ?"),
+                ("Anne suit Radio FG", "On a un problème… En voir plus"),
+            ]
+        );
+    }
+
 
     #[test]
     fn feed_rows_drop_badges_repeats_and_doubled_text() {

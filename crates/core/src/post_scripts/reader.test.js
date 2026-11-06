@@ -2,32 +2,40 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync(__dirname + '/reader.js', 'utf8');
+// labels.js is injected before reader.js, as the Rust side does.
+const source = fs.readFileSync(__dirname + '/labels.js', 'utf8') + fs.readFileSync(__dirname + '/reader.js', 'utf8');
+const W = require('./labels.js');
 const ARTICLE = '[role=article][aria-label]';
 const EDITOR = '[role=textbox][contenteditable=true],textarea';
 
 function fixture(mode = false) {
-  const watch = mode === true, isReel = mode === 'reel' || mode === 'reel-count' || mode === 'untitled';
+  const watch = mode === true || mode === 'watch-fr', isReel = mode === 'reel' || mode === 'reel-count' || mode === 'reel-fr' || mode === 'untitled';
+  const french = mode === 'reel-fr' || mode === 'watch-fr';
   let comments = [], focus, editor;
   const boxes = [];
   let opened = !watch, paused = false;
   let expanded = false;
   let expanding = false;
   const video = {muted: false, querySelectorAll: () => [], pause() { paused = true; }, getBoundingClientRect: () => ({height: 100, top: 0})};
-  const expand = {getAttribute: () => expanded ? 'See less' : 'See more', isConnected: true,
+  const expand = {getAttribute: () => french ? expanded ? 'Voir moins' : 'En voir plus' : expanded ? 'See less' : 'See more', isConnected: true,
     closest: () => mode === 'slow' ? {} : null,
     click() {if (mode === 'slow') expanding = true; else expanded = true;}};
   const author = {innerText: 'Reel author', href: 'https://www.facebook.com/author', closest: () => null, getAttribute: () => ''};
   const reelCard = {isConnected: true, closest: () => null, contains: () => true, querySelectorAll: selector => selector === 'a[href]' ? [author] : selector === '[role=button][aria-label]' ? [openComments] : selector === '[role=button],button' ? [expand] : []};
   video.parentElement = isReel ? reelCard : null;
-  const openComments = {getAttribute: () => mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
+  const openComments = {getAttribute: () => mode === 'reel-fr' ? 'Commenter, 1,9 K commentaires' : mode === 'watch-fr' ? 'Laissez un commentaire' : mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
   // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
   const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
+  // A link-preview card: Facebook gives it a bare "?__cft__" href until it is focused.
+  let cardHref = '?__cft__[0]=x';
+  const linkCard = {get href() { return new URL(cardHref, 'https://www.facebook.com/a/posts/1').href; }, innerText: 'LOFT – Free Vintage Reverb Plugin',
+    getAttribute: name => name === 'href' ? cardHref : '', closest: () => null,
+    focus() { cardHref = 'https://13x.audio/products/loft?fbclid=abc'; }, blur() {}};
   const messages = mode === 'shared' || mode === 'shared-source' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
   if (mode === 'shared') messages.push({text: 'Hidden template', visible: false, closest: () => null, contains: () => false});
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -136,6 +144,12 @@ function fixture(mode = false) {
   assert.equal(reeled.video, 'https://www.facebook.com/reel/123/');
   const counted = JSON.parse(await fixture('reel-count').api.initialize('https://www.facebook.com/reel/123/'));
   assert.equal(counted.text, 'Entire reel caption');
+  // A French Facebook account: "Commenter, 1,9 K commentaires" and "En voir plus".
+  const french = JSON.parse(await fixture('reel-fr').api.initialize('https://www.facebook.com/reel/123/'));
+  assert.equal(french.text, 'Entire reel caption');
+  assert.equal(french.author, 'Reel author');
+  const watchedFr = JSON.parse(await fixture('watch-fr').api.initialize('https://www.facebook.com/page/videos/123/'));
+  assert.equal(watchedFr.text, 'Entire post text');
   const untitled = fixture('untitled');
   assert.equal(JSON.parse(await untitled.api.initialize('https://www.facebook.com/reel/123/')).text, '');
   assert.equal(JSON.parse(await untitled.api.setTitle('Dedicated To Bart Simpson')).text, 'Dedicated To Bart Simpson');
@@ -144,6 +158,8 @@ function fixture(mode = false) {
   const sharedVideo = JSON.parse(await fixture('external-video').api.initialize('https://www.facebook.com/a/posts/1'));
   assert.equal(sharedVideo.video, 'https://www.youtube.com/watch?v=abc');
   assert.deepEqual(sharedVideo.links, [{label: 'A video', url: 'https://www.youtube.com/watch?v=abc'}]);
+  const carded = JSON.parse(await fixture('card').api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.deepEqual(carded.links, [{label: 'LOFT – Free Vintage Reverb Plugin', url: 'https://13x.audio/products/loft'}]);
   const watch = fixture(true);
   const watched = JSON.parse(await watch.api.initialize('https://www.facebook.com/page/videos/123/'));
   assert.equal(watched.author, 'Post author');
@@ -313,5 +329,24 @@ function fixture(mode = false) {
   parent.actions = [f.replyAction(parent, mine)];
   assert.equal(await f.api.prepare('1', 'hello'), '"hello"');
   assert.equal(f.focused, mine);
+  // French words from docs/fr-labels.md.
+  assert.equal(W.reelReaction('J’aime, 28 réactions', null), 'none');
+  assert.equal(W.reelReaction('J’aime, 28 réactions', 'true'), 'like');
+  assert.equal(W.reelReaction('Retirer J’adore, 29 réactions', null), 'love');
+  assert.equal(W.reelReaction('J’adore, 29 réactions', null), 'love');
+  assert.equal(W.reelReaction('Like', null), 'none');
+  assert.equal(W.reelReaction('Remove Haha', null), 'haha');
+  assert.equal(W.reelReaction('Réagir', null), null);
+  assert.equal(W.reelReaction('Commenter, 2 commentaires', null), null);
+  for (const text of ['Commenter', 'Commenter, 2 commentaires', 'Commenter, 1,9 K commentaires', 'Comment, 1.2K comments']) assert.ok(W.comment.test(text), text);
+  for (const text of ['Partager la publication de X', 'Partager, 4 partages', "Share X's post, 18 shares"]) assert.ok(W.share.test(text), text);
+  for (const text of ['1,9 K', '40,1 K', '4 890', '4\u202f890', 'Compte vérifié', 'Vous suivez JECK', 'Suivre', '·']) assert.ok(W.captionNoise.test(text), text);
+  for (const text of ['il y a 10 heures', '8 h', '1 j', '1 sem.', '2 ans', 'À l’instant', 'Hier à 14:05']) assert.ok(W.time.test(text), text);
+  for (const text of ['J’aime', "J'aime", 'Répondre', 'Modifié', 'Voir la traduction']) assert.ok(W.commentAction.test(text), text);
+  assert.ok(W.nextReel.test('Carte suivante'));
+  assert.ok(W.seeMore.test('En voir plus'));
+  assert.ok(W.manyReels.test('JECK a publié 3 nouveaux reels.'));
+  assert.equal(('Partagé avec : Public'.match(W.sharingWith) || [])[1], 'Public');
+  console.log('French Facebook fixtures passed: reel and video comments, reactions, counts, times, badges.');
   console.log('Reader safety fixtures passed: missing, stale, changed, ambiguous, no root fallback, exact-thread confirmation, reply boxes beside comments, prefilled names.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

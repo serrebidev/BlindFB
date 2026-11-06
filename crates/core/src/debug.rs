@@ -7,8 +7,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
+use patois::t;
+
 use crate::backend::data_dir;
 use crate::fb::Fb;
+use crate::tf;
 
 const MAX_LOG_BYTES: u64 = 5 * 1024 * 1024;
 const REPORT_TAIL_LINES: usize = 3000;
@@ -42,13 +45,16 @@ pub fn enabled() -> bool {
 /// Turn logging on or off, and remember the choice across restarts.
 pub fn set_enabled(on: bool) -> Result<(), String> {
     ENABLED.store(on, Ordering::Relaxed);
-    let path = marker().ok_or("could not find BlindFB's data folder")?;
+    let path = marker().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
     if on {
-        let dir = path.parent().ok_or("could not find BlindFB's data folder")?;
-        std::fs::create_dir_all(dir).map_err(|e| format!("could not save the setting: {e}"))?;
-        std::fs::write(&path, "").map_err(|e| format!("could not save the setting: {e}"))?;
+        let dir = path.parent().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
+        std::fs::write(&path, "")
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
     } else if path.is_file() {
-        std::fs::remove_file(&path).map_err(|e| format!("could not save the setting: {e}"))?;
+        std::fs::remove_file(&path)
+            .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
     }
     append_line(&format!("{}\tdebug logging {}", now(), if on { "on" } else { "off" }));
     Ok(())
@@ -245,11 +251,12 @@ fn report_text(fb: Option<&Fb>) -> String {
 /// Write the report to `path` and return a message for the user.
 pub fn write_report(fb: Option<&Fb>, path: &str) -> Result<String, String> {
     std::fs::write(path, report_text(fb))
-        .map_err(|e| format!("could not save the debug report: {e}"))?;
-    Ok(format!(
+        .map_err(|e| tf!("could not save the debug report: {error}", error = e))?;
+    Ok(tf!(
         "Saved the debug report to {path}.\n\nSend that file to the developer. It holds what \
          BlindFB ran and the errors it got, plus Facebook links you opened or reacted to. It does \
-         not hold your post text, messages or PIN."
+         not hold your post text, messages or PIN.",
+        path = path
     ))
 }
 

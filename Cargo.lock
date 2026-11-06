@@ -260,6 +260,7 @@ dependencies = [
  "blindfb-core",
  "image",
  "native-ocr",
+ "patois",
  "serde_json",
  "ship-shape",
  "shipfitter",
@@ -272,6 +273,7 @@ name = "blindfb-core"
 version = "0.7.22"
 dependencies = [
  "flate2",
+ "patois",
  "rookie-cookies",
  "rusqlite",
  "serde_json",
@@ -1977,6 +1979,7 @@ dependencies = [
  "miniz_oxide 0.9.1",
  "patois-macros",
  "sys-locale",
+ "wxdragon",
 ]
 
 [[package]]
