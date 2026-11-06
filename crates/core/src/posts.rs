@@ -440,7 +440,18 @@ pub fn reel_react(fb: &Fb, page: &str, reaction: &str) -> Result<String, String>
 /// Open Facebook's share dialog for the post and return the audience it will use.
 /// Nothing is shared until `share_now`.
 pub fn share_open(fb: &Fb, page: &str) -> Result<String, String> {
-    let output = eval(fb, page, "window.__blindfbPost.shareOpen()")?;
+    // Facebook ignores script clicks on Share inside a post dialog: click it through the
+    // browser when the page can name it, else let the script press it.
+    let target = eval(fb, page, "window.__blindfbPost.shareTarget()")?;
+    let clicked = match serde_json::from_str::<Option<String>>(&target) {
+        Ok(Some(reference)) => fb.run(&["page", page, "click", &reference]).is_ok(),
+        _ => false,
+    };
+    let output = eval(
+        fb,
+        page,
+        &format!("window.__blindfbPost.shareOpen({clicked})"),
+    )?;
     let value: Value = serde_json::from_str(&output)
         .map_err(|_| t!("Could not read Facebook's share audience. Nothing was shared."))?;
     value["audience"]

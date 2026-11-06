@@ -46,8 +46,10 @@ Le bouton Partager ouvre d'abord une fenêtre de choix, puis un éditeur :
 | Fermer l'éditeur | `Fermer la boîte de dialogue de l’éditeur`, puis `Enregistrer comme brouillon` / `Supprimer le brouillon` / `Fermer` | relevé |
 
 Le bouton Partager d'une publication ouverte en fenêtre ne réagit pas à un clic
-simulé en JavaScript (`click()` ni suite d'événements pointeur) : il faudra un clic
-« réel » du navigateur (CDP `Input.dispatchMouseEvent`, comme `fb page click`).
+simulé en JavaScript (`click()` ni suite d'événements pointeur) : BlindFB le fait
+cliquer par le navigateur (`fb page click`, référence donnée par `shareTarget`).
+Vérifié sur un vrai compte : ouverture, audience lue (« Vos ami(e)s »), fermeture et
+brouillon abandonné ; le bouton final « Partager » n'a pas été pressé.
 
 ## Reel et vidéo (lecteur plein écran, `/reel/…` et `/watch/`)
 

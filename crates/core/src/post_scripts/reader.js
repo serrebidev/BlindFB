@@ -347,21 +347,35 @@
   const activate = element => (F.press ? F.press(element) : element.click());
   const shareNowButton = dialog => [...dialog.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.shareNow.test(label(element) || F.clean(element.innerText || '')));
 
-  // Open Facebook's own share dialog for this post and report its audience; nothing is shared yet.
-  async function shareOpen() {
+  function shareButton() {
     current();
     const buttons = [...(card || root).querySelectorAll('[role=button],button')].filter(element => !element.closest(ARTICLE) && F.visible(element) && W.share.test(label(element)));
     if (buttons.length !== 1) throw Error('This post has no unique Share button. Nothing was shared.');
-    activate(buttons[0]);
-    // The first press can only load Facebook's share code; press once more if nothing opened.
-    const pressed = Date.now();
-    let toFeed = null, again = false;
+    return buttons[0];
+  }
+
+  // Facebook ignores script clicks on Share inside a post dialog, so the backend clicks it for
+  // real (`page click`). This is the post's Share button as a page-snapshot reference, or null.
+  // Buttons with the same name (the same post behind the dialog) are told apart by their order,
+  // which is the snapshot's order.
+  function shareTarget() {
+    const button = shareButton();
+    const name = label(button);
+    if (!F.pageSnapshot || !name) return JSON.stringify(null);
+    const same = [...document.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && label(element) === name);
+    const rows = F.pageSnapshot(name).split('\n').map(line => line.split('\t')).filter(row => row[1] === 'button' && row[2] === name);
+    const index = same.indexOf(button);
+    return JSON.stringify(index >= 0 && rows.length === same.length ? rows[index][0] : null);
+  }
+
+  // Open Facebook's own share dialog for this post and report its audience; nothing is shared yet.
+  // `clicked`: the backend already clicked Share (see shareTarget); otherwise press it here.
+  async function shareOpen(clicked = false) {
+    const button = shareButton();
+    if (!clicked) activate(button);
+    let toFeed = null;
     const dialog = await F.waitFor(() => {
       const dialogs = [...document.querySelectorAll('[role=dialog]')].filter(element => element !== root && !element.contains(root) && F.visible(element));
-      if (!dialogs.length && !again && Date.now() - pressed > 3000 && buttons[0].isConnected) {
-        again = true;
-        activate(buttons[0]);
-      }
       const found = dialogs.filter(element => shareNowButton(element).length === 1);
       if (found.length === 1) return found[0];
       // French Facebook asks where to share first ("Options de partage"); the feed opens the editor.
@@ -459,7 +473,7 @@
 
   window.__blindfbPost = {
     setTitle(title) { current(); if (card && !reel.text) reel.text = title; return read(); },
-    like, shareOpen, shareFill, shareNow, shareClose, reelReact,
+    like, shareTarget, shareOpen, shareFill, shareNow, shareClose, reelReact,
     async initialize(url) {
       target = url;
       if (/^\/reel\//.test(new URL(url).pathname)) {
