@@ -34,6 +34,21 @@ Il mélange parfois les langues : un bouton Partager est resté en anglais
 | Follow / Following | `Suivre`, `Vous suivez X` | relevé |
 | Remove Like / Unlike | `Retirer J’aime` ou `Supprimer J’aime` | supposé |
 
+## Partage (relevé en mode manuel, rien n'a été partagé)
+
+Le bouton Partager ouvre d'abord une fenêtre de choix, puis un éditeur :
+
+| Étape | Français | |
+|---|---|---|
+| Fenêtre de choix | `[role=dialog][aria-label="Options de partage"]` : `Partager sur le Fil`, `Partager dans votre story (Ami(e)s)`, `Envoyer dans Messenger`, `Partager dans un groupe`, `Partager sur le profil d’un(e) ami(e)` | relevé |
+| Éditeur (Share to Feed) | dialogue `Écrire une publication`, zone `Quoi de neuf, <Prénom> ?`, bouton texte `Partager` (pas « Partager maintenant ») | relevé |
+| Audience | `Modifier la confidentialité. Partage avec Vos ami(e)s.` | relevé |
+| Fermer l'éditeur | `Fermer la boîte de dialogue de l’éditeur`, puis `Enregistrer comme brouillon` / `Supprimer le brouillon` / `Fermer` | relevé |
+
+Le bouton Partager d'une publication ouverte en fenêtre ne réagit pas à un clic
+simulé en JavaScript (`click()` ni suite d'événements pointeur) : il faudra un clic
+« réel » du navigateur (CDP `Input.dispatchMouseEvent`, comme `fb page click`).
+
 ## Reel et vidéo (lecteur plein écran, `/reel/…` et `/watch/`)
 
 | Anglais | Français | |
@@ -50,7 +65,7 @@ Il mélange parfois les langues : un bouton Partager est resté en anglais
 | Unmute | `Réactiver` | relevé |
 | Video player / Change Position | `Video player`, `Change Position` (restés en anglais) | relevé |
 | Comments panel | `[role=complementary]` avec des `[role=article]` comme ci-dessus | relevé |
-| Reaction picker | `J’aime`, `J’adore`, `Solidaire`, `Haha`, `Wouah`, `Triste`, `Grrr` | J’aime/J’adore/Haha relevés, autres supposés |
+| Reaction picker | dialogue `Réactions` : `J’aime`, `J’adore`, `Solidaire`, `Haha`, `Wouah`, `Triste`, `En colère` | relevé |
 | Leave a comment (Watch) | non vu : `/watch/` ouvre le même lecteur que les Reels | — |
 
 ## Temps et nombres
@@ -71,4 +86,5 @@ Il mélange parfois les langues : un bouton Partager est resté en anglais
 | New message | `Nouveau message` | relevé |
 | Use a one-time code instead | `Utiliser plutôt un code à usage unique` | relevé |
 | Location | `Lieu : Toulouse, Dans un rayon de 500 km` | relevé |
-| Free | `Gratuit` | supposé |
+| Free | `Gratuit` (à la place du prix) | relevé |
+| Just listed (badge) | `Annonce récente`, avant le prix | relevé |

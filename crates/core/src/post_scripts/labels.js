@@ -16,7 +16,7 @@
     haha: ['Haha'],
     wow: ['Wow', 'Wouah'],
     sad: ['Sad', 'Triste', 'Buồn'],
-    angry: ['Angry', 'Grrr', 'Phẫn nộ'],
+    angry: ['Angry', 'En colère', 'Grrr', 'Phẫn nộ'],
   };
   const REMOVE = '(?:Remove|Retirer|Supprimer|Annuler)\\s+';
 
@@ -38,10 +38,15 @@
     replyStart: /^(?:Reply|Trả lời|Répondre)\b/i,
     // "Share", "Share X's post, 18 shares", "Partager la publication de X", "Partager, 4 partages".
     share: /^(?:Share|Partager)\b/i,
-    shareNow: exact('Share now|Partager maintenant'),
+    shareNow: exact('Share now|Partager maintenant|Partager'),
+    // French Facebook first asks where to share; "to the feed" opens the editor with Partager.
+    shareOptions: exact('Share options|Options de partage'),
+    shareToFeed: exact('Share to Feed|Partager sur le Fil'),
+    // Closing an unsent share asks what to do with its draft.
+    discardDraft: exact('Discard|Discard post|Supprimer le brouillon'),
     editPrivacy: /^(?:Edit privacy|Modifier la confidentialité)/i,
     sharingWith: /(?:Sharing with|Partag[ée] avec\s*:?)\s*(.+?)\.?$/i,
-    close: exact('Close|Fermer'),
+    close: exact(`Close|Fermer|Fermer la boîte de dialogue de l${A}éditeur`),
     react: exact('React|Réagir', ''),
     reactionsDialog: exact('Reactions|Réactions'),
     // A notification about several reels at once: "X posted 3 new reels" (French form supposed).

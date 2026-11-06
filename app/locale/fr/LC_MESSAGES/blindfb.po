@@ -37,7 +37,7 @@ msgstr "Triste"
 
 #: app/src/chat_dialog.rs:91 app/src/main.rs:172 app/src/post_dialog.rs:40
 msgid "Angry"
-msgstr "Grrr"
+msgstr "En colère"
 
 #: app/src/chat_dialog.rs:158
 msgid "Sending…"
@@ -400,7 +400,7 @@ msgstr "Réagir : Triste"
 
 #: app/src/main.rs:133
 msgid "React: angry"
-msgstr "Réagir : Grrr"
+msgstr "Réagir : En colère"
 
 #: app/src/main.rs:134
 msgid "React: none"
@@ -439,7 +439,7 @@ msgstr "triste"
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src/main.rs:156
 msgid "angry"
-msgstr "grrr"
+msgstr "en colère"
 
 #. TRANSLATORS: the choice that removes your reaction, in a list of reactions.
 #: app/src/main.rs:158

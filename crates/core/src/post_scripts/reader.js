@@ -343,6 +343,8 @@
   }
 
   let sharing = null;
+  // Facebook answers some buttons (Share) only to a full pointer sequence, not a bare click().
+  const activate = element => (F.press ? F.press(element) : element.click());
   const shareNowButton = dialog => [...dialog.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.shareNow.test(label(element) || F.clean(element.innerText || '')));
 
   // Open Facebook's own share dialog for this post and report its audience; nothing is shared yet.
@@ -350,11 +352,27 @@
     current();
     const buttons = [...(card || root).querySelectorAll('[role=button],button')].filter(element => !element.closest(ARTICLE) && F.visible(element) && W.share.test(label(element)));
     if (buttons.length !== 1) throw Error('This post has no unique Share button. Nothing was shared.');
-    buttons[0].click();
+    activate(buttons[0]);
+    // The first press can only load Facebook's share code; press once more if nothing opened.
+    const pressed = Date.now();
+    let toFeed = null, again = false;
     const dialog = await F.waitFor(() => {
-      const found = [...document.querySelectorAll('[role=dialog]')].filter(element => element !== root && !element.contains(root) && F.visible(element) && shareNowButton(element).length === 1);
-      return found.length === 1 ? found[0] : null;
-    }, 8000);
+      const dialogs = [...document.querySelectorAll('[role=dialog]')].filter(element => element !== root && !element.contains(root) && F.visible(element));
+      if (!dialogs.length && !again && Date.now() - pressed > 3000 && buttons[0].isConnected) {
+        again = true;
+        activate(buttons[0]);
+      }
+      const found = dialogs.filter(element => shareNowButton(element).length === 1);
+      if (found.length === 1) return found[0];
+      // French Facebook asks where to share first ("Options de partage"); the feed opens the editor.
+      const options = dialogs.find(element => W.shareOptions.test(label(element)));
+      const feed = options ? [...options.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.shareToFeed.test(F.clean(element.innerText || '') || label(element))) : [];
+      if (feed.length === 1 && toFeed !== feed[0]) {
+        toFeed = feed[0];
+        activate(toFeed);
+      }
+      return null;
+    }, 10000);
     if (!dialog) throw Error('Facebook did not open its share dialog. Nothing was shared.');
     const privacy = [...dialog.querySelectorAll('[role=button],button')].map(label).find(text => W.editPrivacy.test(text)) || '';
     sharing = {dialog, text: ''};
@@ -395,11 +413,15 @@
     return 'shared';
   }
 
-  function shareClose() {
+  // Close the unsent share; when Facebook asks about the draft, drop it (nothing was shared).
+  async function shareClose() {
     const dialog = sharing && sharing.dialog;
     sharing = null;
     const close = dialog && dialog.isConnected && [...dialog.querySelectorAll('[role=button],button')].find(element => W.close.test(label(element)));
-    if (close) close.click();
+    if (!close) return 'closed';
+    close.click();
+    const discard = await F.waitFor(() => [...document.querySelectorAll('[role=button],button')].find(element => F.visible(element) && W.discardDraft.test(F.clean(element.innerText || '') || label(element))), 2000);
+    if (discard) discard.click();
     return 'closed';
   }
 
