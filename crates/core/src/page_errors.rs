@@ -7,6 +7,8 @@ use patois::t;
 /// A page error as the user should read it: the message alone, translated when known.
 /// Anything else passes through unchanged.
 pub fn page_error(raw: &str) -> String {
+    // The fb command line prints its errors as "error: <message>".
+    let raw = raw.strip_prefix("error: ").unwrap_or(raw);
     let Some(rest) = raw.strip_prefix("js: ") else {
         return raw.to_owned();
     };
@@ -74,5 +76,9 @@ mod tests {
         );
         assert_eq!(page_error("js: TypeError: x is null\n    at y"), "TypeError: x is null");
         assert_eq!(page_error("not logged in"), "not logged in");
+        assert_eq!(
+            page_error("error: js: Error: The post could not be read.\n    at x"),
+            "The post could not be read."
+        );
     }
 }

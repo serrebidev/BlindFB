@@ -39,8 +39,10 @@ pub const POSTED: &[&str] = &[" posted ", " a publié "];
 pub const OWNER_PROFILE: &[&str] = &["owner profile", "profil du propriétaire"];
 
 /// An author part that is only one of Facebook's own badge words.
+/// Case does not matter: French writes "Indicateur de statut En ligne".
 pub fn feed_noise(part: &str) -> bool {
-    FEED_NOISE.contains(&part) || part.starts_with("Vous suivez ")
+    let part = part.to_lowercase();
+    FEED_NOISE.iter().any(|noise| noise.to_lowercase() == part) || part.starts_with("vous suivez ")
 }
 
 /// The Follow link Facebook glues to a page name ("Oh My Mag · Suivre").
@@ -93,6 +95,7 @@ mod tests {
         assert!(feed_noise("Compte vérifié"));
         assert!(feed_noise("Suivre"));
         assert!(feed_noise("Vous suivez JECK"));
+        assert!(feed_noise("Indicateur de statut En ligne"));
         assert!(!feed_noise("Oh My Mag"));
     }
 

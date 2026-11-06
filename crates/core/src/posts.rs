@@ -114,10 +114,9 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         if id.is_empty() || !ids.insert(id.clone()) {
             return Err(t!("Invalid post detail: empty or duplicate comment identity"));
         }
-        let url = optional_string(row, "url")?;
-        if let Some(url) = &url {
-            validate_target(url)?;
-        }
+        // A reel's comments can carry only their author's profile link (with a comment_id),
+        // which leads to the profile, not the comment: drop it instead of failing the post.
+        let url = optional_string(row, "url")?.filter(|url| validate_target(url).is_ok());
         comments.push(Comment {
             id,
             author: string(row, "author")?,
@@ -493,6 +492,13 @@ pub fn close(fb: &Fb, page: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_comment_link_to_a_profile_is_dropped_not_fatal() {
+        let detail = parse_detail(r#"{"url":"https://www.facebook.com/reel/1/","author":"A","time":"","text":"Reel","comments":[{"id":"c1","author":"B","time":"7 h","text":"Hi","parent_id":null,"url":"https://www.facebook.com/someone?comment_id=Y29t&__tn__=R"}]}"#).unwrap();
+        assert_eq!(detail.comments.len(), 1);
+        assert_eq!(detail.comments[0].url, None);
+    }
+
     use super::*;
 
     #[test]

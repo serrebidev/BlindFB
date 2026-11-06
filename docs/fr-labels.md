@@ -68,7 +68,7 @@ brouillon abandonné ; le bouton final « Partager » n'a pas été pressé.
 | Video player / Change Position | `Video player`, `Change Position` (restés en anglais) | relevé |
 | Comments panel | `[role=complementary]` avec des `[role=article]` comme ci-dessus | relevé |
 | Reaction picker | dialogue `Réactions` : `J’aime`, `J’adore`, `Solidaire`, `Haha`, `Wouah`, `Triste`, `En colère` | relevé |
-| Leave a comment (Watch) | non vu : `/watch/` ouvre le même lecteur que les Reels | — |
+| Leave a comment (Watch) | `Laissez un commentaire` (texte du bouton : `Commenter`), vu sur `/watch/live/` ; `/watch/` seul ouvre le même lecteur que les Reels | relevé |
 
 ## Temps et nombres
 

@@ -26,7 +26,7 @@
     // "Commenter", "Commenter, 1,9 K commentaires".
     comment: exact('Comment(?:, .+ comments?)?|Commenter(?:, .+ commentaires?)?'),
     // Opens the comments of a Watch video ("Leave a comment" in English).
-    leaveComment: exact('Leave a comment|Laisser un commentaire', ''),
+    leaveComment: exact('Leave a comment|Laissez un commentaire|Laisser un commentaire', ''),
     seeMore: exact('See more|Xem thêm|Voir plus|En voir plus|Afficher la suite'),
     // Words in a comment that are its actions, not its text.
     commentAction: exact(`Like|Reply|Edited|See translation|Thích|Trả lời|J${A}aime|Répondre|Modifié|Voir la traduction`),
