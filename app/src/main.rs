@@ -2562,8 +2562,13 @@ fn counts_label(raw: &str) -> String {
     let parts: Vec<&str> = raw.split('/').map(str::trim).collect();
     let numeric = |p: &str| {
         !p.is_empty()
-            && p.chars()
-                .all(|c| c.is_ascii_digit() || matches!(c, '.' | ',' | 'K' | 'M' | 'k' | 'm'))
+            && p.chars().all(|c| {
+                c.is_ascii_digit()
+                    || matches!(
+                        c,
+                        '.' | ',' | 'K' | 'M' | 'k' | 'm' | ' ' | '\u{a0}' | '\u{202f}'
+                    )
+            })
     };
     if parts.len() == 3 && parts.iter().all(|p| numeric(p)) {
         format!(
@@ -4817,6 +4822,11 @@ mod tests {
         assert_eq!(
             counts_label("12/3/1.2K"),
             "Reactions: 12, comments: 3, shares: 1.2K"
+        );
+        // French Facebook writes "1,9 K" and "4 890" with a space.
+        assert_eq!(
+            counts_label("1,9 K/49/4\u{202f}890"),
+            "Reactions: 1,9 K, comments: 49, shares: 4\u{202f}890"
         );
         // Not a numeric triple: shown as it came, never dropped.
         assert_eq!(

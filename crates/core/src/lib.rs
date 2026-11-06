@@ -13,6 +13,7 @@ pub mod debug;
 mod engine;
 pub mod fb;
 pub mod http;
+pub mod labels;
 pub mod media;
 pub mod mpv;
 pub mod posts;

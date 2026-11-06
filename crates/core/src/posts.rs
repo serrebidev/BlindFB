@@ -336,7 +336,10 @@ pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
     }
     let script = format!(
         "{};window.__blindfbPost.initialize({})",
-        include_str!("post_scripts/reader.js"),
+        concat!(
+            include_str!("post_scripts/labels.js"),
+            include_str!("post_scripts/reader.js")
+        ),
         json!(target)
     );
     let result = eval(fb, page, &script).and_then(|output| {

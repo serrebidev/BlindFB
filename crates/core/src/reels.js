@@ -68,6 +68,8 @@
   if (typeof module !== 'undefined') module.exports = {notification, stories};
   if (typeof window === 'undefined') return;
   const F = window.__fb;
+  // Facebook's words per language: post_scripts/labels.js, injected before this script.
+  const W = window.__blindfbLabels;
   const roots = () => [...document.querySelectorAll('script[type="application/json"]')].flatMap(script => {
     try { return [JSON.parse(script.textContent)]; } catch { return []; }
   });
@@ -94,7 +96,7 @@
       return r.height > 0 && r.top >= -10 && r.top < innerHeight / 2;
     });
     let card = video;
-    while (card && ![...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && /^Comment(?:, \S+ comments?)?$/i.test(label(b)))) card = card.parentElement;
+    while (card && ![...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && W.comment.test(label(b)))) card = card.parentElement;
     return card && [...card.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? card : null;
   }
 
@@ -106,9 +108,9 @@
       if (!card) break;
       const url = reelUrl(location.href);
       if (url && !seen.has(url)) {
-        const expand = [...card.querySelectorAll('[role=button],button')].filter(b => F.visible(b) && /^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(label(b)));
+        const expand = [...card.querySelectorAll('[role=button],button')].filter(b => F.visible(b) && W.seeMore.test(label(b)));
         for (const button of expand) button.click();
-        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !/^(See more|Xem thêm|Voir plus|Afficher la suite)$/i.test(label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh to retry.');
+        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh to retry.');
         const author = [...card.querySelectorAll('a[href]')].map(a => F.clean(a.innerText || '')).find(Boolean) || '';
         const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT), lines = [];
         let node;
@@ -116,7 +118,7 @@
           const element = node.parentElement;
           if (element.closest('script,style,button,[role=button],[aria-hidden=true]') || !F.visible(element)) continue;
           const line = F.clean(node.nodeValue || '');
-          if (line && line !== author && !/^(·|Follow|Following|Verified account|[\d.,]+[KMB]?)$/i.test(line)) lines.push(line);
+          if (line && line !== author && !W.captionNoise.test(line)) lines.push(line);
         }
         const text = lines.join('\n');
         rows.push({url, author, text});
@@ -124,7 +126,7 @@
       }
       if (rows.length >= count) break;
       const before = location.href;
-      const next = [...document.querySelectorAll('[role=button][aria-label]')].filter(b => F.visible(b) && /^(Next Card|Next reel)$/i.test(label(b)));
+      const next = [...document.querySelectorAll('[role=button][aria-label]')].filter(b => F.visible(b) && W.nextReel.test(label(b)));
       if (next.length !== 1) break;
       next[0].click();
       if (!await F.waitFor(() => location.href !== before && currentCard(), 6000)) break;
@@ -142,7 +144,7 @@
       for (const anchor of document.querySelectorAll('a[href*="/reel/"]')) {
         const url = reelUrl(anchor.href);
         if (!url || seen.has(url)) continue;
-        const row = captions.get(url) || {url, author: document.title.replace(/ Reels.*$/, ''), text: ''};
+        const row = captions.get(url) || {url, author: W.reelsTitleAuthor(document.title), text: ''};
         rows.push(row);
         seen.add(url);
         if (rows.length >= count) break;

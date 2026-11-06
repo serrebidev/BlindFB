@@ -56,15 +56,6 @@ pub fn parse_records(output: &str) -> Vec<Record> {
 /// text in the author, posts repeated by the feed scroller, or text the
 /// page rendered twice back to back.
 pub fn parse_feed(output: &str) -> Vec<Record> {
-    const NOISE: [&str; 7] = [
-        "Online status indicator",
-        "Active",
-        "Verified account",
-        "Suggested for you",
-        "Shared with Public",
-        "Follow",
-        "View more comments",
-    ];
     let squash = |s: &str| s.split_whitespace().collect::<String>();
     let mut seen = std::collections::HashSet::new();
     let mut rows = Vec::new();
@@ -104,7 +95,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
             // contained in a longer one is that same author, not a second one.
             let candidates: Vec<&str> = record.fields[1]
                 .split(" / ")
-                .map(str::trim)
+                .map(crate::labels::without_follow)
                 .filter(|part| !part.is_empty())
                 .collect();
             for part in candidates.iter().copied() {
@@ -112,7 +103,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     .iter()
                     .any(|other| other.len() > part.len() && other.contains(part));
                 let noise = part.is_empty()
-                    || NOISE.contains(&part)
+                    || crate::labels::feed_noise(part)
                     || part.bytes().all(|b| b.is_ascii_digit())
                     || (part.len() > 30 && text.contains(part))
                     || spelled_out
@@ -121,7 +112,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     continue;
                 }
                 parts.push(part);
-                if matches!(part, "and" | "follows" | "is with" | "is in" | "is at") {
+                if crate::labels::AUTHOR_JOINERS.contains(&part) {
                     author.push(' ');
                     author.push_str(part);
                     joined = true;
@@ -153,9 +144,7 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
 
 /// Stable identity for a normalized feed row, including alternate photo links.
 pub fn feed_record_key(record: &Record) -> String {
-    let text = record
-        .field(4)
-        .trim_end_matches("… See more")
+    let text = crate::labels::without_see_more(record.field(4))
         .split_whitespace()
         .collect::<String>();
     if text.is_empty() {
@@ -548,7 +537,7 @@ pub fn notifs_args(count: u32) -> Vec<String> {
     vec![
         "eval".to_owned(),
         "https://www.facebook.com/notifications/".to_owned(),
-        format!("{};window.__fb.notifs({count}).then(out=>JSON.stringify({{...out,rows:out.rows.map(row=>{{if(!row[2].toLowerCase().includes(' new reels'))return row;const metadata=window.__blindfbReels.notificationNow(new URL(row[3].v,window.location.origin).href);return metadata?[...row,metadata]:row}})}}))", include_str!("reels.js")),
+        format!("{};window.__fb.notifs({count}).then(out=>JSON.stringify({{...out,rows:out.rows.map(row=>{{if(!window.__blindfbLabels.manyReels.test(row[2]))return row;const metadata=window.__blindfbReels.notificationNow(new URL(row[3].v,window.location.origin).href);return metadata?[...row,metadata]:row}})}}))", concat!(include_str!("post_scripts/labels.js"), include_str!("reels.js"))),
     ]
 }
 
@@ -1010,6 +999,26 @@ mod tests {
             .any(|script| script.contains("window.__fb.notifs(20)")
                 && script.contains("notificationNow")));
     }
+    #[test]
+    fn french_feed_rows_drop_french_badges() {
+        // Rows as the backend printed them on a French Facebook account.
+        let out = [
+            "/Ohmymag/posts/1\tOh My Mag / Compte vérifié / Suivre / Oh My Mag · Suivre\til y a 10 heures\t0/738/34\tVous le préférez ?",
+            "-\tAnne / suit / Radio FG\t\t0/0/0\tOn a un problème… En voir plus",
+            "-\tAnne / suit / Radio FG\t\t0/0/0\tOn a un problème… En voir plus",
+        ]
+        .join("\n");
+        let rows = parse_feed(&out);
+        let summary: Vec<(&str, &str)> = rows.iter().map(|r| (r.field(1), r.field(4))).collect();
+        assert_eq!(
+            summary,
+            [
+                ("Oh My Mag", "Vous le préférez ?"),
+                ("Anne suit Radio FG", "On a un problème… En voir plus"),
+            ]
+        );
+    }
+
 
     #[test]
     fn feed_rows_drop_badges_repeats_and_doubled_text() {

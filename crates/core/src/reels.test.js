@@ -35,7 +35,8 @@ async function recommendedFixture(commentLabel) {
   };
   const window = {__fb: {clean: text => text.trim(), visible: () => true,
     waitFor: async predicate => predicate(), sleep: async () => {}}};
-  vm.runInNewContext(fs.readFileSync(__dirname + '/reels.js', 'utf8'),
+  // labels.js is injected before reels.js, as the Rust side does.
+  vm.runInNewContext(fs.readFileSync(__dirname + '/post_scripts/labels.js', 'utf8') + fs.readFileSync(__dirname + '/reels.js', 'utf8'),
     {window, document, location: {href: 'https://www.facebook.com/reel/123/'}, URL, innerHeight: 800, NodeFilter: {SHOW_TEXT: 4}});
   window.__blindfbReels.initialize('fixture', 'recommended');
   const first = JSON.parse(await window.__blindfbReels.more('fixture', 1));
@@ -45,8 +46,9 @@ async function recommendedFixture(commentLabel) {
   assert.deepEqual(JSON.parse(await window.__blindfbReels.more('fixture', 1)).rows, []);
 }
 (async () => {
-  for (const label of ['Comment', 'Comment, 1 comment', 'Comment, 6 comments', 'Comment, 1.2K comments']) {
+  for (const label of ['Comment', 'Comment, 1 comment', 'Comment, 6 comments', 'Comment, 1.2K comments',
+    'Commenter', 'Commenter, 1 commentaire', 'Commenter, 2 commentaires', 'Commenter, 1,9 K commentaires']) {
     await recommendedFixture(label);
   }
-  console.log('Recommended reels fixtures passed: plain and counted comment buttons, no duplicate reels.');
+  console.log('Recommended reels fixtures passed: plain and counted comment buttons in English and French, no duplicate reels.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

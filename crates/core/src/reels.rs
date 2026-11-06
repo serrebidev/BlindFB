@@ -29,17 +29,13 @@ impl ReelSource {
 
 pub fn notification_source(record: &Record) -> Option<ReelSource> {
     let text = record.field(2);
-    if !text.to_lowercase().contains(" new reels") || !is_reel(record.field(3)) {
+    if !crate::labels::many_reels(text) || !is_reel(record.field(3)) {
         return None;
     }
     let metadata = serde_json::from_str::<Value>(record.field(4)).unwrap_or(Value::Null);
     Some(ReelSource::Notification {
         target: crate::fb::web_url(record.field(3)),
-        author: text
-            .split(" posted ")
-            .next()
-            .unwrap_or("this account")
-            .to_owned(),
+        author: crate::labels::reel_notification_author(text).to_owned(),
         urls: metadata["urls"]
             .as_array()
             .into_iter()
@@ -106,7 +102,15 @@ fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
 }
 
 fn initialize(fb: &Fb, page: &str) -> Result<(), String> {
-    eval(fb, page, include_str!("reels.js")).map(|_| ())
+    eval(
+        fb,
+        page,
+        concat!(
+            include_str!("post_scripts/labels.js"),
+            include_str!("reels.js")
+        ),
+    )
+    .map(|_| ())
 }
 
 fn account_url(url: &str) -> bool {
@@ -298,7 +302,7 @@ pub fn load(fb: &Fb, source: &ReelSource, append: bool) -> Result<String, String
                 account = detail.links.iter().find_map(|link| {
                     if account_url(&link.url)
                         || link.label == detail.author
-                        || link.label.to_lowercase().contains("owner profile")
+                        || crate::labels::owner_profile(&link.label)
                     {
                         owner_reels(&link.url)
                     } else {
