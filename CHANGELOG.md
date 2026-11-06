@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.25 - 2026-11-06
+
+Opening a post in the reader, and sending a comment from it, failed on
+Windows with "could not run fb.exe: The filename or extension is too
+long" and your draft was kept. The reader's script had grown past
+Windows' 32,767-character command-line limit, so the backend never
+started. Long reader scripts are now sent to the page in pieces and
+run whole. Backend v0.1.5-blindfb.37 (unchanged).
+
 ## v0.7.22 - 2026-11-06
 
 No console window on Windows. The app is now linked as a Windows GUI

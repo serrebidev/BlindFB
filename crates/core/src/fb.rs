@@ -303,6 +303,11 @@ impl Fb {
     }
 
     fn run_unlogged(&self, args: &[&str]) -> Result<String, String> {
+        if let ["page", page, "eval", script] = args {
+            if script.len() > MAX_DIRECT_EVAL {
+                return self.run_chunked_eval(page, script);
+            }
+        }
         if self.engine.is_some() && args == ["login", "--visible"] {
             return self.login_visible();
         }
@@ -322,6 +327,14 @@ impl Fb {
             crate::engine::close()?;
         }
         result
+    }
+
+    fn run_chunked_eval(&self, page: &str, script: &str) -> Result<String, String> {
+        for (index, chunk) in eval_chunks(script).into_iter().enumerate() {
+            let step = eval_chunk_step(index == 0, chunk);
+            self.run_unlogged(&["page", page, "eval", &step])?;
+        }
+        self.run_unlogged(&["page", page, "eval", "eval(window.__blindfbEvalChunk)"])
     }
 
     fn command(&self, args: &[&str]) -> Result<Command, String> {
@@ -440,6 +453,37 @@ impl Fb {
             })?;
         collect(output)
     }
+}
+
+/// Longest page script still passed to `fb` as one argument. Windows caps
+/// the whole command line at 32,767 characters; longer scripts are chunked.
+const MAX_DIRECT_EVAL: usize = 16_000;
+/// Script bytes per chunked-eval step, before JSON escaping.
+const EVAL_CHUNK: usize = 4_000;
+
+/// Split `script` on char boundaries into chunks of at most [`EVAL_CHUNK`]
+/// bytes, so a chunk never cuts a multi-byte character in half.
+fn eval_chunks(script: &str) -> Vec<&str> {
+    let mut chunks = Vec::new();
+    let mut start = 0;
+    while start < script.len() {
+        let mut end = (start + EVAL_CHUNK).min(script.len());
+        while !script.is_char_boundary(end) {
+            end -= 1;
+        }
+        chunks.push(&script[start..end]);
+        start = end;
+    }
+    chunks
+}
+
+/// One step that appends `chunk` to the script the page is assembling.
+fn eval_chunk_step(first: bool, chunk: &str) -> String {
+    format!(
+        "window.__blindfbEvalChunk{}={}",
+        if first { "" } else { "+" },
+        serde_json::to_string(chunk).unwrap_or_else(|_| "\"\"".to_owned())
+    )
 }
 
 fn collect(output: std::process::Output) -> Result<String, String> {
@@ -1139,6 +1183,37 @@ mod tests {
             thread_url_from_profile_url("https://www.facebook.com/profile.php?id=42").as_deref(),
             Some("https://www.facebook.com/messages/t/42")
         );
+    }
+
+    #[test]
+    fn long_eval_chunks_reassemble_exactly_and_stay_small() {
+        let script = format!("{}🎉'\"\\{}", "J’aime ".repeat(2_000), "x".repeat(9_000));
+        assert!(script.len() > MAX_DIRECT_EVAL);
+        let chunks = eval_chunks(&script);
+        assert!(chunks.len() > 1);
+        assert_eq!(chunks.concat(), script);
+        for (index, chunk) in chunks.iter().enumerate() {
+            assert!(chunk.len() <= EVAL_CHUNK, "chunk {index} is {} bytes", chunk.len());
+            assert!(eval_chunk_step(index == 0, chunk).len() < MAX_DIRECT_EVAL);
+        }
+        assert!(eval_chunk_step(true, "a").starts_with("window.__blindfbEvalChunk="));
+        assert!(eval_chunk_step(false, "a").starts_with("window.__blindfbEvalChunk+="));
+        assert_eq!(eval_chunks(""), Vec::<&str>::new());
+        assert_eq!(eval_chunks("short"), ["short"]);
+    }
+
+    #[test]
+    fn shipped_post_reader_script_takes_the_chunked_path() {
+        let script = format!(
+            "{};window.__blindfbPost.initialize({})",
+            concat!(
+                include_str!("post_scripts/labels.js"),
+                include_str!("post_scripts/reader.js")
+            ),
+            serde_json::json!("https://www.facebook.com/a/posts/1")
+        );
+        assert!(script.len() > MAX_DIRECT_EVAL, "reader script is {} bytes", script.len());
+        assert_eq!(eval_chunks(&script).concat(), script);
     }
 
     #[test]
