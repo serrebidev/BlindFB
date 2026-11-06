@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BlindFB\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 18:17+0100\n"
+"POT-Creation-Date: 2026-11-06 20:19+0100\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -3204,6 +3204,170 @@ msgstr "impossible de créer un fichier de mpv : {error}"
 msgid "could not unpack mpv: {error}"
 msgstr "impossible de décompresser mpv : {error}"
 
+#: crates/core/src/page_errors.rs:20
+msgid "Ambiguous comment permalink; refresh the post."
+msgstr "Lien de commentaire ambigu ; actualisez la publication."
+
+#: crates/core/src/page_errors.rs:21
+msgid "Duplicate comment identity; refresh the post."
+msgstr "Deux commentaires ont la même identité ; actualisez la publication."
+
+#: crates/core/src/page_errors.rs:22
+msgid "Facebook did not confirm the Like. Refresh to check."
+msgstr "Facebook n’a pas confirmé le J’aime. Actualisez pour vérifier."
+
+#: crates/core/src/page_errors.rs:23
+msgid "Facebook did not confirm the reaction. Refresh to check."
+msgstr "Facebook n’a pas confirmé la réaction. Actualisez pour vérifier."
+
+#: crates/core/src/page_errors.rs:24
+msgid "Facebook did not confirm the share. Check your profile before trying again; do not share again automatically."
+msgstr "Facebook n’a pas confirmé le partage. Vérifiez votre profil avant de réessayer ; ne partagez pas à nouveau automatiquement."
+
+#: crates/core/src/page_errors.rs:25
+msgid "Facebook did not open its share dialog. Nothing was shared."
+msgstr "Facebook n’a pas ouvert sa fenêtre de partage. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:26
+msgid "Facebook did not show its reactions. Nothing was changed."
+msgstr "Facebook n’a pas affiché ses réactions. Rien n’a été modifié."
+
+#: crates/core/src/page_errors.rs:27
+msgid "Facebook has not expanded all text. Refresh the reader to retry."
+msgstr "Facebook n’a pas déplié tout le texte. Actualisez la fenêtre de lecture pour réessayer."
+
+#: crates/core/src/page_errors.rs:28
+msgid "Facebook has not expanded the reel caption. Refresh the reader to retry."
+msgstr "Facebook n’a pas déplié la légende du Reel. Actualisez la fenêtre de lecture pour réessayer."
+
+#: crates/core/src/page_errors.rs:29
+msgid "Facebook has not expanded the reel caption. Refresh to retry."
+msgstr "Facebook n’a pas déplié la légende du Reel. Actualisez pour réessayer."
+
+#: crates/core/src/page_errors.rs:30
+msgid "More than one post dialog is open."
+msgstr "Plusieurs fenêtres de publication sont ouvertes."
+
+#: crates/core/src/page_errors.rs:31
+msgid "More than one post is visible. Open the individual post permalink."
+msgstr "Plusieurs publications sont visibles. Ouvrez le lien de la publication seule."
+
+#: crates/core/src/page_errors.rs:32
+msgid "No unique comment box on this post. Nothing was sent."
+msgstr "Cette publication n’a pas une seule zone de commentaire. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:33
+msgid "No unique editor inside the selected comment thread. Nothing was sent."
+msgstr "Le fil du commentaire sélectionné n’a pas une seule zone de réponse. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:34
+msgid "Post changed or reader expired. Refresh or reopen the post."
+msgstr "La publication a changé ou la fenêtre de lecture a expiré. Actualisez ou rouvrez la publication."
+
+#: crates/core/src/page_errors.rs:35
+msgid "Selected comment changed or disappeared. Refresh and select it again."
+msgstr "Le commentaire sélectionné a changé ou a disparu. Actualisez et sélectionnez-le à nouveau."
+
+#: crates/core/src/page_errors.rs:36
+msgid "Selected comment is ambiguous or stale."
+msgstr "Le commentaire sélectionné est ambigu ou périmé."
+
+#: crates/core/src/page_errors.rs:37
+msgid "Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically."
+msgstr "L’envoi n’a pas été confirmé dans le fil sélectionné. Actualisez avant de réessayer ; ne renvoyez pas automatiquement."
+
+#: crates/core/src/page_errors.rs:38
+msgid "The Facebook editor already contains a draft. Nothing was overwritten."
+msgstr "L’éditeur de Facebook contient déjà un brouillon. Rien n’a été remplacé."
+
+#: crates/core/src/page_errors.rs:39
+msgid "The Share now button is missing. Nothing was shared."
+msgstr "Le bouton de partage est introuvable. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:40
+msgid "The comment editor has no reliable accessible name. Nothing was sent."
+msgstr "La zone de commentaire n’a pas de nom accessible fiable. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:41
+msgid "The comment editor is ambiguous. Nothing was sent."
+msgstr "La zone de commentaire est ambiguë. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:42
+msgid "The post could not be read."
+msgstr "Impossible de lire la publication."
+
+#: crates/core/src/page_errors.rs:43
+msgid "The reel could not be read."
+msgstr "Impossible de lire le Reel."
+
+#: crates/core/src/page_errors.rs:44
+msgid "The reel's comments could not be opened."
+msgstr "Impossible d’ouvrir les commentaires du Reel."
+
+#: crates/core/src/page_errors.rs:45
+msgid "The selected comment editor changed. Nothing was sent."
+msgstr "La zone de réponse du commentaire sélectionné a changé. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:46
+msgid "The selected comment has no unique Like button. Nothing was changed."
+msgstr "Le commentaire sélectionné n’a pas un seul bouton J’aime. Rien n’a été modifié."
+
+#: crates/core/src/page_errors.rs:47
+msgid "The selected comment has no unique Reply action. Nothing was sent."
+msgstr "Le commentaire sélectionné n’a pas une seule action Répondre. Rien n’a été envoyé."
+
+#: crates/core/src/page_errors.rs:48
+msgid "The share dialog closed. Nothing was shared."
+msgstr "La fenêtre de partage s’est fermée. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:49
+msgid "The share dialog has no unique text box. Nothing was shared."
+msgstr "La fenêtre de partage n’a pas une seule zone de texte. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:50
+msgid "The share text box already contains text. Nothing was shared."
+msgstr "La zone de texte du partage contient déjà du texte. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:51
+msgid "The share text box is ambiguous. Nothing was shared."
+msgstr "La zone de texte du partage est ambiguë. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:52
+msgid "The share text did not match. Nothing was shared."
+msgstr "Le texte du partage ne correspond pas. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:53
+msgid "The video comments could not be opened."
+msgstr "Impossible d’ouvrir les commentaires de la vidéo."
+
+#: crates/core/src/page_errors.rs:54
+msgid "There is no pending submission."
+msgstr "Aucun envoi en attente."
+
+#: crates/core/src/page_errors.rs:55
+msgid "This post has no unique Share button. Nothing was shared."
+msgstr "Cette publication n’a pas un seul bouton Partager. Rien n’a été partagé."
+
+#: crates/core/src/page_errors.rs:56
+msgid "This reel has no Like button. Nothing was changed."
+msgstr "Ce Reel n’a pas de bouton J’aime. Rien n’a été modifié."
+
+#: crates/core/src/page_errors.rs:57
+msgid "This reel has no unique Comment button."
+msgstr "Ce Reel n’a pas un seul bouton Commenter."
+
+#: crates/core/src/page_errors.rs:58
+msgid "This reel has no unique React button. Nothing was changed."
+msgstr "Ce Reel n’a pas un seul bouton Réagir. Rien n’a été modifié."
+
+#: crates/core/src/page_errors.rs:59
+msgid "This reels list expired. Refresh it to continue."
+msgstr "Cette liste de Reels a expiré. Actualisez-la pour continuer."
+
+#: crates/core/src/page_errors.rs:60
+msgid "Unknown reaction. Nothing was changed."
+msgstr "Réaction inconnue. Rien n’a été modifié."
+
 #: crates/core/src/posts.rs:91
 #, rust-format
 msgid "Invalid post detail: {field} must be text"
@@ -3238,28 +3402,28 @@ msgstr "Détail de publication non valide : commentaire parent manquant"
 msgid "This item has no supported Facebook post URL. Refresh the list and open the post again."
 msgstr "Cet élément n’a pas d’URL de publication Facebook prise en charge. Actualisez la liste et rouvrez la publication."
 
-#: crates/core/src/posts.rs:386
+#: crates/core/src/posts.rs:387
 msgid "Enter a comment before sending"
 msgstr "Saisissez un commentaire avant d’envoyer"
 
-#: crates/core/src/posts.rs:399
+#: crates/core/src/posts.rs:400
 msgid "Could not identify the selected comment editor"
 msgstr "Impossible d’identifier la zone de commentaire sélectionnée"
 
-#: crates/core/src/posts.rs:406
+#: crates/core/src/posts.rs:407
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically."
 msgstr "L’envoi n’a pas pu être confirmé. Actualisez avant de réessayer ; ne renvoyez pas automatiquement."
 
-#: crates/core/src/posts.rs:410
+#: crates/core/src/posts.rs:411
 #, rust-format
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}"
 msgstr "L’envoi n’a pas pu être confirmé. Actualisez avant de réessayer ; ne renvoyez pas automatiquement. {error}"
 
-#: crates/core/src/posts.rs:445 crates/core/src/posts.rs:449
+#: crates/core/src/posts.rs:457 crates/core/src/posts.rs:461
 msgid "Could not read Facebook's share audience. Nothing was shared."
 msgstr "Impossible de lire l’audience du partage sur Facebook. Rien n’a été partagé."
 
-#: crates/core/src/posts.rs:462
+#: crates/core/src/posts.rs:474
 msgid "Could not identify the share text box. Nothing was shared."
 msgstr "Impossible d’identifier la zone de texte du partage. Rien n’a été partagé."
 
@@ -3284,41 +3448,41 @@ msgstr "Facebook a renvoyé un lien de Reel non valide"
 msgid "Reel"
 msgstr "Reel"
 
-#: crates/core/src/reels.rs:184
+#: crates/core/src/reels.rs:185
 msgid "Reel loading was interrupted. Refresh to retry."
 msgstr "Le chargement du Reel a été interrompu. Actualisez pour réessayer."
 
-#: crates/core/src/reels.rs:188
+#: crates/core/src/reels.rs:189
 msgid "Reel loading was interrupted"
 msgstr "Le chargement du Reel a été interrompu"
 
-#: crates/core/src/reels.rs:191
+#: crates/core/src/reels.rs:192
 msgid "This older reels list expired. Refresh it to load more."
 msgstr "Cette ancienne liste de Reels a expiré. Actualisez-la pour en charger plus."
 
-#: crates/core/src/reels.rs:232
+#: crates/core/src/reels.rs:233
 msgid "This notification has no valid reel link"
 msgstr "Cette notification n’a pas de lien de Reel valide"
 
-#: crates/core/src/reels.rs:249
+#: crates/core/src/reels.rs:250
 msgid "Could not read the notification's reels"
 msgstr "Impossible de lire les Reels de la notification"
 
-#: crates/core/src/reels.rs:281
+#: crates/core/src/reels.rs:282
 #, rust-format
 msgid "Reel {number}"
 msgstr "Reel {number}"
 
-#: crates/core/src/reels.rs:282
+#: crates/core/src/reels.rs:283
 #, rust-format
 msgid "Reel {number}. Preview unavailable; open this reel to retry."
 msgstr "Reel {number}. Aperçu indisponible ; ouvrez ce Reel pour réessayer."
 
-#: crates/core/src/reels.rs:316
+#: crates/core/src/reels.rs:317
 msgid "Facebook did not expose the other reels or the account's reels page"
 msgstr "Facebook n’a fourni ni les autres Reels ni la page Reels du compte"
 
-#: crates/core/src/reels.rs:320
+#: crates/core/src/reels.rs:321
 #, rust-format
 msgid "Facebook did not expose the exact set. Showing {author}'s reels instead."
 msgstr "Facebook n’a pas fourni la série exacte. Affichage des Reels de {author} à la place."

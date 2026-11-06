@@ -16,6 +16,7 @@ pub mod i18n;
 pub mod http;
 pub mod labels;
 pub mod media;
+pub mod page_errors;
 pub mod mpv;
 pub mod posts;
 pub mod reels;

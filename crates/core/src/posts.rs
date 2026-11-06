@@ -310,6 +310,7 @@ pub fn validate_target(target: &str) -> Result<(), String> {
 
 fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
     fb.run(&["page", page, "eval", script])
+        .map_err(|e| crate::page_errors::page_error(&e))
 }
 
 pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {

@@ -100,6 +100,7 @@ pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
 
 fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
     fb.run(&["page", page, "eval", script])
+        .map_err(|e| crate::page_errors::page_error(&e))
 }
 
 fn initialize(fb: &Fb, page: &str) -> Result<(), String> {
