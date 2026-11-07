@@ -255,7 +255,7 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 
 [[package]]
 name = "blindfb"
-version = "0.7.27"
+version = "0.7.28"
 dependencies = [
  "blindfb-core",
  "image",
@@ -270,7 +270,7 @@ dependencies = [
 
 [[package]]
 name = "blindfb-core"
-version = "0.7.27"
+version = "0.7.28"
 dependencies = [
  "flate2",
  "patois",
@@ -3296,9 +3296,9 @@ checksum = "3a3b425286980a367278453f3b6d28cdcb134b574e5a35824a6ff5eebad50bb6"
 
 [[package]]
 name = "uuid"
-version = "1.29.0"
+version = "1.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
+checksum = "4a06f08a856b009bc7bbaf7d3e79808595d032dd19074c0c2ef26e49e03e6bdc"
 dependencies = [
  "js-sys",
  "serde_core",
@@ -3764,9 +3764,9 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "wx-utils"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ee31824ac70e91cf5de61fc01e82b850a8521158177c393204d877eb52349a7"
+checksum = "145bd06b862b7245d3489195d989a55aef61bb72dadf753d303d450ba7409d0b"
 dependencies = [
  "patois",
  "wxdragon",
@@ -3825,7 +3825,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.7.27"
+version = "0.7.28"
 dependencies = [
  "minisign",
  "minisign-verify",

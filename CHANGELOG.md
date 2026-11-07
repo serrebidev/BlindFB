@@ -4,6 +4,25 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.28 - 2026-11-07
+
+Links inside comments, and release notes that say what changed.
+Backend v0.1.5-blindfb.38.
+
+- New: browse the links in a comment. In the post reader, selecting a
+  comment that has links points the links list at that comment — its
+  title says whose links they are — and the comment's context menu
+  gains the same Links submenu as the post's. In the comments list
+  view, a comment's links join the link list under its details.
+  Facebook only shows a trimmed label for a link inside a comment, so
+  the real address used to be lost; BlindFB now carries it, with
+  Facebook's redirect unwrapped and tracking parameters stripped.
+- Release notes are now the per-version sections of this changelog,
+  the way BlindRadio ships them: Check for updates shows what actually
+  changed instead of an empty page. The notes for v0.7.21 to v0.7.27
+  have been filled in on GitHub too, and from now on a release whose
+  section is not written does not publish.
+
 ## v0.7.27 - 2026-11-07
 
 News feed cursor (issue #23): opening an author's posts or profile
@@ -30,6 +49,30 @@ long" and your draft was kept. The reader's script had grown past
 Windows' 32,767-character command-line limit, so the backend never
 started. Long reader scripts are now sent to the page in pieces and
 run whole. Backend v0.1.5-blindfb.37 (unchanged).
+
+## v0.7.24 - 2026-11-06
+
+Posting and the feed, fixed for non-English interfaces (issues #20 and
+#21, thanks Michal). Backend v0.1.5-blindfb.37.
+
+- Posting failed with "audience option not found" whenever Facebook was
+  not in English, French or Vietnamese: the backend's audience picker
+  only knew those languages. It now knows every language the Post
+  button knows — Czech and Slovak first, then the rest.
+- Sponsored and suggested feed rows that carry no link to open no
+  longer appear in the feed list. They could not be opened, reacted to
+  or commented on, so listing them only dead-ended on Enter.
+
+## v0.7.23 - 2026-11-06
+
+BlindFB in French (thanks math65). Backend v0.1.5-blindfb.35.
+
+- New: the whole interface — menus, dialogs, lists and messages — in
+  French, chosen from the same language setting as the other
+  translations.
+- The backend reads French Facebook pages: times, counts, the verified
+  badge, presence and Marketplace, plus the long French reaction labels
+  ("J'aime" and its selected form).
 
 ## v0.7.22 - 2026-11-06
 
