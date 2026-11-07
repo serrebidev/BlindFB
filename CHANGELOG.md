@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.26 - 2026-11-06
+
+Comments (issue #22): replies hidden behind Facebook's "View replies"
+buttons now load automatically when a post opens, and each reply row
+names the comment it answers. After you send a comment, the reader
+lands on your new comment in the list so you hear it read back, and
+commenting from the list views now says "Comment sent." and refreshes
+an open comments view instead of a bare "Done". Backend
+v0.1.5-blindfb.37 (unchanged).
+
 ## v0.7.25 - 2026-11-06
 
 Opening a post in the reader, and sending a comment from it, failed on

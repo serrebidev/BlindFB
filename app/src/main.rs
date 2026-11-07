@@ -264,6 +264,11 @@ enum Tag {
         append: bool,
     },
     Text,
+    /// A comment sent from the list views: success must say so, not "Done",
+    /// and a comments view showing that post refreshes to show it (issue #22).
+    Commented {
+        post: String,
+    },
     DebugReport,
     AlertNotifications,
     AlertChats,
@@ -3148,6 +3153,20 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(&ui.frame, &e, "BlindFB");
             }
         },
+        Tag::Commented { post } => match done.result {
+            Ok(text) => {
+                set_details(ui, text.trim(), None);
+                ui.status(&t!("Comment sent."));
+                if matches!(&ui.state.borrow().view, View::CommentsOf(current) if current == &post)
+                {
+                    refresh(ui);
+                }
+            }
+            Err(e) => {
+                ui.status(&t!("Error"));
+                show_error(&ui.frame, &e, "BlindFB");
+            }
+        },
         Tag::GroupJoin { group } => match done.result {
             Ok(text) => {
                 let text = text.trim().to_owned();
@@ -3590,7 +3609,7 @@ fn comment_selected(ui: &Ui) {
         if !text.trim().is_empty() {
             ui.send(Job {
                 task: Task::Fb(comment_args(&post, &text), None),
-                tag: Tag::Text,
+                tag: Tag::Commented { post },
             });
         }
     }

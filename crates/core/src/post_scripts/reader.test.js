@@ -34,8 +34,12 @@ function fixture(mode = false) {
     focus() { cardHref = 'https://13x.audio/products/loft?fbclid=abc'; }, blur() {}};
   const messages = mode === 'shared' || mode === 'shared-source' || mode === 'ambiguous' ? ['Poster text', 'Shared original'].map(text => ({text, closest: () => null, contains: () => false})) : [{closest: () => null, contains: () => false}];
   if (mode === 'shared') messages.push({text: 'Hidden template', visible: false, closest: () => null, contains: () => false});
+  let repliesShown = false;
+  const viewReplies = {innerText: '', isConnected: true, closest: () => null,
+    getAttribute: () => repliesShown ? 'Hide replies' : 'View 1 reply',
+    click() { if (!repliesShown) { repliesShown = true; const reply = article('2', comments[0]); reply.lines[2] = 'A hidden reply'; } }};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -347,6 +351,15 @@ function fixture(mode = false) {
   assert.ok(W.seeMore.test('En voir plus'));
   assert.ok(W.manyReels.test('JECK a publié 3 nouveaux reels.'));
   assert.equal(('Partagé avec : Public'.match(W.sharingWith) || [])[1], 'Public');
+  // Issue #22: replies hidden behind "View replies" load automatically on read.
+  const collapsed = fixture('replies');
+  collapsed.article('1');
+  const collapsedDetail = JSON.parse(await collapsed.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(collapsedDetail.comments.length, 2);
+  assert.equal(collapsedDetail.comments.find(c => c.id === '2').parent_id, '1');
+  assert.equal(collapsedDetail.comments.find(c => c.id === '2').text, 'A hidden reply');
+  for (const text of ['View replies', 'View 1 reply', 'View 12 replies', 'View more replies', 'Afficher les réponses', 'Voir 2 réponses']) assert.ok(W.viewReplies.test(text), text);
+  for (const text of ['Hide replies', 'View comment', 'See more']) assert.ok(!W.viewReplies.test(text), text);
   console.log('French Facebook fixtures passed: reel and video comments, reactions, counts, times, badges.');
   console.log('Reader safety fixtures passed: missing, stale, changed, ambiguous, no root fallback, exact-thread confirmation, reply boxes beside comments, prefilled names.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

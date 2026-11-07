@@ -198,6 +198,21 @@
     return result;
   }
 
+  // Facebook hides replies behind "View replies" buttons; they are not in the page
+  // until pressed. Press them in bounded rounds (a reply can hide replies of its own)
+  // so read() returns the whole thread, not just the top level (issue #22).
+  async function expandReplies() {
+    for (let round = 0; round < 5; round++) {
+      const buttons = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.viewReplies.test(F.clean(element.innerText || '') || label(element)));
+      if (!buttons.length) return;
+      const before = root.querySelectorAll(ARTICLE).length;
+      for (const button of buttons) {
+        if (button.isConnected) button.click();
+      }
+      await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || buttons.every(button => !button.isConnected || !F.visible(button) || !W.viewReplies.test(F.clean(button.innerText || '') || label(button))), 5000);
+    }
+  }
+
   async function read() {
     current();
     const watch = /\/videos\/|^\/watch\/?/.test(new URL(target).pathname);
@@ -206,6 +221,7 @@
       if (button.isConnected) button.click();
     }
     if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
+    await expandReplies();
     const rows = collect();
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {

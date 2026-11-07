@@ -1101,6 +1101,25 @@ pub(super) fn prepared(ui: &Ui, target: &str, result: Result<String, String>) {
     }
 }
 
+/// One comments-list row. A reply names the comment it answers, so it cannot
+/// be mistaken for a top-level comment (issue #22).
+fn comment_row(comment: &Comment, comments: &[Comment]) -> String {
+    match comment
+        .parent_id
+        .as_ref()
+        .and_then(|parent| comments.iter().find(|other| &other.id == parent))
+    {
+        Some(parent) => format!(
+            "{} — {}: {} — {}",
+            tf!("Reply to {author}", author = parent.author),
+            comment.author,
+            comment.text,
+            comment.time
+        ),
+        None => format!("{}: {} — {}", comment.author, comment.text, comment.time),
+    }
+}
+
 fn selected_index(comments: &[Comment], id: Option<&str>) -> Option<u32> {
     id.and_then(|id| comments.iter().position(|comment| comment.id == id))
         .map(|i| i as u32)
@@ -1151,6 +1170,14 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             reader.message(ui, &tf!("{error} Your draft has been kept.", error = error));
         }
         Ok(detail) => {
+            // Before this refresh, so a sent comment can be recognised as new.
+            let previous_ids: std::collections::HashSet<String> = reader
+                .state
+                .borrow()
+                .comments
+                .iter()
+                .map(|c| c.id.clone())
+                .collect();
             let selected_id = reader.comments.get_selection().and_then(|index| {
                 reader
                     .state
@@ -1164,7 +1191,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 reader.post.change_value(&text);
             }
             for (index, comment) in detail.comments.iter().enumerate() {
-                let row = format!("{}: {} — {}", comment.author, comment.text, comment.time);
+                let row = comment_row(comment, &detail.comments);
                 if index < reader.comments.get_count() as usize {
                     if reader.comments.get_string(index as u32).as_deref() != Some(&row) {
                         reader.comments.set_string(index as u32, &row);
@@ -1176,7 +1203,21 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             while reader.comments.get_count() as usize > detail.comments.len() {
                 reader.comments.delete(reader.comments.get_count() - 1);
             }
-            if let Some(index) = selected_index(&detail.comments, selected_id.as_deref()) {
+            // A sent comment is the confirmation: land on it in the list, so
+            // the screen reader reads the comment that just posted (issue #22).
+            let posted = sent.then(|| {
+                detail
+                    .comments
+                    .iter()
+                    .position(|comment| !previous_ids.contains(&comment.id))
+                    .map(|index| index as u32)
+            });
+            if let Some(Some(index)) = posted {
+                if reader.comments.get_selection() != Some(index) {
+                    reader.comments.set_selection(index, true);
+                }
+                reader.comments.set_focus();
+            } else if let Some(index) = selected_index(&detail.comments, selected_id.as_deref()) {
                 if reader.comments.get_selection() != Some(index) {
                     reader.comments.set_selection(index, true);
                 }
@@ -1313,6 +1354,16 @@ mod tests {
         state.busy = false;
         assert!(state.take_autoplay_request());
         assert!(!state.take_autoplay_request());
+    }
+
+    #[test]
+    fn reply_rows_name_the_comment_they_answer() {
+        let comments = parse_detail(r#"{"url":"https://www.facebook.com/a/posts/1","author":"A","time":"now","text":"Post","comments":[{"id":"1","author":"Ann","time":"1h","text":"Top level","parent_id":null,"url":null},{"id":"2","author":"Bob","time":"2h","text":"A reply","parent_id":"1","url":null}]}"#).unwrap().comments;
+        assert_eq!(comment_row(&comments[0], &comments), "Ann: Top level — 1h");
+        assert_eq!(
+            comment_row(&comments[1], &comments),
+            "Reply to Ann — Bob: A reply — 2h"
+        );
     }
 
     #[test]

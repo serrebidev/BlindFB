@@ -36,6 +36,9 @@
     commentLike: exact(`Like|Remove Like|Unlike|J${A}aime|${REMOVE}J${A}aime|Je n${A}aime plus`),
     reply: exact('Reply|Trả lời|Répondre'),
     replyStart: /^(?:Reply|Trả lời|Répondre)\b/i,
+    // Buttons that load a comment's hidden replies: "View replies", "View 3 replies",
+    // "View more replies". Never "Hide replies" — that would collapse them again.
+    viewReplies: exact(`View(?: more| previous)?(?: ${COUNT})? replies|View 1 reply|Afficher(?: les| plus de)?(?: ${COUNT})? réponses|Voir(?: les| plus de)?(?: ${COUNT})? réponses|Xem(?: thêm)?(?: ${COUNT})?(?: câu)? trả lời`),
     // "Share", "Share X's post, 18 shares", "Partager la publication de X", "Partager, 4 partages".
     share: /^(?:Share|Partager)\b/i,
     shareNow: exact('Share now|Partager maintenant|Partager'),
