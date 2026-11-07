@@ -1646,9 +1646,20 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
 
 fn activate_view(ui: &Ui, view: &View) {
     ui.latest_list.lock().unwrap().background.remove(view);
+    let selected = ui.items.get_selection();
     let mut state = ui.state.borrow_mut();
     let clear = state.records_view != *view;
     if clear {
+        // Remember the outgoing list's cursor before its records and the
+        // list selection are cleared: show_records runs only once the
+        // next list has loaded, when both are already gone, so the save
+        // there never saw them and every return landed on the first
+        // item (issue #23).
+        let key = selection_key(&state.records_view, &state.records, selected);
+        if let Some(key) = key {
+            let outgoing = state.records_view.clone();
+            state.selection_memory.insert(outgoing, key);
+        }
         state.records.clear();
     }
     if !quote_follows_chat(&state.view, view) {
@@ -2422,6 +2433,15 @@ fn record_key(view: &View, record: &Record) -> String {
         .to_owned()
 }
 
+/// The identity of the record at `selected`, for selection memory: a row
+/// with no identity (empty key, or the "-" placeholder) remembers nothing.
+fn selection_key(view: &View, records: &[Record], selected: Option<u32>) -> Option<String> {
+    selected
+        .and_then(|i| records.get(i as usize))
+        .map(|r| record_key(view, r))
+        .filter(|k| !k.is_empty() && k != "-")
+}
+
 // shortcut: extract URLs written in the text; named attachment links are available in the full reader.
 fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
     let mut links = Vec::new();
@@ -2760,10 +2780,7 @@ fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>
             .iter()
             .map(|r| list_label(&state.records_view, r))
             .collect();
-        let key = old_index
-            .and_then(|i| state.records.get(i as usize))
-            .map(|r| record_key(&state.records_view, r))
-            .filter(|k| !k.is_empty() && k != "-");
+        let key = selection_key(&state.records_view, &state.records, old_index);
         // Leaving a list: remember where the cursor was, so returning to
         // that list restores it instead of landing on the first item.
         if state.records_view != *view {
@@ -5022,6 +5039,37 @@ mod tests {
         assert_eq!(pop_previous(&mut history, &View::Chats), Some(View::Feed));
         assert!(history.is_empty());
         assert_eq!(pop_previous(&mut history, &View::Feed), None);
+    }
+
+    #[test]
+    fn selection_key_names_the_selected_record() {
+        // Issue #23: the key captured when a list is left is what the
+        // return restores; no selection, a stale index, and a "-" row
+        // (no identity) all remember nothing.
+        let rows = vec![
+            Record {
+                author_ref: None,
+                fields: vec!["p12345".into(), "Alice".into()],
+                raw: String::new(),
+            },
+            Record {
+                author_ref: None,
+                fields: vec!["p67890".into(), "Bob".into()],
+                raw: String::new(),
+            },
+        ];
+        assert_eq!(
+            selection_key(&View::Feed, &rows, Some(1)).as_deref(),
+            Some("p67890")
+        );
+        assert_eq!(selection_key(&View::Feed, &rows, None), None);
+        assert_eq!(selection_key(&View::Feed, &rows, Some(9)), None);
+        let dash = vec![Record {
+            author_ref: None,
+            fields: vec!["-".into()],
+            raw: "-".into(),
+        }];
+        assert_eq!(selection_key(&View::Feed, &dash, Some(0)), None);
     }
 
     #[test]

@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.27 - 2026-11-07
+
+News feed cursor (issue #23): opening an author's posts or profile
+from the feed and coming back with Escape landed on the first feed
+item. Each list's cursor is now remembered when the list is left —
+before its rows are cleared for the next list — so Back returns to
+the item you were on. Backend v0.1.5-blindfb.37 (unchanged).
+
 ## v0.7.26 - 2026-11-06
 
 Comments (issue #22): replies hidden behind Facebook's "View replies"
