@@ -513,6 +513,7 @@ mod tests {
     fn record(fields: &[&str]) -> Record {
         Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|s| s.to_string()).collect(),
             raw: fields.join("\t"),
         }

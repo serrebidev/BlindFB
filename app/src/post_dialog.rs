@@ -77,7 +77,13 @@ struct ReelPlayback {
 struct ReaderState {
     target: String,
     comments: Vec<Comment>,
+    /// The links list's current contents: the post's links, or the selected
+    /// comment's while `links_for` names it.
     links: Vec<Link>,
+    /// The post's own links, restored when no comment with links is selected.
+    post_links: Vec<Link>,
+    /// The comment whose links are showing, when the list is a comment's.
+    links_for: Option<String>,
     video: Option<String>,
     video_requested: bool,
     video_request: u64,
@@ -175,6 +181,67 @@ impl PostReader {
         }) {
             open_url(&link);
         }
+    }
+
+    /// Point the links list at `target` under an accessible `name`, keeping
+    /// the selection on the same URL when it survives the swap.
+    fn show_links(&self, target: Vec<Link>, name: &str) {
+        let selected_url = self.links.get_selection().and_then(|index| {
+            self.state
+                .borrow()
+                .links
+                .get(index as usize)
+                .map(|link| link.url.clone())
+        });
+        self.links.clear();
+        for link in &target {
+            self.links
+                .append(&format!("{} — {}", link.label, link.url));
+        }
+        if let Some(index) = selected_url
+            .and_then(|url| target.iter().position(|link| link.url == url))
+            .or_else(|| (!target.is_empty()).then_some(0))
+        {
+            self.links.set_selection(index as u32, true);
+        }
+        self.links.set_name(name);
+        self.state.borrow_mut().links = target;
+        self.controls();
+    }
+
+    /// The links list belongs to the selected comment when it has links of
+    /// its own, and to the post otherwise. Called when the comment selection
+    /// moves and after every (re)load, so a refresh keeps the same owner.
+    fn follow_comment_links(&self) {
+        let (target, name, owner) = {
+            let state = self.state.borrow();
+            let selected = self
+                .comments
+                .get_selection()
+                .and_then(|i| state.comments.get(i as usize));
+            match selected.filter(|comment| !comment.links.is_empty()) {
+                Some(comment) => (
+                    comment.links.clone(),
+                    tf!(
+                        "Links in {author}'s comment. Enter opens the selected link in your browser",
+                        author = comment.author
+                    ),
+                    Some(comment.id.clone()),
+                ),
+                None => (
+                    state.post_links.clone(),
+                    t!("Post links. Enter opens the selected link in your browser"),
+                    None,
+                ),
+            }
+        };
+        let state = self.state.borrow();
+        if state.links_for == owner && state.links == target {
+            return;
+        }
+        drop(state);
+        self.state.borrow_mut().links_for = owner;
+        self.show_links(target, &name);
     }
 
     fn play_label(&self, playing: bool) {
@@ -753,7 +820,9 @@ fn open_requested(
         state: Rc::new(RefCell::new(ReaderState {
             target: target.to_owned(),
             comments: Vec::new(),
-            links: initial_links,
+            links: initial_links.clone(),
+            post_links: initial_links,
+            links_for: None,
             video: autoplay.then(|| target.to_owned()),
             video_requested: false,
             video_request: 0,
@@ -778,6 +847,8 @@ fn open_requested(
     links.on_item_double_clicked(move |_| r.open_link());
     let r = reader.clone();
     links.on_selection_changed(move |_| r.controls());
+    let r = reader.clone();
+    comments.on_selection_changed(move |_| r.follow_comment_links());
     let r = reader.clone();
     dialog.on_char_hook(move |event| {
         if let WindowEventData::Keyboard(key) = &event {
@@ -906,6 +977,16 @@ fn open_requested(
         menu.enable_item(ID_WEB, web);
         menu.enable_item(ID_COMMENT_PROFILE, person);
         menu.enable_item(ID_COMMENT_FRIEND, person);
+        let comment_links = r.comments.get_selection().and_then(|i| {
+            r.state
+                .borrow()
+                .comments
+                .get(i as usize)
+                .map(|comment| comment.links.clone())
+        });
+        if let Some(links) = comment_links.filter(|links| !links.is_empty()) {
+            append_links_menu(&menu, &links);
+        }
         r.comments.popup_menu(&mut menu, None);
     });
     let r = reader.clone();
@@ -933,7 +1014,7 @@ fn open_requested(
             react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
         }
         menu.append_submenu(react, &t!("&React"), "");
-        append_links_menu(&menu, &r.state.borrow().links);
+        append_links_menu(&menu, &r.state.borrow().post_links);
         menu.append_separator();
         menu.append(ID_COPY_POST, &t!("Cop&y post text"), "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, &t!("Copy &link"), "", ItemKind::Normal);
@@ -1224,43 +1305,16 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             } else if let Some(index) = reader.comments.get_selection() {
                 reader.comments.set_selection(index, false);
             }
-            if reader.state.borrow().links != detail.links {
-                let selected_url = reader.links.get_selection().and_then(|index| {
-                    let state = reader.state.borrow();
-                    state
-                        .loaded
-                        .then(|| state.links.get(index as usize).map(|link| link.url.clone()))
-                        .flatten()
-                });
-                for (index, link) in detail.links.iter().enumerate() {
-                    let row = format!("{} — {}", link.label, link.url);
-                    if index < reader.links.get_count() as usize {
-                        if reader.links.get_string(index as u32).as_deref() != Some(&row) {
-                            reader.links.set_string(index as u32, &row);
-                        }
-                    } else {
-                        reader.links.append(&row);
-                    }
-                }
-                while reader.links.get_count() as usize > detail.links.len() {
-                    reader.links.delete(reader.links.get_count() - 1);
-                }
-                if !detail.links.is_empty() {
-                    let index = selected_url
-                        .and_then(|url| detail.links.iter().position(|link| link.url == url))
-                        .unwrap_or(0);
-                    reader.links.set_selection(index as u32, true);
-                }
-            }
             let count = detail.comments.len();
             {
                 let mut state = reader.state.borrow_mut();
                 state.comments = detail.comments;
                 state.target = detail.url;
-                state.links = detail.links;
+                state.post_links = detail.links;
                 state.video = detail.video;
                 state.loaded = true;
             }
+            reader.follow_comment_links();
             if sent {
                 reader.composer.change_value("");
                 reader.cancel_reply();
@@ -1299,6 +1353,8 @@ mod tests {
             target: "https://www.facebook.com/a/posts/123".to_owned(),
             comments: Vec::new(),
             links: Vec::new(),
+            post_links: Vec::new(),
+            links_for: None,
             video: None,
             video_requested: false,
             video_request: 0,

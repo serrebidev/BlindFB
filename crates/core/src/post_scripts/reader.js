@@ -100,6 +100,32 @@
     return [...found.values()];
   }
 
+  // The browsable links inside one comment: the post-wide links() skips
+  // article internals, so comments collect their own — real targets behind
+  // the redirect wrapper, minus the author link, comment permalinks,
+  // hashtags and anchors whose target is not revealed yet.
+  function commentLinks(article) {
+    const found = new Map();
+    for (const a of article.querySelectorAll('a[href]')) {
+      if (!own(a, article)) continue;
+      const raw = (typeof a.getAttribute === 'function' ? a.getAttribute('href') : a.href) || '';
+      if (!raw || raw.startsWith('?') || raw.startsWith('#')) continue;
+      let url;
+      try { url = new URL(a.href, location.href); } catch { continue; }
+      if (url.hostname === 'l.facebook.com' && url.searchParams.get('u')) {
+        try { url = new URL(url.searchParams.get('u')); } catch { continue; }
+      }
+      if (!/^https?:$/.test(url.protocol) || /\/hashtag\//.test(url.pathname)) continue;
+      if (url.searchParams.has('comment_id') || url.searchParams.has('reply_comment_id')) continue;
+      if (/(^|\.)facebook\.com$/.test(url.hostname) && F.profilePath && F.profilePath(url.href)) continue;
+      for (const key of [...url.searchParams.keys()]) if (/^(__cft__|__tn__|fbclid)/.test(key)) url.searchParams.delete(key);
+      const text = F.clean(a.innerText || '') || url.hostname;
+      if (!found.has(url.href)) found.set(url.href, {label: text, url: url.href});
+      if (found.size >= 10) break;
+    }
+    return [...found.values()];
+  }
+
   async function sharedLinks(scope) {
     const found = new Map();
     for (const profile of scope.querySelectorAll('[data-ad-rendering-role=profile_name]')) {
@@ -183,7 +209,7 @@
     if (body.length > 1 && /^\d+$/.test(body[body.length - 1])) body.pop();
     const ancestor = article.parentElement.closest(ARTICLE);
     const parent = ancestor && root.contains(ancestor) ? identity(ancestor).id : id.parent;
-    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, url: id.url};
+    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, url: id.url, links: commentLinks(article)};
   }
 
   const fingerprint = value => JSON.stringify([value.id, value.author, value.author_ref, value.text, value.parent_id, value.url]);

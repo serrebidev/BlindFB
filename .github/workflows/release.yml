@@ -82,6 +82,30 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
+      # The release notes are the tag's section of CHANGELOG.md, the way
+      # BlindRadio ships them — never an empty body or a compare link. A
+      # release with no section written does not publish.
+      - name: Take the release notes from CHANGELOG.md
+        run: |
+          python3 - "${{ github.ref_name }}" <<'PY'
+          import sys
+          tag = sys.argv[1]
+          notes, inside = [], False
+          for line in open("CHANGELOG.md").read().splitlines():
+              if line.startswith("## "):
+                  inside = line.startswith("## " + tag + " ") or line.strip() == "## " + tag
+                  continue
+              if inside:
+                  notes.append(line)
+          body = "\n".join(notes).strip()
+          if not body:
+              sys.exit("CHANGELOG.md has no section for " + tag)
+          open("release-notes.md", "w").write(body + "\n")
+          print(body)
+          PY
+
       - name: Verify every asset and signature arrived, then publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,4 +116,4 @@ jobs:
           for wanted in BlindFB.zip BlindFB.zip.minisig BlindFB.tar.gz BlindFB.tar.gz.minisig BlindFB-arm64.dmg BlindFB-arm64.dmg.minisig; do
             grep -qx "$wanted" <<<"$present" || { echo "missing: $wanted"; exit 1; }
           done
-          gh release edit "$tag" -R "${{ github.repository }}" --draft=false --latest
+          gh release edit "$tag" -R "${{ github.repository }}" --notes-file release-notes.md --draft=false --latest

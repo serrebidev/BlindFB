@@ -16,6 +16,9 @@ pub struct Comment {
     pub text: String,
     pub parent_id: Option<String>,
     pub url: Option<String>,
+    /// Browsable links inside the comment's own text (real targets, unwrapped
+    /// from Facebook's redirect), for the reader's links list.
+    pub links: Vec<Link>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,6 +102,31 @@ fn optional_string(value: &Value, field: &str) -> Result<Option<String>, String>
     }
 }
 
+/// The `links` rows of a post detail or of one comment: only web pages leave
+/// for the browser; anything else stays out of the list.
+fn parse_links(value: &Value) -> Vec<Link> {
+    value["links"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| {
+                    Some(Link {
+                        label: string(row, "label").ok()?,
+                        url: string(row, "url").ok()?,
+                    })
+                })
+                .filter(|link| {
+                    (link.url.starts_with("https://") || link.url.starts_with("http://"))
+                        && !link
+                            .url
+                            .chars()
+                            .any(|c| c.is_whitespace() || c.is_control())
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
     let value: Value = serde_json::from_str(output)
         .map_err(|_| t!("The post reader returned invalid JSON"))?;
@@ -125,6 +153,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
             text: string(row, "text")?,
             parent_id: optional_string(row, "parent_id")?,
             url,
+            links: parse_links(row),
         });
     }
     let by_id: HashMap<_, _> = comments
@@ -148,27 +177,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         }
         validated.extend(seen);
     }
-    // Only web pages leave for the browser; anything else stays out of the list.
-    let links = value["links"]
-        .as_array()
-        .map(|rows| {
-            rows.iter()
-                .filter_map(|row| {
-                    Some(Link {
-                        label: string(row, "label").ok()?,
-                        url: string(row, "url").ok()?,
-                    })
-                })
-                .filter(|link| {
-                    (link.url.starts_with("https://") || link.url.starts_with("http://"))
-                        && !link
-                            .url
-                            .chars()
-                            .any(|c| c.is_whitespace() || c.is_control())
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let links = parse_links(&value);
     // The player hands this to yt-dlp, so it must be a Facebook video or a site the player knows.
     let video = optional_string(&value, "video")?
         .filter(|video| crate::media::is_playable_video_url(video));
@@ -497,6 +506,19 @@ mod tests {
         let detail = parse_detail(r#"{"url":"https://www.facebook.com/reel/1/","author":"A","time":"","text":"Reel","comments":[{"id":"c1","author":"B","time":"7 h","text":"Hi","parent_id":null,"url":"https://www.facebook.com/someone?comment_id=Y29t&__tn__=R"}]}"#).unwrap();
         assert_eq!(detail.comments.len(), 1);
         assert_eq!(detail.comments[0].url, None);
+    }
+
+    #[test]
+    fn comment_links_parse_and_bad_rows_are_dropped() {
+        let detail = parse_detail(r#"{"url":"https://www.facebook.com/a/posts/1","author":"A","time":"","text":"Post","comments":[{"id":"c1","author":"B","time":"7 h","text":"see this","parent_id":null,"url":null,"links":[{"label":"Example","url":"https://example.com/story"},{"label":"Bad","url":"javascript:alert(1)"},{"label":"Worse","url":"https://exa mple.com"}]},{"id":"c2","author":"C","time":"8 h","text":"no links field","parent_id":null,"url":null}]}"#).unwrap();
+        assert_eq!(
+            detail.comments[0].links,
+            [Link {
+                label: "Example".to_owned(),
+                url: "https://example.com/story".to_owned(),
+            }]
+        );
+        assert!(detail.comments[1].links.is_empty());
     }
 
     use super::*;

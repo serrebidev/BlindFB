@@ -106,6 +106,7 @@ function fixture(mode = false) {
   let named = null, collapsed = false;
   const F = {
     canon: href => {const url = new URL(href); return url.pathname;},
+    profilePath: href => {const m = /^\/([A-Za-z0-9.]{3,})\/?$/.exec(new URL(href).pathname); return m ? '/' + m[1] : null;},
     clean: text => text.trim(), TIME: /^\d+h$/, visible: element => element.visible !== false, enabled: () => true,
     vtext: scope => scope === reelCard ? ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See more', 'Following', '::-webkit-scrollbar {width: 7px;}'] : ['Post author', '1h'],
     postText: element => element === reelCard ? ['Reel author', expanded ? 'Entire reel caption' : 'Short caption…', 'See more', 'Following'].join('\n') : mode === 'slow' && !expanded ? 'Short caption… See more' : element.text || 'Entire post text',
@@ -139,6 +140,23 @@ function fixture(mode = false) {
   assert.equal(JSON.parse(await shared.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Poster text\nShared original');
   const sourced = JSON.parse(await fixture('shared-source').api.initialize('https://www.facebook.com/a/posts/1'));
   assert.deepEqual(sourced.links, [{label: 'Shared post by Big Feast Bistro + Retail', url: 'https://www.facebook.com/bistro/posts/2'}]);
+  // A comment's own links ride along with it: the redirect unwraps, the
+  // author link and the comment permalink stay out.
+  const linkedFixture = fixture();
+  const linkedComment = linkedFixture.article('9');
+  linkedComment.querySelectorAll = selector => selector === 'a[href]' ? [
+    {closest: () => linkedComment, href: 'https://www.facebook.com/comment.author', getAttribute: () => '/comment.author', innerText: 'Comment author'},
+    {closest: () => linkedComment, href: 'https://www.facebook.com/a/posts/1?comment_id=9', getAttribute: () => '/a/posts/1?comment_id=9', innerText: '1h'},
+    {closest: () => linkedComment, href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fexample.com%2Fstory%3Fa%3D1&h=xyz', getAttribute: () => 'https://l.facebook.com/l.php?u=x', innerText: 'example.com/story'},
+    {closest: () => linkedComment, href: 'https://othersite.org/page?fbclid=zz', getAttribute: () => 'https://othersite.org/page?fbclid=zz', innerText: 'Other Site'},
+  ] : [];
+  linkedFixture.article('10');
+  const linkedDetail = JSON.parse(await linkedFixture.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.deepEqual(linkedDetail.comments.find(c => c.id === '9').links, [
+    {label: 'example.com/story', url: 'https://example.com/story?a=1'},
+    {label: 'Other Site', url: 'https://othersite.org/page'},
+  ]);
+  assert.deepEqual(linkedDetail.comments.find(c => c.id === '10').links, []);
   const ambiguous = fixture('ambiguous');
   await assert.rejects(ambiguous.api.initialize('https://www.facebook.com/a/posts/1'), /More than one post/);
   const reel = fixture('reel');

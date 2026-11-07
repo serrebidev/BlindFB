@@ -2495,10 +2495,22 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
 }
 
 fn set_details(ui: &Ui, text: &str, post: Option<&str>) {
+    set_details_linked(ui, text, post, &[]);
+}
+
+/// `extra`: links the record itself carries (a comment's own links from the
+/// backend's `cl` lines), which the details text cannot hold — Facebook
+/// renders a comment link's label trimmed, so the target only exists here.
+fn set_details_linked(ui: &Ui, text: &str, post: Option<&str>, extra: &[Link]) {
     if ui.details.get_value() != text {
         ui.details.change_value(text);
     }
-    let links = links_in_text(text, post);
+    let mut links = links_in_text(text, post);
+    for link in extra.iter().rev() {
+        if !links.iter().any(|shown| shown.url == link.url) {
+            links.insert(0, link.clone());
+        }
+    }
     if *ui.link_targets.borrow() == links {
         return;
     }
@@ -2666,8 +2678,9 @@ fn show_details(ui: &Ui, index: usize) {
         let post = post_target(&state.view, record)
             .filter(|target| target.starts_with("https://") || target.starts_with('/'))
             .map(web_url);
+        let extra = record.links.clone();
         drop(state);
-        set_details(ui, &text, post.as_deref());
+        set_details_linked(ui, &text, post.as_deref(), &extra);
     }
 }
 
@@ -3360,6 +3373,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record {
                     author_ref: None,
+                    links: Vec::new(),
                     fields: vec![l.to_owned()],
                     raw: l.to_owned(),
                 })
@@ -3368,18 +3382,32 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         ),
         View::CommentsOf(_) => {
             let mut body_lines = Vec::new();
-            let mut comments = Vec::new();
+            let mut comments: Vec<Record> = Vec::new();
             // A `cu` line directly before a comment carries the commenter's
             // profile path; it becomes the comment record's second field.
             let mut pending_ref = String::new();
             for line in raw.lines() {
-                if let Some(ref_) = line.strip_prefix("cu\t") {
+                if let Some(rest) = line.strip_prefix("cl\t") {
+                    // A `cl` line directly after a comment carries one of
+                    // the links inside that comment's text.
+                    if let Some(comment) = comments.last_mut() {
+                        let mut parts = rest.splitn(2, '\t');
+                        let url = parts.next().unwrap_or("");
+                        if !url.is_empty() {
+                            comment.links.push(Link {
+                                label: parts.next().unwrap_or(url).to_owned(),
+                                url: url.to_owned(),
+                            });
+                        }
+                    }
+                } else if let Some(ref_) = line.strip_prefix("cu\t") {
                     pending_ref = ref_.to_owned();
                 } else if line.starts_with("c\t") {
                     let mut fields: Vec<String> = line.split('\t').map(str::to_owned).collect();
                     fields.insert(1, std::mem::take(&mut pending_ref));
                     comments.push(Record {
                         author_ref: None,
+                        links: Vec::new(),
                         fields,
                         raw: line.to_owned(),
                     });
@@ -3397,6 +3425,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record {
                     author_ref: None,
+                    links: Vec::new(),
                     fields: vec![l.to_owned()],
                     raw: l.to_owned(),
                 })
@@ -5049,11 +5078,13 @@ mod tests {
         let rows = vec![
             Record {
                 author_ref: None,
+                links: Vec::new(),
                 fields: vec!["p12345".into(), "Alice".into()],
                 raw: String::new(),
             },
             Record {
                 author_ref: None,
+                links: Vec::new(),
                 fields: vec!["p67890".into(), "Bob".into()],
                 raw: String::new(),
             },
@@ -5066,6 +5097,7 @@ mod tests {
         assert_eq!(selection_key(&View::Feed, &rows, Some(9)), None);
         let dash = vec![Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec!["-".into()],
             raw: "-".into(),
         }];
@@ -5103,6 +5135,7 @@ mod tests {
         );
         let post = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec![
                 "p1".into(),
                 "Alice".into(),
@@ -5121,12 +5154,14 @@ mod tests {
         // A chats line with fewer than five fields must not panic the reader.
         let short = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec!["c1".into()],
             raw: "c1".into(),
         };
         assert_eq!(details_for(&View::Chats, &short), "c1");
         let full = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec![
                 "c1".into(),
                 "!".into(),
@@ -5146,6 +5181,7 @@ mod tests {
         // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
         let friend = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec![
                 "Alice Smith".into(),
                 "u1abc".into(),
@@ -5160,6 +5196,7 @@ mod tests {
         // chats: ref, flags, time, name, preview.
         let chat = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec![
                 "c8x2f".into(),
                 "!".into(),
@@ -5312,6 +5349,7 @@ mod tests {
     fn item_links_use_each_views_target_instead_of_its_label() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|s| (*s).to_owned()).collect(),
             raw: String::new(),
         };
@@ -5369,6 +5407,27 @@ mod tests {
             &row(&["c", "u1234", "Alice", "now", "Hi"])
         )
         .is_none());
+    }
+
+    #[test]
+    fn comment_rows_carry_their_cl_links() {
+        let raw = "by\tAlice\tnow\ncl\thttps://stray.example/\tStray\ncu\t/commenter\nc\tCommenter One\t2h\tGreat post, see example.com/story\ncl\thttps://example.com/story?a=1\texample.com/story\ncl\thttps://othersite.org/page\tOther Site\nc\tSecond\t3h\tNo links here\n";
+        let (records, _) = parse_for(&View::CommentsOf("p1".into()), raw).unwrap();
+        assert_eq!(records.len(), 2);
+        assert_eq!(
+            records[0].links,
+            [
+                Link {
+                    label: "example.com/story".to_owned(),
+                    url: "https://example.com/story?a=1".to_owned(),
+                },
+                Link {
+                    label: "Other Site".to_owned(),
+                    url: "https://othersite.org/page".to_owned(),
+                },
+            ]
+        );
+        assert!(records[1].links.is_empty());
     }
 
     #[test]
@@ -5593,6 +5652,7 @@ mod tests {
     fn more_keeps_distinct_refless_chat_and_friend_rows() {
         let rec = |fields: &[&str]| Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|s| s.to_string()).collect(),
             raw: fields.join("\t"),
         };
@@ -5639,6 +5699,7 @@ mod tests {
     fn linkless_rows_say_so_without_touching_copied_text() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };
@@ -5672,6 +5733,7 @@ mod tests {
     fn routes_only_post_targets_and_detects_messenger_lock() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };
@@ -5731,6 +5793,7 @@ mod tests {
     fn marketplace_rows_read_like_search_listings() {
         let listing = Record {
             author_ref: None,
+            links: Vec::new(),
             fields: vec![
                 "Wooden chair".to_owned(),
                 "https://www.facebook.com/marketplace/item/555".to_owned(),
@@ -5771,6 +5834,7 @@ mod tests {
     fn search_rows_route_by_kind() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
         };

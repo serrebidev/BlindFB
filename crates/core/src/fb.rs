@@ -23,6 +23,9 @@ pub struct Record {
     /// The author name alone cannot resolve a group post's author: the
     /// group name is merged into it.
     pub author_ref: Option<String>,
+    /// Browsable links carried on `cl` lines after a comment row (the real
+    /// targets inside the comment's text), for the details pane's link list.
+    pub links: Vec<crate::posts::Link>,
 }
 
 impl Record {
@@ -52,6 +55,7 @@ pub fn parse_records(output: &str) -> Vec<Record> {
             fields: line.split('\t').map(str::to_owned).collect(),
             raw: line.to_owned(),
             author_ref: None,
+            links: Vec::new(),
         })
         .collect()
 }
@@ -195,6 +199,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
                 raw: fields.join("\t"),
                 fields,
                 author_ref: None,
+                links: Vec::new(),
             })
         })
         .collect();
