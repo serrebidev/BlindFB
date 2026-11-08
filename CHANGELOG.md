@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.30 - 2026-11-07
+
+Search works the way it should (MichalSuchy's report, issue #24).
+Backend v0.1.5-blindfb.39.
+
+- Search results no longer read "(no link)". People, pages, groups,
+  events and places were marked unopenable even though Enter opened
+  them; the mark now appears only on a result that truly has nothing
+  to open.
+- Every search result's context menu can open it on Facebook in your
+  browser, and people and pages gained a Posts item, so you can read
+  someone's posts straight from the results. The backend now sends
+  each result's own web address along, which is what makes this
+  possible.
+- Back from a search result restores the results list. Before, it
+  landed on an empty list with no way back short of searching again.
+
 ## v0.7.29 - 2026-11-07
 
 The translation engine moves to patois 0.3, the release its author
