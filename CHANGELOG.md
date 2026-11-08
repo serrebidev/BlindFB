@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.31 - 2026-11-07
+
+Two requests from MichalSuchy (issues #25 and #26).
+Backend v0.1.5-blindfb.40.
+
+- Events, Pages and Places join the Views list (and the View menu).
+  Events and Places open on Facebook in your browser; a Page opens
+  its posts in BlindFB, like a profile. The backend learned three
+  new commands — events, pages and places — that read each section's
+  own page the way Groups already did.
+- Hide BlindFB to the system tray and bring it back: Ctrl+T or
+  File > Hide to system tray hides the window; double-click the
+  tray icon, or use its Show / hide menu item, to toggle it back.
+  The tray menu also has Exit.
+
 ## v0.7.30 - 2026-11-07
 
 Search works the way it should (MichalSuchy's report, issue #24).
