@@ -939,6 +939,37 @@ pub fn marketplace_args(count: u32) -> Vec<String> {
     vec!["marketplace".to_owned(), "-n".to_owned(), count.to_string()]
 }
 
+// --- Hub lists (backend .40) ------------------------------------------------
+// Events, pages and places are browsable hub lists like groups: rows are
+// [name, URL (with --urls), info], parsed by parse_records like the rest.
+
+pub fn events_args(count: u32) -> Vec<String> {
+    vec![
+        "events".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--urls".to_owned(),
+    ]
+}
+
+pub fn pages_args(count: u32) -> Vec<String> {
+    vec![
+        "pages".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--urls".to_owned(),
+    ]
+}
+
+pub fn places_args(count: u32) -> Vec<String> {
+    vec![
+        "places".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--urls".to_owned(),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1224,6 +1255,13 @@ mod tests {
     #[test]
     fn groups_command_args() {
         assert_eq!(groups_args(120), ["groups", "-n", "120", "--urls"]);
+    }
+
+    #[test]
+    fn hub_list_command_args() {
+        assert_eq!(events_args(50), ["events", "-n", "50", "--urls"]);
+        assert_eq!(pages_args(50), ["pages", "-n", "50", "--urls"]);
+        assert_eq!(places_args(50), ["places", "-n", "50", "--urls"]);
     }
 
     #[test]

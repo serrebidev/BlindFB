@@ -39,10 +39,11 @@ use std::time::{Duration, Instant};
 use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    chats_args, comment_args, delete_args, facebook_share_url, feed_args, friend_add_args,
-    friends_args, group_apply_args, group_join_args, group_leave_args, groups_args, link_url,
-    listing_message_args, marketplace_args, msg_react_args, notifs_args, parse_feed,
-    parse_notifications, parse_records, post_args, post_done_message, post_unconfirmed_message,
+    chats_args, comment_args, delete_args, events_args, facebook_share_url, feed_args,
+    friend_add_args, friends_args, group_apply_args, group_join_args, group_leave_args,
+    groups_args, link_url, listing_message_args, marketplace_args, msg_react_args, notifs_args,
+    pages_args, parse_feed, parse_notifications, parse_records, places_args, post_args,
+    post_done_message, post_unconfirmed_message,
     posts_args, profile_args,
     profile_url_from_post_url, react_args, read_args, recent_feed_args, reply_args, search_args,
     sell_args, send_args, thread_url_from_profile_url, unsend_args, view_args, web_url, Fb, Record,
@@ -73,6 +74,12 @@ const ID_RECENT_FEED: i32 = 10009;
 const ID_MORE: i32 = 10016;
 const ID_REELS: i32 = 10017;
 const ID_MARKETPLACE: i32 = 10018;
+const ID_EVENTS_VIEW: i32 = 10097;
+const ID_PAGES_VIEW: i32 = 10098;
+const ID_PLACES_VIEW: i32 = 10099;
+const ID_TRAY_TOGGLE: i32 = 10110;
+const ID_TRAY_MENU_TOGGLE: i32 = 10201;
+const ID_TRAY_MENU_EXIT: i32 = 10202;
 const ID_WEB_POST: i32 = 10080;
 const ID_WEB_PERSON: i32 = 10081;
 const ID_WEB_CHAT: i32 = 10082;
@@ -223,6 +230,9 @@ enum View {
     Chats,
     Groups,
     Marketplace,
+    Events,
+    Pages,
+    Places,
     SearchResults,
     PostsOf(String),
     CommentsOf(String),
@@ -245,6 +255,9 @@ impl View {
             View::Chats => t("Chats"),
             View::Groups => t("My groups"),
             View::Marketplace => t("Marketplace"),
+            View::Events => t("Events"),
+            View::Pages => t("Pages"),
+            View::Places => t("Places"),
             View::SearchResults => t("Search results"),
             View::PostsOf(who) => tf!("Posts by {who}", who = who),
             View::CommentsOf(_) => t("Post and comments"),
@@ -606,6 +619,9 @@ fn run() {
         t("Feeds (most recent)"),
         t("Reels"),
         t("Marketplace"),
+        t("Events"),
+        t("Pages"),
+        t("Places"),
     ] {
         views.append(&name);
     }
@@ -716,6 +732,42 @@ fn run() {
     build_menus(&frame);
     startup_log("run: menus built");
 
+    // System tray (issue #26). The icon lives as long as the app, so it
+    // is intentionally leaked like the timers below. Its menu toggles
+    // the window or exits; double-clicking the icon also toggles it
+    // (Windows/Linux — macOS has no tray mouse events, its menu is the
+    // restore path there). Artwork is a plain blue square placeholder,
+    // the same approach as BlindRSS's tray icon.
+    let tray = Box::leak(Box::new(TaskBarIcon::builder().build()));
+    {
+        let mut rgba = Vec::with_capacity(32 * 32 * 4);
+        for _ in 0..32 * 32 {
+            rgba.extend_from_slice(&[30, 100, 200, 255]);
+        }
+        if let Some(bmp) = Bitmap::from_rgba(&rgba, 32, 32) {
+            tray.set_icon(&bmp, "BlindFB");
+        }
+    }
+    let mut tray_menu = Menu::builder()
+        .append_item(ID_TRAY_MENU_TOGGLE, &t("Show / hide BlindFB"), "")
+        .append_separator()
+        .append_item(ID_TRAY_MENU_EXIT, &t("Exit BlindFB"), "")
+        .build();
+    tray.set_popup_menu(&mut tray_menu);
+    {
+        let frame_tray = frame;
+        tray.on_menu(move |event| match event.get_id() {
+            ID_TRAY_MENU_TOGGLE => toggle_tray_window(&frame_tray),
+            ID_TRAY_MENU_EXIT => frame_tray.close(true),
+            _ => {}
+        });
+    }
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        let frame_tray = frame;
+        tray.on_left_double_click(move |_| toggle_tray_window(&frame_tray));
+    }
+
     let state = Rc::new(RefCell::new(State {
         next_alert_check: Instant::now() + ALERT_FIRST,
         alert_notifications: Default::default(),
@@ -790,6 +842,9 @@ fn run() {
                 6 => View::RecentFeed,
                 7 => View::Reels(ReelSource::Recommended),
                 8 => View::Marketplace,
+                9 => View::Events,
+                10 => View::Pages,
+                11 => View::Places,
                 _ => View::Chats,
             };
             ui_views.state.borrow_mut().pending_view = Some((view, Instant::now()));
@@ -1329,6 +1384,20 @@ fn refs(args: &[String]) -> Vec<&str> {
     args.iter().map(String::as_str).collect()
 }
 
+/// Hide the window to the system tray, or bring it back (issue #26).
+/// One toggle for both directions: Ctrl+T and the tray menu call this;
+/// a hidden window has no keyboard focus, so from the tray the restore
+/// side is the tray icon's double-click or its Show / hide menu item.
+fn toggle_tray_window(frame: &Frame) {
+    if frame.is_shown() {
+        frame.show(false);
+    } else {
+        frame.iconize(false);
+        frame.show(true);
+        frame.raise();
+    }
+}
+
 fn build_menus(frame: &Frame) {
     let file_menu = Menu::builder()
         .append_item(
@@ -1363,6 +1432,11 @@ fn build_menus(frame: &Frame) {
             &t("Check GitHub for a newer BlindFB"),
         )
         .append_separator()
+        .append_item(
+            ID_TRAY_TOGGLE,
+            &t("Hide to system &tray\tCtrl+T"),
+            &t("Hide BlindFB to the system tray; the tray icon or its menu brings it back"),
+        )
         .append_item(ID_EXIT, &t("E&xit\tCtrl+Q"), &t("Close BlindFB"))
         .build();
 
@@ -1388,6 +1462,9 @@ fn build_menus(frame: &Frame) {
             &t("&Marketplace\tCtrl+9"),
             &t("Browse Marketplace listings"),
         )
+        .append_item(ID_EVENTS_VIEW, &t("&Events"), &t("Events from your events page"))
+        .append_item(ID_PAGES_VIEW, &t("Pa&ges"), &t("Pages from your pages page"))
+        .append_item(ID_PLACES_VIEW, &t("P&laces"), &t("Places from the places page"))
         .append_item(
             ID_UNREAD_CHATS,
             &t("&Unread chats only"),
@@ -1834,6 +1911,9 @@ fn cacheable(view: &View, args: &[String]) -> bool {
             | View::MyPosts
             | View::Chats
             | View::Groups
+            | View::Events
+            | View::Pages
+            | View::Places
             // Search has no default_args (the query is the user's), so the
             // cache is the only way Back can restore the results; without
             // it Back landed on an empty list (issue #24).
@@ -1851,6 +1931,9 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::Chats => chats_args(PAGE, false),
         View::Groups => groups_args(PAGE),
         View::Marketplace => marketplace_args(PAGE),
+        View::Events => events_args(PAGE),
+        View::Pages => pages_args(PAGE),
+        View::Places => places_args(PAGE),
         View::SearchResults | View::Reels(_) => return None,
         View::PostsOf(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
@@ -2079,6 +2162,9 @@ fn more_args(
         | View::Chats
         | View::SearchResults
         | View::Marketplace
+        | View::Events
+        | View::Pages
+        | View::Places
         | View::Groups => {
             let mut args = previous.to_vec();
             let index = args.iter().position(|arg| arg == "-n")? + 1;
@@ -2177,7 +2263,9 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
         }
     };
     let key = |record: &Record| match view {
-        View::Friends | View::Groups => id_or_raw(record.field(1), record),
+        View::Friends | View::Groups | View::Events | View::Pages | View::Places => {
+            id_or_raw(record.field(1), record)
+        }
         View::Chats => id_or_raw(record.field(0), record),
         View::Notifications => format!("{}\t{}", record.field(2), record.field(3)),
         _ => post_target(view, record)
@@ -2290,9 +2378,14 @@ fn display_for(view: &View, record: &Record) -> String {
                 record.raw.clone()
             }
         }
-        View::Friends => {
+        View::Friends | View::Events | View::Pages | View::Places => {
             if record.fields.len() >= 3 {
-                format!("{} — {}", record.field(0), record.field(2))
+                let info = record.field(2);
+                if info.is_empty() {
+                    record.field(0).to_owned()
+                } else {
+                    format!("{} — {}", record.field(0), info)
+                }
             } else {
                 record.raw.clone()
             }
@@ -2382,6 +2475,19 @@ fn details_for(view: &View, record: &Record) -> String {
                 record.raw.clone()
             }
         }
+        View::Events | View::Pages | View::Places => {
+            let info = record.field(2);
+            tf!(
+                "{name}\n{info}On the web: {url}",
+                name = record.field(0),
+                info = if info.is_empty() {
+                    String::new()
+                } else {
+                    format!("{info}\n")
+                },
+                url = record.field(1)
+            )
+        }
         View::Groups => {
             let info = record.field(2);
             tf!(
@@ -2441,7 +2547,9 @@ fn post_target<'a>(view: &View, record: &'a Record) -> Option<&'a str> {
 fn record_key(view: &View, record: &Record) -> String {
     post_target(view, record)
         .unwrap_or_else(|| match view {
-            View::Friends | View::Groups => record.field(1),
+            View::Friends | View::Groups | View::Events | View::Pages | View::Places => {
+                record.field(1)
+            }
             View::Feed
             | View::RecentFeed
             | View::Reels(_)
@@ -3614,6 +3722,34 @@ fn open_selected(ui: &Ui) {
         View::Chats => chat_dialog::open(ui, &record),
         View::Friends => profile_selected(ui),
         View::Groups => group_dialog::open(ui, &record),
+        View::Pages => {
+            // A page's posts read like a profile's posts.
+            let url = record.field(1).to_owned();
+            if url.is_empty() || url == "-" {
+                show_warning(
+                    &ui.frame,
+                    t("This page has no link, so there is nothing to open."),
+                    &t("Open page"),
+                );
+            } else {
+                load_view(ui, View::PostsOf(url));
+            }
+        }
+        View::Events | View::Places => {
+            // Events and places have no reader view yet: open the page
+            // itself in the browser, like a search row of the same kind.
+            let url = record.field(1).to_owned();
+            if url.is_empty() || url == "-" {
+                show_warning(
+                    &ui.frame,
+                    t("This row has no link, so there is nothing to open."),
+                    &t("Open"),
+                );
+            } else {
+                open_url(&web_url(&url));
+                ui.status(&t("Opened on Facebook in your browser."));
+            }
+        }
         _ => {}
     }
 }
@@ -4152,6 +4288,10 @@ fn handle_menu(ui: &Ui, id: i32) {
             ui.items.set_focus();
         }
         ID_MARKETPLACE => load_view(ui, View::Marketplace),
+        ID_EVENTS_VIEW => load_view(ui, View::Events),
+        ID_PAGES_VIEW => load_view(ui, View::Pages),
+        ID_PLACES_VIEW => load_view(ui, View::Places),
+        ID_TRAY_TOGGLE => toggle_tray_window(&ui.frame),
         ID_WEB_POST => open_post_web(ui),
         ID_WEB_PERSON => open_person_web(ui),
         ID_WEB_CHAT => open_chat_web(ui),
@@ -4266,7 +4406,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                 &t("Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
-                 Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. F5: refresh. Ctrl+L: load more.\n\
+                 Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. The Views list also has Events, Pages and Places. F5: refresh. Ctrl+L: load more.\n\
+                 Ctrl+T: hide BlindFB to the system tray. Bring it back from the tray icon (double-click it, or its Show / hide menu item).\n\
                  Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n\
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
