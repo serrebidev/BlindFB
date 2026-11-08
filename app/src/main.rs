@@ -1834,6 +1834,10 @@ fn cacheable(view: &View, args: &[String]) -> bool {
             | View::MyPosts
             | View::Chats
             | View::Groups
+            // Search has no default_args (the query is the user's), so the
+            // cache is the only way Back can restore the results; without
+            // it Back landed on an empty list (issue #24).
+            | View::SearchResults
     ) && !args.iter().any(|a| a == "--unread")
 }
 
@@ -2209,7 +2213,16 @@ fn list_label(view: &View, record: &Record) -> String {
             | View::PostsOf(_)
             | View::SearchResults
     );
-    if has_posts && post_target(view, record).is_none() {
+    // A search row opens by kind, not by post target: profiles, groups and
+    // the rest carry a ref post_target never returns, so every result read
+    // "(no link)" even though Enter opened it (issue #24). A search row is
+    // unopenable only when it carries no target at all.
+    let no_link = if *view == View::SearchResults {
+        !search_row_openable(record)
+    } else {
+        has_posts && post_target(view, record).is_none()
+    };
+    if no_link {
         // TRANSLATORS: {item} is a list row (a post); the mark says it has no link to open.
         tf!("{item} (no link)", item = label)
     } else {
@@ -2217,13 +2230,20 @@ fn list_label(view: &View, record: &Record) -> String {
     }
 }
 
+/// A search result can be opened when it carries a target (a daemon ref
+/// or a URL); the row's kind decides what opening it does.
+fn search_row_openable(record: &Record) -> bool {
+    let target = record.field(1).trim();
+    !target.is_empty() && target != "-"
+}
+
 fn display_for(view: &View, record: &Record) -> String {
-    if matches!(view, View::SearchResults | View::Marketplace)
-        && record.fields.len() >= 3
-        && record.fields.len() < 5
+    // Search rows are (name, target, info, kind[, web url]) and listing
+    // rows the same without the fifth field: both read "Name — info"; the
+    // raw line would read the ref.
+    if (matches!(view, View::SearchResults) && record.fields.len() >= 3)
+        || (matches!(view, View::Marketplace) && (3..5).contains(&record.fields.len()))
     {
-        // Search and listing rows read "Name — info"; the raw line would
-        // read the ref.
         let info = record.field(2);
         if info.is_empty() {
             return record.field(0).to_owned();
@@ -2317,7 +2337,7 @@ fn display_for(view: &View, record: &Record) -> String {
 }
 
 fn details_for(view: &View, record: &Record) -> String {
-    if *view == View::SearchResults && record.fields.len() >= 3 && record.fields.len() < 5 {
+    if *view == View::SearchResults && record.fields.len() >= 3 {
         let info = record.field(2);
         if info.is_empty() {
             return record.field(0).to_owned();
@@ -3783,6 +3803,7 @@ fn open_post_web(ui: &Ui) {
     };
     let target = match ui.state.borrow().view {
         View::Notifications => record.field(3),
+        View::SearchResults => search_web_target(&record),
         _ => record.field(0),
     };
     if target.starts_with("http") || target.starts_with('/') {
@@ -3794,6 +3815,17 @@ fn open_post_web(ui: &Ui) {
             &t("Open on Facebook"),
         );
     }
+}
+
+/// A search row's web address: the backend's fifth field when present.
+/// Rows from an older backend fall back to the target, which is a URL for
+/// photos and videos but a daemon ref — not a link — for the other kinds.
+fn search_web_target(record: &Record) -> &str {
+    let url = record.field(4).trim();
+    if !url.is_empty() {
+        return url;
+    }
+    record.field(1).trim()
 }
 
 /// Link out to the selected person on the web: their profile, where friend
@@ -4388,6 +4420,7 @@ fn show_item_menu(ui: &Ui) {
                     &[
                         (ID_OPEN, t("&Open group")),
                         (ID_GROUP_JOIN, t("&Join group")),
+                        (ID_WEB_POST, t("Open group on &Facebook (web)")),
                         (ID_COPY_TEXT, t("Cop&y text")),
                     ],
                 ),
@@ -4395,8 +4428,10 @@ fn show_item_menu(ui: &Ui) {
                     &menu,
                     &[
                         (ID_PROFILE, t("&Profile")),
+                        (ID_AUTHOR_POSTS, t("P&osts")),
                         (ID_MESSAGE, t("&Message")),
                         (ID_COMMENT_FRIEND, t("Add &friend")),
+                        (ID_WEB_POST, t("Open on &Facebook (web)")),
                         (ID_COPY_TEXT, t("Cop&y text")),
                     ],
                 ),
@@ -4418,6 +4453,7 @@ fn show_item_menu(ui: &Ui) {
                         (ID_COMMENT, t("&Comment…")),
                         (ID_COPY_TEXT, t("Cop&y text")),
                         (ID_COPY_LINK, t("Copy &link")),
+                        (ID_WEB_POST, t("Open on &Facebook (web)")),
                     ],
                 ),
             }
@@ -5881,5 +5917,65 @@ mod tests {
         let legacy = row(&["Carol", "u4jkl", "Page"]);
         assert_eq!(post_target(&View::SearchResults, &legacy), None);
         assert_eq!(display_for(&View::SearchResults, &legacy), "Carol — Page");
+    }
+
+    #[test]
+    fn search_rows_read_openable_and_carry_a_web_address() {
+        let row = |fields: &[&str]| Record {
+            author_ref: None,
+            links: Vec::new(),
+            fields: fields.iter().map(|f| f.to_string()).collect(),
+            raw: String::new(),
+        };
+        // Issue #24: a profile result opens through its ref, so it must not
+        // be labelled "(no link)"; only a targetless row earns the mark.
+        let profile = row(&[
+            "Bea",
+            "u2def",
+            "Friend",
+            "profile",
+            "https://www.facebook.com/bea",
+        ]);
+        assert_eq!(
+            list_label(&View::SearchResults, &profile),
+            "Bea — Friend"
+        );
+        let stranded = row(&["Nobody", "", "Nowhere", "profile"]);
+        assert!(list_label(&View::SearchResults, &stranded).ends_with("(no link)"));
+        // The fifth field never reaches the row's text or details.
+        assert_eq!(
+            display_for(&View::SearchResults, &profile),
+            "Bea — Friend"
+        );
+        assert_eq!(
+            details_for(&View::SearchResults, &profile),
+            "Bea\nFriend"
+        );
+        // Open on web uses the row's own address, not the ref; rows from an
+        // older backend fall back to the target.
+        assert_eq!(
+            search_web_target(&profile),
+            "https://www.facebook.com/bea"
+        );
+        let photo = row(&[
+            "Photo of a chair",
+            "https://www.facebook.com/photo.php?fbid=9",
+            "",
+            "photo",
+        ]);
+        assert_eq!(
+            search_web_target(&photo),
+            "https://www.facebook.com/photo.php?fbid=9"
+        );
+        // Back from a result restores the search: the view is cacheable and
+        // a refresh re-runs the last search's arguments.
+        assert!(cacheable(
+            &View::SearchResults,
+            &search_args("bea", None, PAGE)
+        ));
+        assert_eq!(
+            refresh_args(&View::SearchResults, &search_args("bea", None, PAGE)),
+            Some(search_args("bea", None, PAGE))
+        );
     }
 }
