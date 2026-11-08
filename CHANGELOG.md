@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.33 - 2026-11-08
+
+The Author profile's last row (issue #27, reported by MichalSuchy).
+Backend unchanged, v0.1.5-blindfb.40.
+
+- The last row of a profile read as a bare "actions" and pressing
+  Enter on it did nothing. That row lists the actions Facebook shows
+  on the profile; it now reads in full, as "Actions: …", and Enter on
+  it opens the person's actions menu (posts, message, add friend,
+  open on Facebook).
+- Enter works on every profile row now: the name opens the person's
+  posts, the address row opens the profile in your browser, and the
+  information rows say they are information only instead of staying
+  silent. A profile's context menu (Applications or Shift+F10) offers
+  the same actions as a friend's: posts, message, add friend, and
+  open on Facebook.
+
 ## v0.7.32 - 2026-11-08
 
 Fixes the system tray from v0.7.31 (issue #26, reported by MichalSuchy).

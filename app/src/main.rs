@@ -2418,7 +2418,34 @@ fn search_row_openable(record: &Record) -> bool {
     !target.is_empty() && target != "-"
 }
 
+/// A profile row as it reads. The backend sends "key<TAB>value" lines;
+/// name and address read bare, and every other row names what it is, so
+/// the Actions row reads as the list of actions it carries (issue #27)
+/// instead of a bare word that looks like a pressable item.
+fn profile_row_label(record: &Record) -> String {
+    let key = record.field(0).trim();
+    let value = record.field(1).trim();
+    if value.is_empty() {
+        return key.to_owned();
+    }
+    match key {
+        "name" | "url" => value.to_owned(),
+        "actions" => tf!("Actions: {actions}", actions = value),
+        "" => value.to_owned(),
+        _ => {
+            let mut label = key.to_owned();
+            if let Some(first) = label.get_mut(0..1) {
+                first.make_ascii_uppercase();
+            }
+            format!("{label}: {value}")
+        }
+    }
+}
+
 fn display_for(view: &View, record: &Record) -> String {
+    if matches!(view, View::ProfileOf(_)) {
+        return profile_row_label(record);
+    }
     // Search rows are (name, target, info, kind[, web url]) and listing
     // rows the same without the fifth field: both read "Name — info"; the
     // raw line would read the ref.
@@ -2581,6 +2608,7 @@ fn details_for(view: &View, record: &Record) -> String {
                 url = record.field(1)
             )
         }
+        View::ProfileOf(_) => profile_row_label(record),
         View::Groups => {
             let info = record.field(2);
             tf!(
@@ -3644,11 +3672,20 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         View::ProfileOf(_) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
-                .map(|l| Record {
-                    author_ref: None,
-                    links: Vec::new(),
-                    fields: vec![l.to_owned()],
-                    raw: l.to_owned(),
+                .map(|l| {
+                    // Backend profile lines are "key<TAB>value" (name,
+                    // url, friends, intro, actions, one row per info
+                    // list); keep the two fields apart so the row can
+                    // read and act as what it is (issue #27).
+                    let mut parts = l.splitn(2, '\t');
+                    let key = parts.next().unwrap_or("").to_owned();
+                    let value = parts.next().unwrap_or("").to_owned();
+                    Record {
+                        author_ref: None,
+                        links: Vec::new(),
+                        fields: vec![key, value],
+                        raw: l.to_owned(),
+                    }
                 })
                 .collect(),
             Some(raw.trim().to_owned()),
@@ -3843,6 +3880,25 @@ fn open_selected(ui: &Ui) {
                 ui.status(&t("Opened on Facebook in your browser."));
             }
         }
+        View::ProfileOf(who) => match record.field(0) {
+            // The Actions row lists the actions Facebook shows on this
+            // profile (issue #27): Enter presents the real actions menu
+            // instead of doing nothing in silence.
+            "actions" => show_item_menu(ui),
+            "url" => {
+                let url = record.field(1).to_owned();
+                if url.is_empty() {
+                    ui.status(&t("This profile row has no link to open."));
+                } else {
+                    open_url(&web_url(&url));
+                    ui.status(&t("Opened on Facebook in your browser."));
+                }
+            }
+            "name" => load_view(ui, View::PostsOf(who.clone())),
+            _ => ui.status(&t(
+                "Information only. Applications or Shift+F10 opens this person's actions.",
+            )),
+        },
         _ => {}
     }
 }
@@ -3923,6 +3979,7 @@ fn poster_name(author: &str) -> &str {
 fn person_of(ui: &Ui, record: &Record) -> Option<String> {
     let view = ui.state.borrow().view.clone();
     match view {
+        View::ProfileOf(who) => Some(who.clone()),
         View::Friends => Some(record.field(1).to_owned()),
         View::Chats => Some(record.field(3).to_owned()),
         View::CommentsOf(_) => {
@@ -3998,6 +4055,7 @@ fn posts_selected(ui: &Ui) {
 /// their thread.
 fn message_target(view: &View, record: &Record) -> (String, String) {
     match view {
+        View::ProfileOf(who) => (who.clone(), who.clone()),
         View::Friends => (record.field(1).to_owned(), record.field(0).to_owned()),
         View::SearchResults => (record.field(1).to_owned(), record.field(0).to_owned()),
         View::Chats => (record.field(0).to_owned(), record.field(3).to_owned()),
@@ -4072,6 +4130,22 @@ fn open_person_web(ui: &Ui) {
         return;
     }
     let view = ui.state.borrow().view.clone();
+    if let View::ProfileOf(who) = &view {
+        // The profile itself is the person: open it directly when it is
+        // a path or address, else fall back to a people search by name.
+        let who = who.clone();
+        if who.starts_with("http") || who.starts_with('/') {
+            open_url(&web_url(&who));
+        } else if let Some(url) = ui.state.borrow().author_urls.get(&who).cloned() {
+            open_url(&url);
+        } else {
+            let query = who.replace(' ', "%20");
+            open_url(&format!(
+                "https://www.facebook.com/search/people/?q={query}"
+            ));
+        }
+        return;
+    }
     let name = match view {
         View::Friends => record.field(0).to_owned(),
         View::Chats => record.field(3).to_owned(),
@@ -4796,6 +4870,16 @@ fn show_item_menu(ui: &Ui) {
                 (ID_WEB_PERSON, t("Open group on &Facebook (web)")),
                 (0, String::new()),
                 (ID_GROUP_LEAVE, t("&Leave group…")),
+            ],
+        ),
+        View::ProfileOf(_) => add(
+            &menu,
+            &[
+                (ID_AUTHOR_POSTS, t("P&osts")),
+                (ID_MESSAGE, t("&Message")),
+                (ID_COMMENT_FRIEND, t("Add &friend")),
+                (ID_WEB_PERSON, t("Open on &Facebook (web)")),
+                (ID_COPY_TEXT, t("Cop&y text")),
             ],
         ),
         _ => add(&menu, &[(ID_COPY_TEXT, t("Cop&y text"))]),
@@ -6232,6 +6316,37 @@ mod tests {
         assert_eq!(
             refresh_args(&View::SearchResults, &search_args("bea", None, PAGE)),
             Some(search_args("bea", None, PAGE))
+        );
+    }
+
+    #[test]
+    fn profile_rows_split_key_and_value_and_actions_read_as_actions() {
+        // Issue #27: the profile's last row read as a bare "actions" and
+        // Enter on it did nothing. The backend's key<TAB>value lines now
+        // split into fields, and each row reads as what it is.
+        let view = View::ProfileOf("u1234".into());
+        let (records, _) = parse_for(
+            &view,
+            "name\tAlice Example\nurl\thttps://www.facebook.com/alice\nfriends\t312 friends\nintro\tHello there\nactions\tMessage | Add friend | Follow\n",
+        )
+        .unwrap();
+        assert_eq!(records.len(), 5);
+        assert_eq!(records[4].field(0), "actions");
+        assert_eq!(records[4].field(1), "Message | Add friend | Follow");
+        assert_eq!(display_for(&view, &records[0]), "Alice Example");
+        assert_eq!(
+            display_for(&view, &records[1]),
+            "https://www.facebook.com/alice"
+        );
+        assert_eq!(display_for(&view, &records[2]), "Friends: 312 friends");
+        assert_eq!(display_for(&view, &records[3]), "Intro: Hello there");
+        assert_eq!(
+            display_for(&view, &records[4]),
+            "Actions: Message | Add friend | Follow"
+        );
+        assert_eq!(
+            details_for(&view, &records[4]),
+            "Actions: Message | Add friend | Follow"
         );
     }
 }
