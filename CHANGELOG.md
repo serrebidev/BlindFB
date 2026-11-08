@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.34 - 2026-11-08
+
+Fixes Reels and Places in Views (issues #28 and #29, reported by
+MichalSuchy). Backend v0.1.5-blindfb.41.
+
+- Places no longer always comes back empty. The places page is a
+  legacy city directory with no main landmark on it, and the backend
+  waited for its list inside that landmark, so nothing could ever
+  appear. Places now lists the directory's "Things to do in …" city
+  pages, gathered from the whole page.
+- Reels no longer comes back empty when Facebook itself is not in
+  English, French or Vietnamese. The reel card was recognised by its
+  English-style "Comment" button wording, so in any other language no
+  card was ever found. The card is now also recognised by its shape:
+  the video's container that holds the author's link and the action
+  buttons, whatever language they are in.
+
 ## v0.7.33 - 2026-11-08
 
 The Author profile's last row (issue #27, reported by MichalSuchy).

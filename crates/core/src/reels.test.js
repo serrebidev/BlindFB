@@ -47,8 +47,9 @@ async function recommendedFixture(commentLabel) {
 }
 (async () => {
   for (const label of ['Comment', 'Comment, 1 comment', 'Comment, 6 comments', 'Comment, 1.2K comments',
-    'Commenter', 'Commenter, 1 commentaire', 'Commenter, 2 commentaires', 'Commenter, 1,9 K commentaires']) {
+    'Commenter', 'Commenter, 1 commentaire', 'Commenter, 2 commentaires', 'Commenter, 1,9 K commentaires',
+    'Komentář', 'Komentář, 12 komentářů']) {
     await recommendedFixture(label);
   }
-  console.log('Recommended reels fixtures passed: plain and counted comment buttons in English and French, no duplicate reels.');
+  console.log('Recommended reels fixtures passed: plain and counted comment buttons in English and French, a comment button in a language labels.js does not know, no duplicate reels.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

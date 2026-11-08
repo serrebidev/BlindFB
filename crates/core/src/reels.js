@@ -95,9 +95,21 @@
       const r = element.getBoundingClientRect();
       return r.height > 0 && r.top >= -10 && r.top < innerHeight / 2;
     });
+    const hasAuthor = card => [...card.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || ''));
     let card = video;
     while (card && ![...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && W.comment.test(label(b)))) card = card.parentElement;
-    return card && [...card.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? card : null;
+    if (card && hasAuthor(card)) return card;
+    // The comment label above is only known in the languages in labels.js.
+    // In any other Facebook language the labeled climb never matches and
+    // the list came back empty, so fall back to the card's shape: the
+    // first ancestor holding both a labeled action button (any wording)
+    // and the author's link.
+    card = video;
+    for (let depth = 0; card && depth < 20; depth++, card = card.parentElement) {
+      const hasAction = [...card.querySelectorAll('[role=button][aria-label]')].some(b => F.visible(b) && label(b));
+      if (hasAction && hasAuthor(card)) return card;
+    }
+    return null;
   }
 
   async function recommended(count) {
