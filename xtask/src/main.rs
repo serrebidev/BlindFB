@@ -254,8 +254,8 @@ fn update_check() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Refresh the French catalog from the code: xgettext reads every `t!`, `tf!`,
-/// `nt!` and `ntf!`, then msgmerge adds new messages with an empty translation and
+/// Refresh the French catalog from the code: xgettext reads every `t`, `tf!`,
+/// `nt` and `ntf!`, then msgmerge adds new messages with an empty translation and
 /// marks removed ones obsolete. Needs GNU gettext 0.24 or newer (Rust support).
 fn i18n() -> Result<(), Box<dyn Error>> {
     let root = root();
@@ -271,9 +271,9 @@ fn i18n() -> Result<(), Box<dyn Error>> {
         .args([
             "--language=Rust",
             "--from-code=UTF-8",
-            "--keyword=t!",
+            "--keyword=t",
             "--keyword=tf!",
-            "--keyword=nt!:1,2",
+            "--keyword=nt:1,2",
             "--keyword=ntf!:1,2",
             "--add-comments=TRANSLATORS:",
             "--no-wrap",

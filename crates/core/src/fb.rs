@@ -165,14 +165,14 @@ pub fn feed_record_key(record: &Record) -> String {
 /// Keep notification post URLs instead of replacing them with daemon-local references.
 pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
     let value: serde_json::Value = serde_json::from_str(output).map_err(|_| {
-        t!("The backend returned unreadable notifications. Refresh to retry.")
+        t("The backend returned unreadable notifications. Refresh to retry.")
     })?;
     if let Some(error) = value["err"].as_str() {
         return Err(error.to_owned());
     }
     let rows = value["rows"]
         .as_array()
-        .ok_or_else(|| t!("The backend returned no notification list"))?;
+        .ok_or_else(|| t("The backend returned no notification list"))?;
     // One odd row must not empty the whole view: a notification without a
     // target still has text worth reading, and a row whose shape this build
     // does not know is skipped. Only a payload with nothing readable at all
@@ -204,7 +204,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
         })
         .collect();
     if records.is_empty() && !rows.is_empty() {
-        return Err(t!("The backend returned no readable notifications. Refresh to retry."));
+        return Err(t("The backend returned no readable notifications. Refresh to retry."));
     }
     Ok(records)
 }
@@ -279,14 +279,14 @@ impl Fb {
 
     pub(crate) fn browser_endpoint(&self) -> Result<(u16, String), String> {
         if std::env::var_os("FB_CDP").is_some() {
-            return Err(t!("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."));
+            return Err(t("Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."));
         }
         if self.engine.is_some() {
             crate::engine::endpoint()
         } else {
             crate::browsers::fb_browser_endpoint()
         }
-        .ok_or_else(|| t!("the backend browser is not running"))
+        .ok_or_else(|| t("the backend browser is not running"))
     }
 
     /// Run `fb` with `args` and return stdout. On non-zero exit the error is
@@ -368,7 +368,7 @@ impl Fb {
         let browser = self
             .engine
             .as_ref()
-            .ok_or_else(|| t!("no dedicated browser selected"))?;
+            .ok_or_else(|| t("no dedicated browser selected"))?;
         self.run(&["stop"])?;
         crate::engine::close()?;
         let (endpoint, _) = crate::engine::ensure(browser, true)?;
@@ -398,7 +398,7 @@ impl Fb {
         let mut last_error = String::new();
         while std::time::Instant::now() < deadline {
             if crate::engine::endpoint().is_none() {
-                return Err(t!("Sign-in was cancelled: the browser window was closed"));
+                return Err(t("Sign-in was cancelled: the browser window was closed"));
             }
             let status = self.run(&["status"])?;
             if crate::browsers::signed_in(&status) {
@@ -719,10 +719,10 @@ pub fn post_args(
 pub fn post_done_message(output: &str) -> String {
     if output.trim_start().starts_with("pending") {
         // TRANSLATORS: "My posts" is a view name in BlindFB.
-        t!("Facebook accepted your post and is still publishing it. It should appear in My posts \
+        t("Facebook accepted your post and is still publishing it. It should appear in My posts \
             soon. You do not need to post it again.")
     } else {
-        t!("Your post is published.")
+        t("Your post is published.")
     }
 }
 
@@ -732,7 +732,7 @@ pub fn post_unconfirmed_message(error: &str) -> Option<String> {
     (error.contains("post may have been published") || error.contains("timed out after"))
         .then(|| {
             // TRANSLATORS: "My posts" is a view name in BlindFB.
-            t!("Facebook may have published your post, but BlindFB could not confirm it. Check My \
+            t("Facebook may have published your post, but BlindFB could not confirm it. Check My \
                 posts before posting it again.")
         })
 }

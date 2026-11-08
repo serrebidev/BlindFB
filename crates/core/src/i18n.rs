@@ -2,7 +2,7 @@
 //!
 //! Text the user sees is written in English in the code and looked up in the
 //! catalog `app/locale/<lang>/LC_MESSAGES/blindfb.po`:
-//! - `t!("…")` for plain text,
+//! - `t("…")` for plain text,
 //! - `tf!("Loading {view}…", view = title)` for text with named placeholders
 //!   (patois itself does not interpolate),
 //! - `ntf!("{n} item", "{n} items", count)` for counts; `{n}` is the count.
@@ -70,7 +70,7 @@ pub fn saved() -> Language {
 
 /// Remember the choice for the next start.
 pub fn save(language: Language) -> Result<(), String> {
-    let path = setting_path().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+    let path = setting_path().ok_or_else(|| t("could not find BlindFB's data folder"))?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)
             .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
@@ -122,7 +122,7 @@ pub fn __fill(text: String, values: &[(&str, String)]) -> String {
 macro_rules! tf {
     ($msgid:literal $(, $name:ident = $value:expr)* $(,)?) => {
         $crate::i18n::__fill(
-            ::patois::t!($msgid),
+            ::patois::t($msgid),
             &[$((stringify!($name), ::std::string::ToString::to_string(&$value))),*],
         )
     };
@@ -134,7 +134,7 @@ macro_rules! ntf {
     ($singular:literal, $plural:literal, $n:expr $(, $name:ident = $value:expr)* $(,)?) => {{
         let n = $n;
         $crate::i18n::__fill(
-            ::patois::nt!($singular, $plural, n),
+            ::patois::nt($singular, $plural, n as u64),
             &[("n", ::std::string::ToString::to_string(&n)) $(, (stringify!($name), ::std::string::ToString::to_string(&$value)))*],
         )
     }};

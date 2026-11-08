@@ -82,13 +82,13 @@ fn restored_selection(
 /// The menu text of a reaction keyword; the keyword itself goes to the backend.
 fn reaction_label(reaction: &str) -> String {
     match reaction {
-        "like" => t!("Like"),
-        "love" => t!("Love"),
-        "care" => t!("Care"),
-        "haha" => t!("Haha"),
-        "wow" => t!("Wow"),
-        "sad" => t!("Sad"),
-        "angry" => t!("Angry"),
+        "like" => t("Like"),
+        "love" => t("Love"),
+        "care" => t("Care"),
+        "haha" => t("Haha"),
+        "wow" => t("Wow"),
+        "sad" => t("Sad"),
+        "angry" => t("Angry"),
         other => other[..1].to_uppercase() + &other[1..],
     }
 }
@@ -155,7 +155,7 @@ impl ChatWindow {
         if text.trim().is_empty() && files.is_empty() {
             return;
         }
-        self.note(&t!("Sending…"));
+        self.note(&t("Sending…"));
         let args = match &reply_to {
             Some((target, nth)) => reply_args(&id, &text, &files, target, *nth),
             None => send_args(&id, &text, &files),
@@ -184,9 +184,9 @@ impl ChatWindow {
                     if let Some(line) = self.messages.get_string(index) {
                         let done = Clipboard::get().set_text(&line);
                         self.note(&if done {
-                            t!("Message copied.")
+                            t("Message copied.")
                         } else {
-                            t!("Could not copy.")
+                            t("Could not copy.")
                         });
                     }
                 }
@@ -194,11 +194,11 @@ impl ChatWindow {
             ID_MSG_REPLY => {
                 if self.state.lock().unwrap().reply_to.is_some() {
                     self.state.lock().unwrap().reply_to = None;
-                    self.note(&t!("Reply cancelled. Your next message sends normally."));
+                    self.note(&t("Reply cancelled. Your next message sends normally."));
                     return;
                 }
                 let Some((text, nth)) = self.selected_match() else {
-                    self.note(&t!("That message has no text to reply to."));
+                    self.note(&t("That message has no text to reply to."));
                     return;
                 };
                 self.state.lock().unwrap().reply_to = Some((text.clone(), nth));
@@ -214,7 +214,7 @@ impl ChatWindow {
                     return;
                 }
                 let Some((text, nth)) = self.selected_match() else {
-                    self.note(&t!("That message has no text to react to."));
+                    self.note(&t("That message has no text to react to."));
                     return;
                 };
                 let id = self.state.lock().unwrap().id.clone();
@@ -236,11 +236,11 @@ impl ChatWindow {
 
 pub(super) fn open(ui: &Ui, record: &Record) {
     if ui.chat_window.lock().unwrap().is_some() {
-        ui.status(&t!("A chat window is already open. Close it to open another chat."));
+        ui.status(&t("A chat window is already open. Close it to open another chat."));
         return;
     }
     let Some((id, name, group)) = chat_target(record) else {
-        ui.status(&t!("This chat row has no name or link, so its window cannot open."));
+        ui.status(&t("This chat row has no name or link, so its window cannot open."));
         return;
     };
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
@@ -255,32 +255,32 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
-    let messages_label = StaticText::builder(&dialog).with_label(&t!("&Messages")).build();
+    let messages_label = StaticText::builder(&dialog).with_label(&t("&Messages")).build();
     let messages = ListBox::builder(&dialog).build();
-    messages.set_name(&t!("Messages in this chat, oldest first"));
-    let more = Button::builder(&dialog).with_label(&t!("Load &more")).build();
-    let refresh = Button::builder(&dialog).with_label(&t!("&Refresh")).build();
-    let compose_label = StaticText::builder(&dialog).with_label(&t!("Me&ssage")).build();
+    messages.set_name(&t("Messages in this chat, oldest first"));
+    let more = Button::builder(&dialog).with_label(&t("Load &more")).build();
+    let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
+    let compose_label = StaticText::builder(&dialog).with_label(&t("Me&ssage")).build();
     let compose = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ProcessEnter)
         .build();
     compose.set_name(&tf!("Message to {name}. Enter sends", name = name));
-    let attach = Button::builder(&dialog).with_label(&t!("Attach &files")).build();
-    let manage = Button::builder(&dialog).with_label(&t!("A&ttachments…")).build();
-    manage.set_name(&t!("Attachments. Review or remove attached files"));
-    let send = Button::builder(&dialog).with_label(&t!("&Send")).build();
+    let attach = Button::builder(&dialog).with_label(&t("Attach &files")).build();
+    let manage = Button::builder(&dialog).with_label(&t("A&ttachments…")).build();
+    manage.set_name(&t("Attachments. Review or remove attached files"));
+    let send = Button::builder(&dialog).with_label(&t("&Send")).build();
     let status_label = StaticText::builder(&dialog)
-        .with_label(&t!("Chat status"))
+        .with_label(&t("Chat status"))
         .build();
     let status = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ReadOnly)
         .build();
-    status.set_name(&t!("Chat status"));
+    status.set_name(&t("Chat status"));
     status.enable_focus_from_keyboard();
-    status.change_value(&t!("Loading messages…"));
+    status.change_value(&t("Loading messages…"));
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
-        .with_label(&t!("C&lose"))
+        .with_label(&t("C&lose"))
         .build();
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     actions.add(&more, 0, SizerFlag::All, 4);
@@ -326,16 +326,16 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             .append_item(
                 ID_MSG_REPLY,
                 &if replying {
-                    t!("Cancel &reply")
+                    t("Cancel &reply")
                 } else {
-                    t!("&Reply")
+                    t("&Reply")
                 },
-                &t!("Quote this message in your next send"),
+                &t("Quote this message in your next send"),
             )
             .append_item(
                 ID_MSG_COPY,
-                &t!("Cop&y message"),
-                &t!("Copy the message text"),
+                &t("Cop&y message"),
+                &t("Copy the message text"),
             )
             .build();
         let react = Menu::builder().build();
@@ -346,7 +346,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             let label = reaction_label(reaction);
             react.append(ID_MSG_REACT + i as i32, &label, "", ItemKind::Normal);
         }
-        menu.append_submenu(react, &t!("Re&act"), &t!("React to this message"));
+        menu.append_submenu(react, &t("Re&act"), &t("React to this message"));
         w.messages.popup_menu(&mut menu, None);
     });
     let (w, u) = (window.clone(), ui.clone());
@@ -369,7 +369,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     let (w, u) = (window.clone(), ui.clone());
     refresh.on_click(move |_| {
         w.state.lock().unwrap().follow_tail = true;
-        w.note(&t!("Refreshing…"));
+        w.note(&t("Refreshing…"));
         w.load(&u);
     });
     let (w, u) = (window.clone(), ui.clone());
@@ -378,14 +378,14 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         state.count += PAGE;
         state.follow_tail = false;
         drop(state);
-        w.note(&t!("Loading more…"));
+        w.note(&t("Loading more…"));
         w.load(&u);
     });
     let (w, parent) = (window.clone(), dialog);
     manage.on_click(move |_| {
         let mut files = w.state.lock().unwrap().files.clone();
         if files.is_empty() {
-            w.note(&t!("No files are attached."));
+            w.note(&t("No files are attached."));
             return;
         }
         super::manage_files_dialog(&parent, &mut files);
@@ -466,7 +466,7 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
         Err(e) => {
             if needs_messenger_unlock(&e) {
                 // TRANSLATORS: "Chat" and "Unlock encrypted chats" are the menu and its item
-                window.note(&t!(
+                window.note(&t(
                     "Messenger is locked. Close this window and use Chat, Unlock encrypted chats, then reopen the chat."
                 ));
             } else {
@@ -489,7 +489,7 @@ pub(super) fn deliver_sent(ui: &Ui, session: u64, result: Result<String, String>
             state.reply_to = None;
             state.follow_tail = true;
             drop(state);
-            window.note(&t!("Message sent."));
+            window.note(&t("Message sent."));
             window.load(ui);
         }
         Err(e) => {

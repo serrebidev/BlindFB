@@ -748,7 +748,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
     let root = browser
         .data_dir
         .as_ref()
-        .ok_or_else(|| t!("this browser has no profile yet; sign in to Facebook there first"))?;
+        .ok_or_else(|| t("this browser has no profile yet; sign in to Facebook there first"))?;
     let mut profiles = Vec::new();
     if let Ok(text) = std::fs::read_to_string(root.join("Local State")) {
         if let Ok(state) = serde_json::from_str::<serde_json::Value>(&text) {
@@ -773,7 +773,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
         profiles.extend(others);
     }
     let mut tried = Vec::new();
-    let mut last_error = t!("no signed-in Facebook profile found");
+    let mut last_error = t("no signed-in Facebook profile found");
     for profile in profiles {
         if tried.contains(&profile) {
             continue;
@@ -810,7 +810,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
             }
             Err(error) => {
                 last_error = if error.code() == "source_inspection_failed" {
-                    t!(
+                    t(
                         "the cookie database could not be read; close this browser normally and retry"
                     )
                 } else {
@@ -849,7 +849,7 @@ fn has_facebook_session(cookies: &[FfCookie]) -> bool {
 
 fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
     if !has_facebook_session(cookies) || cookies.iter().any(|c| !valid_facebook_cookie(c)) {
-        return Err(t!("The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."));
+        return Err(t("The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."));
     }
     status(fb)?;
     let endpoint = fb.browser_endpoint()?;
@@ -864,7 +864,7 @@ fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
         fb.run(&["profile", "me"])?;
         Ok(current)
     } else {
-        Err(t!("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))
+        Err(t("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))
     }
 }
 
@@ -959,7 +959,7 @@ pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
 pub fn extract_firefox_cookies(profile: &Path) -> Result<Vec<FfCookie>, String> {
     let source = profile.join("cookies.sqlite");
     if !source.is_file() {
-        return Err(t!(
+        return Err(t(
             "this Firefox profile has no cookie database — sign in to Facebook in Firefox first"
         ));
     }
@@ -1019,7 +1019,7 @@ fn read_cookie_db(db: &Path) -> Result<Vec<FfCookie>, String> {
     match pick {
         Some((_, list)) => Ok(list.clone()),
         None => Err(
-            t!("Firefox is not signed in to Facebook — sign in there first, then try again"),
+            t("Firefox is not signed in to Facebook — sign in there first, then try again"),
         ),
     }
 }
@@ -1105,10 +1105,10 @@ pub(crate) fn cdp_call(
 /// them in the backend's browser, and verify with `fb status`.
 pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
     let root = firefox.data_dir.clone().ok_or_else(|| {
-        t!("Firefox has not run yet — open it once, sign in to Facebook there, then try again")
+        t("Firefox has not run yet — open it once, sign in to Facebook there, then try again")
     })?;
     let profile = firefox_profile(&root)
-        .ok_or_else(|| t!("no Firefox profile found — sign in to Facebook in Firefox first"))?;
+        .ok_or_else(|| t("no Firefox profile found — sign in to Facebook in Firefox first"))?;
     let cookies = extract_firefox_cookies(&profile)?;
 
     import_cookies(fb, &cookies)
@@ -1179,7 +1179,7 @@ fn download_and_run(url: &str, file_name: &str) -> Result<String, String> {
     installer_command(&path)
         .stdin(Stdio::null())
         .spawn()
-        .map(|_| t!("installer downloaded and started — follow its prompts, then try again"))
+        .map(|_| t("installer downloaded and started — follow its prompts, then try again"))
         .map_err(|e| tf!("cannot start the installer: {error}", error = e))
 }
 
@@ -1197,7 +1197,7 @@ fn install_from_dmg(kind: BrowserKind, url: &str, app_name: &str) -> Result<Stri
         .status()
         .map_err(|e| tf!("cannot open the installer image: {error}", error = e))?;
     if !attached.success() {
-        return Err(t!("the installer image did not open"));
+        return Err(t("the installer image did not open"));
     }
     let apps = home().join("Applications");
     let _ = std::fs::create_dir_all(&apps);
@@ -1253,7 +1253,7 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
                 "firefox-setup.exe",
             ),
             BrowserKind::Chromium => {
-                return Err(t!(
+                return Err(t(
                     "Chromium has no official Windows installer — install Google Chrome instead"
                 ))
             }
@@ -1283,7 +1283,7 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
                 "Firefox.app",
             ),
             BrowserKind::Chromium => {
-                return Err(t!(
+                return Err(t(
                     "Chromium has no official macOS installer — install Google Chrome instead"
                 ))
             }
@@ -1313,7 +1313,7 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
         ));
     }
     #[allow(unreachable_code)]
-    Err(t!("browser installs are not supported on this system"))
+    Err(t("browser installs are not supported on this system"))
 }
 
 #[cfg(test)]

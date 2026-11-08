@@ -71,9 +71,9 @@ pub fn loaded(title: &str, total: usize, added: usize, append: bool) -> String {
 }
 
 pub fn set_enabled(kind: Kind, on: bool) -> Result<(), String> {
-    let path = marker(kind).ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+    let path = marker(kind).ok_or_else(|| t("could not find BlindFB's data folder"))?;
     if on {
-        let dir = path.parent().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+        let dir = path.parent().ok_or_else(|| t("could not find BlindFB's data folder"))?;
         std::fs::create_dir_all(dir)
             .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
         std::fs::write(&path, "")

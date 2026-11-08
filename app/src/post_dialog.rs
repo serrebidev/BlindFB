@@ -25,20 +25,20 @@ const ID_REACT: i32 = 12120; // + index into REACTIONS
 const ID_COMMENT_PROFILE: i32 = 12110;
 const ID_COMMENT_FRIEND: i32 = 12111;
 fn composer_label() -> String {
-    t!("&Write a comment (Ctrl+Enter to send)")
+    t("&Write a comment (Ctrl+Enter to send)")
 }
 
 /// The display label of a reaction keyword; the keyword itself stays English.
 fn reaction_label(reaction: &str) -> String {
     match reaction {
-        "like" => t!("Like"),
-        "love" => t!("Love"),
-        "care" => t!("Care"),
-        "haha" => t!("Haha"),
-        "wow" => t!("Wow"),
-        "sad" => t!("Sad"),
-        "angry" => t!("Angry"),
-        "none" => t!("Remove reaction"),
+        "like" => t("Like"),
+        "love" => t("Love"),
+        "care" => t("Care"),
+        "haha" => t("Haha"),
+        "wow" => t("Wow"),
+        "sad" => t("Sad"),
+        "angry" => t("Angry"),
+        "none" => t("Remove reaction"),
         other => other[..1].to_uppercase() + &other[1..],
     }
 }
@@ -230,7 +230,7 @@ impl PostReader {
                 ),
                 None => (
                     state.post_links.clone(),
-                    t!("Post links. Enter opens the selected link in your browser"),
+                    t("Post links. Enter opens the selected link in your browser"),
                     None,
                 ),
             }
@@ -248,9 +248,9 @@ impl PostReader {
         // Both labels go through t! here and where the button is built, so the
         // comparison holds in every language.
         let label = if playing {
-            t!("&Pause video")
+            t("&Pause video")
         } else {
-            t!("&Play video")
+            t("&Play video")
         };
         if self.play.get_label() == label {
             return;
@@ -267,9 +267,9 @@ impl PostReader {
         if state.media_ready {
             drop(state);
             let (ok, message) = if self.media.get_state() == MediaState::Playing {
-                (self.media.pause(), t!("Video paused."))
+                (self.media.pause(), t("Video paused."))
             } else {
-                (self.media.play(), t!("Playing video."))
+                (self.media.play(), t("Playing video."))
             };
             if !ok {
                 self.state.borrow_mut().media_ready = false;
@@ -279,7 +279,7 @@ impl PostReader {
                 &if ok {
                     message
                 } else {
-                    t!("Playback failed. Press Play to retry.")
+                    t("Playback failed. Press Play to retry.")
                 },
             );
             self.play_label(ok && self.media.get_state() == MediaState::Playing);
@@ -301,7 +301,7 @@ impl PostReader {
             },
             tag: Tag::PostVideo(self.session, request),
         });
-        self.message(ui, &t!("Preparing video…"));
+        self.message(ui, &t("Preparing video…"));
     }
 
     fn load_stream(&self, ui: &Ui, data: &str) {
@@ -313,10 +313,10 @@ impl PostReader {
             }
         };
         self.state.borrow_mut().media_loading = Some(Instant::now());
-        self.message(ui, &t!("Loading video…"));
+        self.message(ui, &t("Loading video…"));
         if !self.media.load_uri(&info.url) {
             self.state.borrow_mut().media_loading = None;
-            self.message(ui, &t!("Could not load video. Press Play to retry."));
+            self.message(ui, &t("Could not load video. Press Play to retry."));
         }
         self.controls();
     }
@@ -335,9 +335,9 @@ impl PostReader {
         self.message(
             ui,
             &if was_ready && !stopped {
-                t!("Could not stop video. Try Pause or close the reader.")
+                t("Could not stop video. Try Pause or close the reader.")
             } else {
-                t!("Video stopped.")
+                t("Video stopped.")
             },
         );
     }
@@ -345,7 +345,7 @@ impl PostReader {
     fn seek(&self, ui: &Ui, offset: i64) {
         let position = seek_position(self.media.tell(), self.media.length(), offset);
         if self.media.seek(position) < 0 {
-            self.message(ui, &t!("This video could not seek."));
+            self.message(ui, &t("This video could not seek."));
         } else {
             self.message(
                 ui,
@@ -373,9 +373,9 @@ impl PostReader {
                     self.message(
                         ui,
                         &if ok {
-                            t!("Playing video.")
+                            t("Playing video.")
                         } else {
-                            t!("Playback failed. Press Play to retry.")
+                            t("Playback failed. Press Play to retry.")
                         },
                     );
                 }
@@ -384,7 +384,7 @@ impl PostReader {
                 }
                 PlayerEvent::Finished => {
                     self.play_label(false);
-                    self.message(ui, &t!("Video finished."));
+                    self.message(ui, &t("Video finished."));
                 }
                 PlayerEvent::Error(error) => {
                     let mut state = self.state.borrow_mut();
@@ -431,7 +431,7 @@ impl PostReader {
             ui,
             Task::PostShareOpen { page },
             Tag::PostShareReady(self.session),
-            &t!("Opening Facebook's share dialog…"),
+            &t("Opening Facebook's share dialog…"),
         );
     }
 
@@ -443,7 +443,7 @@ impl PostReader {
                 "Share this post to your feed. Audience: {audience}.\nSay something about it (optional), then press OK to share:",
                 audience = audience
             ),
-            &t!("Share post"),
+            &t("Share post"),
         )
         .build();
         let text = (entry.show_modal() == ID_OK).then(|| entry.get_value().unwrap_or_default());
@@ -455,14 +455,14 @@ impl PostReader {
                     task: Task::PostShare { page, text },
                     tag: Tag::PostShared(self.session),
                 });
-                self.message(ui, &t!("Sharing…"));
+                self.message(ui, &t("Sharing…"));
             }
             None => {
                 ui.send(Job {
                     task: Task::PostShareCancel { page },
                     tag: Tag::PostShareClosed(self.session),
                 });
-                self.message(ui, &t!("Share cancelled. Nothing was shared."));
+                self.message(ui, &t("Share cancelled. Nothing was shared."));
             }
         }
     }
@@ -478,16 +478,16 @@ impl PostReader {
                 // Before the post arrives the field holds the loading placeholder;
                 // copying it and reporting success leaves junk on the clipboard.
                 if !self.state.borrow().loaded {
-                    self.message(ui, &t!("The post has not loaded yet. Try again in a moment."));
+                    self.message(ui, &t("The post has not loaded yet. Try again in a moment."));
                     return;
                 }
                 let copied = Clipboard::get().set_text(&self.post.get_value());
                 self.message(
                     ui,
                     &if copied {
-                        t!("Post copied.")
+                        t("Post copied.")
                     } else {
-                        t!("Could not copy the post.")
+                        t("Could not copy the post.")
                     },
                 );
             }
@@ -496,9 +496,9 @@ impl PostReader {
                 self.message(
                     ui,
                     &if copied {
-                        t!("Link copied.")
+                        t("Link copied.")
                     } else {
-                        t!("Could not copy the link.")
+                        t("Could not copy the link.")
                     },
                 );
             }
@@ -514,7 +514,7 @@ impl PostReader {
                             reaction: reaction.to_owned(),
                         },
                         Tag::PostReelReacted(self.session),
-                        &t!("Reacting…"),
+                        &t("Reacting…"),
                     );
                     return;
                 }
@@ -522,7 +522,7 @@ impl PostReader {
                     task: Task::Fb(react_args(&target, reaction), None),
                     tag: Tag::PostNote(self.session),
                 });
-                self.message(ui, &t!("Reacting…"));
+                self.message(ui, &t("Reacting…"));
             }
             _ => {}
         }
@@ -531,7 +531,7 @@ impl PostReader {
     fn send(&self, ui: &Ui) {
         let text = self.composer.get_value();
         if text.trim().is_empty() {
-            self.message(ui, &t!("Write a comment or reply first."));
+            self.message(ui, &t("Write a comment or reply first."));
             self.composer.set_focus();
             return;
         }
@@ -552,7 +552,7 @@ impl PostReader {
             },
             tag: Tag::PostSent(self.session),
         });
-        self.message(ui, &t!("Sending comment…"));
+        self.message(ui, &t("Sending comment…"));
     }
 
     fn menu_action(&self, ui: &Ui, action: i32) {
@@ -591,9 +591,9 @@ impl PostReader {
             }
             ID_COPY => {
                 let message = if Clipboard::get().set_text(&format!("{author}: {text}")) {
-                    t!("Comment copied.")
+                    t("Comment copied.")
                 } else {
-                    t!("Could not copy the comment.")
+                    t("Could not copy the comment.")
                 };
                 self.message(ui, &message);
             }
@@ -615,7 +615,7 @@ impl PostReader {
                 let who = author_ref.unwrap_or(author);
                 if !who.is_empty() {
                     self.state.borrow_mut().pending_profile = Some(who);
-                    self.message(ui, &t!("Opening the commenter's profile…"));
+                    self.message(ui, &t("Opening the commenter's profile…"));
                 }
             }
             ID_COMMENT_FRIEND => {
@@ -686,45 +686,45 @@ fn open_requested(
     );
     let autoplay = playback.is_some();
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
-    let dialog = Dialog::builder(&ui.frame, &t!("Post and comments"))
+    let dialog = Dialog::builder(&ui.frame, &t("Post and comments"))
         .with_size(900, 700)
         .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
     let links_label = StaticText::builder(&dialog)
-        .with_label(&t!("Post lin&ks"))
+        .with_label(&t("Post lin&ks"))
         .build();
     let links = ListBox::builder(&dialog).build();
-    links.set_name(&t!("Post links. Enter opens the selected link in your browser"));
+    links.set_name(&t("Post links. Enter opens the selected link in your browser"));
     for link in &initial_links {
         links.append(&format!("{} — {}", link.label, link.url));
     }
     links.set_selection(0, true);
-    let open_link = Button::builder(&dialog).with_label(&t!("&Open link")).build();
+    let open_link = Button::builder(&dialog).with_label(&t("&Open link")).build();
     let post_label = StaticText::builder(&dialog)
-        .with_label(&t!("&Full post"))
+        .with_label(&t("&Full post"))
         .build();
     let post = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::MultiLine | TextCtrlStyle::ReadOnly)
         .build();
-    post.set_name(&t!(
+    post.set_name(&t(
         "Full post. Applications or Shift+F10 for links, comment, react, share and copy"
     ));
-    let loading = t!("Loading post and comments…");
+    let loading = t("Loading post and comments…");
     post.change_value(preview.as_deref().unwrap_or(&loading));
     let media_label = StaticText::builder(&dialog)
-        .with_label(&t!("Video player"))
+        .with_label(&t("Video player"))
         .build();
     let media = Player::new(&dialog);
     let player_buttons = BoxSizer::builder(Orientation::Horizontal).build();
-    let play = Button::builder(&dialog).with_label(&t!("&Play video")).build();
-    let stop = Button::builder(&dialog).with_label(&t!("S&top video")).build();
+    let play = Button::builder(&dialog).with_label(&t("&Play video")).build();
+    let stop = Button::builder(&dialog).with_label(&t("S&top video")).build();
     let back = Button::builder(&dialog)
-        .with_label(&t!("Back 10 seconds"))
+        .with_label(&t("Back 10 seconds"))
         .build();
     let forward = Button::builder(&dialog)
-        .with_label(&t!("Forward 10 seconds"))
+        .with_label(&t("Forward 10 seconds"))
         .build();
     for button in [&play, &stop, &back, &forward] {
         // set_name overrides wx's own accessible name, so strip the mnemonic
@@ -733,17 +733,17 @@ fn open_requested(
         player_buttons.add(button, 0, SizerFlag::All, 4);
     }
     let volume_label = StaticText::builder(&dialog)
-        .with_label(&t!("Video &volume (percent)"))
+        .with_label(&t("Video &volume (percent)"))
         .build();
     let volume = Slider::builder(&dialog)
         .with_value(100)
         .with_min_value(0)
         .with_max_value(100)
         .build();
-    volume.set_name(&t!("Video volume, percent"));
-    let comments_label = StaticText::builder(&dialog).with_label(&t!("&Comments")).build();
+    volume.set_name(&t("Video volume, percent"));
+    let comments_label = StaticText::builder(&dialog).with_label(&t("&Comments")).build();
     let comments = ListBox::builder(&dialog).build();
-    comments.set_name(&t!(
+    comments.set_name(&t(
         "Comments. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
     ));
     let composer_text = composer_label();
@@ -753,23 +753,23 @@ fn open_requested(
         .build();
     composer.set_name(&composer_text.replace('&', ""));
     let status_label = StaticText::builder(&dialog)
-        .with_label(&t!("Reader status"))
+        .with_label(&t("Reader status"))
         .build();
     let status = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ReadOnly)
         .build();
-    status.set_name(&t!("Reader status"));
+    status.set_name(&t("Reader status"));
     status.enable_focus_from_keyboard();
     let buttons = BoxSizer::builder(Orientation::Horizontal).build();
     let send = Button::builder(&dialog)
-        .with_label(&t!("&Send (Ctrl+Enter)"))
+        .with_label(&t("&Send (Ctrl+Enter)"))
         .build();
-    let share = Button::builder(&dialog).with_label(&t!("S&hare…")).build();
-    let refresh = Button::builder(&dialog).with_label(&t!("&Refresh")).build();
-    let cancel = Button::builder(&dialog).with_label(&t!("Ca&ncel reply")).build();
+    let share = Button::builder(&dialog).with_label(&t("S&hare…")).build();
+    let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
+    let cancel = Button::builder(&dialog).with_label(&t("Ca&ncel reply")).build();
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
-        .with_label(&t!("C&lose"))
+        .with_label(&t("C&lose"))
         .build();
     for button in [&send, &share, &refresh, &cancel, &close] {
         // Same as above: strip the mnemonic marker before it becomes the
@@ -873,7 +873,7 @@ fn open_requested(
     let (r, u) = (reader.clone(), ui.clone());
     volume.on_slider(move |_| {
         if r.state.borrow().media_ready && !r.media.set_volume(r.volume.value() as f64 / 100.0) {
-            r.message(&u, &t!("Could not set video volume."));
+            r.message(&u, &t("Could not set video volume."));
         }
     });
     let (r, u) = (reader.clone(), ui.clone());
@@ -918,7 +918,7 @@ fn open_requested(
             },
             tag: Tag::PostLoaded(r.session),
         });
-        r.message(&u, &t!("Refreshing comments…"));
+        r.message(&u, &t("Refreshing comments…"));
     });
     close.on_click(move |_| dialog.end_modal(ID_CANCEL));
     dialog.bind_internal(EventType::CLOSE_WINDOW, move |event| {
@@ -942,34 +942,34 @@ fn open_requested(
             return;
         };
         let mut menu = Menu::builder()
-            .append_item(ID_REPLY, &t!("&Reply"), &t!("Reply to this exact comment"))
+            .append_item(ID_REPLY, &t("&Reply"), &t("Reply to this exact comment"))
             .append_item(
                 ID_LIKE,
-                &t!("&Like / unlike"),
-                &t!("Like this comment, or remove your Like"),
+                &t("&Like / unlike"),
+                &t("Like this comment, or remove your Like"),
             )
-            .append_item(ID_COPY, &t!("&Copy comment"), &t!("Copy the full comment"))
+            .append_item(ID_COPY, &t("&Copy comment"), &t("Copy the full comment"))
             .append_item(
                 ID_WEB,
-                &t!("Open comment on &Facebook"),
-                &t!("Open the comment permalink"),
+                &t("Open comment on &Facebook"),
+                &t("Open the comment permalink"),
             )
             .append_separator()
             .append_item(
                 ID_COMMENT_PROFILE,
-                &t!("View &profile"),
-                &t!("Open the commenter's profile"),
+                &t("View &profile"),
+                &t("Open the commenter's profile"),
             )
             .append_item(
                 ID_COMMENT_FRIEND,
-                &t!("Add &friend"),
-                &t!("Send the commenter a friend request"),
+                &t("Add &friend"),
+                &t("Send the commenter a friend request"),
             )
             .append_separator()
             .append_item(
                 ID_POST_COMMENT,
-                &t!("Comment on the &post"),
-                &t!("Write a new top-level comment"),
+                &t("Comment on the &post"),
+                &t("Write a new top-level comment"),
             )
             .build();
         menu.enable_item(ID_REPLY, reply);
@@ -999,13 +999,13 @@ fn open_requested(
         let mut menu = Menu::builder()
             .append_item(
                 ID_POST_COMMENT,
-                &t!("&Comment…"),
-                &t!("Write a comment on this post"),
+                &t("&Comment…"),
+                &t("Write a comment on this post"),
             )
             .append_item(
                 ID_SHARE,
-                &t!("S&hare…"),
-                &t!("Share with Facebook's own share dialog"),
+                &t("S&hare…"),
+                &t("Share with Facebook's own share dialog"),
             )
             .build();
         let react = Menu::builder().build();
@@ -1013,14 +1013,14 @@ fn open_requested(
             let label = reaction_label(reaction);
             react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
         }
-        menu.append_submenu(react, &t!("&React"), "");
+        menu.append_submenu(react, &t("&React"), "");
         append_links_menu(&menu, &r.state.borrow().post_links);
         menu.append_separator();
-        menu.append(ID_COPY_POST, &t!("Cop&y post text"), "", ItemKind::Normal);
-        menu.append(ID_COPY_POST_LINK, &t!("Copy &link"), "", ItemKind::Normal);
+        menu.append(ID_COPY_POST, &t("Cop&y post text"), "", ItemKind::Normal);
+        menu.append(ID_COPY_POST_LINK, &t("Copy &link"), "", ItemKind::Normal);
         menu.append(
             ID_WEB_POST,
-            &t!("Open on &Facebook (web)"),
+            &t("Open on &Facebook (web)"),
             "",
             ItemKind::Normal,
         );
@@ -1067,7 +1067,7 @@ fn open_requested(
             r.media.stop();
             r.state.borrow_mut().media_loading = None;
             r.controls();
-            r.message(&u, &t!("Video loading timed out. Press Play to retry."));
+            r.message(&u, &t("Video loading timed out. Press Play to retry."));
         }
         let close_for_profile = {
             let mut state = r.state.borrow_mut();

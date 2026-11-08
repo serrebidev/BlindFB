@@ -12,7 +12,7 @@ use crate::tf;
 fn profile() -> Result<PathBuf, String> {
     crate::backend::data_dir()
         .map(|dir| dir.join("browser"))
-        .ok_or_else(|| t!("cannot find BlindFB's browser data folder"))
+        .ok_or_else(|| t("cannot find BlindFB's browser data folder"))
 }
 
 pub(crate) fn endpoint() -> Option<(u16, String)> {
@@ -41,7 +41,7 @@ pub(crate) fn ensure(browser: &Browser, visible: bool) -> Result<((u16, String),
     let exe = browser
         .exe
         .as_ref()
-        .ok_or_else(|| t!("the selected browser is not installed"))?;
+        .ok_or_else(|| t("the selected browser is not installed"))?;
     let mut command = Command::new(exe);
     command
         .arg(format!("--user-data-dir={}", profile.display()))
@@ -109,5 +109,5 @@ pub(crate) fn close() -> Result<(), String> {
         }
         std::thread::sleep(Duration::from_millis(200));
     }
-    Err(t!("BlindFB's dedicated browser did not close; close its window and retry sign-in"))
+    Err(t("BlindFB's dedicated browser did not close; close its window and retry sign-in"))
 }

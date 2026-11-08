@@ -95,13 +95,13 @@ impl GroupWindow {
                 // The row lacks the field this action needs; say so instead of
                 // closing the window onto nothing.
                 None if id == ID_MEMBER_PROFILE => {
-                    self.note(&t!("This member row has no profile link."))
+                    self.note(&t("This member row has no profile link."))
                 }
-                None => self.note(&t!("This member row has no name, so its chat cannot open.")),
+                None => self.note(&t("This member row has no name, so its chat cannot open.")),
             },
             ID_MEMBER_FRIEND => {
                 if url.is_empty() {
-                    self.note(&t!(
+                    self.note(&t(
                         "This member row has no profile link, so a friend request cannot be sent."
                     ));
                 } else {
@@ -114,7 +114,7 @@ impl GroupWindow {
             }
             ID_MEMBER_WEB => {
                 if url.is_empty() {
-                    self.note(&t!("This member row has no link to open."));
+                    self.note(&t("This member row has no link to open."));
                 } else {
                     open_url(&url);
                 }
@@ -137,13 +137,13 @@ impl GroupState {
 
 pub(super) fn open(ui: &Ui, record: &Record) {
     if ui.group_window.lock().unwrap().is_some() {
-        ui.status(&t!("A group window is already open. Close it to open another group."));
+        ui.status(&t("A group window is already open. Close it to open another group."));
         return;
     }
     let name = record.field(0).to_owned();
     let url = record.field(1).to_owned();
     if url.is_empty() {
-        ui.status(&t!("This group row has no link, so its window cannot open."));
+        ui.status(&t("This group row has no link, so its window cannot open."));
         return;
     }
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
@@ -153,26 +153,26 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         .build();
     dialog.set_escape_id(ID_CANCEL);
     let root = BoxSizer::builder(Orientation::Vertical).build();
-    let posts_label = StaticText::builder(&dialog).with_label(&t!("&Posts")).build();
+    let posts_label = StaticText::builder(&dialog).with_label(&t("&Posts")).build();
     let posts = ListBox::builder(&dialog).build();
-    posts.set_name(&t!("Posts in this group. Enter opens the selected post"));
-    let members_label = StaticText::builder(&dialog).with_label(&t!("&Members")).build();
+    posts.set_name(&t("Posts in this group. Enter opens the selected post"));
+    let members_label = StaticText::builder(&dialog).with_label(&t("&Members")).build();
     let members = ListBox::builder(&dialog).build();
-    members.set_name(&t!(
+    members.set_name(&t(
         "Members of this group. Applications or Shift+F10 for profile, message and friend actions"
     ));
     let status_label = StaticText::builder(&dialog)
-        .with_label(&t!("Group status"))
+        .with_label(&t("Group status"))
         .build();
     let status = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ReadOnly)
         .build();
-    status.set_name(&t!("Group status"));
+    status.set_name(&t("Group status"));
     status.enable_focus_from_keyboard();
-    status.change_value(&t!("Loading posts and members…"));
+    status.change_value(&t("Loading posts and members…"));
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
-        .with_label(&t!("C&lose"))
+        .with_label(&t("C&lose"))
         .build();
     root.add(&posts_label, 0, SizerFlag::All, 4);
     root.add(&posts, 2, SizerFlag::Expand | SizerFlag::All, 4);
@@ -236,7 +236,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
                     if w.state.lock().unwrap().pending.is_some() {
                         d.end_modal(ID_OK);
                     } else if w.selected_member().is_some() {
-                        w.note(&t!("This member row has no profile link."));
+                        w.note(&t("This member row has no profile link."));
                     }
                     return;
                 }
@@ -253,23 +253,23 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         let mut menu = Menu::builder()
             .append_item(
                 ID_MEMBER_PROFILE,
-                &t!("View &profile"),
-                &t!("Open this member's profile"),
+                &t("View &profile"),
+                &t("Open this member's profile"),
             )
             .append_item(
                 ID_MEMBER_MESSAGE,
-                &t!("&Message"),
-                &t!("Chat with this member"),
+                &t("&Message"),
+                &t("Chat with this member"),
             )
             .append_item(
                 ID_MEMBER_FRIEND,
-                &t!("Add &friend"),
-                &t!("Send this member a friend request"),
+                &t("Add &friend"),
+                &t("Send this member a friend request"),
             )
             .append_item(
                 ID_MEMBER_WEB,
-                &t!("Open on &Facebook"),
-                &t!("Open this member's profile on the web"),
+                &t("Open on &Facebook"),
+                &t("Open this member's profile on the web"),
             )
             .build();
         w.members.popup_menu(&mut menu, None);
@@ -324,7 +324,7 @@ impl GroupWindow {
                 self.state.lock().unwrap().pending = Some(Pending::Post(target));
                 dialog.end_modal(ID_OK);
             }
-            None => self.note(&t!("This post row has no link, so it cannot be opened.")),
+            None => self.note(&t("This post row has no link, so it cannot be opened.")),
         }
     }
 }
@@ -340,7 +340,7 @@ fn refresh_note(window: &GroupWindow) {
                 ntf!("{n} post", "{n} posts", n)
             }
         })
-        .unwrap_or_else(|| t!("posts loading"));
+        .unwrap_or_else(|| t("posts loading"));
     let members = state
         .members_count
         .map(|n| {
@@ -352,7 +352,7 @@ fn refresh_note(window: &GroupWindow) {
                 ntf!("{n} member", "{n} members", n)
             }
         })
-        .unwrap_or_else(|| t!("members loading"));
+        .unwrap_or_else(|| t("members loading"));
     // TRANSLATORS: the group window status: group name, then the posts part
     // ("12 posts", "posts loading"…), then the members part
     window.note(&tf!(

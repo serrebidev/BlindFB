@@ -35,14 +35,14 @@ pub struct VideoStream {
 
 pub fn parse_stream(output: &str) -> Result<VideoStream, String> {
     let data: serde_json::Value =
-        serde_json::from_str(output).map_err(|_| t!("Invalid video metadata"))?;
+        serde_json::from_str(output).map_err(|_| t("Invalid video metadata"))?;
     let url = data["url"]
         .as_str()
         .filter(|url| {
             playable_url(true, url).is_some()
                 && !url.chars().any(|c| c.is_control() || c.is_whitespace())
         })
-        .ok_or_else(|| t!("Invalid video stream URL"))?;
+        .ok_or_else(|| t("Invalid video stream URL"))?;
     Ok(VideoStream {
         url: url.to_owned(),
         title: data["title"]
@@ -129,9 +129,9 @@ pub fn ensure() -> Result<PathBuf, String> {
     static INSTALL: Mutex<()> = Mutex::new(());
     let _install = INSTALL
         .lock()
-        .map_err(|_| t!("the video helper installer was interrupted"))?;
+        .map_err(|_| t("the video helper installer was interrupted"))?;
     let target = managed_ytdlp()
-        .ok_or_else(|| t!("could not find a place to install the video helper"))?;
+        .ok_or_else(|| t("could not find a place to install the video helper"))?;
     if fresh(&target) {
         return Ok(target);
     }
@@ -143,15 +143,15 @@ pub fn ensure() -> Result<PathBuf, String> {
 }
 
 fn install(target: &Path) -> Result<(), String> {
-    let asset = asset_name().ok_or_else(|| t!("no video helper is available for this platform"))?;
+    let asset = asset_name().ok_or_else(|| t("no video helper is available for this platform"))?;
     let bytes = get(&format!("{RELEASES}{asset}"))?;
     let sums = String::from_utf8_lossy(&get(&format!("{RELEASES}SHA2-256SUMS"))?).into_owned();
     let expected = expected_hash(&sums, asset)
-        .ok_or_else(|| t!("the video helper has no checksum"))?;
+        .ok_or_else(|| t("the video helper has no checksum"))?;
     if sha256_hex(&bytes) != expected {
-        return Err(t!("the video helper download failed its checksum — not installing it"));
+        return Err(t("the video helper download failed its checksum — not installing it"));
     }
-    let dir = target.parent().ok_or_else(|| t!("bad install path"))?;
+    let dir = target.parent().ok_or_else(|| t("bad install path"))?;
     fs::create_dir_all(dir)
         .map_err(|e| tf!("could not create the install folder: {error}", error = e))?;
     let tmp = CookieFile::create(dir, "")?;
@@ -340,7 +340,7 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
                     Err(error) => {
                         tf!("could not wait for the video helper: {error}", error = error)
                     }
-                    _ => t!("the video helper timed out; try the video again"),
+                    _ => t("the video helper timed out; try the video again"),
                 });
             }
         }
@@ -364,7 +364,7 @@ fn run_helper(command: &mut Command, timeout: Duration) -> Result<Output, String
 /// Blocking.
 pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
     if !is_playable_video_url(video) {
-        return Err(t!("This video is not on Facebook or a video site BlindFB can play."));
+        return Err(t("This video is not on Facebook or a video site BlindFB can play."));
     }
     // Another site's page is resolved by the player itself, which keeps its own yt-dlp. Nothing
     // is fetched here, so a third-party site is never handed your Facebook session.
@@ -372,7 +372,7 @@ pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String
         #[cfg(target_os = "windows")]
         return Ok(serde_json::json!({"url": video, "title": ""}).to_string());
         #[cfg(not(target_os = "windows"))]
-        return Err(t!(
+        return Err(t(
             "Videos from other sites play in BlindFB's own player, which this build does not have."
         ));
     }
@@ -385,8 +385,8 @@ pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String
         "Network.getCookies",
         r#"{"urls":["https://www.facebook.com/"]}"#,
     ])?)
-    .map_err(|_| t!("could not read your Facebook session for the video helper"))?;
-    let dir = data_dir().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+    .map_err(|_| t("could not read your Facebook session for the video helper"))?;
+    let dir = data_dir().ok_or_else(|| t("could not find BlindFB's data folder"))?;
     let file = CookieFile::create(&dir, &netscape_cookies(&cookies["cookies"]))?;
     let mut command = video_command(&program, video, Some(&file.0));
     let output = run_helper(&mut command, Duration::from_secs(60))?;
@@ -421,7 +421,7 @@ pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String
         .rev()
         .find(|line| !line.trim().is_empty())
         .map_or_else(
-            || t!("no video found"),
+            || t("no video found"),
             |line| line.trim_start_matches("ERROR: ").to_owned(),
         );
     // TRANSLATORS: {reason} is the video helper's own error, usually in English.

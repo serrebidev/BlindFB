@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 shipfitter = { version = "0.2.4", features = ["package"] }
-ship-shape = "0.5.0"
+ship-shape = "0.6"
 minisign = "0.10.0"
 # The check the updater itself makes on a download.
 minisign-verify = "0.2.5"

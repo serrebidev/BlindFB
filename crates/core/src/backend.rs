@@ -179,20 +179,20 @@ fn extract(asset: &str, bytes: &[u8]) -> Result<Vec<u8>, String> {
 /// backend. Stops a running managed daemon first so the binary can be
 /// replaced. Blocking; call from a worker thread. Returns a summary line.
 pub fn install_or_update() -> Result<String, String> {
-    let asset = asset_name().ok_or_else(|| t!("no prebuilt backend for this platform"))?;
-    let target = managed_bin().ok_or_else(|| t!("could not find a place to install the backend"))?;
+    let asset = asset_name().ok_or_else(|| t("no prebuilt backend for this platform"))?;
+    let target = managed_bin().ok_or_else(|| t("could not find a place to install the backend"))?;
 
     let json: serde_json::Value = serde_json::from_slice(&get(RELEASE_URL)?)
         .map_err(|e| tf!("download failed: {error}", error = e))?;
     let tag = json
         .get("tag_name")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| t!("download failed: no tag in the release response"))?
+        .ok_or_else(|| t("download failed: no tag in the release response"))?
         .to_owned();
     let assets = json
         .get("assets")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| t!("download failed: no assets in the release response"))?;
+        .ok_or_else(|| t("download failed: no assets in the release response"))?;
     let url_of = |name: &str| -> Option<String> {
         assets.iter().find_map(|a| {
             (a.get("name").and_then(|v| v.as_str()) == Some(name))
@@ -205,16 +205,16 @@ pub fn install_or_update() -> Result<String, String> {
         })
     };
     let asset_url = url_of(asset)
-        .ok_or_else(|| t!("download failed: release has no build for this platform"))?;
+        .ok_or_else(|| t("download failed: release has no build for this platform"))?;
     let sums_url = url_of("SHA256SUMS")
-        .ok_or_else(|| t!("download failed: release has no checksums file"))?;
+        .ok_or_else(|| t("download failed: release has no checksums file"))?;
 
     let bytes = get(&asset_url)?;
     let sums = String::from_utf8_lossy(&get(&sums_url)?).into_owned();
     let expected = expected_hash(&sums, asset)
-        .ok_or_else(|| t!("download failed: no checksum for this build"))?;
+        .ok_or_else(|| t("download failed: no checksum for this build"))?;
     if sha256_hex(&bytes) != expected {
-        return Err(t!("the backend download failed its checksum — not installing it"));
+        return Err(t("the backend download failed its checksum — not installing it"));
     }
     let binary = extract(asset, &bytes)?;
 
@@ -222,7 +222,7 @@ pub fn install_or_update() -> Result<String, String> {
         // Replacing a running daemon's binary fails on Windows; stop it first.
         let _ = crate::fb::Fb::with_program(target.clone()).run(&["quit"]);
     }
-    let dir = target.parent().ok_or_else(|| t!("bad install path"))?;
+    let dir = target.parent().ok_or_else(|| t("bad install path"))?;
     fs::create_dir_all(dir)
         .map_err(|e| tf!("could not create the install folder: {error}", error = e))?;
     let tmp = dir.join(format!("{}.new", exe_name()));

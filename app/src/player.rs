@@ -33,7 +33,7 @@ mod platform {
             let media = MediaCtrl::builder(parent)
                 .with_size(Size::new(320, 120))
                 .build();
-            media.set_name(&t!("Video display"));
+            media.set_name(&t("Video display"));
             media.disable_focus_from_keyboard();
             media.set_can_focus(false);
             media.show_player_controls(MediaCtrlPlayerControls::None);
@@ -54,7 +54,7 @@ mod platform {
             let loaded = !uri.contains('\0') && self.media.load_uri(uri);
             if !loaded {
                 self.events.borrow_mut().push(PlayerEvent::Error(
-                    t!("The media backend could not load this video."),
+                    t("The media backend could not load this video."),
                 ));
             }
             loaded
@@ -173,7 +173,7 @@ mod platform {
                 return match message["error"].as_str() {
                     Some("success") | None => None,
                     Some(_) => Some(PlayerEvent::CommandFailed(
-                        t!("The video player could not complete that action."),
+                        t("The video player could not complete that action."),
                     )),
                 };
             }
@@ -207,7 +207,7 @@ mod platform {
                     Some("error") => {
                         self.stopped = true;
                         self.state = MediaState::Stopped;
-                        Some(PlayerEvent::Error(t!(
+                        Some(PlayerEvent::Error(t(
                             "The video could not be played. Try another video or check your connection."
                         )))
                     }
@@ -283,7 +283,7 @@ mod platform {
                 .with_style(PanelStyle::BorderNone)
                 .with_size(Size::new(320, 120))
                 .build();
-            surface.set_name(&t!("Video display"));
+            surface.set_name(&t("Video display"));
             surface.disable_focus_from_keyboard();
             surface.set_can_focus(false);
             // mpv creates a child window; disabling the display also prevents mouse focus there.
@@ -399,7 +399,7 @@ mod platform {
             report(
                 snapshot,
                 Some(PlayerEvent::Error(
-                    t!("The video player is not installed."),
+                    t("The video player is not installed."),
                 )),
             );
             return;
@@ -458,7 +458,7 @@ mod platform {
                 report(
                     snapshot,
                     Some(PlayerEvent::Error(
-                        t!("The video player could not start."),
+                        t("The video player could not start."),
                     )),
                 );
                 return;
@@ -621,7 +621,7 @@ mod platform {
             report(
                 snapshot,
                 Some(PlayerEvent::Error(
-                    t!("The video player disconnected. Close this post and try again."),
+                    t("The video player disconnected. Close this post and try again."),
                 )),
             );
         }

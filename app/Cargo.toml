@@ -13,12 +13,12 @@ path = "src/main.rs"
 [dependencies]
 blindfb-core = { path = "../crates/core" }
 wxdragon = { version = "0.9.24", default-features = false, features = ["media-ctrl"] }
-wx-utils = "0.4.4"
-ship-shape = "0.5.0"
+wx-utils = "0.5"
+ship-shape = "0.6"
 native-ocr = "0.2.1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 serde_json = "1"
-patois = { version = "0.2.4", features = ["ui"] }
+patois = { version = "0.3", features = ["wx"] }
 
 [build-dependencies]
 shipfitter = { version = "0.2.4", features = ["windows-resources"] }

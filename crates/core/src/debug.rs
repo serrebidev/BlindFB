@@ -45,9 +45,9 @@ pub fn enabled() -> bool {
 /// Turn logging on or off, and remember the choice across restarts.
 pub fn set_enabled(on: bool) -> Result<(), String> {
     ENABLED.store(on, Ordering::Relaxed);
-    let path = marker().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+    let path = marker().ok_or_else(|| t("could not find BlindFB's data folder"))?;
     if on {
-        let dir = path.parent().ok_or_else(|| t!("could not find BlindFB's data folder"))?;
+        let dir = path.parent().ok_or_else(|| t("could not find BlindFB's data folder"))?;
         std::fs::create_dir_all(dir)
             .map_err(|e| tf!("could not save the setting: {error}", error = e))?;
         std::fs::write(&path, "")
