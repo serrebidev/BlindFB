@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.29 - 2026-11-07
+
+The translation engine moves to patois 0.3, the release its author
+announced for other apps to adopt. Backend v0.1.5-blindfb.38,
+unchanged.
+
+- Your translations are untouched: the French catalog is the same
+  file with the same words, now read by patois 0.3. The libraries
+  that share the catalog moved with it (wx-utils 0.5 for the dialog
+  helpers, ship-shape 0.6 for the update checker), so their text
+  follows the same language setting as the rest of the app.
+- Under the hood, translatable strings are now plain function calls
+  instead of macros. That is the form standard gettext tools such as
+  Poedit collect, which is how the next language gets added.
+
 ## v0.7.28 - 2026-11-07
 
 Links inside comments, and release notes that say what changed.
