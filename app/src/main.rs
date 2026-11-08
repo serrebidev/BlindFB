@@ -5618,7 +5618,8 @@ mod tests {
         // freed when run() returned and opening the tray menu crashed
         // the app. The destroy path must also remove the icon so a
         // clean exit leaves no ghost in the tray.
-        let source = include_str!("main.rs");
+        // Normalize line endings: a Windows checkout is CRLF.
+        let source = include_str!("main.rs").replace("\r\n", "\n");
         assert!(source.contains("Box::leak(Box::new(\n        Menu::builder()"));
         assert!(source.contains("tray_destroy.remove_icon()"));
     }
