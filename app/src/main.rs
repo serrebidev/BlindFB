@@ -738,6 +738,10 @@ fn run() {
     // (Windows/Linux — macOS has no tray mouse events, its menu is the
     // restore path there). Artwork is a plain blue square placeholder,
     // the same approach as BlindRSS's tray icon.
+    // The menu is leaked for the same reason: set_popup_menu keeps only
+    // a reference and wxDragon's Menu destroys its wxMenu on drop, so a
+    // menu owned by this stack frame was freed when run() returned and
+    // opening the tray menu crashed the app (issue #26, Michal's report).
     let tray = Box::leak(Box::new(TaskBarIcon::builder().build()));
     {
         let mut rgba = Vec::with_capacity(32 * 32 * 4);
@@ -748,12 +752,14 @@ fn run() {
             tray.set_icon(&bmp, "BlindFB");
         }
     }
-    let mut tray_menu = Menu::builder()
-        .append_item(ID_TRAY_MENU_TOGGLE, &t("Show / hide BlindFB"), "")
-        .append_separator()
-        .append_item(ID_TRAY_MENU_EXIT, &t("Exit BlindFB"), "")
-        .build();
-    tray.set_popup_menu(&mut tray_menu);
+    let tray_menu: &mut Menu = Box::leak(Box::new(
+        Menu::builder()
+            .append_item(ID_TRAY_MENU_TOGGLE, &t("Show / hide BlindFB"), "")
+            .append_separator()
+            .append_item(ID_TRAY_MENU_EXIT, &t("Exit BlindFB"), "")
+            .build(),
+    ));
+    tray.set_popup_menu(tray_menu);
     {
         let frame_tray = frame;
         tray.on_menu(move |event| match event.get_id() {
@@ -767,6 +773,10 @@ fn run() {
         let frame_tray = frame;
         tray.on_left_double_click(move |_| toggle_tray_window(&frame_tray));
     }
+    // Windows: Ctrl+T must also restore, and a menu accelerator cannot
+    // reach a hidden window — register it system-wide (issue #26).
+    #[cfg(target_os = "windows")]
+    spawn_tray_hotkey_thread();
 
     let state = Rc::new(RefCell::new(State {
         next_alert_check: Instant::now() + ALERT_FIRST,
@@ -959,6 +969,10 @@ fn run() {
         while let Ok(done) = done_rx.try_recv() {
             apply_done(&ui_tick, done);
         }
+        #[cfg(target_os = "windows")]
+        if TRAY_HOTKEY_PENDING.swap(false, std::sync::atomic::Ordering::SeqCst) {
+            toggle_tray_window(&ui_tick.frame);
+        }
         let due = {
             let state = ui_tick.state.borrow();
             state
@@ -999,10 +1013,14 @@ fn run() {
         startup_log("window: close requested");
         event.skip(true);
     });
+    let tray_destroy: &TaskBarIcon = tray;
     frame.on_destroy(move |_| {
         startup_log("window: stopping timers before destruction");
         timer.stop();
         unlock_timer.stop();
+        // Take the tray icon down with the window; a leaked icon whose
+        // app has exited lingers in the tray as a ghost (issue #26).
+        tray_destroy.remove_icon();
     });
 
     frame.centre();
@@ -1384,10 +1402,85 @@ fn refs(args: &[String]) -> Vec<&str> {
     args.iter().map(String::as_str).collect()
 }
 
+/// Win32 RegisterHotKey spec for the tray toggle (issue #26):
+/// (modifier flags, virtual-key code) — Ctrl+T, no auto-repeat, so
+/// holding the key down does not strobe the window. Only the Windows
+/// hotkey thread calls this in production; the unit test pins the spec
+/// on every platform.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn tray_hotkey_spec() -> (u32, u32) {
+    const MOD_CONTROL: u32 = 0x0002;
+    const MOD_NOREPEAT: u32 = 0x4000;
+    const VK_T: u32 = 0x54;
+    (MOD_CONTROL | MOD_NOREPEAT, VK_T)
+}
+
+/// Set by the Windows hotkey thread when Ctrl+T is pressed; the GUI
+/// timer consumes it and toggles (issue #26).
+#[cfg(target_os = "windows")]
+static TRAY_HOTKEY_PENDING: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Register Ctrl+T as a system-wide hotkey on its own message-loop
+/// thread (Windows, issue #26). A menu accelerator cannot reach a
+/// hidden window, so the v0.7.31 shortcut hid BlindFB but never
+/// restored it. RegisterHotKey with no window posts WM_HOTKEY to this
+/// thread's queue; the flag above hands the press to the GUI timer,
+/// which toggles on the GUI thread where wx calls belong.
+#[cfg(target_os = "windows")]
+fn spawn_tray_hotkey_thread() {
+    use std::ffi::c_void;
+    use std::sync::atomic::Ordering;
+    #[repr(C)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+    #[repr(C)]
+    struct Msg {
+        hwnd: *mut c_void,
+        message: u32,
+        wparam: usize,
+        lparam: isize,
+        time: u32,
+        pt: Point,
+    }
+    #[link(name = "user32")]
+    unsafe extern "system" {
+        fn RegisterHotKey(hwnd: *mut c_void, id: i32, modifiers: u32, vk: u32) -> i32;
+        fn GetMessageW(msg: *mut Msg, hwnd: *mut c_void, min: u32, max: u32) -> i32;
+    }
+    const WM_HOTKEY: u32 = 0x0312;
+    let (modifiers, vk) = tray_hotkey_spec();
+    std::thread::spawn(move || unsafe {
+        if RegisterHotKey(std::ptr::null_mut(), 1, modifiers, vk) == 0 {
+            startup_log(
+                "hotkey: Ctrl+T is owned by another app; it only works while BlindFB is focused",
+            );
+            return;
+        }
+        startup_log("hotkey: Ctrl+T registered system-wide for the tray toggle");
+        let mut msg = Msg {
+            hwnd: std::ptr::null_mut(),
+            message: 0,
+            wparam: 0,
+            lparam: 0,
+            time: 0,
+            pt: Point { x: 0, y: 0 },
+        };
+        while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+            if msg.message == WM_HOTKEY {
+                TRAY_HOTKEY_PENDING.store(true, Ordering::SeqCst);
+            }
+        }
+    });
+}
+
 /// Hide the window to the system tray, or bring it back (issue #26).
-/// One toggle for both directions: Ctrl+T and the tray menu call this;
-/// a hidden window has no keyboard focus, so from the tray the restore
-/// side is the tray icon's double-click or its Show / hide menu item.
+/// One toggle for both directions. On Windows Ctrl+T is registered
+/// system-wide (see spawn_tray_hotkey_thread), so the same shortcut
+/// restores a hidden window; elsewhere the tray icon's double-click or
+/// its Show / hide menu item is the restore side.
 fn toggle_tray_window(frame: &Frame) {
     if frame.is_shown() {
         frame.show(false);
@@ -5507,6 +5600,27 @@ mod tests {
         ready.recv_timeout(Duration::from_secs(2)).unwrap();
         drop(active_prefetch);
         queued.join().unwrap();
+    }
+
+    #[test]
+    fn tray_hotkey_is_ctrl_t_without_repeat() {
+        // Issue #26: one shortcut toggles hide/restore. MOD_CONTROL |
+        // MOD_NOREPEAT, VK_T — the spec the Windows hotkey thread
+        // registers system-wide so it also fires while hidden.
+        assert_eq!(tray_hotkey_spec(), (0x4002, 0x54));
+    }
+
+    #[test]
+    fn tray_menu_outlives_the_frame_that_sets_it() {
+        // Issue #26 regression: wxDragon's Menu destroys its wxMenu on
+        // drop and set_popup_menu keeps only a reference, so the tray
+        // menu must be leaked like the icon — a stack-owned menu was
+        // freed when run() returned and opening the tray menu crashed
+        // the app. The destroy path must also remove the icon so a
+        // clean exit leaves no ghost in the tray.
+        let source = include_str!("main.rs");
+        assert!(source.contains("Box::leak(Box::new(\n        Menu::builder()"));
+        assert!(source.contains("tray_destroy.remove_icon()"));
     }
 
     #[test]

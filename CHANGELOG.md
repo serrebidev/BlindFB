@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.32 - 2026-11-08
+
+Fixes the system tray from v0.7.31 (issue #26, reported by MichalSuchy).
+Backend unchanged, v0.1.5-blindfb.40.
+
+- Ctrl+T now restores as well as hides. It was only a menu shortcut, and a hidden window receives no menu shortcuts; on Windows it is now a system-wide hotkey, so the same Ctrl+T brings BlindFB back.
+- Opening the tray icon's right-click menu no longer crashes BlindFB — the menu was being freed while the icon still pointed at it.
+- Quitting BlindFB now removes its tray icon instead of leaving a ghost icon behind.
+
 ## v0.7.31 - 2026-11-07
 
 Two requests from MichalSuchy (issues #25 and #26).
