@@ -70,7 +70,7 @@ cargo xtask package   # dist/BlindFB.zip (Windows), dist/BlindFB.tar.gz (Linux),
                       # dist/BlindFB-<arch>.dmg (macOS), each with its .minisig
 ```
 
-Linux build dependencies for wxWidgets are the usual GTK set (see `.github/workflows/ci.yml`). GitHub Actions builds signed packages for all three systems on `v*` tags and publishes when all expected assets arrive.
+Linux build dependencies for wxWidgets are the usual GTK set (see `.github/workflows/ci.yml`). GitHub Actions builds signed packages for all three systems on `v*` tags and publishes when all expected assets arrive. Full process for this PC, including Forgejo releases while GitHub is suspended: [docs/local-build.md](docs/local-build.md).
 
 ## Alerts
 
