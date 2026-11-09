@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.36 - 2026-11-08
+
+BlindFB gets its own permanent signing key (public key F806D88DE00499EF),
+replacing the temporary v0.7.35 key from the Forgejo move. Every product now
+signs with its own key, and every secret and password lives in the owner's
+key store, so a lost machine never breaks releases again. Install this one
+manually: v0.7.35 verifies with the old key and cannot offer this update.
+No app changes since v0.7.35.
+
 ## v0.7.35 - 2026-11-08
 
 Update signing rekeyed. BlindFB's original minisign secret existed only as
