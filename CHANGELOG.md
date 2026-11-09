@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.35 - 2026-11-08
+
+Update signing rekeyed. BlindFB's original minisign secret existed only as
+a GitHub Actions secret and was lost with the GitHub account suspension, so
+this release starts a new signing key (public key F69FBB62D15E51DB). Builds
+of v0.7.34 and older cannot verify this or later releases - install this
+one manually; updates work normally from here. Also carries the v0.7.34
+fixes, which never shipped publicly: Reels and Places in Views (issues #28
+and #29, reported by MichalSuchy). Backend v0.1.5-blindfb.41.
+
 ## v0.7.34 - 2026-11-08
 
 Fixes Reels and Places in Views (issues #28 and #29, reported by
