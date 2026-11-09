@@ -211,13 +211,14 @@ fn update_check() -> Result<(), Box<dyn Error>> {
     let key = fs::read_to_string(root().join("app/assets/minisign.pub"))?;
     let key = key.lines().nth(1).unwrap_or_default().trim().to_owned();
     let config = ship_shape::UpdaterConfig::new(
-        "serrebidev/BlindFB",
+        "serrebi/BlindFB",
         APP,
         APP,
         key,
         current.trim_start_matches('v'),
     )
-    .with_install_kind(ship_shape::InstallKind::Portable);
+    .with_install_kind(ship_shape::InstallKind::Portable)
+    .with_api_base_url("https://git.serrebiradio.com/api/v1");
     let config = if cfg!(target_os = "macos") {
         config.with_asset_suffix(if cfg!(target_arch = "aarch64") {
             "-arm64"

@@ -693,8 +693,8 @@ msgid "Check for &updates…"
 msgstr "Rechercher des mises à &jour…"
 
 #: app/src/main.rs:1352
-msgid "Check GitHub for a newer BlindFB"
-msgstr "Chercher une version plus récente de BlindFB sur GitHub"
+msgid "Check Forgejo for a newer BlindFB"
+msgstr "Chercher une version plus récente de BlindFB sur Forgejo"
 
 #: app/src/main.rs:1355
 msgid "Close BlindFB"
@@ -947,8 +947,8 @@ msgid "&Install or update backend…"
 msgstr "&Installer ou mettre à jour le moteur…"
 
 #: app/src/main.rs:1458
-msgid "Download BlindFB's supported facebook-cli backend from GitHub"
-msgstr "Télécharger depuis GitHub le moteur facebook-cli pris en charge par BlindFB"
+msgid "Download BlindFB's supported facebook-cli backend from Forgejo"
+msgstr "Télécharger depuis Forgejo le moteur facebook-cli pris en charge par BlindFB"
 
 #: app/src/main.rs:1460
 msgid "Backend &status"
@@ -999,8 +999,8 @@ msgid "Keyboard commands and reader controls"
 msgstr "Commandes clavier et commandes de la fenêtre de lecture"
 
 #: app/src/main.rs:1483
-msgid "BlindFB on &GitHub"
-msgstr "BlindFB sur &GitHub"
+msgid "BlindFB on &Forgejo"
+msgstr "BlindFB sur &Forgejo"
 
 #: app/src/main.rs:1484
 msgid "Open the BlindFB repository"

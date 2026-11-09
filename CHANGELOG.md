@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.37 - 2026-11-08
+
+Updates move to Forgejo. The in-app updater now checks Forgejo releases (via
+the project's ship-shape fork, which makes the API base URL configurable),
+and the managed facebook-cli backend downloads from Forgejo too. Install
+this one manually: older builds read GitHub, which is suspended. No app
+changes otherwise.
+
 ## v0.7.36 - 2026-11-08
 
 BlindFB gets its own permanent signing key (public key F806D88DE00499EF),

@@ -1522,7 +1522,7 @@ fn build_menus(frame: &Frame) {
         .append_item(
             ID_UPDATE,
             &t("Check for &updates…"),
-            &t("Check GitHub for a newer BlindFB"),
+            &t("Check Forgejo for a newer BlindFB"),
         )
         .append_separator()
         .append_item(
@@ -1636,7 +1636,7 @@ fn build_menus(frame: &Frame) {
         .append_item(
             ID_INSTALL_BACKEND,
             &t("&Install or update backend…"),
-            &t("Download BlindFB's supported facebook-cli backend from GitHub"),
+            &t("Download BlindFB's supported facebook-cli backend from Forgejo"),
         )
         .append_item(ID_STATUS, &t("Backend &status"), &t("Show fb daemon status"))
         .append_item(ID_LOGIN, &t("&Sign in…"), &t("Sign in through your browser"))
@@ -1661,7 +1661,7 @@ fn build_menus(frame: &Frame) {
         )
         .append_item(
             ID_GITHUB,
-            &t("BlindFB on &GitHub"),
+            &t("BlindFB on &Forgejo"),
             &t("Open the BlindFB repository"),
         )
         .append_separator()
@@ -4597,12 +4597,12 @@ fn handle_menu(ui: &Ui, id: i32) {
                      Built with wxDragon on the facebook-cli (fb) backend."
                 ))
                 .copyright("Copyright (c) 2026 Brandon Bracey")
-                .website("https://github.com/serrebidev/BlindFB")
+                .website("https://git.serrebiradio.com/serrebi/BlindFB")
                 .licence("MIT")
                 .add_developer("Brandon Bracey")
                 .show();
         }
-        ID_GITHUB => open_url("https://github.com/serrebidev/BlindFB"),
+        ID_GITHUB => open_url("https://git.serrebiradio.com/serrebi/BlindFB"),
         ID_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::Voice),
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),

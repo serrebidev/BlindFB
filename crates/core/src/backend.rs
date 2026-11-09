@@ -1,5 +1,5 @@
 //! Automatic backend install: download the matching `fb` (facebook-cli)
-//! release from GitHub, verify its SHA-256 against the release's
+//! release from Forgejo, verify its SHA-256 against the release's
 //! SHA256SUMS, and unpack it into BlindFB's managed bin directory.
 //!
 //! The user never needs a terminal or a Rust toolchain: the app installs
@@ -20,7 +20,7 @@ use crate::tf;
 /// once those merge.
 pub const BACKEND_VERSION: &str = "0.1.5-blindfb.41";
 const RELEASE_URL: &str =
-    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.41";
+    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.41";
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {

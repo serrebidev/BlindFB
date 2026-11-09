@@ -15,14 +15,15 @@ const PUBLIC_KEY: &str = env!("BLINDFB_MINISIGN_PUBLIC_KEY");
 
 pub fn check(parent: &dyn WxWidget, trigger: CheckTrigger) {
     let config = UpdaterConfig::new(
-        "serrebidev/BlindFB",
+        "serrebi/BlindFB",
         "BlindFB",
         "BlindFB",
         PUBLIC_KEY,
         env!("CARGO_PKG_VERSION"),
     )
     .with_commit(env!("BLINDFB_COMMIT_HASH"))
-    .with_install_kind(InstallKind::Portable);
+    .with_install_kind(InstallKind::Portable)
+    .with_api_base_url("https://git.serrebiradio.com/api/v1");
     // macOS publishes one disk image per architecture, so the name carries the suffix there.
     #[cfg(target_os = "macos")]
     let config = config.with_asset_suffix(if cfg!(target_arch = "aarch64") {
