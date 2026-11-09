@@ -1,0 +1,60 @@
+# Generated from release.yml (package job): the macOS leg only, for the Forgejo Mac runner.
+# Dispatch with release_tag to attach the macOS build to an existing release.
+name: macOS release
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to build macOS for and attach to
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      TAG: ${{ inputs.release_tag }}
+      CARGO_TERM_COLOR: always
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        ref: ${{ inputs.release_tag }}
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy,rustfmt
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 22
+    - name: Validate release
+      shell: bash
+      run: |
+        cargo clippy --locked --workspace --all-targets -- -D warnings
+        cargo test --locked --workspace
+        node crates/core/src/post_scripts/reader.test.js
+        node crates/core/src/reels.test.js
+    - name: Package with shipfitter (cargo xtask package)
+      env:
+        MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
+        MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+      run: cargo xtask package
+    - name: Attach to the Forgejo release
+      env:
+        FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+      run: |
+        set -euo pipefail
+        api="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY"
+        h="Authorization: token $FORGEJO_TOKEN"
+        release="$(curl -sf -H "$h" "$api/releases/tags/$TAG")"
+        id="$(echo "$release" | jq -r .id)"
+        for file in dist/BlindFB-arm64.dmg dist/BlindFB-arm64.dmg.minisig; do
+          name="$(basename "$file")"
+          old="$(echo "$release" | jq -r --arg n "$name" '.assets[] | select(.name == $n) | .id')"
+          [ -z "$old" ] || curl -sf -X DELETE -H "$h" "$api/releases/$id/assets/$old"
+          curl -sf -o /dev/null -H "$h" -F "attachment=@$file" "$api/releases/$id/assets?name=$name"
+          echo "Attached $name to $TAG"
+        done
