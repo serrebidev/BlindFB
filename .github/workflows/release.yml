@@ -48,7 +48,37 @@ jobs:
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav gstreamer1.0-x
 
+      # Host runners (macOS, Windows) start every job in a fresh,
+      # randomly named work folder, so rust-cache never matched
+      # there: its cache version hashes the absolute target path
+      # ("No cache found", full rebuilds every run). target/ points
+      # at a fixed folder on the runner instead and builds reuse the
+      # previous run directly. Each runner takes one job at a time.
+      # Owner-approved 2026-11-10 (same fix as BlindRSS-Rust df47812).
+      # ponytail: the folder only grows; delete it on the runner
+      # when disk gets tight (next build is cold once).
+      - name: Persistent target folder (Windows host runner)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = 'C:/forgejo-runner/cargo-target/BlindFB/package'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          if (Test-Path target) { cmd /c rmdir /s /q target }
+          New-Item -ItemType Junction -Path target -Target $dir | Out-Null
+
+      - name: Persistent target folder (macOS host runner)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dir="$HOME/forgejo-runner/cargo-target/BlindFB/package"
+          mkdir -p "$dir"
+          rm -rf target
+          ln -s "$dir" target
+
+      # Linux runs in a container with a stable path: rust-cache
+      # works there and stays the only cache.
       - uses: Swatinem/rust-cache@v2
+        if: runner.os == 'Linux'
         with:
           cache-on-failure: true
 
@@ -76,6 +106,19 @@ jobs:
           draft: true
           files: dist/*
           fail_on_unmatched_files: true
+
+      # Drop only the link, never the shared folder behind it,
+      # before the runner deletes the work folder.
+      - name: Unlink persistent target folder (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path target) { (Get-Item target).Delete() }
+
+      - name: Unlink persistent target folder (macOS)
+        if: always() && runner.os == 'macOS'
+        shell: bash
+        run: rm -f target
 
   publish:
     name: Publish
