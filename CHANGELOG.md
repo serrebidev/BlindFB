@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.38 - 2026-11-10
+
+Sending a message no longer fails with "Messenger dialog blocks input" on
+some chats (seen on group chats). Facebook keeps its closed Notifications
+panel on the page as a hidden dialog, and the backend mistook it for a
+prompt blocking the message box. Only a dialog that is actually showing
+blocks sending now. Ships with backend v0.1.5-blindfb.42.
+
 ## v0.7.37 - 2026-11-08
 
 Updates move to Forgejo. The in-app updater now checks Forgejo releases (via
