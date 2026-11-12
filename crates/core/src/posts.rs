@@ -219,6 +219,35 @@ pub fn reader_url(target: &str) -> Option<String> {
     validate_target(&url).ok().map(|_| url)
 }
 
+/// The group home address of a post URL, e.g.
+/// `https://www.facebook.com/groups/123/posts/999` → `https://www.facebook.com/groups/123`.
+/// `None` for non-group posts and non-Facebook targets. The backend reads a
+/// group's posts through `posts <group url>` (fb.rs), so this is all the
+/// Group's posts action needs.
+pub fn group_url(url: &str) -> Option<String> {
+    let url = url.trim();
+    // Feed rows carry absolute Facebook URLs; a bare path is also a
+    // Facebook target. Refs (`p3k9a`) and other hosts are not groups.
+    let uri = url.parse::<tungstenite::http::Uri>().ok()?;
+    if let Some(host) = uri.host() {
+        let host = host.to_ascii_lowercase();
+        if host != "facebook.com" && !host.ends_with(".facebook.com") {
+            return None;
+        }
+    } else if !uri.path().starts_with('/') {
+        return None;
+    }
+    let mut parts = uri.path().split('/').filter(|part| !part.is_empty());
+    if parts.next()? != "groups" {
+        return None;
+    }
+    let group = parts.next()?;
+    if group.is_empty() || group == "?" {
+        return None;
+    }
+    Some(format!("https://www.facebook.com/groups/{group}"))
+}
+
 fn group_notification_post(url: &str) -> Option<String> {
     let uri = url.parse::<tungstenite::http::Uri>().ok()?;
     if !matches!(
@@ -667,6 +696,26 @@ mod tests {
         );
         assert_eq!(reader_url("/2284937812074776/x"), None);
         assert!(reader_url("/alice/posts/pfbid0x").is_some());
+    }
+
+    #[test]
+    fn group_url_only_comes_from_group_posts() {
+        assert_eq!(
+            group_url("https://www.facebook.com/groups/123/posts/999"),
+            Some("https://www.facebook.com/groups/123".to_owned())
+        );
+        assert_eq!(
+            group_url("https://www.facebook.com/groups/vanity/permalink/55?x=1"),
+            Some("https://www.facebook.com/groups/vanity".to_owned())
+        );
+        assert_eq!(
+            group_url("/groups/7/?post_id=8"),
+            Some("https://www.facebook.com/groups/7".to_owned()),
+        );
+        assert_eq!(group_url("https://www.facebook.com/jdoe/posts/1"), None);
+        assert_eq!(group_url("https://example.com/groups/7"), None);
+        assert_eq!(group_url("p3k9a"), None);
+        assert_eq!(group_url(""), None);
     }
 
     #[test]

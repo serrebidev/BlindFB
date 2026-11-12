@@ -1,4 +1,5 @@
-//! Interface language: BlindFB's own words in English or French, through patois.
+//! Interface language: BlindFB's own words in English, French, Russian or
+//! Estonian, through patois.
 //!
 //! Text the user sees is written in English in the code and looked up in the
 //! catalog `app/locale/<lang>/LC_MESSAGES/blindfb.po`:
@@ -24,10 +25,12 @@ pub const DOMAIN: &str = "blindfb";
 /// The language the user chose in Help.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Language {
-    /// Follow the system: French when the system is in French, English otherwise.
+    /// Follow the system: the system language when BlindFB has it, English otherwise.
     System,
     English,
     French,
+    Russian,
+    Estonian,
 }
 
 impl Language {
@@ -36,6 +39,8 @@ impl Language {
             Self::System => "system",
             Self::English => "en",
             Self::French => "fr",
+            Self::Russian => "ru",
+            Self::Estonian => "et",
         }
     }
 
@@ -43,6 +48,8 @@ impl Language {
         match code.trim() {
             "en" => Self::English,
             "fr" => Self::French,
+            "ru" => Self::Russian,
+            "et" => Self::Estonian,
             _ => Self::System,
         }
     }
@@ -53,6 +60,8 @@ impl Language {
             Self::System => patois::system_locale(),
             Self::English => "en".to_owned(),
             Self::French => "fr".to_owned(),
+            Self::Russian => "ru".to_owned(),
+            Self::Estonian => "et".to_owned(),
         }
     }
 }
@@ -166,7 +175,13 @@ mod tests {
 
     #[test]
     fn saved_codes_round_trip() {
-        for language in [Language::System, Language::English, Language::French] {
+        for language in [
+            Language::System,
+            Language::English,
+            Language::French,
+            Language::Russian,
+            Language::Estonian,
+        ] {
             assert_eq!(Language::from_code(language.code()), language);
         }
         assert_eq!(Language::from_code("garbage"), Language::System);

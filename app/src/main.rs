@@ -80,6 +80,7 @@ const ID_PAGES_VIEW: i32 = 10098;
 const ID_PLACES_VIEW: i32 = 10099;
 const ID_TRAY_TOGGLE: i32 = 10110;
 const ID_TRAY_HOTKEY: i32 = 10111;
+const ID_GROUP_POSTS: i32 = 10112;
 const ID_TRAY_MENU_TOGGLE: i32 = 10201;
 const ID_TRAY_MENU_EXIT: i32 = 10202;
 const ID_WEB_POST: i32 = 10080;
@@ -131,6 +132,8 @@ const ID_LIST_SOUND_ALERTS: i32 = 10078;
 const ID_LANG_SYSTEM: i32 = 10094;
 const ID_LANG_ENGLISH: i32 = 10095;
 const ID_LANG_FRENCH: i32 = 10096;
+const ID_LANG_RUSSIAN: i32 = 10120;
+const ID_LANG_ESTONIAN: i32 = 10121;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -237,6 +240,8 @@ enum View {
     Places,
     SearchResults,
     PostsOf(String),
+    /// A group's posts, by group home URL (`https://www.facebook.com/groups/<id>`).
+    GroupPosts(String),
     CommentsOf(String),
     ProfileOf(String),
     /// A conversation, identified by its backend ref (never its display
@@ -262,6 +267,7 @@ impl View {
             View::Places => t("Places"),
             View::SearchResults => t("Search results"),
             View::PostsOf(who) => tf!("Posts by {who}", who = who),
+            View::GroupPosts(group) => tf!("Posts in group {group}", group = group),
             View::CommentsOf(_) => t("Post and comments"),
             View::ProfileOf(who) => tf!("Profile of {who}", who = who),
             View::ChatWith(_, name) => tf!("Chat with {name}", name = name),
@@ -1762,6 +1768,16 @@ fn build_menus(frame: &Frame) {
             "Langue : &français",
             "Afficher BlindFB en français",
         )
+        .append_radio_item(
+            ID_LANG_RUSSIAN,
+            "Язык: р&усский",
+            "Показать BlindFB на русском",
+        )
+        .append_radio_item(
+            ID_LANG_ESTONIAN,
+            "Keel: e&esti",
+            "Näita BlindFB eesti keeles",
+        )
         .append_separator()
         .append_item(ID_ABOUT, &t("&About BlindFB"), &t("About this program"))
         .build();
@@ -1780,6 +1796,8 @@ fn build_menus(frame: &Frame) {
             Language::System => ID_LANG_SYSTEM,
             Language::English => ID_LANG_ENGLISH,
             Language::French => ID_LANG_FRENCH,
+            Language::Russian => ID_LANG_RUSSIAN,
+            Language::Estonian => ID_LANG_ESTONIAN,
         },
         true,
     );
@@ -2102,7 +2120,7 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::Pages => pages_args(PAGE),
         View::Places => places_args(PAGE),
         View::SearchResults | View::Reels(_) => return None,
-        View::PostsOf(who) => posts_args(who, PAGE, true),
+        View::PostsOf(who) | View::GroupPosts(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
         View::ProfileOf(who) => profile_args(who),
         View::ChatWith(id, _) => read_args(id, 50),
@@ -2325,6 +2343,7 @@ fn more_args(
         View::RecentFeed
         | View::MyPosts
         | View::PostsOf(_)
+        | View::GroupPosts(_)
         | View::Friends
         | View::Chats
         | View::SearchResults
@@ -2442,7 +2461,11 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
     let mut seen: HashSet<String> = existing.iter().map(&key).collect();
     let feed = matches!(
         view,
-        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)
+        View::Feed
+            | View::RecentFeed
+            | View::MyPosts
+            | View::PostsOf(_)
+            | View::GroupPosts(_)
     );
     let mut seen_posts: HashSet<String> = existing
         .iter()
@@ -2466,6 +2489,7 @@ fn list_label(view: &View, record: &Record) -> String {
             | View::Notifications
             | View::MyPosts
             | View::PostsOf(_)
+            | View::GroupPosts(_)
             | View::SearchResults
     );
     // A search row opens by kind, not by post target: profiles, groups and
@@ -2538,6 +2562,7 @@ fn display_for(view: &View, record: &Record) -> String {
         | View::Reels(_)
         | View::MyPosts
         | View::PostsOf(_)
+        | View::GroupPosts(_)
         | View::SearchResults => {
             if record.fields.len() >= 5 {
                 // A post without text or time must not read as ". ." to a screen reader.
@@ -2637,6 +2662,7 @@ fn details_for(view: &View, record: &Record) -> String {
         | View::Reels(_)
         | View::MyPosts
         | View::PostsOf(_)
+        | View::GroupPosts(_)
         | View::SearchResults => {
             if record.fields.len() >= 5 {
                 tf!(
@@ -2722,9 +2748,12 @@ fn post_target<'a>(view: &View, record: &'a Record) -> Option<&'a str> {
     }
     let value = match view {
         View::Notifications => record.field(3),
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) => {
-            record.field(0)
-        }
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::GroupPosts(_) => record.field(0),
         _ => return None,
     }
     .trim();
@@ -2750,6 +2779,7 @@ fn record_key(view: &View, record: &Record) -> String {
             | View::Reels(_)
             | View::MyPosts
             | View::PostsOf(_)
+            | View::GroupPosts(_)
             | View::SearchResults => &record.raw,
             _ => record.field(0),
         })
@@ -3026,9 +3056,12 @@ fn more_row_label(view: &View, count: usize) -> Option<String> {
         return None;
     }
     match view {
-        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) | View::SearchResults => {
-            Some(t("Load more posts"))
-        }
+        View::Feed
+        | View::RecentFeed
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::GroupPosts(_)
+        | View::SearchResults => Some(t("Load more posts")),
         View::Reels(_) => Some(t("Load more reels")),
         View::Notifications => Some(t("Load more notifications")),
         View::Friends => Some(t("Load more friends")),
@@ -3086,7 +3119,11 @@ fn more_selection(
 fn show_records(ui: &Ui, view: &View, records: Vec<Record>, body: Option<String>) {
     if matches!(
         view,
-        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_)
+        View::Feed
+            | View::RecentFeed
+            | View::MyPosts
+            | View::PostsOf(_)
+            | View::GroupPosts(_)
     ) {
         let mut state = ui.state.borrow_mut();
         for record in &records {
@@ -3202,6 +3239,7 @@ fn refresh_controls(ui: &Ui) {
             | View::Reels(_)
             | View::MyPosts
             | View::PostsOf(_)
+            | View::GroupPosts(_)
             | View::SearchResults
     );
     let people = post_list || matches!(view, View::Friends);
@@ -3690,7 +3728,11 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
     Ok(match view {
         View::Notifications => (parse_notifications(raw)?, None),
         View::Reels(_) => reels::parse(raw)?,
-        View::Feed | View::RecentFeed | View::MyPosts | View::PostsOf(_) => (parse_feed(raw), None),
+        View::Feed
+        | View::RecentFeed
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::GroupPosts(_) => (parse_feed(raw), None),
         View::ChatWith(..) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
@@ -3878,6 +3920,7 @@ fn open_selected(ui: &Ui) {
         | View::Reels(_)
         | View::MyPosts
         | View::PostsOf(_)
+        | View::GroupPosts(_)
         | View::Notifications => {
             let Some(target) = post_target(&view, &record) else {
                 show_warning(
@@ -4112,6 +4155,18 @@ fn friend_selected(ui: &Ui) {
         task: Task::Fb(friend_add_args(&who), None),
         tag: Tag::Text,
     });
+}
+
+fn group_posts_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let view = ui.state.borrow().view.clone();
+    if let Some(target) = post_target(&view, &record) {
+        if let Some(group) = blindfb_core::posts::group_url(target) {
+            load_view(ui, View::GroupPosts(group));
+        }
+    }
 }
 
 fn posts_selected(ui: &Ui) {
@@ -4534,6 +4589,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_PLACES_VIEW => load_view(ui, View::Places),
         ID_TRAY_TOGGLE => toggle_tray_window(&ui.frame),
         ID_TRAY_HOTKEY => prompt_tray_hotkey(ui),
+        ID_GROUP_POSTS => group_posts_selected(ui),
         ID_WEB_POST => open_post_web(ui),
         ID_WEB_PERSON => open_person_web(ui),
         ID_WEB_CHAT => open_chat_web(ui),
@@ -4682,10 +4738,12 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),
         ID_LIST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ListSound),
-        ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH => {
+        ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH | ID_LANG_RUSSIAN | ID_LANG_ESTONIAN => {
             let language = match id {
                 ID_LANG_ENGLISH => Language::English,
                 ID_LANG_FRENCH => Language::French,
+                ID_LANG_RUSSIAN => Language::Russian,
+                ID_LANG_ESTONIAN => Language::Estonian,
                 _ => Language::System,
             };
             match i18n::save(language) {
@@ -4841,7 +4899,12 @@ fn show_item_menu(ui: &Ui) {
                 ),
             }
         }
-        View::Feed | View::RecentFeed | View::Reels(_) | View::MyPosts | View::PostsOf(_) => {
+        View::Feed
+        | View::RecentFeed
+        | View::Reels(_)
+        | View::MyPosts
+        | View::PostsOf(_)
+        | View::GroupPosts(_) => {
             add(
                 &menu,
                 &[
@@ -4850,6 +4913,15 @@ fn show_item_menu(ui: &Ui) {
                     (ID_COMMENT, t("&Comment…")),
                 ],
             );
+            // A group post's author line names the group but resolves no
+            // profile; open the group itself instead (author posts only
+            // works for real authors).
+            let (_, record) = selected(ui).unwrap();
+            if let Some(target) = post_target(&view, &record) {
+                if blindfb_core::posts::group_url(target).is_some() {
+                    add(&menu, &[(ID_GROUP_POSTS, t("Group's p&osts"))]);
+                }
+            }
             let react = Menu::builder().build();
             for (i, reaction) in REACTIONS.iter().enumerate() {
                 let label = reaction_label(reaction);
@@ -5435,6 +5507,13 @@ mod tests {
     #[test]
     fn the_french_catalog_is_embedded() {
         assert!(patois::available_locales(i18n::DOMAIN).contains(&"fr"));
+    }
+
+    #[test]
+    fn the_russian_and_estonian_catalogs_are_embedded() {
+        let locales = patois::available_locales(i18n::DOMAIN);
+        assert!(locales.contains(&"ru"));
+        assert!(locales.contains(&"et"));
     }
 
     /// Every message in the French catalog has its translation; `cargo xtask i18n`

@@ -24,6 +24,7 @@ const ID_WEB_POST: i32 = 12109;
 const ID_REACT: i32 = 12120; // + index into REACTIONS
 const ID_COMMENT_PROFILE: i32 = 12110;
 const ID_COMMENT_FRIEND: i32 = 12111;
+const ID_COPY_ALL: i32 = 12112;
 fn composer_label() -> String {
     t("&Write a comment (Ctrl+Enter to send)")
 }
@@ -207,6 +208,78 @@ impl PostReader {
         self.links.set_name(name);
         self.state.borrow_mut().links = target;
         self.controls();
+    }
+
+    /// Copy the selected comment ("Author: text"), or — with no comment —
+    /// the post text. Reports what it copied in the reader status.
+    fn copy_comment(&self, ui: &Ui) {
+        let text = {
+            let state = self.state.borrow();
+            self.comments
+                .get_selection()
+                .and_then(|index| state.comments.get(index as usize))
+                .map(|comment| format!("{}: {}", comment.author, comment.text))
+                .unwrap_or_else(|| self.post.get_value().to_string())
+        };
+        if text.is_empty() {
+            self.message(ui, &t("Nothing to copy yet."));
+            return;
+        }
+        let message = if Clipboard::get().set_text(&text) {
+            t("Copied.")
+        } else {
+            t("Could not copy.")
+        };
+        self.message(ui, &message);
+    }
+
+    /// Copy the post and every comment, so a whole discussion can be
+    /// pasted into a note or message at once. Replies are marked with
+    /// their parent when they have one; links stay attached as they are.
+    fn copy_all(&self, ui: &Ui) {
+        let text = {
+            let state = self.state.borrow();
+            let mut out = self.post.get_value().to_string();
+            for comment in &state.comments {
+                out.push_str("\n");
+                if comment.parent_id.is_some() {
+                    out.push_str("  ");
+                }
+                out.push_str(&format!("{}: {}", comment.author, comment.text));
+                for link in &comment.links {
+                    out.push_str(&format!(" ({})", link.url));
+                }
+            }
+            out
+        };
+        if text.trim().is_empty() {
+            self.message(ui, &t("Nothing to copy yet."));
+            return;
+        }
+        let message = if Clipboard::get().set_text(&text) {
+            t("Post and comments copied.")
+        } else {
+            t("Could not copy.")
+        };
+        self.message(ui, &message);
+    }
+
+    /// Open the first link of the selected comment in the browser, if it
+    /// has links. The Links list already shows them; this skips Tabbing
+    /// into it.
+    fn open_first_comment_link(&self, ui: &Ui) {
+        let first = {
+            let state = self.state.borrow();
+            self.comments
+                .get_selection()
+                .and_then(|index| state.comments.get(index as usize))
+                .and_then(|comment| comment.links.first())
+                .map(|link| link.url.clone())
+        };
+        match first {
+            Some(url) => open_url(&url),
+            None => self.message(ui, &t("This comment has no link to open.")),
+        }
     }
 
     /// The links list belongs to the selected comment when it has links of
@@ -736,7 +809,7 @@ fn open_requested(
         .with_label(&t("Video &volume (percent)"))
         .build();
     let volume = Slider::builder(&dialog)
-        .with_value(100)
+        .with_value(blindfb_core::media::saved_volume() as i32)
         .with_min_value(0)
         .with_max_value(100)
         .build();
@@ -744,7 +817,7 @@ fn open_requested(
     let comments_label = StaticText::builder(&dialog).with_label(&t("&Comments")).build();
     let comments = ListBox::builder(&dialog).build();
     comments.set_name(&t(
-        "Comments. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
+        "Comments. Ctrl+C copies the comment. Ctrl+Shift+C copies the post and all comments. Ctrl+Enter opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
     ));
     let composer_text = composer_label();
     let composer_label = StaticText::builder(&dialog).with_label(&composer_text).build();
@@ -849,6 +922,35 @@ fn open_requested(
     links.on_selection_changed(move |_| r.controls());
     let r = reader.clone();
     comments.on_selection_changed(move |_| r.follow_comment_links());
+    let (r, u) = (reader.clone(), ui.clone());
+    comments.bind_internal(EventType::KEY_DOWN, move |event| {
+        // Ctrl+C copies the selected comment, Ctrl+Shift+C the whole
+        // discussion, Ctrl+Enter opens the comment's first link.
+        // wxdragon exposes Shift via `shift_down()`.
+        if r.comments.has_focus() {
+            let code = event.get_key_code();
+            // Letters arrive as their ASCII code ('C' = 67, 'c' = 99).
+            let is_c = matches!(code, Some(67 | 99));
+            if event.control_down() {
+                if is_c && event.shift_down() {
+                    event.skip(false);
+                    r.copy_all(&u);
+                    return;
+                }
+                if is_c {
+                    event.skip(false);
+                    r.copy_comment(&u);
+                    return;
+                }
+                if matches!(code, Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
+                    event.skip(false);
+                    r.open_first_comment_link(&u);
+                    return;
+                }
+            }
+        }
+        event.skip(true);
+    });
     let r = reader.clone();
     dialog.on_char_hook(move |event| {
         if let WindowEventData::Keyboard(key) = &event {
@@ -872,6 +974,9 @@ fn open_requested(
     forward.on_click(move |_| r.seek(&u, 10_000));
     let (r, u) = (reader.clone(), ui.clone());
     volume.on_slider(move |_| {
+        // The choice is remembered for the next video and launch; the
+        // live player takes it right away when it is ready.
+        let _ = blindfb_core::media::save_volume(r.volume.value() as u8);
         if r.state.borrow().media_ready && !r.media.set_volume(r.volume.value() as f64 / 100.0) {
             r.message(&u, &t("Could not set video volume."));
         }
@@ -950,6 +1055,11 @@ fn open_requested(
             )
             .append_item(ID_COPY, &t("&Copy comment"), &t("Copy the full comment"))
             .append_item(
+                ID_COPY_ALL,
+                &t("Copy &all comments"),
+                &t("Copy the post and every comment"),
+            )
+            .append_item(
                 ID_WEB,
                 &t("Open comment on &Facebook"),
                 &t("Open the comment permalink"),
@@ -1017,6 +1127,7 @@ fn open_requested(
         append_links_menu(&menu, &r.state.borrow().post_links);
         menu.append_separator();
         menu.append(ID_COPY_POST, &t("Cop&y post text"), "", ItemKind::Normal);
+        menu.append(ID_COPY_ALL, &t("Copy &all comments"), "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, &t("Copy &link"), "", ItemKind::Normal);
         menu.append(
             ID_WEB_POST,
@@ -1035,6 +1146,10 @@ fn open_requested(
         ID_REPLY | ID_COPY | ID_WEB | ID_LIKE | ID_COMMENT_PROFILE | ID_COMMENT_FRIEND => {
             event.skip(false);
             r.menu_action(&u, event.get_id());
+        }
+        ID_COPY_ALL => {
+            event.skip(false);
+            r.copy_all(&u);
         }
         id if (ID_POST_COMMENT..=ID_WEB_POST).contains(&id)
             || (ID_REACT..ID_REACT + REACTIONS.len() as i32).contains(&id) =>

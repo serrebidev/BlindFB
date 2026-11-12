@@ -255,9 +255,11 @@ fn update_check() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Refresh the French catalog from the code: xgettext reads every `t`, `tf!`,
-/// `nt` and `ntf!`, then msgmerge adds new messages with an empty translation and
-/// marks removed ones obsolete. Needs GNU gettext 0.24 or newer (Rust support).
+/// Refresh every catalog under `app/locale` from the code: xgettext reads
+/// every `t`, `tf!`, `nt` and `ntf!`, then msgmerge adds new messages with an
+/// empty translation and marks removed ones obsolete. Needs GNU gettext 0.24
+/// or newer (Rust support). New languages need a folder with an empty
+/// `blindfb.po` header; empty translations fall back to English at runtime.
 fn i18n() -> Result<(), Box<dyn Error>> {
     let root = root();
     let mut sources = Vec::new();
@@ -288,16 +290,21 @@ fn i18n() -> Result<(), Box<dyn Error>> {
     if !status.success() {
         return Err("xgettext failed".into());
     }
-    let catalog = root.join("app/locale/fr/LC_MESSAGES/blindfb.po");
-    let status = Command::new("msgmerge")
-        .args(["--update", "--no-fuzzy-matching", "--no-wrap", "--backup=none"])
-        .arg(&catalog)
-        .arg(&template)
-        .status()?;
-    if !status.success() {
-        return Err("msgmerge failed".into());
+    for language in fs::read_dir(root.join("app/locale"))? {
+        let catalog = language?.path().join("LC_MESSAGES/blindfb.po");
+        if !catalog.is_file() {
+            continue;
+        }
+        let status = Command::new("msgmerge")
+            .args(["--update", "--no-fuzzy-matching", "--no-wrap", "--backup=none"])
+            .arg(&catalog)
+            .arg(&template)
+            .status()?;
+        if !status.success() {
+            return Err("msgmerge failed".into());
+        }
+        println!("updated {}", catalog.display());
     }
-    println!("updated {}", catalog.display());
     Ok(())
 }
 

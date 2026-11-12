@@ -28,6 +28,32 @@ const FORMAT: &str = if cfg!(windows) {
     "sd/hd/best[vcodec!=none][acodec!=none]"
 };
 
+/// Video volume percent 0-100 remembered between runs.
+pub fn saved_volume() -> u8 {
+    volume_path()
+        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|text| parse_volume(&text))
+        .unwrap_or(100)
+}
+
+/// Remember the current volume percent.
+pub fn save_volume(volume: u8) -> Result<(), String> {
+    let path = volume_path().ok_or_else(|| t("could not find BlindFB's data folder"))?;
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir).map_err(|e| tf!("could not save the setting: {error}", error = e))?;
+    }
+    fs::write(&path, volume.clamp(0, 100).to_string())
+        .map_err(|e| tf!("could not save the setting: {error}", error = e))
+}
+
+fn volume_path() -> Option<PathBuf> {
+    data_dir().map(|dir| dir.join("video-volume"))
+}
+
+fn parse_volume(text: &str) -> Option<u8> {
+    text.trim().parse::<u16>().ok().map(|v| v.min(100) as u8)
+}
+
 pub struct VideoStream {
     pub url: String,
     pub title: String,
@@ -435,6 +461,16 @@ pub fn stream_url(fb: &Fb, page: &str, video: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saved_volume_parses_and_clamps() {
+        assert_eq!(parse_volume("70"), Some(70));
+        assert_eq!(parse_volume(" 0 "), Some(0));
+        assert_eq!(parse_volume("150"), Some(100));
+        assert_eq!(parse_volume("garbage"), None);
+        assert_eq!(parse_volume(""), None);
+        assert_eq!(parse_volume("101"), Some(100));
+    }
 
     #[test]
     fn video_metadata_keeps_the_title_and_requires_one_https_stream() {

@@ -1,0 +1,3596 @@
+# Estonian translation of BlindFB.
+# Regenerate the msgids with `cargo xtask i18n`; fill in msgstr by hand.
+# Untranslated strings fall back to English.
+msgid ""
+msgstr ""
+"Project-Id-Version: BlindFB\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-12 11:39-0700\n"
+"Language: et\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: app/src\chat_dialog.rs:85 app/src\main.rs:184 app/src\post_dialog.rs:35
+msgid "Like"
+msgstr "Meeldib"
+
+#: app/src\chat_dialog.rs:86 app/src\main.rs:185 app/src\post_dialog.rs:36
+msgid "Love"
+msgstr "Armas"
+
+#: app/src\chat_dialog.rs:87 app/src\main.rs:186 app/src\post_dialog.rs:37
+msgid "Care"
+msgstr "Hooliv"
+
+#: app/src\chat_dialog.rs:88 app/src\main.rs:187 app/src\post_dialog.rs:38
+msgid "Haha"
+msgstr "Haha"
+
+#: app/src\chat_dialog.rs:89 app/src\main.rs:188 app/src\post_dialog.rs:39
+msgid "Wow"
+msgstr "Vau"
+
+#: app/src\chat_dialog.rs:90 app/src\main.rs:189 app/src\post_dialog.rs:40
+msgid "Sad"
+msgstr "Kurb"
+
+#: app/src\chat_dialog.rs:91 app/src\main.rs:190 app/src\post_dialog.rs:41
+msgid "Angry"
+msgstr "Vihane"
+
+#: app/src\chat_dialog.rs:158
+msgid "Sending…"
+msgstr ""
+
+#: app/src\chat_dialog.rs:187
+msgid "Message copied."
+msgstr ""
+
+#: app/src\chat_dialog.rs:189 app/src\post_dialog.rs:231
+#: app/src\post_dialog.rs:262
+msgid "Could not copy."
+msgstr "Kopeerimine ebaõnnestus."
+
+#: app/src\chat_dialog.rs:197 app/src\main.rs:4503
+msgid "Reply cancelled. Your next message sends normally."
+msgstr ""
+
+#: app/src\chat_dialog.rs:201 app/src\main.rs:4507
+msgid "That message has no text to reply to."
+msgstr ""
+
+#: app/src\chat_dialog.rs:206
+#, rust-format
+msgid "Replying to: {text}. Write your reply and send as usual."
+msgstr ""
+
+#: app/src\chat_dialog.rs:217 app/src\main.rs:4523
+msgid "That message has no text to react to."
+msgstr ""
+
+#: app/src\chat_dialog.rs:227 app/src\main.rs:4531
+#, rust-format
+msgid "Reacting {reaction} to: {text}"
+msgstr ""
+
+#: app/src\chat_dialog.rs:239
+msgid "A chat window is already open. Close it to open another chat."
+msgstr ""
+
+#: app/src\chat_dialog.rs:243
+msgid "This chat row has no name or link, so its window cannot open."
+msgstr ""
+
+#: app/src\chat_dialog.rs:248
+#, rust-format
+msgid "Group chat: {name}"
+msgstr ""
+
+#: app/src\chat_dialog.rs:250
+#, rust-format
+msgid "Chat: {name}"
+msgstr ""
+
+#: app/src\chat_dialog.rs:258
+msgid "&Messages"
+msgstr ""
+
+#: app/src\chat_dialog.rs:260
+msgid "Messages in this chat, oldest first"
+msgstr ""
+
+#: app/src\chat_dialog.rs:261
+msgid "Load &more"
+msgstr ""
+
+#: app/src\chat_dialog.rs:262 app/src\post_dialog.rs:841
+msgid "&Refresh"
+msgstr ""
+
+#: app/src\chat_dialog.rs:263
+msgid "Me&ssage"
+msgstr ""
+
+#: app/src\chat_dialog.rs:267
+#, rust-format
+msgid "Message to {name}. Enter sends"
+msgstr ""
+
+#: app/src\chat_dialog.rs:268
+msgid "Attach &files"
+msgstr ""
+
+#: app/src\chat_dialog.rs:269
+msgid "A&ttachments…"
+msgstr ""
+
+#: app/src\chat_dialog.rs:270
+msgid "Attachments. Review or remove attached files"
+msgstr ""
+
+#: app/src\chat_dialog.rs:271
+msgid "&Send"
+msgstr ""
+
+#: app/src\chat_dialog.rs:273 app/src\chat_dialog.rs:278
+msgid "Chat status"
+msgstr ""
+
+#: app/src\chat_dialog.rs:280
+msgid "Loading messages…"
+msgstr ""
+
+#: app/src\chat_dialog.rs:283 app/src\group_dialog.rs:175 app/src\main.rs:4398
+#: app/src\post_dialog.rs:845
+msgid "C&lose"
+msgstr ""
+
+#: app/src\chat_dialog.rs:329 app/src\main.rs:4982
+msgid "Cancel &reply"
+msgstr ""
+
+#: app/src\chat_dialog.rs:331 app/src\main.rs:4982 app/src\post_dialog.rs:1050
+msgid "&Reply"
+msgstr ""
+
+#: app/src\chat_dialog.rs:333
+msgid "Quote this message in your next send"
+msgstr ""
+
+#: app/src\chat_dialog.rs:337 app/src\main.rs:4997
+msgid "Cop&y message"
+msgstr ""
+
+#: app/src\chat_dialog.rs:338
+msgid "Copy the message text"
+msgstr ""
+
+#: app/src\chat_dialog.rs:349 app/src\main.rs:4993
+msgid "Re&act"
+msgstr ""
+
+#: app/src\chat_dialog.rs:349 app/src\main.rs:4993
+msgid "React to this message"
+msgstr ""
+
+#: app/src\chat_dialog.rs:372
+msgid "Refreshing…"
+msgstr ""
+
+#: app/src\chat_dialog.rs:381
+msgid "Loading more…"
+msgstr ""
+
+#: app/src\chat_dialog.rs:388 app/src\main.rs:4439
+msgid "No files are attached."
+msgstr ""
+
+#: app/src\chat_dialog.rs:394 app/src\chat_dialog.rs:405 app/src\main.rs:4353
+#: app/src\main.rs:4446
+#, rust-format
+msgid "{n} file attached"
+msgid_plural "{n} files attached"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\chat_dialog.rs:460
+#, rust-format
+msgid "{name}: {n} message."
+msgid_plural "{name}: {n} messages."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\chat_dialog.rs:470
+msgid "Messenger is locked. Close this window and use Chat, Unlock encrypted chats, then reopen the chat."
+msgstr ""
+
+#: app/src\chat_dialog.rs:473
+#, rust-format
+msgid "Messages could not load: {error}"
+msgstr ""
+
+#: app/src\chat_dialog.rs:492
+msgid "Message sent."
+msgstr ""
+
+#: app/src\chat_dialog.rs:499
+#, rust-format
+msgid "Could not send: {error} Your attachments are kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
+msgstr ""
+
+#: app/src\chat_dialog.rs:503
+#, rust-format
+msgid "Could not send: {error}"
+msgstr ""
+
+#: app/src\group_dialog.rs:98 app/src\group_dialog.rs:239
+msgid "This member row has no profile link."
+msgstr ""
+
+#: app/src\group_dialog.rs:100
+msgid "This member row has no name, so its chat cannot open."
+msgstr ""
+
+#: app/src\group_dialog.rs:105
+msgid "This member row has no profile link, so a friend request cannot be sent."
+msgstr ""
+
+#: app/src\group_dialog.rs:108 app/src\main.rs:4153
+#, rust-format
+msgid "Sending a friend request to {name}…"
+msgstr ""
+
+#: app/src\group_dialog.rs:117
+msgid "This member row has no link to open."
+msgstr ""
+
+#: app/src\group_dialog.rs:140
+msgid "A group window is already open. Close it to open another group."
+msgstr ""
+
+#: app/src\group_dialog.rs:146
+msgid "This group row has no link, so its window cannot open."
+msgstr ""
+
+#: app/src\group_dialog.rs:150
+#, rust-format
+msgid "Group: {name}"
+msgstr ""
+
+#: app/src\group_dialog.rs:156
+msgid "&Posts"
+msgstr ""
+
+#: app/src\group_dialog.rs:158
+msgid "Posts in this group. Enter opens the selected post"
+msgstr ""
+
+#: app/src\group_dialog.rs:159
+msgid "&Members"
+msgstr ""
+
+#: app/src\group_dialog.rs:162
+msgid "Members of this group. Applications or Shift+F10 for profile, message and friend actions"
+msgstr ""
+
+#: app/src\group_dialog.rs:165 app/src\group_dialog.rs:170
+msgid "Group status"
+msgstr ""
+
+#: app/src\group_dialog.rs:172
+msgid "Loading posts and members…"
+msgstr ""
+
+#: app/src\group_dialog.rs:256 app/src\post_dialog.rs:1070
+msgid "View &profile"
+msgstr ""
+
+#: app/src\group_dialog.rs:257
+msgid "Open this member's profile"
+msgstr ""
+
+#: app/src\group_dialog.rs:261 app/src\main.rs:4873 app/src\main.rs:4965
+#: app/src\main.rs:5026
+msgid "&Message"
+msgstr ""
+
+#: app/src\group_dialog.rs:262
+msgid "Chat with this member"
+msgstr ""
+
+#: app/src\group_dialog.rs:266 app/src\main.rs:4874 app/src\main.rs:5007
+#: app/src\main.rs:5027 app/src\post_dialog.rs:1075
+msgid "Add &friend"
+msgstr ""
+
+#: app/src\group_dialog.rs:267
+msgid "Send this member a friend request"
+msgstr ""
+
+#: app/src\group_dialog.rs:271
+msgid "Open on &Facebook"
+msgstr ""
+
+#: app/src\group_dialog.rs:272
+msgid "Open this member's profile on the web"
+msgstr ""
+
+#: app/src\group_dialog.rs:327
+msgid "This post row has no link, so it cannot be opened."
+msgstr ""
+
+#: app/src\group_dialog.rs:338
+#, rust-format
+msgid "{n} post so far"
+msgid_plural "{n} posts so far"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\group_dialog.rs:340
+#, rust-format
+msgid "{n} post"
+msgid_plural "{n} posts"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\group_dialog.rs:343
+msgid "posts loading"
+msgstr ""
+
+#: app/src\group_dialog.rs:348
+#, rust-format
+msgid "first {cap} members (list capped)"
+msgstr ""
+
+#: app/src\group_dialog.rs:350
+#, rust-format
+msgid "{n} member so far"
+msgid_plural "{n} members so far"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\group_dialog.rs:352
+#, rust-format
+msgid "{n} member"
+msgid_plural "{n} members"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\group_dialog.rs:355
+msgid "members loading"
+msgstr ""
+
+#: app/src\group_dialog.rs:359
+#, rust-format
+msgid "{group}: {posts} · {members}."
+msgstr ""
+
+#: app/src\group_dialog.rs:482
+#, rust-format
+msgid "Posts could not load: {error}"
+msgstr ""
+
+#: app/src\group_dialog.rs:510
+#, rust-format
+msgid "Members could not load: {error}"
+msgstr ""
+
+#: app/src\main.rs:145
+msgid "React: like"
+msgstr ""
+
+#: app/src\main.rs:146
+msgid "React: love"
+msgstr ""
+
+#: app/src\main.rs:147
+msgid "React: care"
+msgstr ""
+
+#: app/src\main.rs:148
+msgid "React: haha"
+msgstr ""
+
+#: app/src\main.rs:149
+msgid "React: wow"
+msgstr ""
+
+#: app/src\main.rs:150
+msgid "React: sad"
+msgstr ""
+
+#: app/src\main.rs:151
+msgid "React: angry"
+msgstr ""
+
+#: app/src\main.rs:152
+msgid "React: none"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:162
+msgid "like"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:164
+msgid "love"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:166
+msgid "care"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:168
+msgid "haha"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:170
+msgid "wow"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:172
+msgid "sad"
+msgstr ""
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:174
+msgid "angry"
+msgstr ""
+
+#. TRANSLATORS: the choice that removes your reaction, in a list of reactions.
+#: app/src\main.rs:176
+msgid "none"
+msgstr ""
+
+#: app/src\main.rs:191 app/src\post_dialog.rs:42
+msgid "Remove reaction"
+msgstr "Eemalda reaktsioon"
+
+#: app/src\main.rs:256 app/src\main.rs:621
+msgid "News feed"
+msgstr "Uudisvoog"
+
+#: app/src\main.rs:257 app/src\main.rs:627
+msgid "Feeds (most recent)"
+msgstr ""
+
+#: app/src\main.rs:259 app/src\main.rs:622
+msgid "Notifications"
+msgstr "Märguanded"
+
+#: app/src\main.rs:260 app/src\main.rs:623 app/src\main.rs:5084
+#: app/src\main.rs:5356
+msgid "Friends"
+msgstr "Sõbrad"
+
+#: app/src\main.rs:261 app/src\main.rs:624
+msgid "My posts"
+msgstr "Minu postitused"
+
+#: app/src\main.rs:262 app/src\main.rs:625
+msgid "Chats"
+msgstr "Vestlused"
+
+#: app/src\main.rs:263
+msgid "My groups"
+msgstr "Minu grupid"
+
+#: app/src\main.rs:264 app/src\main.rs:629 app/src\main.rs:5363
+msgid "Marketplace"
+msgstr "Marketplace"
+
+#: app/src\main.rs:265 app/src\main.rs:630 app/src\main.rs:5362
+msgid "Events"
+msgstr "Sündmused"
+
+#: app/src\main.rs:266 app/src\main.rs:631 app/src\main.rs:5359
+msgid "Pages"
+msgstr "Lehed"
+
+#: app/src\main.rs:267 app/src\main.rs:632 app/src\main.rs:5360
+msgid "Places"
+msgstr "Kohad"
+
+#: app/src\main.rs:268
+msgid "Search results"
+msgstr "Otsingutulemused"
+
+#: app/src\main.rs:269 crates/core/src\i18n.rs:162
+#, rust-format
+msgid "Posts by {who}"
+msgstr "Postitused kasutajalt {who}"
+
+#: app/src\main.rs:270
+#, rust-format
+msgid "Posts in group {group}"
+msgstr "Grupi {group} postitused"
+
+#: app/src\main.rs:271 app/src\post_dialog.rs:762
+msgid "Post and comments"
+msgstr "Postitus ja kommentaarid"
+
+#: app/src\main.rs:272
+#, rust-format
+msgid "Profile of {who}"
+msgstr ""
+
+#: app/src\main.rs:273
+#, rust-format
+msgid "Chat with {name}"
+msgstr ""
+
+#: app/src\main.rs:608
+msgid "Ready. Pick a view to start."
+msgstr ""
+
+#: app/src\main.rs:610
+msgid "Setting up the Facebook backend…"
+msgstr ""
+
+#: app/src\main.rs:618
+msgid "Views"
+msgstr ""
+
+#: app/src\main.rs:626 app/src\main.rs:5361
+msgid "Groups"
+msgstr "Grupid"
+
+#: app/src\main.rs:628 crates/core/src\reels.rs:25
+msgid "Reels"
+msgstr ""
+
+#: app/src\main.rs:638
+msgid "Items"
+msgstr ""
+
+#: app/src\main.rs:644
+msgid "Lin&ks in selected item"
+msgstr ""
+
+#: app/src\main.rs:649
+msgid "Links in selected item. Enter opens the selected link in your browser"
+msgstr ""
+
+#: app/src\main.rs:651
+msgid "Open selected &link"
+msgstr ""
+
+#: app/src\main.rs:655
+msgid "Details"
+msgstr ""
+
+#: app/src\main.rs:662
+msgid "Refresh (F5)"
+msgstr ""
+
+#: app/src\main.rs:664
+msgid "Open / read full post and links"
+msgstr ""
+
+#: app/src\main.rs:666 app/src\main.rs:4038 app/src\main.rs:4044
+#: app/src\main.rs:4789
+msgid "React"
+msgstr ""
+
+#: app/src\main.rs:667 app/src\main.rs:4069 app/src\main.rs:4076
+msgid "Comment"
+msgstr "Kommenteeri"
+
+#: app/src\main.rs:668
+msgid "Profile"
+msgstr ""
+
+#: app/src\main.rs:669 app/src\main.rs:5354
+msgid "Posts"
+msgstr ""
+
+#: app/src\main.rs:670 app/src\main.rs:686
+msgid "Message"
+msgstr ""
+
+#: app/src\main.rs:671 app/src\main.rs:4332 app/src\main.rs:4338
+msgid "Delete post"
+msgstr "Kustuta postitus"
+
+#: app/src\main.rs:690
+msgid "Attach files"
+msgstr ""
+
+#: app/src\main.rs:692 app/src\main.rs:4452
+#, rust-format
+msgid "Attachments ({count})"
+msgstr ""
+
+#: app/src\main.rs:694 app/src\main.rs:4454
+#, rust-format
+msgid "Attachments, {n} attached"
+msgid_plural "Attachments, {n} attached"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\main.rs:695 app/src\main.rs:4540
+msgid "Send"
+msgstr "Saada"
+
+#: app/src\main.rs:765
+msgid "Show / hide BlindFB"
+msgstr ""
+
+#: app/src\main.rs:767
+msgid "Exit BlindFB"
+msgstr ""
+
+#: app/src\main.rs:845
+msgid "Checking the Facebook backend…"
+msgstr ""
+
+#: app/src\main.rs:1078
+msgid "Working…"
+msgstr ""
+
+#: app/src\main.rs:1227 app/src\main.rs:1248 app/src\main.rs:1296
+#: app/src\main.rs:1301 app/src\main.rs:1305 app/src\main.rs:1311
+#: app/src\main.rs:1315 app/src\main.rs:1319 app/src\main.rs:1323
+msgid "The Facebook backend is not installed"
+msgstr ""
+
+#: app/src\main.rs:1268
+msgid "the backend is not installed yet"
+msgstr ""
+
+#: app/src\main.rs:1285
+msgid "the fb backend is not installed — use Backend → Install or update backend"
+msgstr ""
+
+#: app/src\main.rs:1370
+msgid "the Chrome sign-in did not finish"
+msgstr ""
+
+#: app/src\main.rs:1387
+msgid "install the browser first"
+msgstr ""
+
+#: app/src\main.rs:1396
+#, rust-format
+msgid ""
+"Session import failed: {why}\n"
+"\n"
+"Direct sign-in failed: {error}"
+msgstr ""
+
+#: app/src\main.rs:1514 app/src\main.rs:1515
+msgid "Hide to system &tray"
+msgstr ""
+
+#: app/src\main.rs:1528 app/src\main.rs:1550
+msgid "Show/hide hotkey"
+msgstr "Näita/peida kiirklahvi"
+
+#: app/src\main.rs:1529 app/src\main.rs:1611
+msgid "Pick the shortcut that hides and restores BlindFB, or turn it off"
+msgstr "Vali kiirklahv, mis peidab ja taastab BlindFB, või lülita see välja"
+
+#: app/src\main.rs:1545
+#, rust-format
+msgid "Show/hide hotkey: {label}"
+msgstr "Näita/peida klahv: {label}"
+
+#: app/src\main.rs:1546
+msgid "Show/hide hotkey off."
+msgstr "Näita/peida klahv on väljas."
+
+#: app/src\main.rs:1573
+msgid "Open Facebook &link…\tCtrl+O"
+msgstr ""
+
+#: app/src\main.rs:1574
+msgid "Open a Facebook post, video or reel link"
+msgstr ""
+
+#: app/src\main.rs:1576
+msgid "&New post…\tCtrl+N"
+msgstr ""
+
+#: app/src\main.rs:1576
+msgid "Write a new post"
+msgstr ""
+
+#: app/src\main.rs:1579
+msgid "New post with &media…"
+msgstr ""
+
+#: app/src\main.rs:1580
+msgid "Write a post with photos and videos attached"
+msgstr ""
+
+#: app/src\main.rs:1584
+msgid "Sell on &Marketplace…"
+msgstr ""
+
+#: app/src\main.rs:1585
+msgid "Create a Marketplace listing with photos or video"
+msgstr ""
+
+#: app/src\main.rs:1589
+msgid "&Search Facebook…\tCtrl+/"
+msgstr ""
+
+#: app/src\main.rs:1590
+msgid "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"
+msgstr ""
+
+#: app/src\main.rs:1594
+msgid "&OCR an image…"
+msgstr ""
+
+#: app/src\main.rs:1595
+msgid "Read the text in an image file with the operating system's OCR engine"
+msgstr ""
+
+#: app/src\main.rs:1599
+msgid "Check for &updates…"
+msgstr ""
+
+#: app/src\main.rs:1600
+msgid "Check Forgejo for a newer BlindFB"
+msgstr ""
+
+#: app/src\main.rs:1606
+msgid "Hide BlindFB to the system tray; the tray icon or its menu brings it back"
+msgstr "Peidab BlindFB süsteemsele salve; salve ikoon või selle menüü toob selle tagasi"
+
+#: app/src\main.rs:1610
+msgid "Show/hide &hotkey…"
+msgstr ""
+
+#: app/src\main.rs:1613
+msgid "Close BlindFB"
+msgstr ""
+
+#: app/src\main.rs:1613
+msgid "E&xit\tCtrl+Q"
+msgstr ""
+
+#: app/src\main.rs:1617
+msgid "News &feed\tCtrl+1"
+msgstr ""
+
+#: app/src\main.rs:1617
+msgid "Your news feed"
+msgstr "Sinu uudisvoog"
+
+#: app/src\main.rs:1618
+msgid "&Notifications\tCtrl+2"
+msgstr ""
+
+#: app/src\main.rs:1618
+msgid "Your notifications"
+msgstr "Sinu märguanded"
+
+#: app/src\main.rs:1619
+msgid "Fr&iends\tCtrl+3"
+msgstr ""
+
+#: app/src\main.rs:1619
+msgid "Your friends list"
+msgstr "Sõprade loend"
+
+#: app/src\main.rs:1620
+msgid "&My posts\tCtrl+4"
+msgstr ""
+
+#: app/src\main.rs:1620
+msgid "Posts on your own profile"
+msgstr ""
+
+#: app/src\main.rs:1621
+msgid "&Chats\tCtrl+5"
+msgstr ""
+
+#: app/src\main.rs:1621
+msgid "Messenger chats"
+msgstr ""
+
+#: app/src\main.rs:1622
+msgid "&Groups\tCtrl+6"
+msgstr ""
+
+#: app/src\main.rs:1622
+msgid "Groups you belong to"
+msgstr "Grupid, kuhu kuulute"
+
+#: app/src\main.rs:1625
+msgid "Feeds (most &recent)\tCtrl+7"
+msgstr ""
+
+#: app/src\main.rs:1626
+msgid "Newest posts from followed friends, pages and groups"
+msgstr ""
+
+#: app/src\main.rs:1630
+msgid "Re&els\tCtrl+8"
+msgstr ""
+
+#: app/src\main.rs:1631
+msgid "Browse reels with the accessible player"
+msgstr ""
+
+#: app/src\main.rs:1635
+msgid "&Marketplace\tCtrl+9"
+msgstr ""
+
+#: app/src\main.rs:1636
+msgid "Browse Marketplace listings"
+msgstr ""
+
+#: app/src\main.rs:1638
+msgid "&Events"
+msgstr ""
+
+#: app/src\main.rs:1638
+msgid "Events from your events page"
+msgstr ""
+
+#: app/src\main.rs:1639
+msgid "Pa&ges"
+msgstr ""
+
+#: app/src\main.rs:1639
+msgid "Pages from your pages page"
+msgstr ""
+
+#: app/src\main.rs:1640
+msgid "P&laces"
+msgstr ""
+
+#: app/src\main.rs:1640
+msgid "Places from the places page"
+msgstr ""
+
+#: app/src\main.rs:1643
+msgid "&Unread chats only"
+msgstr ""
+
+#: app/src\main.rs:1644
+msgid "Chats with unread messages"
+msgstr ""
+
+#: app/src\main.rs:1647
+msgid "&Refresh\tF5"
+msgstr ""
+
+#: app/src\main.rs:1647
+msgid "Reload the current view"
+msgstr ""
+
+#: app/src\main.rs:1650
+msgid "&Load more\tCtrl+L"
+msgstr ""
+
+#: app/src\main.rs:1651
+msgid "Append more items and keep your reading position"
+msgstr ""
+
+#: app/src\main.rs:1656
+msgid "&Voice alerts"
+msgstr ""
+
+#: app/src\main.rs:1657
+msgid "Say new notifications and unread chats aloud"
+msgstr ""
+
+#: app/src\main.rs:1661
+msgid "&Sound alerts"
+msgstr ""
+
+#: app/src\main.rs:1662
+msgid "Play a sound for new notifications and unread chats"
+msgstr ""
+
+#: app/src\main.rs:1666
+msgid "Voice alert when a &list loads"
+msgstr ""
+
+#: app/src\main.rs:1667
+msgid "Say the name and size of a list when it finishes loading"
+msgstr ""
+
+#: app/src\main.rs:1671
+msgid "Sound alert when a list &loads"
+msgstr ""
+
+#: app/src\main.rs:1672
+msgid "Play a sound when a list finishes loading"
+msgstr ""
+
+#: app/src\main.rs:1677
+msgid "&Open post / comments"
+msgstr ""
+
+#: app/src\main.rs:1677
+msgid "Open the selected item; Enter in the items list"
+msgstr ""
+
+#: app/src\main.rs:1678 app/src\main.rs:4893 app/src\main.rs:4912
+#: app/src\main.rs:4954 app/src\post_dialog.rs:840 app/src\post_dialog.rs:1117
+msgid "S&hare…"
+msgstr ""
+
+#: app/src\main.rs:1678
+msgid "Share the selected post"
+msgstr ""
+
+#: app/src\main.rs:1679 app/src\main.rs:4894 app/src\main.rs:4913
+#: app/src\post_dialog.rs:1112
+msgid "&Comment…"
+msgstr ""
+
+#: app/src\main.rs:1679
+msgid "Comment on the selected post"
+msgstr ""
+
+#: app/src\main.rs:1680 app/src\main.rs:4936
+msgid "Author &profile"
+msgstr ""
+
+#: app/src\main.rs:1680
+msgid "Show the profile of the selected item's author or owner"
+msgstr ""
+
+#: app/src\main.rs:1681 app/src\main.rs:4937
+msgid "Author's p&osts"
+msgstr ""
+
+#: app/src\main.rs:1681
+msgid "Posts by the selected item's author"
+msgstr ""
+
+#: app/src\main.rs:1682
+msgid "&Message author / friend"
+msgstr ""
+
+#: app/src\main.rs:1682
+msgid "Open a Messenger chat with this person"
+msgstr ""
+
+#: app/src\main.rs:1683 app/src\main.rs:4942
+msgid "Open post on &Facebook (web)"
+msgstr ""
+
+#: app/src\main.rs:1683
+msgid "Open the selected post in your browser"
+msgstr ""
+
+#: app/src\main.rs:1684
+msgid "Open person or group on Fa&cebook (web)"
+msgstr ""
+
+#: app/src\main.rs:1684
+msgid "Open the selected person's profile (or the group) in your browser, where friend management lives"
+msgstr ""
+
+#: app/src\main.rs:1686 app/src\main.rs:4947
+msgid "&Delete post…"
+msgstr ""
+
+#: app/src\main.rs:1686
+msgid "Delete the selected post (your own posts only)"
+msgstr ""
+
+#: app/src\main.rs:1691
+msgid "Set this reaction on the selected post"
+msgstr ""
+
+#: app/src\main.rs:1697 app/src\main.rs:4972
+msgid "&Open chat"
+msgstr ""
+
+#: app/src\main.rs:1697
+msgid "Open the selected chat"
+msgstr ""
+
+#: app/src\main.rs:1700
+msgid "Open chat in &Messenger (web)"
+msgstr ""
+
+#: app/src\main.rs:1701
+msgid "Open this chat in your browser — voice and video calls live there"
+msgstr ""
+
+#: app/src\main.rs:1705 app/src\main.rs:4998
+msgid "&Unsend my last message…"
+msgstr ""
+
+#: app/src\main.rs:1706
+msgid "Remove your newest message in the open chat for everyone"
+msgstr ""
+
+#: app/src\main.rs:1710
+msgid "Unloc&k encrypted chats…"
+msgstr ""
+
+#: app/src\main.rs:1711
+msgid "Enter your Messenger PIN to read end-to-end encrypted chats"
+msgstr ""
+
+#: app/src\main.rs:1718
+msgid "&Install or update backend…"
+msgstr ""
+
+#: app/src\main.rs:1719
+msgid "Download BlindFB's supported facebook-cli backend from Forgejo"
+msgstr ""
+
+#: app/src\main.rs:1721
+msgid "Backend &status"
+msgstr ""
+
+#: app/src\main.rs:1721
+msgid "Show fb daemon status"
+msgstr ""
+
+#: app/src\main.rs:1722
+msgid "&Sign in…"
+msgstr ""
+
+#: app/src\main.rs:1722
+msgid "Sign in through your browser"
+msgstr ""
+
+#: app/src\main.rs:1725
+msgid "Install a &browser…"
+msgstr ""
+
+#: app/src\main.rs:1726
+msgid "Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"
+msgstr ""
+
+#: app/src\main.rs:1728
+msgid "S&top daemon"
+msgstr ""
+
+#: app/src\main.rs:1728
+msgid "Stop the fb daemon"
+msgstr ""
+
+#: app/src\main.rs:1731
+msgid "&Quit daemon and Chrome"
+msgstr ""
+
+#: app/src\main.rs:1732
+msgid "Stop the daemon and close its hidden Chrome"
+msgstr ""
+
+#: app/src\main.rs:1739
+msgid "&Keyboard commands\tF1"
+msgstr ""
+
+#: app/src\main.rs:1740
+msgid "Keyboard commands and reader controls"
+msgstr ""
+
+#: app/src\main.rs:1744
+msgid "BlindFB on &Forgejo"
+msgstr ""
+
+#: app/src\main.rs:1745
+msgid "Open the BlindFB repository"
+msgstr ""
+
+#: app/src\main.rs:1750
+msgid "&Debug logging"
+msgstr ""
+
+#: app/src\main.rs:1751
+msgid "Record what BlindFB runs and the errors it gets, for a bug report"
+msgstr ""
+
+#: app/src\main.rs:1755
+msgid "Save debug &report…"
+msgstr ""
+
+#: app/src\main.rs:1756
+msgid "Save a file you can send to the developer"
+msgstr ""
+
+#: app/src\main.rs:1762
+msgid "Language: &system default"
+msgstr ""
+
+#: app/src\main.rs:1763
+msgid "Use the system language when BlindFB has it, English otherwise"
+msgstr ""
+
+#: app/src\main.rs:1782
+msgid "&About BlindFB"
+msgstr ""
+
+#: app/src\main.rs:1782
+msgid "About this program"
+msgstr ""
+
+#: app/src\main.rs:1786
+msgid "&File"
+msgstr ""
+
+#: app/src\main.rs:1787
+msgid "&View"
+msgstr ""
+
+#: app/src\main.rs:1788
+msgid "&Post"
+msgstr ""
+
+#: app/src\main.rs:1789
+msgid "&Chat"
+msgstr ""
+
+#: app/src\main.rs:1790
+msgid "&Backend"
+msgstr ""
+
+#: app/src\main.rs:1791
+msgid "&Help"
+msgstr ""
+
+#: app/src\main.rs:1877
+msgid "Alerts"
+msgstr ""
+
+#: app/src\main.rs:1882
+msgid "Voice alerts on."
+msgstr ""
+
+#: app/src\main.rs:1883
+msgid "Voice alerts off."
+msgstr ""
+
+#: app/src\main.rs:1884
+msgid "Sound alerts on."
+msgstr ""
+
+#: app/src\main.rs:1885
+msgid "Sound alerts off."
+msgstr ""
+
+#: app/src\main.rs:1886
+msgid "List voice alerts on."
+msgstr ""
+
+#: app/src\main.rs:1887
+msgid "List voice alerts off."
+msgstr ""
+
+#: app/src\main.rs:1888
+msgid "List sound alerts on."
+msgstr ""
+
+#: app/src\main.rs:1889
+msgid "List sound alerts off."
+msgstr ""
+
+#. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+#: app/src\main.rs:1970 app/src\main.rs:1996 app/src\main.rs:2144
+#, rust-format
+msgid "Loading {view}…"
+msgstr ""
+
+#. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+#: app/src\main.rs:2052
+#, rust-format
+msgid "Back to {view}"
+msgstr ""
+
+#: app/src\main.rs:2055
+msgid "No previous list to go back to."
+msgstr ""
+
+#: app/src\main.rs:2160
+msgid "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?"
+msgstr ""
+
+#: app/src\main.rs:2161 app/src\main.rs:2181 app/src\main.rs:3704
+msgid "Sign in"
+msgstr ""
+
+#: app/src\main.rs:2171
+#, rust-format
+msgid "{browser} (your default browser)"
+msgstr ""
+
+#: app/src\main.rs:2177
+msgid "Sign in in a new browser window"
+msgstr ""
+
+#: app/src\main.rs:2183
+msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly."
+msgstr ""
+
+#: app/src\main.rs:2185
+msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks."
+msgstr ""
+
+#: app/src\main.rs:2237 app/src\main.rs:2293
+#, rust-format
+msgid "Installing {browser}…"
+msgstr ""
+
+#: app/src\main.rs:2249
+msgid "Signing in through your browser…"
+msgstr ""
+
+#: app/src\main.rs:2275
+#, rust-format
+msgid "{browser} (installed)"
+msgstr ""
+
+#: app/src\main.rs:2284
+msgid "Install a browser"
+msgstr ""
+
+#: app/src\main.rs:2285
+msgid "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session."
+msgstr ""
+
+#: app/src\main.rs:2307
+msgid "Wait for this section to finish loading before refreshing."
+msgstr ""
+
+#: app/src\main.rs:2379
+msgid "Reels are already loading…"
+msgstr ""
+
+#: app/src\main.rs:2381
+msgid "Load the reels list first, or refresh it to retry."
+msgstr ""
+
+#: app/src\main.rs:2390
+msgid "Wait for this section to load before requesting more items."
+msgstr ""
+
+#: app/src\main.rs:2396
+msgid "Items are already loading…"
+msgstr ""
+
+#: app/src\main.rs:2397
+msgid "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
+msgstr ""
+
+#. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+#: app/src\main.rs:2415
+#, rust-format
+msgid "Loading more {view}…"
+msgstr ""
+
+#. TRANSLATORS: {item} is a list row (a post); the mark says it has no link to open.
+#: app/src\main.rs:2506
+#, rust-format
+msgid "{item} (no link)"
+msgstr ""
+
+#: app/src\main.rs:2531
+#, rust-format
+msgid "Actions: {actions}"
+msgstr ""
+
+#. TRANSLATORS: {notification} is a notification's text and time.
+#: app/src\main.rs:2592
+#, rust-format
+msgid "Unread. {notification}"
+msgstr ""
+
+#. TRANSLATORS: {name} is a chat's name in the Chats list.
+#: app/src\main.rs:2618
+#, rust-format
+msgid "{name} (unread) (group)"
+msgstr ""
+
+#. TRANSLATORS: {name} is a chat's name in the Chats list.
+#: app/src\main.rs:2620
+#, rust-format
+msgid "{name} (unread)"
+msgstr ""
+
+#. TRANSLATORS: {name} is a chat's name in the Chats list.
+#: app/src\main.rs:2622
+#, rust-format
+msgid "{name} (group)"
+msgstr ""
+
+#: app/src\main.rs:2669
+#, rust-format
+msgid ""
+"Author: {author}\n"
+"Time: {time}\n"
+"{counts}\n"
+"\n"
+"{text}"
+msgstr ""
+
+#: app/src\main.rs:2680
+#, rust-format
+msgid ""
+"Name: {name}\n"
+"Ref: {reference}\n"
+"{info}"
+msgstr ""
+
+#: app/src\main.rs:2688
+#, rust-format
+msgid ""
+"Chat: {name}\n"
+"Time: {time}\n"
+"Flags: {flags} (! unread, g group, e encrypted)\n"
+"\n"
+"{text}"
+msgstr ""
+
+#: app/src\main.rs:2701
+#, rust-format
+msgid ""
+"{name}\n"
+"{info}On the web: {url}"
+msgstr ""
+
+#: app/src\main.rs:2715
+#, rust-format
+msgid ""
+"Group: {name}\n"
+"{info}On the web: {url}\n"
+"\n"
+"Open the group for its window: its posts, and its full member list. Posting to a group, and group settings, live on the web page."
+msgstr ""
+
+#: app/src\main.rs:2803 crates/core/src\posts.rs:49
+msgid "Full post on Facebook"
+msgstr "Täielik postitus Facebookis"
+
+#: app/src\main.rs:2936
+msgid "&Links"
+msgstr ""
+
+#: app/src\main.rs:2936
+msgid "Open a link in your browser"
+msgstr ""
+
+#. TRANSLATORS: {action} is a "Load more…" row label such as "Load more posts".
+#: app/src\main.rs:3024
+#, rust-format
+msgid "{action}. Press Enter to load the next batch."
+msgstr ""
+
+#: app/src\main.rs:3064
+msgid "Load more posts"
+msgstr ""
+
+#: app/src\main.rs:3065
+msgid "Load more reels"
+msgstr ""
+
+#: app/src\main.rs:3066
+msgid "Load more notifications"
+msgstr ""
+
+#: app/src\main.rs:3067
+msgid "Load more friends"
+msgstr ""
+
+#: app/src\main.rs:3068
+msgid "Load more groups"
+msgstr ""
+
+#: app/src\main.rs:3069
+msgid "Load more listings"
+msgstr ""
+
+#: app/src\main.rs:3070
+msgid "Load more conversations"
+msgstr ""
+
+#: app/src\main.rs:3092
+#, rust-format
+msgid "Reactions: {reactions}, comments: {comments}, shares: {shares}"
+msgstr ""
+
+#: app/src\main.rs:3098
+#, rust-format
+msgid "Reactions / comments / shares: {counts}"
+msgstr ""
+
+#: app/src\main.rs:3219
+msgid "(nothing here)"
+msgstr ""
+
+#. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+#: app/src\main.rs:3222
+#, rust-format
+msgid "{view} — {n} item"
+msgid_plural "{view} — {n} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
+#: app/src\main.rs:3323 crates/core/src\alerts.rs:67
+#, rust-format
+msgid "{view}: no items to show."
+msgstr ""
+
+#: app/src\main.rs:3329
+#, rust-format
+msgid "{n} new item loaded."
+msgid_plural "{n} new items loaded."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\main.rs:3330 crates/core/src\alerts.rs:64
+#, rust-format
+msgid "{n} item total."
+msgid_plural "{n} items total."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\main.rs:3366
+msgid "Messenger needs its history restored. Enter your PIN in the unlock dialog."
+msgstr ""
+
+#: app/src\main.rs:3369
+msgid "Messenger history is still locked. Use Chat → Unlock encrypted chats to retry."
+msgstr ""
+
+#: app/src\main.rs:3373
+msgid "Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry."
+msgstr ""
+
+#: app/src\main.rs:3374
+msgid "Messenger history"
+msgstr ""
+
+#: app/src\main.rs:3383
+#, rust-format
+msgid "Could not update {view}. Showing earlier results."
+msgstr ""
+
+#: app/src\main.rs:3388 app/src\main.rs:3519 app/src\main.rs:3530
+#: app/src\main.rs:3543 app/src\main.rs:3557 app/src\main.rs:3572
+#: app/src\main.rs:3585 app/src\main.rs:3643 app/src\update.rs:53
+msgid "Error"
+msgstr ""
+
+#: app/src\main.rs:3395 app/src\main.rs:3448
+msgid "Reaction set."
+msgstr ""
+
+#: app/src\main.rs:3423
+msgid "Post ready."
+msgstr ""
+
+#: app/src\main.rs:3426 app/src\main.rs:3550
+msgid "Comment sent."
+msgstr ""
+
+#: app/src\main.rs:3429
+msgid "Like changed."
+msgstr ""
+
+#: app/src\main.rs:3435
+msgid "Shared to your feed."
+msgstr ""
+
+#: app/src\main.rs:3442 app/src\post_dialog.rs:538
+msgid "Share cancelled. Nothing was shared."
+msgstr ""
+
+#: app/src\main.rs:3476
+msgid "PIN accepted. Facebook is still restoring your chat history — loading your chats…"
+msgstr ""
+
+#: app/src\main.rs:3478
+msgid "Messenger unlocked. Loading your chats…"
+msgstr ""
+
+#: app/src\main.rs:3484
+msgid "PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes."
+msgstr ""
+
+#: app/src\main.rs:3486
+msgid "Messenger unlocked."
+msgstr ""
+
+#: app/src\main.rs:3491
+msgid "Messenger could not be unlocked."
+msgstr ""
+
+#: app/src\main.rs:3495
+#, rust-format
+msgid ""
+"Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n"
+"\n"
+"{error}"
+msgstr ""
+
+#: app/src\main.rs:3498 app/src\main.rs:3826
+msgid "Unlock encrypted chats"
+msgstr ""
+
+#: app/src\main.rs:3513
+msgid "Debug report saved."
+msgstr ""
+
+#: app/src\main.rs:3514 app/src\main.rs:3520
+msgid "Debug report"
+msgstr ""
+
+#: app/src\main.rs:3532 app/src\main.rs:5070
+msgid "New post"
+msgstr "Uus postitus"
+
+#: app/src\main.rs:3540 app/src\main.rs:3568 app/src\main.rs:3579
+#: app/src\main.rs:5183
+msgid "Done"
+msgstr ""
+
+#: app/src\main.rs:3573
+msgid "Join group"
+msgstr ""
+
+#: app/src\main.rs:3586 app/src\main.rs:5220
+msgid "Leave group"
+msgstr ""
+
+#: app/src\main.rs:3612
+msgid "Sent"
+msgstr ""
+
+#: app/src\main.rs:3623
+msgid "Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
+msgstr ""
+
+#: app/src\main.rs:3625
+msgid "Message could not be sent. Your draft has been kept."
+msgstr ""
+
+#: app/src\main.rs:3627
+msgid "Send message"
+msgstr ""
+
+#: app/src\main.rs:3637
+msgid "Message removed"
+msgstr ""
+
+#: app/src\main.rs:3656
+msgid "The backend is installed but not signed in."
+msgstr ""
+
+#: app/src\main.rs:3658 app/src\main.rs:3679 app/src\main.rs:3712
+msgid "Signed out. Use Backend → Sign in when ready."
+msgstr ""
+
+#: app/src\main.rs:3663
+msgid "Installing the Facebook backend…"
+msgstr ""
+
+#: app/src\main.rs:3670
+msgid "The Facebook backend could not start."
+msgstr ""
+
+#: app/src\main.rs:3671
+msgid "Backend startup"
+msgstr ""
+
+#: app/src\main.rs:3686
+#, rust-format
+msgid ""
+"The backend could not be installed automatically: {error}\n"
+"You can retry from Backend → Install or update backend."
+msgstr ""
+
+#: app/src\main.rs:3689
+msgid "Backend install failed"
+msgstr ""
+
+#: app/src\main.rs:3695
+msgid "Signed in."
+msgstr ""
+
+#: app/src\main.rs:3700
+msgid "Sign-in did not finish — see the details, or try Backend → Sign in."
+msgstr ""
+
+#: app/src\main.rs:3701
+msgid "Sign-in did not finish"
+msgstr ""
+
+#: app/src\main.rs:3705
+msgid "Sign-in failed. Use Backend → Sign in to retry."
+msgstr ""
+
+#: app/src\main.rs:3716 app/src\main.rs:3722
+msgid "Browser install"
+msgstr ""
+
+#: app/src\main.rs:3717
+msgid "Browser installation failed."
+msgstr ""
+
+#: app/src\main.rs:3826
+msgid "Messenger PIN:"
+msgstr ""
+
+#: app/src\main.rs:3835
+msgid "Unlock cancelled."
+msgstr ""
+
+#: app/src\main.rs:3858
+msgid "Unlocking Messenger…"
+msgstr ""
+
+#: app/src\main.rs:3873
+msgid "Facebook post, video or reel link (full https:// URL):"
+msgstr ""
+
+#: app/src\main.rs:3874 app/src\main.rs:3888
+msgid "Open Facebook link"
+msgstr ""
+
+#: app/src\main.rs:3887
+msgid "Paste a full https:// Facebook post, video or reel link. This link is invalid or unsupported."
+msgstr ""
+
+#: app/src\main.rs:3928
+msgid "This row has no link, so there is no post to open. Sponsored and suggested rows usually have none."
+msgstr ""
+
+#: app/src\main.rs:3929 app/src\main.rs:3962 app/src\main.rs:5126
+msgid "Open post"
+msgstr ""
+
+#: app/src\main.rs:3955
+msgid "Opened notification on Facebook."
+msgstr ""
+
+#: app/src\main.rs:3961
+msgid "BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?"
+msgstr ""
+
+#: app/src\main.rs:3978
+msgid "This page has no link, so there is nothing to open."
+msgstr ""
+
+#: app/src\main.rs:3979
+msgid "Open page"
+msgstr ""
+
+#: app/src\main.rs:3992
+msgid "This row has no link, so there is nothing to open."
+msgstr ""
+
+#: app/src\main.rs:3993 app/src\main.rs:5137 app/src\main.rs:5147
+msgid "Open"
+msgstr "Ava"
+
+#: app/src\main.rs:3997 app/src\main.rs:4011
+msgid "Opened on Facebook in your browser."
+msgstr ""
+
+#: app/src\main.rs:4008
+msgid "This profile row has no link to open."
+msgstr ""
+
+#: app/src\main.rs:4016
+msgid "Information only. Applications or Shift+F10 opens this person's actions."
+msgstr ""
+
+#: app/src\main.rs:4028
+msgid "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
+msgstr ""
+
+#: app/src\main.rs:4030
+msgid "Select a post first."
+msgstr ""
+
+#: app/src\main.rs:4044
+msgid "Reaction"
+msgstr ""
+
+#: app/src\main.rs:4076
+msgid "Your comment:"
+msgstr ""
+
+#: app/src\main.rs:4230
+msgid "This row has no web link (it is a suggestion or ad row)."
+msgstr ""
+
+#: app/src\main.rs:4231
+msgid "Open on Facebook"
+msgstr ""
+
+#: app/src\main.rs:4312
+msgid "Select or open a chat first."
+msgstr ""
+
+#: app/src\main.rs:4313
+msgid "Open in Messenger"
+msgstr ""
+
+#: app/src\main.rs:4332
+msgid "Select one of your posts first."
+msgstr ""
+
+#: app/src\main.rs:4337
+msgid "Delete this post? Facebook moves it to the trash (permanent removal after 30 days)."
+msgstr ""
+
+#: app/src\main.rs:4367 app/src\main.rs:4377
+msgid "Attached files"
+msgstr ""
+
+#: app/src\main.rs:4374
+msgid "Attached &files"
+msgstr ""
+
+#: app/src\main.rs:4393
+msgid "&Remove selected"
+msgstr ""
+
+#: app/src\main.rs:4395
+msgid "Remove &all"
+msgstr ""
+
+#: app/src\main.rs:4512
+#, rust-format
+msgid "Replying to: {text}. Write your reply in the message box and send as usual."
+msgstr ""
+
+#: app/src\main.rs:4540
+msgid "Open a chat first, then write and send."
+msgstr ""
+
+#: app/src\main.rs:4557
+msgid "Wait for your message to finish sending."
+msgstr ""
+
+#: app/src\main.rs:4603
+msgid "Share"
+msgstr "Jaga"
+
+#: app/src\main.rs:4608
+msgid "BlindFB cannot share this kind of item yet. Open it on Facebook to share it."
+msgstr ""
+
+#: app/src\main.rs:4609 app/src\post_dialog.rs:519
+msgid "Share post"
+msgstr ""
+
+#: app/src\main.rs:4622
+msgid "Text copied."
+msgstr ""
+
+#: app/src\main.rs:4626 app/src\post_dialog.rs:572
+msgid "Link copied."
+msgstr ""
+
+#: app/src\main.rs:4627
+msgid "Copy link"
+msgstr "Kopeeri link"
+
+#: app/src\main.rs:4627
+msgid "This item has no link to copy."
+msgstr ""
+
+#: app/src\main.rs:4632
+msgid "Opened Facebook's share page in your browser."
+msgstr ""
+
+#: app/src\main.rs:4636
+msgid "This item has no link to share."
+msgstr ""
+
+#: app/src\main.rs:4637
+msgid "Share on Facebook"
+msgstr ""
+
+#: app/src\main.rs:4651 app/src\main.rs:5116
+msgid "Opened the listing in your browser."
+msgstr ""
+
+#: app/src\main.rs:4671
+msgid "Downloading the Facebook backend…"
+msgstr ""
+
+#: app/src\main.rs:4689
+msgid "Remove your newest message in this chat for everyone?"
+msgstr ""
+
+#: app/src\main.rs:4690 app/src\main.rs:4698
+msgid "Unsend"
+msgstr ""
+
+#: app/src\main.rs:4698
+msgid "Open a chat first."
+msgstr ""
+
+#: app/src\main.rs:4704
+msgid ""
+"Ctrl+O: open a Facebook post, video or reel link.\n"
+"Enter on an item: open it. Applications or Shift+F10: item actions.\n"
+"End then Enter on Load more posts or Load more reels loads the next batch.\n"
+"Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. The Views list also has Events, Pages and Places. F5: refresh. Ctrl+L: load more.\n"
+"Alt+Ctrl+F (default, changeable in File, Show/hide hotkey): hide BlindFB to the system tray. Bring it back with the same shortcut, from the tray icon (double-click it, or its Show / hide menu item).\n"
+"Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n"
+"Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n"
+"The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n"
+"Enter on a selected link or Open link opens your browser.\n"
+"Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n"
+"Arrow keys on Video volume change its percentage.\n"
+"Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n"
+"Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."
+msgstr ""
+
+#: app/src\main.rs:4717
+msgid "Keyboard commands"
+msgstr "Klaviatuurikäsud"
+
+#: app/src\main.rs:4727
+msgid ""
+"An accessible Facebook and Messenger client for screen reader users.\n"
+"Built with wxDragon on the facebook-cli (fb) backend."
+msgstr ""
+
+#: app/src\main.rs:4751
+msgid "Language saved. Restart BlindFB to use it."
+msgstr "Keel salvestatud. Taaskäivita BlindFB."
+
+#: app/src\main.rs:4752
+msgid "Language"
+msgstr "Keel"
+
+#: app/src\main.rs:4759
+msgid "Debug logging on. Repeat what failed, then use Help, Save debug report."
+msgstr ""
+
+#: app/src\main.rs:4761
+msgid "Debug logging off."
+msgstr ""
+
+#: app/src\main.rs:4762
+msgid "Debug logging"
+msgstr ""
+
+#: app/src\main.rs:4767
+msgid "Save debug report"
+msgstr ""
+
+#. TRANSLATORS: a file-type filter; translate "Text files" only, keep "(*.txt)|*.txt".
+#: app/src\main.rs:4770
+msgid "Text files (*.txt)|*.txt"
+msgstr ""
+
+#: app/src\main.rs:4775
+msgid "Saving the debug report…"
+msgstr ""
+
+#: app/src\main.rs:4802
+msgid "Copy"
+msgstr ""
+
+#: app/src\main.rs:4802
+msgid "Could not copy to the clipboard."
+msgstr ""
+
+#: app/src\main.rs:4862 app/src\main.rs:5015
+msgid "&Open group"
+msgstr ""
+
+#: app/src\main.rs:4863
+msgid "&Join group"
+msgstr ""
+
+#: app/src\main.rs:4864 app/src\main.rs:5017
+msgid "Open group on &Facebook (web)"
+msgstr ""
+
+#: app/src\main.rs:4865 app/src\main.rs:4876 app/src\main.rs:4886
+#: app/src\main.rs:4895 app/src\main.rs:4940 app/src\main.rs:4955
+#: app/src\main.rs:5009 app/src\main.rs:5029 app/src\main.rs:5032
+msgid "Cop&y text"
+msgstr ""
+
+#: app/src\main.rs:4871 app/src\main.rs:4963
+msgid "&Profile"
+msgstr ""
+
+#: app/src\main.rs:4872 app/src\main.rs:4964 app/src\main.rs:5025
+msgid "P&osts"
+msgstr ""
+
+#: app/src\main.rs:4875 app/src\main.rs:4897 app/src\main.rs:4957
+#: app/src\main.rs:4966 app/src\main.rs:5028 app/src\post_dialog.rs:1134
+msgid "Open on &Facebook (web)"
+msgstr ""
+
+#: app/src\main.rs:4882
+msgid "&Open listing in browser"
+msgstr ""
+
+#: app/src\main.rs:4883
+msgid "&Message seller…"
+msgstr ""
+
+#: app/src\main.rs:4884 app/src\main.rs:4896 app/src\main.rs:4941
+#: app/src\main.rs:4956 app/src\main.rs:5016 app/src\post_dialog.rs:1131
+msgid "Copy &link"
+msgstr ""
+
+#: app/src\main.rs:4885
+msgid "Share on &Facebook…"
+msgstr ""
+
+#: app/src\main.rs:4892 app/src\main.rs:4953
+msgid "&Open"
+msgstr ""
+
+#: app/src\main.rs:4911
+msgid "&Open post and comments"
+msgstr ""
+
+#: app/src\main.rs:4922
+msgid "Group's p&osts"
+msgstr ""
+
+#: app/src\main.rs:4930 app/src\post_dialog.rs:1126
+msgid "&React"
+msgstr ""
+
+#: app/src\main.rs:4938
+msgid "&Message author"
+msgstr ""
+
+#: app/src\main.rs:4943
+msgid "Open author on Fa&cebook (web)"
+msgstr ""
+
+#: app/src\main.rs:4973 app/src\main.rs:4999
+msgid "Open in &Messenger (web)"
+msgstr ""
+
+#: app/src\main.rs:5006
+msgid "Commenter &profile"
+msgstr ""
+
+#: app/src\main.rs:5008
+msgid "&Message commenter"
+msgstr ""
+
+#: app/src\main.rs:5019
+msgid "&Leave group…"
+msgstr ""
+
+#: app/src\main.rs:5070
+msgid "Post text:"
+msgstr ""
+
+#: app/src\main.rs:5084
+msgid "Only me"
+msgstr ""
+
+#: app/src\main.rs:5084
+msgid "Public"
+msgstr ""
+
+#: app/src\main.rs:5087
+msgid "Audience"
+msgstr ""
+
+#: app/src\main.rs:5087
+msgid "Who can see this?"
+msgstr ""
+
+#: app/src\main.rs:5118
+msgid "This listing row has no link to open."
+msgstr ""
+
+#: app/src\main.rs:5125
+msgid "This row has no link, so there is no post to open."
+msgstr ""
+
+#: app/src\main.rs:5136
+msgid "This row has no link, so it cannot be opened."
+msgstr ""
+
+#: app/src\main.rs:5146
+msgid "BlindFB cannot read this kind of item yet. Open it in your web browser?"
+msgstr ""
+
+#: app/src\main.rs:5163
+msgid "This group row has no link, so it cannot be joined."
+msgstr ""
+
+#: app/src\main.rs:5166
+#, rust-format
+msgid "Joining {group}…"
+msgstr ""
+
+#: app/src\main.rs:5190
+msgid "Membership questions"
+msgstr ""
+
+#. TRANSLATORS: {question} is a group's membership question, asked in a text box.
+#: app/src\main.rs:5190
+#, rust-format
+msgid "{question}:"
+msgstr ""
+
+#: app/src\main.rs:5192
+msgid "Join cancelled: the membership questions were not answered."
+msgstr ""
+
+#: app/src\main.rs:5197
+msgid "Submitting your answers…"
+msgstr ""
+
+#: app/src\main.rs:5210
+msgid "This group row has no link, so it cannot be left."
+msgstr ""
+
+#: app/src\main.rs:5217
+#, rust-format
+msgid "Leave the group {name}? You can rejoin later, but private groups will need approval again."
+msgstr ""
+
+#: app/src\main.rs:5224
+#, rust-format
+msgid "Leaving {name}…"
+msgstr ""
+
+#: app/src\main.rs:5237
+msgid "This listing row has no link, so its seller cannot be messaged."
+msgstr ""
+
+#: app/src\main.rs:5242
+#, rust-format
+msgid "Message to the seller of {listing}:"
+msgstr ""
+
+#: app/src\main.rs:5243
+msgid "Message seller"
+msgstr ""
+
+#: app/src\main.rs:5250
+msgid "Messaging the seller…"
+msgstr ""
+
+#: app/src\main.rs:5260
+msgid "Listing title:"
+msgstr ""
+
+#: app/src\main.rs:5260 app/src\main.rs:5269 app/src\main.rs:5279
+#: app/src\main.rs:5293 app/src\main.rs:5310 app/src\main.rs:5316
+#: app/src\main.rs:5326
+msgid "Sell on Marketplace"
+msgstr ""
+
+#: app/src\main.rs:5268
+msgid "Price (0 lists it as free):"
+msgstr ""
+
+#: app/src\main.rs:5278
+msgid "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing."
+msgstr ""
+
+#: app/src\main.rs:5284
+msgid "New"
+msgstr ""
+
+#: app/src\main.rs:5285
+msgid "Used - like new"
+msgstr ""
+
+#: app/src\main.rs:5286
+msgid "Used - good"
+msgstr ""
+
+#: app/src\main.rs:5287
+msgid "Used - fair"
+msgstr ""
+
+#: app/src\main.rs:5292
+msgid "Condition:"
+msgstr ""
+
+#: app/src\main.rs:5309
+msgid "Category (leave empty to skip):"
+msgstr ""
+
+#: app/src\main.rs:5315
+msgid "Description (leave empty to skip):"
+msgstr ""
+
+#: app/src\main.rs:5325
+msgid "Marketplace allows at most 10 photos and videos per listing."
+msgstr ""
+
+#: app/src\main.rs:5330
+#, rust-format
+msgid "Listing {title} on Marketplace…"
+msgstr ""
+
+#: app/src\main.rs:5353
+msgid "Everything"
+msgstr ""
+
+#: app/src\main.rs:5355
+msgid "People"
+msgstr ""
+
+#: app/src\main.rs:5357
+msgid "Photos"
+msgstr ""
+
+#: app/src\main.rs:5358
+msgid "Videos"
+msgstr ""
+
+#: app/src\main.rs:5388
+msgid "Search Facebook"
+msgstr ""
+
+#: app/src\main.rs:5395
+msgid "Search &for:"
+msgstr ""
+
+#: app/src\main.rs:5400
+msgid "Search for"
+msgstr ""
+
+#: app/src\main.rs:5402
+msgid "Search &in:"
+msgstr ""
+
+#: app/src\main.rs:5410
+msgid "Search in"
+msgstr ""
+
+#: app/src\main.rs:5415
+msgid "&Search"
+msgstr ""
+
+#: app/src\main.rs:5417
+msgid "Search"
+msgstr "Otsing"
+
+#: app/src\main.rs:5421 app/src\main.rs:5423 app/src\update.rs:48
+msgid "Cancel"
+msgstr "Tühista"
+
+#: app/src\main.rs:5450
+msgid "No OCR engine is available on this system. On Linux, install tesseract-ocr."
+msgstr ""
+
+#: app/src\main.rs:5451
+msgid "OCR an image"
+msgstr ""
+
+#: app/src\main.rs:5463
+msgid "Reading image text…"
+msgstr ""
+
+#: app/src\main.rs:5475
+#, rust-format
+msgid "could not open image: {error}"
+msgstr ""
+
+#: app/src\main.rs:5479
+#, rust-format
+msgid "OCR failed: {error}"
+msgstr ""
+
+#: app/src\player.rs:36 app/src\player.rs:286
+msgid "Video display"
+msgstr ""
+
+#: app/src\player.rs:57
+msgid "The media backend could not load this video."
+msgstr ""
+
+#: app/src\player.rs:176
+msgid "The video player could not complete that action."
+msgstr ""
+
+#: app/src\player.rs:211
+msgid "The video could not be played. Try another video or check your connection."
+msgstr ""
+
+#: app/src\player.rs:402
+msgid "The video player is not installed."
+msgstr ""
+
+#: app/src\player.rs:461
+msgid "The video player could not start."
+msgstr ""
+
+#: app/src\player.rs:624
+msgid "The video player disconnected. Close this post and try again."
+msgstr ""
+
+#: app/src\post_dialog.rs:29
+msgid "&Write a comment (Ctrl+Enter to send)"
+msgstr ""
+
+#: app/src\post_dialog.rs:225 app/src\post_dialog.rs:256
+msgid "Nothing to copy yet."
+msgstr ""
+
+#: app/src\post_dialog.rs:229
+msgid "Copied."
+msgstr ""
+
+#: app/src\post_dialog.rs:260
+msgid "Post and comments copied."
+msgstr "Postitus ja kommentaarid kopeeritud."
+
+#: app/src\post_dialog.rs:281
+msgid "This comment has no link to open."
+msgstr ""
+
+#: app/src\post_dialog.rs:299
+#, rust-format
+msgid "Links in {author}'s comment. Enter opens the selected link in your browser"
+msgstr ""
+
+#: app/src\post_dialog.rs:306 app/src\post_dialog.rs:772
+msgid "Post links. Enter opens the selected link in your browser"
+msgstr "Postituse lingid. Enter avab valitud lingi brauseris"
+
+#: app/src\post_dialog.rs:324
+msgid "&Pause video"
+msgstr ""
+
+#: app/src\post_dialog.rs:326 app/src\post_dialog.rs:794
+msgid "&Play video"
+msgstr ""
+
+#: app/src\post_dialog.rs:343
+msgid "Video paused."
+msgstr ""
+
+#: app/src\post_dialog.rs:345 app/src\post_dialog.rs:449
+msgid "Playing video."
+msgstr ""
+
+#: app/src\post_dialog.rs:355 app/src\post_dialog.rs:451
+msgid "Playback failed. Press Play to retry."
+msgstr ""
+
+#: app/src\post_dialog.rs:377
+msgid "Preparing video…"
+msgstr ""
+
+#: app/src\post_dialog.rs:389
+msgid "Loading video…"
+msgstr ""
+
+#: app/src\post_dialog.rs:392
+msgid "Could not load video. Press Play to retry."
+msgstr ""
+
+#: app/src\post_dialog.rs:411
+msgid "Could not stop video. Try Pause or close the reader."
+msgstr ""
+
+#: app/src\post_dialog.rs:413
+msgid "Video stopped."
+msgstr ""
+
+#: app/src\post_dialog.rs:421
+msgid "This video could not seek."
+msgstr ""
+
+#: app/src\post_dialog.rs:426
+#, rust-format
+msgid "Video position: {n} second."
+msgid_plural "Video position: {n} seconds."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\post_dialog.rs:460
+msgid "Video finished."
+msgstr ""
+
+#: app/src\post_dialog.rs:469 app/src\post_dialog.rs:1280
+#, rust-format
+msgid "{error} Press Play to retry."
+msgstr ""
+
+#: app/src\post_dialog.rs:507
+msgid "Opening Facebook's share dialog…"
+msgstr ""
+
+#: app/src\post_dialog.rs:516
+#, rust-format
+msgid ""
+"Share this post to your feed. Audience: {audience}.\n"
+"Say something about it (optional), then press OK to share:"
+msgstr ""
+
+#: app/src\post_dialog.rs:531
+msgid "Sharing…"
+msgstr ""
+
+#: app/src\post_dialog.rs:554
+msgid "The post has not loaded yet. Try again in a moment."
+msgstr ""
+
+#: app/src\post_dialog.rs:561
+msgid "Post copied."
+msgstr "Postitus kopeeritud."
+
+#: app/src\post_dialog.rs:563
+msgid "Could not copy the post."
+msgstr ""
+
+#: app/src\post_dialog.rs:574
+msgid "Could not copy the link."
+msgstr ""
+
+#: app/src\post_dialog.rs:590 app/src\post_dialog.rs:598
+msgid "Reacting…"
+msgstr ""
+
+#: app/src\post_dialog.rs:607
+msgid "Write a comment or reply first."
+msgstr ""
+
+#: app/src\post_dialog.rs:628
+msgid "Sending comment…"
+msgstr ""
+
+#: app/src\post_dialog.rs:658
+#, rust-format
+msgid "Reply to {author} (Ctrl+Enter to send)"
+msgstr ""
+
+#: app/src\post_dialog.rs:663
+#, rust-format
+msgid "Replying to {author}."
+msgstr ""
+
+#: app/src\post_dialog.rs:667
+msgid "Comment copied."
+msgstr "Kommentaar kopeeritud."
+
+#: app/src\post_dialog.rs:669
+msgid "Could not copy the comment."
+msgstr ""
+
+#: app/src\post_dialog.rs:684
+#, rust-format
+msgid "Changing your Like on {author}'s comment…"
+msgstr ""
+
+#: app/src\post_dialog.rs:691
+msgid "Opening the commenter's profile…"
+msgstr ""
+
+#: app/src\post_dialog.rs:701
+#, rust-format
+msgid "Sending a friend request to {author}…"
+msgstr ""
+
+#: app/src\post_dialog.rs:769
+msgid "Post lin&ks"
+msgstr ""
+
+#: app/src\post_dialog.rs:777
+msgid "&Open link"
+msgstr ""
+
+#: app/src\post_dialog.rs:779
+msgid "&Full post"
+msgstr ""
+
+#: app/src\post_dialog.rs:785
+msgid "Full post. Applications or Shift+F10 for links, comment, react, share and copy"
+msgstr ""
+
+#: app/src\post_dialog.rs:787
+msgid "Loading post and comments…"
+msgstr ""
+
+#: app/src\post_dialog.rs:790
+msgid "Video player"
+msgstr ""
+
+#: app/src\post_dialog.rs:795
+msgid "S&top video"
+msgstr ""
+
+#: app/src\post_dialog.rs:797
+msgid "Back 10 seconds"
+msgstr ""
+
+#: app/src\post_dialog.rs:800
+msgid "Forward 10 seconds"
+msgstr ""
+
+#: app/src\post_dialog.rs:809
+msgid "Video &volume (percent)"
+msgstr ""
+
+#: app/src\post_dialog.rs:816
+msgid "Video volume, percent"
+msgstr "Video helitugevus, protsent"
+
+#: app/src\post_dialog.rs:817
+msgid "&Comments"
+msgstr ""
+
+#: app/src\post_dialog.rs:820
+msgid "Comments. Ctrl+C copies the comment. Ctrl+Shift+C copies the post and all comments. Ctrl+Enter opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
+msgstr ""
+
+#: app/src\post_dialog.rs:829 app/src\post_dialog.rs:834
+msgid "Reader status"
+msgstr ""
+
+#: app/src\post_dialog.rs:838
+msgid "&Send (Ctrl+Enter)"
+msgstr ""
+
+#: app/src\post_dialog.rs:842
+msgid "Ca&ncel reply"
+msgstr ""
+
+#: app/src\post_dialog.rs:981
+msgid "Could not set video volume."
+msgstr ""
+
+#: app/src\post_dialog.rs:1026
+msgid "Refreshing comments…"
+msgstr ""
+
+#: app/src\post_dialog.rs:1050
+msgid "Reply to this exact comment"
+msgstr ""
+
+#: app/src\post_dialog.rs:1053
+msgid "&Like / unlike"
+msgstr ""
+
+#: app/src\post_dialog.rs:1054
+msgid "Like this comment, or remove your Like"
+msgstr ""
+
+#: app/src\post_dialog.rs:1056
+msgid "&Copy comment"
+msgstr ""
+
+#: app/src\post_dialog.rs:1056
+msgid "Copy the full comment"
+msgstr ""
+
+#: app/src\post_dialog.rs:1059 app/src\post_dialog.rs:1130
+msgid "Copy &all comments"
+msgstr ""
+
+#: app/src\post_dialog.rs:1060
+msgid "Copy the post and every comment"
+msgstr ""
+
+#: app/src\post_dialog.rs:1064
+msgid "Open comment on &Facebook"
+msgstr ""
+
+#: app/src\post_dialog.rs:1065
+msgid "Open the comment permalink"
+msgstr ""
+
+#: app/src\post_dialog.rs:1071
+msgid "Open the commenter's profile"
+msgstr ""
+
+#: app/src\post_dialog.rs:1076
+msgid "Send the commenter a friend request"
+msgstr ""
+
+#: app/src\post_dialog.rs:1081
+msgid "Comment on the &post"
+msgstr ""
+
+#: app/src\post_dialog.rs:1082
+msgid "Write a new top-level comment"
+msgstr ""
+
+#: app/src\post_dialog.rs:1113
+msgid "Write a comment on this post"
+msgstr ""
+
+#: app/src\post_dialog.rs:1118
+msgid "Share with Facebook's own share dialog"
+msgstr ""
+
+#: app/src\post_dialog.rs:1129
+msgid "Cop&y post text"
+msgstr ""
+
+#: app/src\post_dialog.rs:1185
+msgid "Video loading timed out. Press Play to retry."
+msgstr ""
+
+#: app/src\post_dialog.rs:1310
+#, rust-format
+msgid "Reply to {author}"
+msgstr ""
+
+#: app/src\post_dialog.rs:1366
+#, rust-format
+msgid "{error} Your draft has been kept."
+msgstr ""
+
+#: app/src\post_dialog.rs:1439
+#, rust-format
+msgid "{n} comment loaded."
+msgid_plural "{n} comments loaded."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src\update.rs:44
+msgid "Update to %s"
+msgstr ""
+
+#: app/src\update.rs:45
+msgid "A new version of %s is available. Here's what's new:"
+msgstr ""
+
+#: app/src\update.rs:46
+msgid "&Yes"
+msgstr ""
+
+#: app/src\update.rs:47
+msgid "&No"
+msgstr ""
+
+#: app/src\update.rs:49
+msgid "No release notes provided."
+msgstr ""
+
+#: app/src\update.rs:50
+msgid "%s Update"
+msgstr ""
+
+#: app/src\update.rs:51
+msgid "Downloading update..."
+msgstr ""
+
+#: app/src\update.rs:52
+msgid "Preparing update..."
+msgstr ""
+
+#: app/src\update.rs:54
+msgid "Update Ready"
+msgstr ""
+
+#: app/src\update.rs:55
+msgid "No updates available."
+msgstr ""
+
+#: app/src\update.rs:56
+msgid "No updates available. Latest version: %s"
+msgstr ""
+
+#: app/src\update.rs:57
+msgid "Info"
+msgstr ""
+
+#: app/src\update.rs:58
+msgid "Security verification failed. The update might have been tampered with: %s"
+msgstr ""
+
+#: app/src\update.rs:59
+msgid "Security Error"
+msgstr ""
+
+#: app/src\update.rs:60
+msgid "The update server returned HTTP error %s."
+msgstr ""
+
+#: app/src\update.rs:61
+msgid "Could not reach the update server: %s"
+msgstr ""
+
+#: app/src\update.rs:62
+msgid "Update cancelled."
+msgstr ""
+
+#: app/src\update.rs:63
+msgid "Current version is not a valid semver."
+msgstr ""
+
+#: app/src\update.rs:64
+msgid "Latest release tag is not a valid semver."
+msgstr ""
+
+#: app/src\update.rs:65
+msgid "Latest release does not include downloadable assets."
+msgstr ""
+
+#: app/src\update.rs:66
+msgid "Update is available but no matching download asset or signature was found."
+msgstr ""
+
+#: app/src\update.rs:67
+msgid "Failed to parse release JSON"
+msgstr ""
+
+#: app/src\update.rs:68
+msgid "Invalid public key"
+msgstr ""
+
+#: app/src\update.rs:69
+msgid "Invalid signature"
+msgstr ""
+
+#: app/src\update.rs:70
+msgid "Failed to read signature"
+msgstr ""
+
+#: app/src\update.rs:71
+msgid "Signature verification failed"
+msgstr ""
+
+#: app/src\update.rs:72
+msgid "Failed to create private download directory"
+msgstr ""
+
+#: app/src\update.rs:73
+msgid "Failed to create file"
+msgstr ""
+
+#: app/src\update.rs:74
+msgid "Failed to write file"
+msgstr ""
+
+#: app/src\update.rs:75
+msgid "Failed to read file for verification"
+msgstr ""
+
+#: app/src\update.rs:76
+msgid "Failed to rename verified file"
+msgstr ""
+
+#: crates/core/src\alerts.rs:59
+#, rust-format
+msgid "{view}: {n} new item loaded."
+msgid_plural "{view}: {n} new items loaded."
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/core/src\alerts.rs:69
+#, rust-format
+msgid "{view} loaded. {n} item."
+msgid_plural "{view} loaded. {n} items."
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/core/src\alerts.rs:74 crates/core/src\alerts.rs:76
+#: crates/core/src\debug.rs:48 crates/core/src\debug.rs:50
+#: crates/core/src\i18n.rs:82 crates/core/src\media.rs:41
+#: crates/core/src\media.rs:415 crates/core/src\tray_hotkey.rs:123
+msgid "could not find BlindFB's data folder"
+msgstr ""
+
+#: crates/core/src\alerts.rs:78 crates/core/src\alerts.rs:80
+#: crates/core/src\alerts.rs:83 crates/core/src\debug.rs:52
+#: crates/core/src\debug.rs:54 crates/core/src\debug.rs:57
+#: crates/core/src\i18n.rs:85 crates/core/src\i18n.rs:88
+#: crates/core/src\media.rs:43 crates/core/src\media.rs:46
+#: crates/core/src\tray_hotkey.rs:126 crates/core/src\tray_hotkey.rs:129
+#, rust-format
+msgid "could not save the setting: {error}"
+msgstr ""
+
+#: crates/core/src\alerts.rs:142
+#, rust-format
+msgid "And {n} more."
+msgid_plural "And {n} more."
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/core/src\backend.rs:111 crates/core/src\backend.rs:113
+#: crates/core/src\backend.rs:186
+#, rust-format
+msgid "download failed: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:135 crates/core/src\backend.rs:158
+#, rust-format
+msgid "could not open the backend download: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:139 crates/core/src\backend.rs:161
+#, rust-format
+msgid "could not read the backend download: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:142 crates/core/src\backend.rs:164
+#, rust-format
+msgid "bad backend download: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:148 crates/core/src\backend.rs:170
+#, rust-format
+msgid "could not unpack the backend: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:152 crates/core/src\backend.rs:174
+#, rust-format
+msgid "the backend download did not contain {want}"
+msgstr ""
+
+#: crates/core/src\backend.rs:182
+msgid "no prebuilt backend for this platform"
+msgstr ""
+
+#: crates/core/src\backend.rs:183
+msgid "could not find a place to install the backend"
+msgstr ""
+
+#: crates/core/src\backend.rs:190
+msgid "download failed: no tag in the release response"
+msgstr ""
+
+#: crates/core/src\backend.rs:195
+msgid "download failed: no assets in the release response"
+msgstr ""
+
+#: crates/core/src\backend.rs:208
+msgid "download failed: release has no build for this platform"
+msgstr ""
+
+#: crates/core/src\backend.rs:210
+msgid "download failed: release has no checksums file"
+msgstr ""
+
+#: crates/core/src\backend.rs:215
+msgid "download failed: no checksum for this build"
+msgstr ""
+
+#: crates/core/src\backend.rs:217
+msgid "the backend download failed its checksum — not installing it"
+msgstr ""
+
+#: crates/core/src\backend.rs:225 crates/core/src\media.rs:180
+msgid "bad install path"
+msgstr ""
+
+#: crates/core/src\backend.rs:227 crates/core/src\media.rs:182
+#, rust-format
+msgid "could not create the install folder: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:229
+#, rust-format
+msgid "could not write the backend: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:236
+#, rust-format
+msgid "could not install the backend: {error}"
+msgstr ""
+
+#: crates/core/src\backend.rs:238
+#, rust-format
+msgid "Installed the Facebook backend {version} to {path}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:633
+#, rust-format
+msgid "cannot read {path}: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:637
+#, rust-format
+msgid "cannot back up Local State: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:646
+#, rust-format
+msgid "cannot update Local State: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:655
+#, rust-format
+msgid "{browser} is not installed"
+msgstr ""
+
+#: crates/core/src\browsers.rs:663 crates/core/src\engine.rs:70
+#, rust-format
+msgid "cannot start {browser}: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:704
+#, rust-format
+msgid "{browser} has not run yet — open it once, sign in to Facebook there, then try again"
+msgstr ""
+
+#. TRANSLATORS: {page} is the browser's inspect page address; "Allow remote debugging
+#. for this browser instance" is the browser's own checkbox, in its own language.
+#: crates/core/src\browsers.rs:728
+#, rust-format
+msgid "{browser} did not offer a debugging endpoint — in {page}, tick \"Allow remote debugging for this browser instance\", then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:740
+#, rust-format
+msgid "{browser} is not signed in to Facebook — sign in there first, then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:751
+msgid "this browser has no profile yet; sign in to Facebook there first"
+msgstr ""
+
+#: crates/core/src\browsers.rs:776
+msgid "no signed-in Facebook profile found"
+msgstr ""
+
+#: crates/core/src\browsers.rs:814
+msgid "the cookie database could not be read; close this browser normally and retry"
+msgstr ""
+
+#: crates/core/src\browsers.rs:818
+#, rust-format
+msgid "cookie extraction failed ({code}): {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:827
+#, rust-format
+msgid "Could not import {browser}: {error}. Sign in to Facebook there, or choose a new browser window."
+msgstr ""
+
+#: crates/core/src\browsers.rs:852
+msgid "The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."
+msgstr ""
+
+#: crates/core/src\browsers.rs:867
+msgid "Facebook did not accept the imported session. Choose a new browser window to sign in directly."
+msgstr ""
+
+#: crates/core/src\browsers.rs:963
+msgid "this Firefox profile has no cookie database — sign in to Facebook in Firefox first"
+msgstr ""
+
+#: crates/core/src\browsers.rs:972
+#, rust-format
+msgid "cannot open the Firefox cookie database: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:978
+#, rust-format
+msgid "cannot query the Firefox cookie database: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:994 crates/core/src\browsers.rs:998
+#, rust-format
+msgid "cannot read the Firefox cookies: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1022
+msgid "Firefox is not signed in to Facebook — sign in there first, then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1072
+#, rust-format
+msgid "cannot reach the backend browser: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1079
+#, rust-format
+msgid "cannot talk to the backend browser: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1083
+#, rust-format
+msgid "the backend browser did not answer: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1095
+#, rust-format
+msgid "the backend browser refused {method}: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1108
+msgid "Firefox has not run yet — open it once, sign in to Facebook there, then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1111
+msgid "no Firefox profile found — sign in to Facebook in Firefox first"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1126 crates/core/src\browsers.rs:1128
+#, rust-format
+msgid "download of {url} failed: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1148
+#, rust-format
+msgid "cannot run winget: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1150
+#, rust-format
+msgid "installed via winget ({id})"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1153
+#, rust-format
+msgid "winget could not install {id} (it may have asked for administrator approval)"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1178 crates/core/src\browsers.rs:1190
+#, rust-format
+msgid "cannot save the installer: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1182
+msgid "installer downloaded and started — follow its prompts, then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1183
+#, rust-format
+msgid "cannot start the installer: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1198
+#, rust-format
+msgid "cannot open the installer image: {error}"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1200
+msgid "the installer image did not open"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1215
+#, rust-format
+msgid "{browser} installed to your Applications folder"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1219
+#, rust-format
+msgid "could not copy {browser} into your Applications folder"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1257
+msgid "Chromium has no official Windows installer — install Google Chrome instead"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1287
+msgid "Chromium has no official macOS installer — install Google Chrome instead"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1297
+#, rust-format
+msgid "{package} (from Google's download page)"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1302
+#, rust-format
+msgid "{package} (from Brave's download page)"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1305
+#, rust-format
+msgid "{package} (from Microsoft's download page)"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1311
+#, rust-format
+msgid "installing a browser on Linux needs the administrator — run your package manager to install {package}, then try again"
+msgstr ""
+
+#: crates/core/src\browsers.rs:1316
+msgid "browser installs are not supported on this system"
+msgstr ""
+
+#: crates/core/src\debug.rs:254
+#, rust-format
+msgid "could not save the debug report: {error}"
+msgstr ""
+
+#: crates/core/src\debug.rs:256
+#, rust-format
+msgid ""
+"Saved the debug report to {path}.\n"
+"\n"
+"Send that file to the developer. It holds what BlindFB ran and the errors it got, plus Facebook links you opened or reacted to. It does not hold your post text, messages or PIN."
+msgstr ""
+
+#: crates/core/src\engine.rs:15
+msgid "cannot find BlindFB's browser data folder"
+msgstr ""
+
+#: crates/core/src\engine.rs:34
+#, rust-format
+msgid "cannot create the browser profile: {error}"
+msgstr ""
+
+#: crates/core/src\engine.rs:39
+#, rust-format
+msgid "cannot clear the stopped browser endpoint: {error}"
+msgstr ""
+
+#: crates/core/src\engine.rs:44
+msgid "the selected browser is not installed"
+msgstr ""
+
+#: crates/core/src\engine.rs:82
+#, rust-format
+msgid "{browser} exited before its browser connection was ready: {status}"
+msgstr ""
+
+#: crates/core/src\engine.rs:92
+#, rust-format
+msgid "{browser} did not start its dedicated BlindFB browser within 40 seconds"
+msgstr ""
+
+#: crates/core/src\engine.rs:112
+msgid "BlindFB's dedicated browser did not close; close its window and retry sign-in"
+msgstr ""
+
+#: crates/core/src\fb.rs:168
+msgid "The backend returned unreadable notifications. Refresh to retry."
+msgstr ""
+
+#: crates/core/src\fb.rs:175
+msgid "The backend returned no notification list"
+msgstr ""
+
+#: crates/core/src\fb.rs:207
+msgid "The backend returned no readable notifications. Refresh to retry."
+msgstr ""
+
+#: crates/core/src\fb.rs:282
+msgid "Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."
+msgstr ""
+
+#: crates/core/src\fb.rs:289
+msgid "the backend browser is not running"
+msgstr ""
+
+#: crates/core/src\fb.rs:325 crates/core/src\fb.rs:442
+#: crates/core/src\fb.rs:454
+#, rust-format
+msgid "could not run {program}: {error}"
+msgstr ""
+
+#: crates/core/src\fb.rs:371
+msgid "no dedicated browser selected"
+msgstr ""
+
+#: crates/core/src\fb.rs:401
+msgid "Sign-in was cancelled: the browser window was closed"
+msgstr ""
+
+#. TRANSLATORS: "Backend → Sign in" is a menu path; {error} is the backend's last error.
+#: crates/core/src\fb.rs:418
+#, rust-format
+msgid "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {error}"
+msgstr ""
+
+#: crates/core/src\fb.rs:506
+#, rust-format
+msgid "fb exited with {status}"
+msgstr ""
+
+#. TRANSLATORS: "My posts" is a view name in BlindFB.
+#: crates/core/src\fb.rs:722
+msgid "Facebook accepted your post and is still publishing it. It should appear in My posts soon. You do not need to post it again."
+msgstr ""
+
+#: crates/core/src\fb.rs:725
+msgid "Your post is published."
+msgstr ""
+
+#. TRANSLATORS: "My posts" is a view name in BlindFB.
+#: crates/core/src\fb.rs:735
+msgid "Facebook may have published your post, but BlindFB could not confirm it. Check My posts before posting it again."
+msgstr ""
+
+#: crates/core/src\i18n.rs:172 crates/core/src\i18n.rs:173
+#, rust-format
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/core/src\media.rs:64
+msgid "Invalid video metadata"
+msgstr ""
+
+#: crates/core/src\media.rs:71
+msgid "Invalid video stream URL"
+msgstr ""
+
+#: crates/core/src\media.rs:158
+msgid "the video helper installer was interrupted"
+msgstr ""
+
+#: crates/core/src\media.rs:160
+msgid "could not find a place to install the video helper"
+msgstr ""
+
+#: crates/core/src\media.rs:172
+msgid "no video helper is available for this platform"
+msgstr ""
+
+#: crates/core/src\media.rs:176
+msgid "the video helper has no checksum"
+msgstr ""
+
+#: crates/core/src\media.rs:178
+msgid "the video helper download failed its checksum — not installing it"
+msgstr ""
+
+#: crates/core/src\media.rs:185
+#, rust-format
+msgid "could not write the video helper: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:190
+#, rust-format
+msgid "could not make the video helper executable: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:193
+#, rust-format
+msgid "could not install the video helper: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:311
+#, rust-format
+msgid "could not create a private video helper file: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:315
+#, rust-format
+msgid "could not write the video helper file: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:348
+#, rust-format
+msgid "could not capture the video helper output: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:356
+#, rust-format
+msgid "could not start the video helper: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:367
+#, rust-format
+msgid "could not wait for the video helper: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:369
+msgid "the video helper timed out; try the video again"
+msgstr ""
+
+#: crates/core/src\media.rs:378
+#, rust-format
+msgid "could not read the video helper output: {error}"
+msgstr ""
+
+#: crates/core/src\media.rs:393
+msgid "This video is not on Facebook or a video site BlindFB can play."
+msgstr ""
+
+#: crates/core/src\media.rs:402
+msgid "Videos from other sites play in BlindFB's own player, which this build does not have."
+msgstr ""
+
+#: crates/core/src\media.rs:414
+msgid "could not read your Facebook session for the video helper"
+msgstr ""
+
+#: crates/core/src\media.rs:450
+msgid "no video found"
+msgstr ""
+
+#. TRANSLATORS: {reason} is the video helper's own error, usually in English.
+#: crates/core/src\media.rs:454
+#, rust-format
+msgid "Facebook did not give a playable video. {reason}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:29
+msgid "the managed mpv player is available only on Windows with a local data folder"
+msgstr ""
+
+#: crates/core/src\mpv.rs:33
+msgid "the mpv installer lock was poisoned"
+msgstr ""
+
+#: crates/core/src\mpv.rs:45
+msgid "the mpv download failed its checksum; it was not installed"
+msgstr ""
+
+#: crates/core/src\mpv.rs:48 crates/core/src\mpv.rs:49
+msgid "bad mpv install path"
+msgstr ""
+
+#: crates/core/src\mpv.rs:51
+#, rust-format
+msgid "could not create the mpv install folder: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:56
+msgid "the mpv download did not contain mpv.exe"
+msgstr ""
+
+#: crates/core/src\mpv.rs:62
+#, rust-format
+msgid "could not install mpv: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:68
+#, rust-format
+msgid "could not remove the mpv staging folder: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:80
+#, rust-format
+msgid "could not create the mpv staging folder: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:84
+msgid "could not find an unused mpv staging folder"
+msgstr ""
+
+#: crates/core/src\mpv.rs:89
+#, rust-format
+msgid "could not open the mpv download: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:91
+msgid "unexpected mpv release archive contents"
+msgstr ""
+
+#: crates/core/src\mpv.rs:95
+#, rust-format
+msgid "could not read the mpv download: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:97
+msgid "unexpected mpv bundle name"
+msgstr ""
+
+#: crates/core/src\mpv.rs:102 crates/core/src\mpv.rs:137
+#, rust-format
+msgid "could not read the mpv bundle: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:133
+#, rust-format
+msgid "could not open the mpv bundle: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:140
+#, rust-format
+msgid "bad mpv archive name: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:147
+#, rust-format
+msgid "unsafe path in the mpv bundle: {name}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:151
+msgid "unsafe path in the mpv bundle"
+msgstr ""
+
+#: crates/core/src\mpv.rs:155 crates/core/src\mpv.rs:159
+#, rust-format
+msgid "could not create an mpv folder: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:165
+#, rust-format
+msgid "could not create an mpv file: {error}"
+msgstr ""
+
+#: crates/core/src\mpv.rs:167
+#, rust-format
+msgid "could not unpack mpv: {error}"
+msgstr ""
+
+#: crates/core/src\page_errors.rs:22
+msgid "Ambiguous comment permalink; refresh the post."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:23
+msgid "Duplicate comment identity; refresh the post."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:24
+msgid "Facebook did not confirm the Like. Refresh to check."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:25
+msgid "Facebook did not confirm the reaction. Refresh to check."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:26
+msgid "Facebook did not confirm the share. Check your profile before trying again; do not share again automatically."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:27
+msgid "Facebook did not open its share dialog. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:28
+msgid "Facebook did not show its reactions. Nothing was changed."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:29
+msgid "Facebook has not expanded all text. Refresh the reader to retry."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:30
+msgid "Facebook has not expanded the reel caption. Refresh the reader to retry."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:31
+msgid "Facebook has not expanded the reel caption. Refresh to retry."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:32
+msgid "More than one post dialog is open."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:33
+msgid "More than one post is visible. Open the individual post permalink."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:34
+msgid "No unique comment box on this post. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:35
+msgid "No unique editor inside the selected comment thread. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:36
+msgid "Post changed or reader expired. Refresh or reopen the post."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:37
+msgid "Selected comment changed or disappeared. Refresh and select it again."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:38
+msgid "Selected comment is ambiguous or stale."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:39
+msgid "Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:40
+msgid "The Facebook editor already contains a draft. Nothing was overwritten."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:41
+msgid "The Share now button is missing. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:42
+msgid "The comment editor has no reliable accessible name. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:43
+msgid "The comment editor is ambiguous. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:44
+msgid "The post could not be read."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:45
+msgid "The reel could not be read."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:46
+msgid "The reel's comments could not be opened."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:47
+msgid "The selected comment editor changed. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:48
+msgid "The selected comment has no unique Like button. Nothing was changed."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:49
+msgid "The selected comment has no unique Reply action. Nothing was sent."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:50
+msgid "The share dialog closed. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:51
+msgid "The share dialog has no unique text box. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:52
+msgid "The share text box already contains text. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:53
+msgid "The share text box is ambiguous. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:54
+msgid "The share text did not match. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:55
+msgid "The video comments could not be opened."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:56
+msgid "There is no pending submission."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:57
+msgid "This post has no unique Share button. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:58
+msgid "This reel has no Like button. Nothing was changed."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:59
+msgid "This reel has no unique Comment button."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:60
+msgid "This reel has no unique React button. Nothing was changed."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:61
+msgid "This reels list expired. Refresh it to continue."
+msgstr ""
+
+#: crates/core/src\page_errors.rs:62
+msgid "Unknown reaction. Nothing was changed."
+msgstr ""
+
+#: crates/core/src\posts.rs:94
+#, rust-format
+msgid "Invalid post detail: {field} must be text"
+msgstr ""
+
+#: crates/core/src\posts.rs:101
+#, rust-format
+msgid "Invalid post detail: {field}"
+msgstr ""
+
+#: crates/core/src\posts.rs:132
+msgid "The post reader returned invalid JSON"
+msgstr ""
+
+#: crates/core/src\posts.rs:137
+msgid "Invalid post detail: comments must be a list"
+msgstr ""
+
+#: crates/core/src\posts.rs:143
+msgid "Invalid post detail: empty or duplicate comment identity"
+msgstr ""
+
+#: crates/core/src\posts.rs:172
+msgid "Invalid post detail: cyclic comment thread"
+msgstr ""
+
+#: crates/core/src\posts.rs:176
+msgid "Invalid post detail: missing parent comment"
+msgstr ""
+
+#: crates/core/src\posts.rs:344
+msgid "This item has no supported Facebook post URL. Refresh the list and open the post again."
+msgstr ""
+
+#: crates/core/src\posts.rs:424
+msgid "Enter a comment before sending"
+msgstr ""
+
+#: crates/core/src\posts.rs:437
+msgid "Could not identify the selected comment editor"
+msgstr ""
+
+#: crates/core/src\posts.rs:444
+msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically."
+msgstr ""
+
+#: crates/core/src\posts.rs:448
+#, rust-format
+msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}"
+msgstr ""
+
+#: crates/core/src\posts.rs:494 crates/core/src\posts.rs:498
+msgid "Could not read Facebook's share audience. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\posts.rs:511
+msgid "Could not identify the share text box. Nothing was shared."
+msgstr ""
+
+#: crates/core/src\reels.rs:26
+#, rust-format
+msgid "Reels from {author}"
+msgstr ""
+
+#: crates/core/src\reels.rs:67
+msgid "Facebook returned an unreadable reels list"
+msgstr ""
+
+#: crates/core/src\reels.rs:70
+msgid "Facebook returned no reels list"
+msgstr ""
+
+#: crates/core/src\reels.rs:77
+msgid "Facebook returned an invalid reel link"
+msgstr ""
+
+#: crates/core/src\reels.rs:86
+msgid "Reel"
+msgstr ""
+
+#: crates/core/src\reels.rs:186
+msgid "Reel loading was interrupted. Refresh to retry."
+msgstr ""
+
+#: crates/core/src\reels.rs:190
+msgid "Reel loading was interrupted"
+msgstr ""
+
+#: crates/core/src\reels.rs:193
+msgid "This older reels list expired. Refresh it to load more."
+msgstr ""
+
+#: crates/core/src\reels.rs:234
+msgid "This notification has no valid reel link"
+msgstr ""
+
+#: crates/core/src\reels.rs:251
+msgid "Could not read the notification's reels"
+msgstr ""
+
+#: crates/core/src\reels.rs:283
+#, rust-format
+msgid "Reel {number}"
+msgstr ""
+
+#: crates/core/src\reels.rs:284
+#, rust-format
+msgid "Reel {number}. Preview unavailable; open this reel to retry."
+msgstr ""
+
+#: crates/core/src\reels.rs:318
+msgid "Facebook did not expose the other reels or the account's reels page"
+msgstr ""
+
+#: crates/core/src\reels.rs:322
+#, rust-format
+msgid "Facebook did not expose the exact set. Showing {author}'s reels instead."
+msgstr ""
+
+#: crates/core/src\tray_hotkey.rs:82
+msgid "Off (no hotkey)"
+msgstr "Väljas (ilma klahvita)"

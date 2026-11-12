@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.40 - 2026-11-12
+
+Six requests from the feedback mail: Ctrl+C copies the selected
+comment, Ctrl+Shift+C copies the post and all comments, and
+Ctrl+Enter opens the first link in a comment (the Links list already
+did this via Tab). The feed's item menu now offers Group's posts on a
+group post, opening the group's own posts view instead of resolving
+the author and failing. The video volume slider is remembered across
+videos and launches. Sound alerts for new notifications and unread
+chats were already shipped (View > Sound alerts). Help > Language
+adds Russian and Estonian starter catalogs; untranslated strings fall
+back to English, and `cargo xtask i18n` now refreshes every catalog
+under `app/locale`. No backend changes, so no facebook-cli PR.
+
 ## v0.7.39 - 2026-11-12
 
 The show/hide hotkey is now Alt+Ctrl+F and can be changed: File >

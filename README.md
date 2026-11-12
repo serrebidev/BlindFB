@@ -31,6 +31,8 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - OCR an image file with the OCR engine built into your operating system.
 - F1 lists the keyboard commands; Ctrl+1 to Ctrl+9 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
 - Alt+Ctrl+F hides BlindFB to the system tray and brings it back. File > Show/hide hotkey changes the shortcut (or turns it off); the new one applies right away.
+- In the post reader, Ctrl+C copies the selected comment, Ctrl+Shift+C copies the post and all comments, and Ctrl+Enter opens the first link in the comment. The feed also offers Group's posts on group posts.
+- The video volume is remembered between videos and launches, and Help > Language offers Russian and Estonian alongside French (untranslated strings fall back to English).
 - Help, Check for updates downloads the new release, verifies its minisign signature, installs it and restarts.
 
 Some things the `fb` backend cannot do are linked out instead of faked: voice and video calls open the conversation in Messenger on the web, adding or removing friends opens the person's real profile, and posting into a group opens the group's web page. Photo albums open in your browser. A few feed rows (often ads and suggestions) never expose a link to Facebook's own scripts; BlindFB marks those "(no link)" and cannot open them.
