@@ -3,7 +3,7 @@ resolver = "2"
 members = ["app", "crates/core", "xtask"]
 
 [workspace.package]
-version = "0.7.40"
+version = "0.7.41"
 edition = "2021"
 license = "MIT"
 repository = "https://git.serrebiradio.com/serrebi/BlindFB"
@@ -14,5 +14,5 @@ lto = "thin"
 [patch.crates-io]
 # ntfs 0.4.0 on crates.io pulls binrw code rejected by newer Rust compilers.
 ntfs = { git = "https://github.com/ColinFinck/ntfs", rev = "47ae0168f6c607208b27c61ed89b4ffac9a3c99a" }
-# ship-shape fork: configurable API base URL for Forgejo-hosted releases (upstream: accessware/ship-shape).
-ship-shape = { git = "https://git.serrebiradio.com/serrebi/ship-shape", rev = "2faa5e8047a0551fefb921fe6aecacdfbbc834fa" }
+# ship-shape fork: Forgejo API base URL, GitHub fallback source, sturdier Windows zip install (upstream: accessware/ship-shape).
+ship-shape = { git = "https://git.serrebiradio.com/serrebi/ship-shape", rev = "a02488d9df6a824675d77855bfe193703872c2ee" }

@@ -1,5 +1,6 @@
 //! In-app updates: ship-shape against this repository's Forgejo Releases, verified with
-//! minisign.
+//! minisign. The GitHub mirror (serrebidev/BlindFB, synced from Forgejo) is the backup source
+//! when Forgejo is down or a download from it fails.
 //!
 //! The public key below is the one `cargo xtask minisign-key` made; its secret half signs
 //! every release asset and lives in the `MINISIGN_KEY` secret, never in git.
@@ -23,7 +24,8 @@ pub fn check(parent: &dyn WxWidget, trigger: CheckTrigger) {
     )
     .with_commit(env!("BLINDFB_COMMIT_HASH"))
     .with_install_kind(InstallKind::Portable)
-    .with_api_base_url("https://git.serrebiradio.com/api/v1");
+    .with_api_base_url("https://git.serrebiradio.com/api/v1")
+    .with_fallback("https://api.github.com", "serrebidev/BlindFB");
     // macOS publishes one disk image per architecture, so the name carries the suffix there.
     #[cfg(target_os = "macos")]
     let config = config.with_asset_suffix(if cfg!(target_arch = "aarch64") {

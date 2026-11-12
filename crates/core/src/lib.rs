@@ -20,6 +20,7 @@ pub mod page_errors;
 pub mod mpv;
 pub mod posts;
 pub mod reels;
+pub mod shortcuts;
 pub mod tray_hotkey;
 
 pub use fb::{parse_records, Fb, Record};

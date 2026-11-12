@@ -5,1306 +5,1302 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BlindFB\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 11:39-0700\n"
+"POT-Creation-Date: 2026-11-12 13:40-0700\n"
 "Language: et\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: app/src\chat_dialog.rs:85 app/src\main.rs:184 app/src\post_dialog.rs:35
+#: app/src\chat_dialog.rs:85 app/src\main.rs:186 app/src\post_dialog.rs:36
 msgid "Like"
 msgstr "Meeldib"
 
-#: app/src\chat_dialog.rs:86 app/src\main.rs:185 app/src\post_dialog.rs:36
+#: app/src\chat_dialog.rs:86 app/src\main.rs:187 app/src\post_dialog.rs:37
 msgid "Love"
 msgstr "Armas"
 
-#: app/src\chat_dialog.rs:87 app/src\main.rs:186 app/src\post_dialog.rs:37
+#: app/src\chat_dialog.rs:87 app/src\main.rs:188 app/src\post_dialog.rs:38
 msgid "Care"
 msgstr "Hooliv"
 
-#: app/src\chat_dialog.rs:88 app/src\main.rs:187 app/src\post_dialog.rs:38
+#: app/src\chat_dialog.rs:88 app/src\main.rs:189 app/src\post_dialog.rs:39
 msgid "Haha"
 msgstr "Haha"
 
-#: app/src\chat_dialog.rs:89 app/src\main.rs:188 app/src\post_dialog.rs:39
+#: app/src\chat_dialog.rs:89 app/src\main.rs:190 app/src\post_dialog.rs:40
 msgid "Wow"
 msgstr "Vau"
 
-#: app/src\chat_dialog.rs:90 app/src\main.rs:189 app/src\post_dialog.rs:40
+#: app/src\chat_dialog.rs:90 app/src\main.rs:191 app/src\post_dialog.rs:41
 msgid "Sad"
 msgstr "Kurb"
 
-#: app/src\chat_dialog.rs:91 app/src\main.rs:190 app/src\post_dialog.rs:41
+#: app/src\chat_dialog.rs:91 app/src\main.rs:192 app/src\post_dialog.rs:42
 msgid "Angry"
 msgstr "Vihane"
 
 #: app/src\chat_dialog.rs:158
 msgid "Sending…"
-msgstr ""
+msgstr "Saatmine…"
 
 #: app/src\chat_dialog.rs:187
 msgid "Message copied."
-msgstr ""
+msgstr "Sõnum kopeeritud."
 
-#: app/src\chat_dialog.rs:189 app/src\post_dialog.rs:231
-#: app/src\post_dialog.rs:262
+#: app/src\chat_dialog.rs:189 app/src\post_dialog.rs:232 app/src\post_dialog.rs:263
 msgid "Could not copy."
 msgstr "Kopeerimine ebaõnnestus."
 
-#: app/src\chat_dialog.rs:197 app/src\main.rs:4503
+#: app/src\chat_dialog.rs:197 app/src\main.rs:4525
 msgid "Reply cancelled. Your next message sends normally."
-msgstr ""
+msgstr "Vastamine tühistatud. Järgmine sõnum saadetakse tavaliselt."
 
-#: app/src\chat_dialog.rs:201 app/src\main.rs:4507
+#: app/src\chat_dialog.rs:201 app/src\main.rs:4529
 msgid "That message has no text to reply to."
-msgstr ""
+msgstr "Selles sõnumis pole teksti, millele vastata."
 
 #: app/src\chat_dialog.rs:206
 #, rust-format
 msgid "Replying to: {text}. Write your reply and send as usual."
-msgstr ""
+msgstr "Vastus sõnumile: {text}. Kirjuta vastus ja saada nagu tavaliselt."
 
-#: app/src\chat_dialog.rs:217 app/src\main.rs:4523
+#: app/src\chat_dialog.rs:217 app/src\main.rs:4545
 msgid "That message has no text to react to."
-msgstr ""
+msgstr "Selles sõnumis pole teksti, millele reageerida."
 
-#: app/src\chat_dialog.rs:227 app/src\main.rs:4531
+#: app/src\chat_dialog.rs:227 app/src\main.rs:4553
 #, rust-format
 msgid "Reacting {reaction} to: {text}"
-msgstr ""
+msgstr "Reaktsioon {reaction} sõnumile: {text}"
 
 #: app/src\chat_dialog.rs:239
 msgid "A chat window is already open. Close it to open another chat."
-msgstr ""
+msgstr "Vestlusaken on juba avatud. Sulge see, et avada teine vestlus."
 
 #: app/src\chat_dialog.rs:243
 msgid "This chat row has no name or link, so its window cannot open."
-msgstr ""
+msgstr "Sellel vestluse real pole nime ega linki, nii et akent ei saa avada."
 
 #: app/src\chat_dialog.rs:248
 #, rust-format
 msgid "Group chat: {name}"
-msgstr ""
+msgstr "Grupivestlus: {name}"
 
 #: app/src\chat_dialog.rs:250
 #, rust-format
 msgid "Chat: {name}"
-msgstr ""
+msgstr "Vestlus: {name}"
 
 #: app/src\chat_dialog.rs:258
 msgid "&Messages"
-msgstr ""
+msgstr "&Sõnumid"
 
 #: app/src\chat_dialog.rs:260
 msgid "Messages in this chat, oldest first"
-msgstr ""
+msgstr "Selle vestluse sõnumid, vanimad enne"
 
 #: app/src\chat_dialog.rs:261
 msgid "Load &more"
-msgstr ""
+msgstr "Laadi &veel"
 
-#: app/src\chat_dialog.rs:262 app/src\post_dialog.rs:841
+#: app/src\chat_dialog.rs:262 app/src\main.rs:1669 app/src\post_dialog.rs:847
 msgid "&Refresh"
-msgstr ""
+msgstr "&Värskenda"
 
 #: app/src\chat_dialog.rs:263
 msgid "Me&ssage"
-msgstr ""
+msgstr "Sõ&num"
 
 #: app/src\chat_dialog.rs:267
 #, rust-format
 msgid "Message to {name}. Enter sends"
-msgstr ""
+msgstr "Sõnum kasutajale {name}. Enter saadab"
 
 #: app/src\chat_dialog.rs:268
 msgid "Attach &files"
-msgstr ""
+msgstr "Lisa &failid"
 
 #: app/src\chat_dialog.rs:269
 msgid "A&ttachments…"
-msgstr ""
+msgstr "&Manused…"
 
 #: app/src\chat_dialog.rs:270
 msgid "Attachments. Review or remove attached files"
-msgstr ""
+msgstr "Manused. Vaata üle või eemalda lisatud failid"
 
 #: app/src\chat_dialog.rs:271
 msgid "&Send"
-msgstr ""
+msgstr "&Saada"
 
 #: app/src\chat_dialog.rs:273 app/src\chat_dialog.rs:278
 msgid "Chat status"
-msgstr ""
+msgstr "Vestluse olek"
 
 #: app/src\chat_dialog.rs:280
 msgid "Loading messages…"
-msgstr ""
+msgstr "Sõnumite laadimine…"
 
-#: app/src\chat_dialog.rs:283 app/src\group_dialog.rs:175 app/src\main.rs:4398
-#: app/src\post_dialog.rs:845
+#: app/src\chat_dialog.rs:283 app/src\group_dialog.rs:175 app/src\main.rs:4420 app/src\post_dialog.rs:851 app/src\shortcuts_dialog.rs:211
 msgid "C&lose"
-msgstr ""
+msgstr "&Sulge"
 
-#: app/src\chat_dialog.rs:329 app/src\main.rs:4982
+#: app/src\chat_dialog.rs:329 app/src\main.rs:5013
 msgid "Cancel &reply"
-msgstr ""
+msgstr "Tühista &vastus"
 
-#: app/src\chat_dialog.rs:331 app/src\main.rs:4982 app/src\post_dialog.rs:1050
+#: app/src\chat_dialog.rs:331 app/src\main.rs:5013 app/src\post_dialog.rs:1057
 msgid "&Reply"
-msgstr ""
+msgstr "&Vasta"
 
 #: app/src\chat_dialog.rs:333
 msgid "Quote this message in your next send"
-msgstr ""
+msgstr "Tsiteeri seda sõnumit järgmises saadetises"
 
-#: app/src\chat_dialog.rs:337 app/src\main.rs:4997
+#: app/src\chat_dialog.rs:337 app/src\main.rs:5028
 msgid "Cop&y message"
-msgstr ""
+msgstr "&Kopeeri sõnum"
 
 #: app/src\chat_dialog.rs:338
 msgid "Copy the message text"
-msgstr ""
+msgstr "Kopeeri sõnumi tekst"
 
-#: app/src\chat_dialog.rs:349 app/src\main.rs:4993
+#: app/src\chat_dialog.rs:349 app/src\main.rs:5024
 msgid "Re&act"
-msgstr ""
+msgstr "Re&ageeri"
 
-#: app/src\chat_dialog.rs:349 app/src\main.rs:4993
+#: app/src\chat_dialog.rs:349 app/src\main.rs:5024
 msgid "React to this message"
-msgstr ""
+msgstr "Reageeri sellele sõnumile"
 
 #: app/src\chat_dialog.rs:372
 msgid "Refreshing…"
-msgstr ""
+msgstr "Värskendamine…"
 
 #: app/src\chat_dialog.rs:381
 msgid "Loading more…"
-msgstr ""
+msgstr "Laadin veel…"
 
-#: app/src\chat_dialog.rs:388 app/src\main.rs:4439
+#: app/src\chat_dialog.rs:388 app/src\main.rs:4461
 msgid "No files are attached."
-msgstr ""
+msgstr "Faile pole lisatud."
 
-#: app/src\chat_dialog.rs:394 app/src\chat_dialog.rs:405 app/src\main.rs:4353
-#: app/src\main.rs:4446
+#: app/src\chat_dialog.rs:394 app/src\chat_dialog.rs:405 app/src\main.rs:4375 app/src\main.rs:4468
 #, rust-format
 msgid "{n} file attached"
 msgid_plural "{n} files attached"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} fail lisatud"
+msgstr[1] "{n} faili lisatud"
 
 #: app/src\chat_dialog.rs:460
 #, rust-format
 msgid "{name}: {n} message."
 msgid_plural "{name}: {n} messages."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{name}: {n} sõnum."
+msgstr[1] "{name}: {n} sõnumit."
 
 #: app/src\chat_dialog.rs:470
 msgid "Messenger is locked. Close this window and use Chat, Unlock encrypted chats, then reopen the chat."
-msgstr ""
+msgstr "Messenger on lukus. Sulge see aken, vali Vestlus, Ava krüptitud vestlused, seejärel ava vestlus uuesti."
 
 #: app/src\chat_dialog.rs:473
 #, rust-format
 msgid "Messages could not load: {error}"
-msgstr ""
+msgstr "Sõnumeid ei õnnestunud laadida: {error}"
 
 #: app/src\chat_dialog.rs:492
 msgid "Message sent."
-msgstr ""
+msgstr "Sõnum saadetud."
 
 #: app/src\chat_dialog.rs:499
 #, rust-format
 msgid "Could not send: {error} Your attachments are kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
-msgstr ""
+msgstr "Saatmine ebaõnnestus: {error} Manused jäid alles. Nupuga Manused saad faili eemaldada, näiteks üle Messengeri 25 MB piiri."
 
 #: app/src\chat_dialog.rs:503
 #, rust-format
 msgid "Could not send: {error}"
-msgstr ""
+msgstr "Saatmine ebaõnnestus: {error}"
 
 #: app/src\group_dialog.rs:98 app/src\group_dialog.rs:239
 msgid "This member row has no profile link."
-msgstr ""
+msgstr "Sellel liikme real pole profiili linki."
 
 #: app/src\group_dialog.rs:100
 msgid "This member row has no name, so its chat cannot open."
-msgstr ""
+msgstr "Sellel liikme real pole nime, nii et vestlust ei saa avada."
 
 #: app/src\group_dialog.rs:105
 msgid "This member row has no profile link, so a friend request cannot be sent."
-msgstr ""
+msgstr "Sellel liikme real pole profiili linki, nii et sõbrakutset ei saa saata."
 
-#: app/src\group_dialog.rs:108 app/src\main.rs:4153
+#: app/src\group_dialog.rs:108 app/src\main.rs:4175
 #, rust-format
 msgid "Sending a friend request to {name}…"
-msgstr ""
+msgstr "Sõbrakutse saatmine kasutajale {name}…"
 
 #: app/src\group_dialog.rs:117
 msgid "This member row has no link to open."
-msgstr ""
+msgstr "Sellel liikme real pole linki, mida avada."
 
 #: app/src\group_dialog.rs:140
 msgid "A group window is already open. Close it to open another group."
-msgstr ""
+msgstr "Grupi aken on juba avatud. Sulge see, et avada teine grupp."
 
 #: app/src\group_dialog.rs:146
 msgid "This group row has no link, so its window cannot open."
-msgstr ""
+msgstr "Sellel grupi real pole linki, nii et akent ei saa avada."
 
 #: app/src\group_dialog.rs:150
 #, rust-format
 msgid "Group: {name}"
-msgstr ""
+msgstr "Grupp: {name}"
 
 #: app/src\group_dialog.rs:156
 msgid "&Posts"
-msgstr ""
+msgstr "&Postitused"
 
 #: app/src\group_dialog.rs:158
 msgid "Posts in this group. Enter opens the selected post"
-msgstr ""
+msgstr "Selle grupi postitused. Enter avab valitud postituse"
 
 #: app/src\group_dialog.rs:159
 msgid "&Members"
-msgstr ""
+msgstr "&Liikmed"
 
 #: app/src\group_dialog.rs:162
 msgid "Members of this group. Applications or Shift+F10 for profile, message and friend actions"
-msgstr ""
+msgstr "Selle grupi liikmed. Applications või Shift+F10 profiili, sõnumi ja sõbraks lisamise jaoks"
 
 #: app/src\group_dialog.rs:165 app/src\group_dialog.rs:170
 msgid "Group status"
-msgstr ""
+msgstr "Grupi olek"
 
 #: app/src\group_dialog.rs:172
 msgid "Loading posts and members…"
-msgstr ""
+msgstr "Postituste ja liikmete laadimine…"
 
-#: app/src\group_dialog.rs:256 app/src\post_dialog.rs:1070
+#: app/src\group_dialog.rs:256 app/src\post_dialog.rs:1077
 msgid "View &profile"
-msgstr ""
+msgstr "Vaata &profiili"
 
 #: app/src\group_dialog.rs:257
 msgid "Open this member's profile"
-msgstr ""
+msgstr "Ava selle liikme profiil"
 
-#: app/src\group_dialog.rs:261 app/src\main.rs:4873 app/src\main.rs:4965
-#: app/src\main.rs:5026
+#: app/src\group_dialog.rs:261 app/src\main.rs:4904 app/src\main.rs:4996 app/src\main.rs:5057
 msgid "&Message"
-msgstr ""
+msgstr "&Sõnum"
 
 #: app/src\group_dialog.rs:262
 msgid "Chat with this member"
-msgstr ""
+msgstr "Vestle selle liikmega"
 
-#: app/src\group_dialog.rs:266 app/src\main.rs:4874 app/src\main.rs:5007
-#: app/src\main.rs:5027 app/src\post_dialog.rs:1075
+#: app/src\group_dialog.rs:266 app/src\main.rs:4905 app/src\main.rs:5038 app/src\main.rs:5058 app/src\post_dialog.rs:1082
 msgid "Add &friend"
-msgstr ""
+msgstr "Lisa &sõbraks"
 
 #: app/src\group_dialog.rs:267
 msgid "Send this member a friend request"
-msgstr ""
+msgstr "Saada sellele liikmele sõbrakutse"
 
 #: app/src\group_dialog.rs:271
 msgid "Open on &Facebook"
-msgstr ""
+msgstr "Ava &Facebookis"
 
 #: app/src\group_dialog.rs:272
 msgid "Open this member's profile on the web"
-msgstr ""
+msgstr "Ava selle liikme profiil veebis"
 
 #: app/src\group_dialog.rs:327
 msgid "This post row has no link, so it cannot be opened."
-msgstr ""
+msgstr "Sellel postituse real pole linki, nii et seda ei saa avada."
 
 #: app/src\group_dialog.rs:338
 #, rust-format
 msgid "{n} post so far"
 msgid_plural "{n} posts so far"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Seni {n} postitus"
+msgstr[1] "Seni {n} postitust"
 
 #: app/src\group_dialog.rs:340
 #, rust-format
 msgid "{n} post"
 msgid_plural "{n} posts"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} postitus"
+msgstr[1] "{n} postitust"
 
 #: app/src\group_dialog.rs:343
 msgid "posts loading"
-msgstr ""
+msgstr "postitused laadivad"
 
 #: app/src\group_dialog.rs:348
 #, rust-format
 msgid "first {cap} members (list capped)"
-msgstr ""
+msgstr "esimesed {cap} liiget (loend on piiratud)"
 
 #: app/src\group_dialog.rs:350
 #, rust-format
 msgid "{n} member so far"
 msgid_plural "{n} members so far"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Seni {n} liige"
+msgstr[1] "Seni {n} liiget"
 
 #: app/src\group_dialog.rs:352
 #, rust-format
 msgid "{n} member"
 msgid_plural "{n} members"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} liige"
+msgstr[1] "{n} liiget"
 
 #: app/src\group_dialog.rs:355
 msgid "members loading"
-msgstr ""
+msgstr "liikmed laadivad"
 
 #: app/src\group_dialog.rs:359
 #, rust-format
 msgid "{group}: {posts} · {members}."
-msgstr ""
+msgstr "{group}: {posts} · {members}."
 
 #: app/src\group_dialog.rs:482
 #, rust-format
 msgid "Posts could not load: {error}"
-msgstr ""
+msgstr "Postitusi ei õnnestunud laadida: {error}"
 
 #: app/src\group_dialog.rs:510
 #, rust-format
 msgid "Members could not load: {error}"
-msgstr ""
-
-#: app/src\main.rs:145
-msgid "React: like"
-msgstr ""
-
-#: app/src\main.rs:146
-msgid "React: love"
-msgstr ""
+msgstr "Liikmeid ei õnnestunud laadida: {error}"
 
 #: app/src\main.rs:147
-msgid "React: care"
-msgstr ""
+msgid "React: like"
+msgstr "Reaktsioon: meeldib"
 
 #: app/src\main.rs:148
-msgid "React: haha"
-msgstr ""
+msgid "React: love"
+msgstr "Reaktsioon: armas"
 
 #: app/src\main.rs:149
-msgid "React: wow"
-msgstr ""
+msgid "React: care"
+msgstr "Reaktsioon: hooliv"
 
 #: app/src\main.rs:150
-msgid "React: sad"
-msgstr ""
+msgid "React: haha"
+msgstr "Reaktsioon: haha"
 
 #: app/src\main.rs:151
-msgid "React: angry"
-msgstr ""
+msgid "React: wow"
+msgstr "Reaktsioon: vau"
 
 #: app/src\main.rs:152
-msgid "React: none"
-msgstr ""
+msgid "React: sad"
+msgstr "Reaktsioon: kurb"
 
-#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:162
-msgid "like"
-msgstr ""
+#: app/src\main.rs:153
+msgid "React: angry"
+msgstr "Reaktsioon: vihane"
+
+#: app/src\main.rs:154
+msgid "React: none"
+msgstr "Reaktsioon: puudub"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:164
-msgid "love"
-msgstr ""
+msgid "like"
+msgstr "meeldib"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:166
-msgid "care"
-msgstr ""
+msgid "love"
+msgstr "armas"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:168
-msgid "haha"
-msgstr ""
+msgid "care"
+msgstr "hooliv"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:170
-msgid "wow"
-msgstr ""
+msgid "haha"
+msgstr "haha"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:172
-msgid "sad"
-msgstr ""
+msgid "wow"
+msgstr "vau"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
 #: app/src\main.rs:174
+msgid "sad"
+msgstr "kurb"
+
+#. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
+#: app/src\main.rs:176
 msgid "angry"
-msgstr ""
+msgstr "vihane"
 
 #. TRANSLATORS: the choice that removes your reaction, in a list of reactions.
-#: app/src\main.rs:176
+#: app/src\main.rs:178
 msgid "none"
-msgstr ""
+msgstr "puudub"
 
-#: app/src\main.rs:191 app/src\post_dialog.rs:42
+#: app/src\main.rs:193 app/src\post_dialog.rs:43
 msgid "Remove reaction"
 msgstr "Eemalda reaktsioon"
 
-#: app/src\main.rs:256 app/src\main.rs:621
+#: app/src\main.rs:258 app/src\main.rs:623
 msgid "News feed"
 msgstr "Uudisvoog"
 
-#: app/src\main.rs:257 app/src\main.rs:627
+#: app/src\main.rs:259 app/src\main.rs:629
 msgid "Feeds (most recent)"
-msgstr ""
+msgstr "Vood (uusimad)"
 
-#: app/src\main.rs:259 app/src\main.rs:622
+#: app/src\main.rs:261 app/src\main.rs:624
 msgid "Notifications"
 msgstr "Märguanded"
 
-#: app/src\main.rs:260 app/src\main.rs:623 app/src\main.rs:5084
-#: app/src\main.rs:5356
+#: app/src\main.rs:262 app/src\main.rs:625 app/src\main.rs:5115 app/src\main.rs:5387
 msgid "Friends"
 msgstr "Sõbrad"
 
-#: app/src\main.rs:261 app/src\main.rs:624
+#: app/src\main.rs:263 app/src\main.rs:626
 msgid "My posts"
 msgstr "Minu postitused"
 
-#: app/src\main.rs:262 app/src\main.rs:625
+#: app/src\main.rs:264 app/src\main.rs:627
 msgid "Chats"
 msgstr "Vestlused"
 
-#: app/src\main.rs:263
+#: app/src\main.rs:265
 msgid "My groups"
 msgstr "Minu grupid"
 
-#: app/src\main.rs:264 app/src\main.rs:629 app/src\main.rs:5363
+#: app/src\main.rs:266 app/src\main.rs:631 app/src\main.rs:5394
 msgid "Marketplace"
 msgstr "Marketplace"
 
-#: app/src\main.rs:265 app/src\main.rs:630 app/src\main.rs:5362
+#: app/src\main.rs:267 app/src\main.rs:632 app/src\main.rs:5393
 msgid "Events"
 msgstr "Sündmused"
 
-#: app/src\main.rs:266 app/src\main.rs:631 app/src\main.rs:5359
+#: app/src\main.rs:268 app/src\main.rs:633 app/src\main.rs:5390
 msgid "Pages"
 msgstr "Lehed"
 
-#: app/src\main.rs:267 app/src\main.rs:632 app/src\main.rs:5360
+#: app/src\main.rs:269 app/src\main.rs:634 app/src\main.rs:5391
 msgid "Places"
 msgstr "Kohad"
 
-#: app/src\main.rs:268
+#: app/src\main.rs:270
 msgid "Search results"
 msgstr "Otsingutulemused"
 
-#: app/src\main.rs:269 crates/core/src\i18n.rs:162
+#: app/src\main.rs:271 crates/core/src\i18n.rs:162
 #, rust-format
 msgid "Posts by {who}"
 msgstr "Postitused kasutajalt {who}"
 
-#: app/src\main.rs:270
+#: app/src\main.rs:272
 #, rust-format
 msgid "Posts in group {group}"
 msgstr "Grupi {group} postitused"
 
-#: app/src\main.rs:271 app/src\post_dialog.rs:762
+#: app/src\main.rs:273 app/src\post_dialog.rs:763
 msgid "Post and comments"
 msgstr "Postitus ja kommentaarid"
 
-#: app/src\main.rs:272
+#: app/src\main.rs:274
 #, rust-format
 msgid "Profile of {who}"
-msgstr ""
+msgstr "Profiil: {who}"
 
-#: app/src\main.rs:273
+#: app/src\main.rs:275
 #, rust-format
 msgid "Chat with {name}"
-msgstr ""
-
-#: app/src\main.rs:608
-msgid "Ready. Pick a view to start."
-msgstr ""
+msgstr "Vestlus kasutajaga {name}"
 
 #: app/src\main.rs:610
+msgid "Ready. Pick a view to start."
+msgstr "Valmis. Alustamiseks vali vaade."
+
+#: app/src\main.rs:612
 msgid "Setting up the Facebook backend…"
-msgstr ""
+msgstr "Facebooki mooduli seadistamine…"
 
-#: app/src\main.rs:618
+#: app/src\main.rs:620
 msgid "Views"
-msgstr ""
+msgstr "Vaated"
 
-#: app/src\main.rs:626 app/src\main.rs:5361
+#: app/src\main.rs:628 app/src\main.rs:5392
 msgid "Groups"
 msgstr "Grupid"
 
-#: app/src\main.rs:628 crates/core/src\reels.rs:25
+#: app/src\main.rs:630 crates/core/src\reels.rs:25
 msgid "Reels"
-msgstr ""
+msgstr "Reels"
 
-#: app/src\main.rs:638
+#: app/src\main.rs:640
 msgid "Items"
-msgstr ""
+msgstr "Üksused"
 
-#: app/src\main.rs:644
+#: app/src\main.rs:646
 msgid "Lin&ks in selected item"
-msgstr ""
-
-#: app/src\main.rs:649
-msgid "Links in selected item. Enter opens the selected link in your browser"
-msgstr ""
+msgstr "Valitud üksuse lin&gid"
 
 #: app/src\main.rs:651
+msgid "Links in selected item. Enter opens the selected link in your browser"
+msgstr "Valitud üksuse lingid. Enter avab valitud lingi brauseris"
+
+#: app/src\main.rs:653
 msgid "Open selected &link"
-msgstr ""
+msgstr "Ava valitud &link"
 
-#: app/src\main.rs:655
+#: app/src\main.rs:657
 msgid "Details"
-msgstr ""
-
-#: app/src\main.rs:662
-msgid "Refresh (F5)"
-msgstr ""
+msgstr "Üksikasjad"
 
 #: app/src\main.rs:664
+msgid "Refresh (F5)"
+msgstr "Värskenda (F5)"
+
+#: app/src\main.rs:666
 msgid "Open / read full post and links"
-msgstr ""
+msgstr "Ava / loe kogu postitus ja lingid"
 
-#: app/src\main.rs:666 app/src\main.rs:4038 app/src\main.rs:4044
-#: app/src\main.rs:4789
+#: app/src\main.rs:668 app/src\main.rs:4060 app/src\main.rs:4066 app/src\main.rs:4820
 msgid "React"
-msgstr ""
+msgstr "Reageeri"
 
-#: app/src\main.rs:667 app/src\main.rs:4069 app/src\main.rs:4076
+#: app/src\main.rs:669 app/src\main.rs:4091 app/src\main.rs:4098
 msgid "Comment"
 msgstr "Kommenteeri"
 
-#: app/src\main.rs:668
+#: app/src\main.rs:670
 msgid "Profile"
-msgstr ""
+msgstr "Profiil"
 
-#: app/src\main.rs:669 app/src\main.rs:5354
+#: app/src\main.rs:671 app/src\main.rs:5385
 msgid "Posts"
-msgstr ""
+msgstr "Postitused"
 
-#: app/src\main.rs:670 app/src\main.rs:686
+#: app/src\main.rs:672 app/src\main.rs:688
 msgid "Message"
-msgstr ""
+msgstr "Sõnum"
 
-#: app/src\main.rs:671 app/src\main.rs:4332 app/src\main.rs:4338
+#: app/src\main.rs:673 app/src\main.rs:4354 app/src\main.rs:4360
 msgid "Delete post"
 msgstr "Kustuta postitus"
 
-#: app/src\main.rs:690
+#: app/src\main.rs:692
 msgid "Attach files"
-msgstr ""
+msgstr "Lisa failid"
 
-#: app/src\main.rs:692 app/src\main.rs:4452
+#: app/src\main.rs:694 app/src\main.rs:4474
 #, rust-format
 msgid "Attachments ({count})"
-msgstr ""
+msgstr "Manused ({count})"
 
-#: app/src\main.rs:694 app/src\main.rs:4454
+#: app/src\main.rs:696 app/src\main.rs:4476
 #, rust-format
 msgid "Attachments, {n} attached"
 msgid_plural "Attachments, {n} attached"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Manused, {n} lisatud"
+msgstr[1] "Manused, {n} lisatud"
 
-#: app/src\main.rs:695 app/src\main.rs:4540
+#: app/src\main.rs:697 app/src\main.rs:4562
 msgid "Send"
 msgstr "Saada"
 
-#: app/src\main.rs:765
-msgid "Show / hide BlindFB"
-msgstr ""
-
 #: app/src\main.rs:767
+msgid "Show / hide BlindFB"
+msgstr "Näita / peida BlindFB"
+
+#: app/src\main.rs:769
 msgid "Exit BlindFB"
-msgstr ""
+msgstr "Välju BlindFB-st"
 
-#: app/src\main.rs:845
+#: app/src\main.rs:847
 msgid "Checking the Facebook backend…"
-msgstr ""
+msgstr "Facebooki mooduli kontrollimine…"
 
-#: app/src\main.rs:1078
+#: app/src\main.rs:1086
 msgid "Working…"
-msgstr ""
+msgstr "Töötan…"
 
-#: app/src\main.rs:1227 app/src\main.rs:1248 app/src\main.rs:1296
-#: app/src\main.rs:1301 app/src\main.rs:1305 app/src\main.rs:1311
-#: app/src\main.rs:1315 app/src\main.rs:1319 app/src\main.rs:1323
+#: app/src\main.rs:1235 app/src\main.rs:1256 app/src\main.rs:1304 app/src\main.rs:1309 app/src\main.rs:1313 app/src\main.rs:1319 app/src\main.rs:1323 app/src\main.rs:1327 app/src\main.rs:1331
 msgid "The Facebook backend is not installed"
-msgstr ""
+msgstr "Facebooki moodul pole paigaldatud"
 
-#: app/src\main.rs:1268
+#: app/src\main.rs:1276
 msgid "the backend is not installed yet"
-msgstr ""
+msgstr "moodul pole veel paigaldatud"
 
-#: app/src\main.rs:1285
+#: app/src\main.rs:1293
 msgid "the fb backend is not installed — use Backend → Install or update backend"
-msgstr ""
+msgstr "fb moodul pole paigaldatud — vali Moodul → Paigalda või uuenda moodulit"
 
-#: app/src\main.rs:1370
+#: app/src\main.rs:1378
 msgid "the Chrome sign-in did not finish"
-msgstr ""
+msgstr "Chrome'i sisselogimine ei lõppenud"
 
-#: app/src\main.rs:1387
+#: app/src\main.rs:1395
 msgid "install the browser first"
-msgstr ""
+msgstr "paigalda esmalt brauser"
 
-#: app/src\main.rs:1396
+#: app/src\main.rs:1404
 #, rust-format
 msgid ""
 "Session import failed: {why}\n"
 "\n"
 "Direct sign-in failed: {error}"
 msgstr ""
+"Seansi importimine ebaõnnestus: {why}\n"
+"\n"
+"Otse sisselogimine ebaõnnestus: {error}"
 
-#: app/src\main.rs:1514 app/src\main.rs:1515
+#: app/src\main.rs:1531 app/src\main.rs:1532
 msgid "Hide to system &tray"
-msgstr ""
+msgstr "Peida süsteemsesse &salve"
 
-#: app/src\main.rs:1528 app/src\main.rs:1550
+#: app/src\main.rs:1545 app/src\main.rs:1567
 msgid "Show/hide hotkey"
 msgstr "Näita/peida kiirklahvi"
 
-#: app/src\main.rs:1529 app/src\main.rs:1611
+#: app/src\main.rs:1546 app/src\main.rs:1628
 msgid "Pick the shortcut that hides and restores BlindFB, or turn it off"
 msgstr "Vali kiirklahv, mis peidab ja taastab BlindFB, või lülita see välja"
 
-#: app/src\main.rs:1545
+#: app/src\main.rs:1562
 #, rust-format
 msgid "Show/hide hotkey: {label}"
 msgstr "Näita/peida klahv: {label}"
 
-#: app/src\main.rs:1546
+#: app/src\main.rs:1563
 msgid "Show/hide hotkey off."
 msgstr "Näita/peida klahv on väljas."
 
-#: app/src\main.rs:1573
-msgid "Open Facebook &link…\tCtrl+O"
-msgstr ""
-
-#: app/src\main.rs:1574
-msgid "Open a Facebook post, video or reel link"
-msgstr ""
-
-#: app/src\main.rs:1576
-msgid "&New post…\tCtrl+N"
-msgstr ""
-
-#: app/src\main.rs:1576
-msgid "Write a new post"
-msgstr ""
-
-#: app/src\main.rs:1579
-msgid "New post with &media…"
-msgstr ""
-
-#: app/src\main.rs:1580
-msgid "Write a post with photos and videos attached"
-msgstr ""
-
-#: app/src\main.rs:1584
-msgid "Sell on &Marketplace…"
-msgstr ""
-
-#: app/src\main.rs:1585
-msgid "Create a Marketplace listing with photos or video"
-msgstr ""
-
-#: app/src\main.rs:1589
-msgid "&Search Facebook…\tCtrl+/"
-msgstr ""
-
 #: app/src\main.rs:1590
-msgid "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"
-msgstr ""
+msgid "Open Facebook &link…"
+msgstr "Ava Facebooki &link…"
 
-#: app/src\main.rs:1594
-msgid "&OCR an image…"
-msgstr ""
+#: app/src\main.rs:1591
+msgid "Open a Facebook post, video or reel link"
+msgstr "Ava Facebooki postituse, video või reeli link"
 
-#: app/src\main.rs:1595
-msgid "Read the text in an image file with the operating system's OCR engine"
-msgstr ""
+#: app/src\main.rs:1593
+msgid "&New post…"
+msgstr "&Uus postitus…"
 
-#: app/src\main.rs:1599
-msgid "Check for &updates…"
-msgstr ""
+#: app/src\main.rs:1593
+msgid "Write a new post"
+msgstr "Kirjuta uus postitus"
 
-#: app/src\main.rs:1600
-msgid "Check Forgejo for a newer BlindFB"
-msgstr ""
+#: app/src\main.rs:1596
+msgid "New post with &media…"
+msgstr "Uus postitus &meediaga…"
+
+#: app/src\main.rs:1597
+msgid "Write a post with photos and videos attached"
+msgstr "Kirjuta postitus koos fotode ja videotega"
+
+#: app/src\main.rs:1601
+msgid "Sell on &Marketplace…"
+msgstr "Müü &Marketplace'is…"
+
+#: app/src\main.rs:1602
+msgid "Create a Marketplace listing with photos or video"
+msgstr "Loo Marketplace'i kuulutus fotode või videoga"
 
 #: app/src\main.rs:1606
+msgid "&Search Facebook…"
+msgstr "&Otsi Facebookist…"
+
+#: app/src\main.rs:1607
+msgid "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"
+msgstr "Otsi kõike: postitusi, inimesi, sõpru, fotosid, videoid, lehti, kohti, gruppe, sündmusi ja Marketplace'i"
+
+#: app/src\main.rs:1611
+msgid "&OCR an image…"
+msgstr "&Tuvasta pildilt tekst…"
+
+#: app/src\main.rs:1612
+msgid "Read the text in an image file with the operating system's OCR engine"
+msgstr "Loe pildifailist tekst operatsioonisüsteemi tekstituvastusega"
+
+#: app/src\main.rs:1616
+msgid "Check for &updates…"
+msgstr "Otsi &uuendusi…"
+
+#: app/src\main.rs:1617
+msgid "Check for a newer BlindFB"
+msgstr "Kontrolli, kas BlindFB uuem versioon on olemas"
+
+#: app/src\main.rs:1623
 msgid "Hide BlindFB to the system tray; the tray icon or its menu brings it back"
 msgstr "Peidab BlindFB süsteemsele salve; salve ikoon või selle menüü toob selle tagasi"
 
-#: app/src\main.rs:1610
+#: app/src\main.rs:1627
 msgid "Show/hide &hotkey…"
-msgstr ""
+msgstr "Näita/peida &kiirklahv…"
 
-#: app/src\main.rs:1613
+#: app/src\main.rs:1632
+msgid "&Keyboard shortcuts…"
+msgstr "&Kiirklahvid…"
+
+#: app/src\main.rs:1633
+msgid "Give any command a shortcut, or change or remove one"
+msgstr "Anna igale käsule kiirklahv või muuda või eemalda see"
+
+#: app/src\main.rs:1635
 msgid "Close BlindFB"
-msgstr ""
+msgstr "Sulge BlindFB"
 
-#: app/src\main.rs:1613
-msgid "E&xit\tCtrl+Q"
-msgstr ""
+#: app/src\main.rs:1635
+msgid "E&xit"
+msgstr "&Välju"
 
-#: app/src\main.rs:1617
-msgid "News &feed\tCtrl+1"
-msgstr ""
+#: app/src\main.rs:1639
+msgid "News &feed"
+msgstr "&Uudisvoog"
 
-#: app/src\main.rs:1617
+#: app/src\main.rs:1639
 msgid "Your news feed"
 msgstr "Sinu uudisvoog"
 
-#: app/src\main.rs:1618
-msgid "&Notifications\tCtrl+2"
-msgstr ""
+#: app/src\main.rs:1640
+msgid "&Notifications"
+msgstr "&Märguanded"
 
-#: app/src\main.rs:1618
+#: app/src\main.rs:1640
 msgid "Your notifications"
 msgstr "Sinu märguanded"
 
-#: app/src\main.rs:1619
-msgid "Fr&iends\tCtrl+3"
-msgstr ""
+#: app/src\main.rs:1641
+msgid "Fr&iends"
+msgstr "&Sõbrad"
 
-#: app/src\main.rs:1619
+#: app/src\main.rs:1641
 msgid "Your friends list"
 msgstr "Sõprade loend"
 
-#: app/src\main.rs:1620
-msgid "&My posts\tCtrl+4"
-msgstr ""
+#: app/src\main.rs:1642
+msgid "&My posts"
+msgstr "&Minu postitused"
 
-#: app/src\main.rs:1620
+#: app/src\main.rs:1642
 msgid "Posts on your own profile"
-msgstr ""
+msgstr "Postitused sinu enda profiilil"
 
-#: app/src\main.rs:1621
-msgid "&Chats\tCtrl+5"
-msgstr ""
+#: app/src\main.rs:1643
+msgid "&Chats"
+msgstr "&Vestlused"
 
-#: app/src\main.rs:1621
+#: app/src\main.rs:1643
 msgid "Messenger chats"
-msgstr ""
+msgstr "Messengeri vestlused"
 
-#: app/src\main.rs:1622
-msgid "&Groups\tCtrl+6"
-msgstr ""
+#: app/src\main.rs:1644
+msgid "&Groups"
+msgstr "&Grupid"
 
-#: app/src\main.rs:1622
+#: app/src\main.rs:1644
 msgid "Groups you belong to"
 msgstr "Grupid, kuhu kuulute"
 
-#: app/src\main.rs:1625
-msgid "Feeds (most &recent)\tCtrl+7"
-msgstr ""
+#: app/src\main.rs:1647
+msgid "Feeds (most &recent)"
+msgstr "Vood (&uusimad)"
 
-#: app/src\main.rs:1626
+#: app/src\main.rs:1648
 msgid "Newest posts from followed friends, pages and groups"
-msgstr ""
+msgstr "Jälgitavate sõprade, lehtede ja gruppide uusimad postitused"
 
-#: app/src\main.rs:1630
-msgid "Re&els\tCtrl+8"
-msgstr ""
+#: app/src\main.rs:1652
+msgid "Re&els"
+msgstr "&Reels"
 
-#: app/src\main.rs:1631
+#: app/src\main.rs:1653
 msgid "Browse reels with the accessible player"
-msgstr ""
-
-#: app/src\main.rs:1635
-msgid "&Marketplace\tCtrl+9"
-msgstr ""
-
-#: app/src\main.rs:1636
-msgid "Browse Marketplace listings"
-msgstr ""
-
-#: app/src\main.rs:1638
-msgid "&Events"
-msgstr ""
-
-#: app/src\main.rs:1638
-msgid "Events from your events page"
-msgstr ""
-
-#: app/src\main.rs:1639
-msgid "Pa&ges"
-msgstr ""
-
-#: app/src\main.rs:1639
-msgid "Pages from your pages page"
-msgstr ""
-
-#: app/src\main.rs:1640
-msgid "P&laces"
-msgstr ""
-
-#: app/src\main.rs:1640
-msgid "Places from the places page"
-msgstr ""
-
-#: app/src\main.rs:1643
-msgid "&Unread chats only"
-msgstr ""
-
-#: app/src\main.rs:1644
-msgid "Chats with unread messages"
-msgstr ""
-
-#: app/src\main.rs:1647
-msgid "&Refresh\tF5"
-msgstr ""
-
-#: app/src\main.rs:1647
-msgid "Reload the current view"
-msgstr ""
-
-#: app/src\main.rs:1650
-msgid "&Load more\tCtrl+L"
-msgstr ""
-
-#: app/src\main.rs:1651
-msgid "Append more items and keep your reading position"
-msgstr ""
-
-#: app/src\main.rs:1656
-msgid "&Voice alerts"
-msgstr ""
+msgstr "Sirvi reelse ligipääsetava mängijaga"
 
 #: app/src\main.rs:1657
-msgid "Say new notifications and unread chats aloud"
-msgstr ""
+msgid "&Marketplace"
+msgstr "Mar&ketplace"
+
+#: app/src\main.rs:1658
+msgid "Browse Marketplace listings"
+msgstr "Sirvi Marketplace'i kuulutusi"
+
+#: app/src\main.rs:1660
+msgid "&Events"
+msgstr "&Sündmused"
+
+#: app/src\main.rs:1660
+msgid "Events from your events page"
+msgstr "Sündmused sinu sündmuste lehelt"
 
 #: app/src\main.rs:1661
-msgid "&Sound alerts"
-msgstr ""
+msgid "Pa&ges"
+msgstr "&Lehed"
+
+#: app/src\main.rs:1661
+msgid "Pages from your pages page"
+msgstr "Lehed sinu lehtede lehelt"
 
 #: app/src\main.rs:1662
-msgid "Play a sound for new notifications and unread chats"
-msgstr ""
+msgid "P&laces"
+msgstr "K&ohad"
+
+#: app/src\main.rs:1662
+msgid "Places from the places page"
+msgstr "Kohad kohtade lehelt"
+
+#: app/src\main.rs:1665
+msgid "&Unread chats only"
+msgstr "&Ainult lugemata vestlused"
 
 #: app/src\main.rs:1666
-msgid "Voice alert when a &list loads"
-msgstr ""
+msgid "Chats with unread messages"
+msgstr "Lugemata sõnumitega vestlused"
 
-#: app/src\main.rs:1667
-msgid "Say the name and size of a list when it finishes loading"
-msgstr ""
-
-#: app/src\main.rs:1671
-msgid "Sound alert when a list &loads"
-msgstr ""
+#: app/src\main.rs:1669
+msgid "Reload the current view"
+msgstr "Laadi praegune vaade uuesti"
 
 #: app/src\main.rs:1672
-msgid "Play a sound when a list finishes loading"
-msgstr ""
+msgid "&Load more"
+msgstr "&Laadi veel"
 
-#: app/src\main.rs:1677
-msgid "&Open post / comments"
-msgstr ""
-
-#: app/src\main.rs:1677
-msgid "Open the selected item; Enter in the items list"
-msgstr ""
-
-#: app/src\main.rs:1678 app/src\main.rs:4893 app/src\main.rs:4912
-#: app/src\main.rs:4954 app/src\post_dialog.rs:840 app/src\post_dialog.rs:1117
-msgid "S&hare…"
-msgstr ""
+#: app/src\main.rs:1673
+msgid "Append more items and keep your reading position"
+msgstr "Lisa veel üksusi ja hoia lugemiskohta"
 
 #: app/src\main.rs:1678
-msgid "Share the selected post"
-msgstr ""
-
-#: app/src\main.rs:1679 app/src\main.rs:4894 app/src\main.rs:4913
-#: app/src\post_dialog.rs:1112
-msgid "&Comment…"
-msgstr ""
+msgid "&Voice alerts"
+msgstr "&Häälteated"
 
 #: app/src\main.rs:1679
-msgid "Comment on the selected post"
-msgstr ""
-
-#: app/src\main.rs:1680 app/src\main.rs:4936
-msgid "Author &profile"
-msgstr ""
-
-#: app/src\main.rs:1680
-msgid "Show the profile of the selected item's author or owner"
-msgstr ""
-
-#: app/src\main.rs:1681 app/src\main.rs:4937
-msgid "Author's p&osts"
-msgstr ""
-
-#: app/src\main.rs:1681
-msgid "Posts by the selected item's author"
-msgstr ""
-
-#: app/src\main.rs:1682
-msgid "&Message author / friend"
-msgstr ""
-
-#: app/src\main.rs:1682
-msgid "Open a Messenger chat with this person"
-msgstr ""
-
-#: app/src\main.rs:1683 app/src\main.rs:4942
-msgid "Open post on &Facebook (web)"
-msgstr ""
+msgid "Say new notifications and unread chats aloud"
+msgstr "Loe uued märguanded ja lugemata vestlused valjult ette"
 
 #: app/src\main.rs:1683
-msgid "Open the selected post in your browser"
-msgstr ""
+msgid "&Sound alerts"
+msgstr "&Heliteated"
 
 #: app/src\main.rs:1684
-msgid "Open person or group on Fa&cebook (web)"
-msgstr ""
+msgid "Play a sound for new notifications and unread chats"
+msgstr "Esita heli uute märguannete ja lugemata vestluste puhul"
 
-#: app/src\main.rs:1684
-msgid "Open the selected person's profile (or the group) in your browser, where friend management lives"
-msgstr ""
+#: app/src\main.rs:1688
+msgid "Voice alert when a &list loads"
+msgstr "Häälteade, kui &loend laadib"
 
-#: app/src\main.rs:1686 app/src\main.rs:4947
-msgid "&Delete post…"
-msgstr ""
+#: app/src\main.rs:1689
+msgid "Say the name and size of a list when it finishes loading"
+msgstr "Ütle loendi nimi ja suurus, kui see laadimise lõpetab"
 
-#: app/src\main.rs:1686
-msgid "Delete the selected post (your own posts only)"
-msgstr ""
+#: app/src\main.rs:1693
+msgid "Sound alert when a list &loads"
+msgstr "Heliteade, kui loend &laadib"
 
-#: app/src\main.rs:1691
-msgid "Set this reaction on the selected post"
-msgstr ""
+#: app/src\main.rs:1694
+msgid "Play a sound when a list finishes loading"
+msgstr "Esita heli, kui loend laadimise lõpetab"
 
-#: app/src\main.rs:1697 app/src\main.rs:4972
-msgid "&Open chat"
-msgstr ""
+#: app/src\main.rs:1699
+msgid "&Open post / comments"
+msgstr "&Ava postitus / kommentaarid"
 
-#: app/src\main.rs:1697
-msgid "Open the selected chat"
-msgstr ""
+#: app/src\main.rs:1699
+msgid "Open the selected item; Enter in the items list"
+msgstr "Ava valitud üksus; Enter üksuste loendis"
+
+#: app/src\main.rs:1700 app/src\main.rs:4924 app/src\main.rs:4943 app/src\main.rs:4985 app/src\post_dialog.rs:846 app/src\post_dialog.rs:1124
+msgid "S&hare…"
+msgstr "&Jaga…"
 
 #: app/src\main.rs:1700
-msgid "Open chat in &Messenger (web)"
-msgstr ""
+msgid "Share the selected post"
+msgstr "Jaga valitud postitust"
+
+#: app/src\main.rs:1701 app/src\main.rs:4925 app/src\main.rs:4944 app/src\post_dialog.rs:1119
+msgid "&Comment…"
+msgstr "&Kommenteeri…"
 
 #: app/src\main.rs:1701
-msgid "Open this chat in your browser — voice and video calls live there"
-msgstr ""
+msgid "Comment on the selected post"
+msgstr "Kommenteeri valitud postitust"
 
-#: app/src\main.rs:1705 app/src\main.rs:4998
-msgid "&Unsend my last message…"
-msgstr ""
+#: app/src\main.rs:1702 app/src\main.rs:4967
+msgid "Author &profile"
+msgstr "Autori &profiil"
+
+#: app/src\main.rs:1702
+msgid "Show the profile of the selected item's author or owner"
+msgstr "Näita valitud üksuse autori või omaniku profiili"
+
+#: app/src\main.rs:1703 app/src\main.rs:4968
+msgid "Author's p&osts"
+msgstr "Autori p&ostitused"
+
+#: app/src\main.rs:1703
+msgid "Posts by the selected item's author"
+msgstr "Valitud üksuse autori postitused"
+
+#: app/src\main.rs:1704
+msgid "&Message author / friend"
+msgstr "&Saada sõnum autorile / sõbrale"
+
+#: app/src\main.rs:1704
+msgid "Open a Messenger chat with this person"
+msgstr "Ava selle inimesega Messengeri vestlus"
+
+#: app/src\main.rs:1705 app/src\main.rs:4973
+msgid "Open post on &Facebook (web)"
+msgstr "Ava postitus &Facebookis (veebis)"
+
+#: app/src\main.rs:1705
+msgid "Open the selected post in your browser"
+msgstr "Ava valitud postitus brauseris"
 
 #: app/src\main.rs:1706
-msgid "Remove your newest message in the open chat for everyone"
-msgstr ""
+msgid "Open person or group on Fa&cebook (web)"
+msgstr "Ava inimene või grupp Fa&cebookis (veebis)"
 
-#: app/src\main.rs:1710
-msgid "Unloc&k encrypted chats…"
-msgstr ""
+#: app/src\main.rs:1706
+msgid "Open the selected person's profile (or the group) in your browser, where friend management lives"
+msgstr "Ava valitud inimese profiil (või grupp) brauseris, kus sõpru hallatakse"
 
-#: app/src\main.rs:1711
-msgid "Enter your Messenger PIN to read end-to-end encrypted chats"
-msgstr ""
+#: app/src\main.rs:1708 app/src\main.rs:4978
+msgid "&Delete post…"
+msgstr "&Kustuta postitus…"
 
-#: app/src\main.rs:1718
-msgid "&Install or update backend…"
-msgstr ""
+#: app/src\main.rs:1708
+msgid "Delete the selected post (your own posts only)"
+msgstr "Kustuta valitud postitus (ainult oma postitused)"
+
+#: app/src\main.rs:1713
+msgid "Set this reaction on the selected post"
+msgstr "Pane valitud postitusele see reaktsioon"
+
+#: app/src\main.rs:1719 app/src\main.rs:5003
+msgid "&Open chat"
+msgstr "&Ava vestlus"
 
 #: app/src\main.rs:1719
-msgid "Download BlindFB's supported facebook-cli backend from Forgejo"
-msgstr ""
-
-#: app/src\main.rs:1721
-msgid "Backend &status"
-msgstr ""
-
-#: app/src\main.rs:1721
-msgid "Show fb daemon status"
-msgstr ""
+msgid "Open the selected chat"
+msgstr "Ava valitud vestlus"
 
 #: app/src\main.rs:1722
-msgid "&Sign in…"
-msgstr ""
+msgid "Open chat in &Messenger (web)"
+msgstr "Ava vestlus &Messengeris (veebis)"
 
-#: app/src\main.rs:1722
-msgid "Sign in through your browser"
-msgstr ""
+#: app/src\main.rs:1723
+msgid "Open this chat in your browser — voice and video calls live there"
+msgstr "Ava see vestlus brauseris — seal on hääl- ja videokõned"
 
-#: app/src\main.rs:1725
-msgid "Install a &browser…"
-msgstr ""
-
-#: app/src\main.rs:1726
-msgid "Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"
-msgstr ""
+#: app/src\main.rs:1727 app/src\main.rs:5029
+msgid "&Unsend my last message…"
+msgstr "&Võta viimane sõnum tagasi…"
 
 #: app/src\main.rs:1728
-msgid "S&top daemon"
-msgstr ""
-
-#: app/src\main.rs:1728
-msgid "Stop the fb daemon"
-msgstr ""
-
-#: app/src\main.rs:1731
-msgid "&Quit daemon and Chrome"
-msgstr ""
+msgid "Remove your newest message in the open chat for everyone"
+msgstr "Eemalda oma uusim sõnum avatud vestlusest kõigi jaoks"
 
 #: app/src\main.rs:1732
-msgid "Stop the daemon and close its hidden Chrome"
-msgstr ""
+msgid "Unloc&k encrypted chats…"
+msgstr "Ava &krüptitud vestlused…"
 
-#: app/src\main.rs:1739
-msgid "&Keyboard commands\tF1"
-msgstr ""
+#: app/src\main.rs:1733
+msgid "Enter your Messenger PIN to read end-to-end encrypted chats"
+msgstr "Sisesta Messengeri PIN, et lugeda otspunktkrüptitud vestlusi"
 
 #: app/src\main.rs:1740
-msgid "Keyboard commands and reader controls"
-msgstr ""
+msgid "&Install or update backend…"
+msgstr "&Paigalda või uuenda moodulit…"
+
+#: app/src\main.rs:1741
+msgid "Download BlindFB's supported facebook-cli backend from Forgejo"
+msgstr "Laadi Forgejost alla BlindFB toetatud facebook-cli moodul"
+
+#: app/src\main.rs:1743
+msgid "Backend &status"
+msgstr "Mooduli &olek"
+
+#: app/src\main.rs:1743
+msgid "Show fb daemon status"
+msgstr "Näita fb teenuse olekut"
 
 #: app/src\main.rs:1744
-msgid "BlindFB on &Forgejo"
-msgstr ""
+msgid "&Sign in…"
+msgstr "&Logi sisse…"
 
-#: app/src\main.rs:1745
-msgid "Open the BlindFB repository"
-msgstr ""
+#: app/src\main.rs:1744
+msgid "Sign in through your browser"
+msgstr "Logi sisse brauseri kaudu"
+
+#: app/src\main.rs:1747
+msgid "Install a &browser…"
+msgstr "Paigalda &brauser…"
+
+#: app/src\main.rs:1748
+msgid "Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"
+msgstr "Laadi alla brauser, mida BlindFB kasutada saab (Chrome, Brave, Edge, Firefox)"
 
 #: app/src\main.rs:1750
-msgid "&Debug logging"
-msgstr ""
+msgid "S&top daemon"
+msgstr "&Peata teenus"
 
-#: app/src\main.rs:1751
-msgid "Record what BlindFB runs and the errors it gets, for a bug report"
-msgstr ""
+#: app/src\main.rs:1750
+msgid "Stop the fb daemon"
+msgstr "Peata fb teenus"
 
-#: app/src\main.rs:1755
-msgid "Save debug &report…"
-msgstr ""
+#: app/src\main.rs:1753
+msgid "&Quit daemon and Chrome"
+msgstr "&Lõpeta teenus ja Chrome"
 
-#: app/src\main.rs:1756
-msgid "Save a file you can send to the developer"
-msgstr ""
+#: app/src\main.rs:1754
+msgid "Stop the daemon and close its hidden Chrome"
+msgstr "Peata teenus ja sulge selle peidetud Chrome"
+
+#: app/src\main.rs:1761
+msgid "&Keyboard commands"
+msgstr "&Klaviatuurikäsud"
 
 #: app/src\main.rs:1762
+msgid "Keyboard commands and reader controls"
+msgstr "Klaviatuurikäsud ja lugeja juhtimine"
+
+#: app/src\main.rs:1766
+msgid "BlindFB on &Forgejo"
+msgstr "BlindFB &Forgejos"
+
+#: app/src\main.rs:1767
+msgid "Open the BlindFB repository"
+msgstr "Ava BlindFB hoidla"
+
+#: app/src\main.rs:1772
+msgid "&Debug logging"
+msgstr "&Silumislogi"
+
+#: app/src\main.rs:1773
+msgid "Record what BlindFB runs and the errors it gets, for a bug report"
+msgstr "Salvesta, mida BlindFB käivitab ja milliseid vigu saab, veateate jaoks"
+
+#: app/src\main.rs:1777
+msgid "Save debug &report…"
+msgstr "Salvesta silumis&aruanne…"
+
+#: app/src\main.rs:1778
+msgid "Save a file you can send to the developer"
+msgstr "Salvesta fail, mille saad arendajale saata"
+
+#: app/src\main.rs:1784
 msgid "Language: &system default"
-msgstr ""
+msgstr "Keel: &süsteemi vaikimisi"
 
-#: app/src\main.rs:1763
+#: app/src\main.rs:1785
 msgid "Use the system language when BlindFB has it, English otherwise"
-msgstr ""
+msgstr "Kasuta süsteemi keelt, kui BlindFB seda oskab, muidu inglise keelt"
 
-#: app/src\main.rs:1782
+#: app/src\main.rs:1804
 msgid "&About BlindFB"
-msgstr ""
+msgstr "&BlindFB teave"
 
-#: app/src\main.rs:1782
+#: app/src\main.rs:1804
 msgid "About this program"
-msgstr ""
+msgstr "Selle programmi teave"
 
-#: app/src\main.rs:1786
+#: app/src\main.rs:1808 app/src\shortcuts_dialog.rs:125
 msgid "&File"
-msgstr ""
+msgstr "&Fail"
 
-#: app/src\main.rs:1787
+#: app/src\main.rs:1809 app/src\shortcuts_dialog.rs:126
 msgid "&View"
-msgstr ""
+msgstr "&Vaade"
 
-#: app/src\main.rs:1788
+#: app/src\main.rs:1810 app/src\shortcuts_dialog.rs:127
 msgid "&Post"
-msgstr ""
+msgstr "&Postitus"
 
-#: app/src\main.rs:1789
+#: app/src\main.rs:1811 app/src\shortcuts_dialog.rs:128
 msgid "&Chat"
-msgstr ""
+msgstr "&Vestlus"
 
-#: app/src\main.rs:1790
+#: app/src\main.rs:1812 app/src\shortcuts_dialog.rs:129
 msgid "&Backend"
-msgstr ""
+msgstr "&Moodul"
 
-#: app/src\main.rs:1791
+#: app/src\main.rs:1813 app/src\shortcuts_dialog.rs:130
 msgid "&Help"
-msgstr ""
+msgstr "&Abi"
 
-#: app/src\main.rs:1877
+#: app/src\main.rs:1899
 msgid "Alerts"
-msgstr ""
+msgstr "Teated"
 
-#: app/src\main.rs:1882
+#: app/src\main.rs:1904
 msgid "Voice alerts on."
-msgstr ""
+msgstr "Häälteated sees."
 
-#: app/src\main.rs:1883
+#: app/src\main.rs:1905
 msgid "Voice alerts off."
-msgstr ""
+msgstr "Häälteated väljas."
 
-#: app/src\main.rs:1884
+#: app/src\main.rs:1906
 msgid "Sound alerts on."
-msgstr ""
+msgstr "Heliteated sees."
 
-#: app/src\main.rs:1885
+#: app/src\main.rs:1907
 msgid "Sound alerts off."
-msgstr ""
+msgstr "Heliteated väljas."
 
-#: app/src\main.rs:1886
+#: app/src\main.rs:1908
 msgid "List voice alerts on."
-msgstr ""
+msgstr "Loendite häälteated sees."
 
-#: app/src\main.rs:1887
+#: app/src\main.rs:1909
 msgid "List voice alerts off."
-msgstr ""
+msgstr "Loendite häälteated väljas."
 
-#: app/src\main.rs:1888
+#: app/src\main.rs:1910
 msgid "List sound alerts on."
-msgstr ""
+msgstr "Loendite heliteated sees."
 
-#: app/src\main.rs:1889
+#: app/src\main.rs:1911
 msgid "List sound alerts off."
-msgstr ""
+msgstr "Loendite heliteated väljas."
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:1970 app/src\main.rs:1996 app/src\main.rs:2144
+#: app/src\main.rs:1992 app/src\main.rs:2018 app/src\main.rs:2166
 #, rust-format
 msgid "Loading {view}…"
-msgstr ""
+msgstr "Laadin: {view}…"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:2052
+#: app/src\main.rs:2074
 #, rust-format
 msgid "Back to {view}"
-msgstr ""
+msgstr "Tagasi: {view}"
 
-#: app/src\main.rs:2055
+#: app/src\main.rs:2077
 msgid "No previous list to go back to."
-msgstr ""
+msgstr "Eelmist loendit, kuhu naasta, pole."
 
-#: app/src\main.rs:2160
+#: app/src\main.rs:2182
 msgid "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?"
-msgstr ""
+msgstr "BlindFB vajab oma eraldi brauseriprofiili jaoks paigaldatud Chromiumi-põhist brauserit (Chrome, Brave või Edge). Firefox saab anda sinu Facebooki seansi, kuid ei saa moodulit käivitada. Kas paigaldada Google Chrome kohe?"
 
-#: app/src\main.rs:2161 app/src\main.rs:2181 app/src\main.rs:3704
+#: app/src\main.rs:2183 app/src\main.rs:2203 app/src\main.rs:3726
 msgid "Sign in"
-msgstr ""
+msgstr "Logi sisse"
 
-#: app/src\main.rs:2171
+#: app/src\main.rs:2193
 #, rust-format
 msgid "{browser} (your default browser)"
-msgstr ""
+msgstr "{browser} (sinu vaikebrauser)"
 
-#: app/src\main.rs:2177
+#: app/src\main.rs:2199
 msgid "Sign in in a new browser window"
-msgstr ""
+msgstr "Logi sisse uues brauseriaknas"
 
-#: app/src\main.rs:2183
+#: app/src\main.rs:2205
 msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly."
-msgstr ""
+msgstr "Millisest brauserist Facebooki seanss kopeerida? Selles brauseris peab olema Facebooki sisse logitud. Kui küpsiste andmebaas on lukus, sulge esmalt brauser. Või vali uus brauseriaken, et otse sisse logida."
 
-#: app/src\main.rs:2185
+#: app/src\main.rs:2207
 msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks."
-msgstr ""
+msgstr "Millisest brauserist Facebooki seanss kopeerida? Selles brauseris peab olema Facebooki sisse logitud. Chrome'is, Brave'is ja Edge'is märgi „Luba kaugsilumine”, kui brauser küsib."
 
-#: app/src\main.rs:2237 app/src\main.rs:2293
+#: app/src\main.rs:2259 app/src\main.rs:2315
 #, rust-format
 msgid "Installing {browser}…"
-msgstr ""
+msgstr "{browser} paigaldamine…"
 
-#: app/src\main.rs:2249
+#: app/src\main.rs:2271
 msgid "Signing in through your browser…"
-msgstr ""
+msgstr "Sisselogimine brauseri kaudu…"
 
-#: app/src\main.rs:2275
+#: app/src\main.rs:2297
 #, rust-format
 msgid "{browser} (installed)"
-msgstr ""
+msgstr "{browser} (paigaldatud)"
 
-#: app/src\main.rs:2284
+#: app/src\main.rs:2306
 msgid "Install a browser"
-msgstr ""
-
-#: app/src\main.rs:2285
-msgid "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session."
-msgstr ""
+msgstr "Paigalda brauser"
 
 #: app/src\main.rs:2307
+msgid "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session."
+msgstr "Millise brauseri paigaldada? Allalaadimine tuleb tootjalt. Chrome, Chromium, Brave ja Edge saavad käitada BlindFB eraldi brauseriprofiili. Firefox saab anda Facebooki seansi."
+
+#: app/src\main.rs:2329
 msgid "Wait for this section to finish loading before refreshing."
-msgstr ""
+msgstr "Oota, kuni see jaotis laadimise lõpetab, enne kui värskendad."
 
-#: app/src\main.rs:2379
+#: app/src\main.rs:2401
 msgid "Reels are already loading…"
-msgstr ""
+msgstr "Reels juba laadivad…"
 
-#: app/src\main.rs:2381
+#: app/src\main.rs:2403
 msgid "Load the reels list first, or refresh it to retry."
-msgstr ""
+msgstr "Laadi esmalt reelsi loend või värskenda seda, et uuesti proovida."
 
-#: app/src\main.rs:2390
+#: app/src\main.rs:2412
 msgid "Wait for this section to load before requesting more items."
-msgstr ""
+msgstr "Oota, kuni see jaotis laadib, enne kui küsid rohkem üksusi."
 
-#: app/src\main.rs:2396
+#: app/src\main.rs:2418
 msgid "Items are already loading…"
-msgstr ""
+msgstr "Üksused juba laadivad…"
 
-#: app/src\main.rs:2397
+#: app/src\main.rs:2419
 msgid "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
-msgstr ""
+msgstr "Laadi veel töötab voogudes, postitustes, otsingutulemustes, märguannetes, sõprades ja vestlusloendites."
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:2415
+#: app/src\main.rs:2437
 #, rust-format
 msgid "Loading more {view}…"
-msgstr ""
+msgstr "Laadin veel: {view}…"
 
 #. TRANSLATORS: {item} is a list row (a post); the mark says it has no link to open.
-#: app/src\main.rs:2506
+#: app/src\main.rs:2528
 #, rust-format
 msgid "{item} (no link)"
-msgstr ""
+msgstr "{item} (lingita)"
 
-#: app/src\main.rs:2531
+#: app/src\main.rs:2553
 #, rust-format
 msgid "Actions: {actions}"
-msgstr ""
+msgstr "Toimingud: {actions}"
 
 #. TRANSLATORS: {notification} is a notification's text and time.
-#: app/src\main.rs:2592
+#: app/src\main.rs:2614
 #, rust-format
 msgid "Unread. {notification}"
-msgstr ""
+msgstr "Lugemata. {notification}"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2618
+#: app/src\main.rs:2640
 #, rust-format
 msgid "{name} (unread) (group)"
-msgstr ""
+msgstr "{name} (lugemata) (grupp)"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2620
+#: app/src\main.rs:2642
 #, rust-format
 msgid "{name} (unread)"
-msgstr ""
+msgstr "{name} (lugemata)"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2622
+#: app/src\main.rs:2644
 #, rust-format
 msgid "{name} (group)"
-msgstr ""
+msgstr "{name} (grupp)"
 
-#: app/src\main.rs:2669
+#: app/src\main.rs:2691
 #, rust-format
 msgid ""
 "Author: {author}\n"
@@ -1313,16 +1309,24 @@ msgid ""
 "\n"
 "{text}"
 msgstr ""
+"Autor: {author}\n"
+"Aeg: {time}\n"
+"{counts}\n"
+"\n"
+"{text}"
 
-#: app/src\main.rs:2680
+#: app/src\main.rs:2702
 #, rust-format
 msgid ""
 "Name: {name}\n"
 "Ref: {reference}\n"
 "{info}"
 msgstr ""
+"Nimi: {name}\n"
+"Viide: {reference}\n"
+"{info}"
 
-#: app/src\main.rs:2688
+#: app/src\main.rs:2710
 #, rust-format
 msgid ""
 "Chat: {name}\n"
@@ -1331,15 +1335,22 @@ msgid ""
 "\n"
 "{text}"
 msgstr ""
+"Vestlus: {name}\n"
+"Aeg: {time}\n"
+"Lipud: {flags} (! lugemata, g grupp, e krüptitud)\n"
+"\n"
+"{text}"
 
-#: app/src\main.rs:2701
+#: app/src\main.rs:2723
 #, rust-format
 msgid ""
 "{name}\n"
 "{info}On the web: {url}"
 msgstr ""
+"{name}\n"
+"{info}Veebis: {url}"
 
-#: app/src\main.rs:2715
+#: app/src\main.rs:2737
 #, rust-format
 msgid ""
 "Group: {name}\n"
@@ -1347,476 +1358,482 @@ msgid ""
 "\n"
 "Open the group for its window: its posts, and its full member list. Posting to a group, and group settings, live on the web page."
 msgstr ""
+"Grupp: {name}\n"
+"{info}Veebis: {url}\n"
+"\n"
+"Ava grupp, et näha selle akent: postitusi ja täielikku liikmete loendit. Grupis postitamine ja grupi seaded on veebilehel."
 
-#: app/src\main.rs:2803 crates/core/src\posts.rs:49
+#: app/src\main.rs:2825 crates/core/src\posts.rs:49
 msgid "Full post on Facebook"
 msgstr "Täielik postitus Facebookis"
 
-#: app/src\main.rs:2936
+#: app/src\main.rs:2958
 msgid "&Links"
-msgstr ""
+msgstr "&Lingid"
 
-#: app/src\main.rs:2936
+#: app/src\main.rs:2958
 msgid "Open a link in your browser"
-msgstr ""
+msgstr "Ava link brauseris"
 
 #. TRANSLATORS: {action} is a "Load more…" row label such as "Load more posts".
-#: app/src\main.rs:3024
+#: app/src\main.rs:3046
 #, rust-format
 msgid "{action}. Press Enter to load the next batch."
-msgstr ""
+msgstr "{action}. Vajuta Enter, et laadida järgmine osa."
 
-#: app/src\main.rs:3064
+#: app/src\main.rs:3086
 msgid "Load more posts"
-msgstr ""
+msgstr "Laadi veel postitusi"
 
-#: app/src\main.rs:3065
+#: app/src\main.rs:3087
 msgid "Load more reels"
-msgstr ""
+msgstr "Laadi veel reelse"
 
-#: app/src\main.rs:3066
+#: app/src\main.rs:3088
 msgid "Load more notifications"
-msgstr ""
+msgstr "Laadi veel märguandeid"
 
-#: app/src\main.rs:3067
+#: app/src\main.rs:3089
 msgid "Load more friends"
-msgstr ""
+msgstr "Laadi veel sõpru"
 
-#: app/src\main.rs:3068
+#: app/src\main.rs:3090
 msgid "Load more groups"
-msgstr ""
+msgstr "Laadi veel gruppe"
 
-#: app/src\main.rs:3069
+#: app/src\main.rs:3091
 msgid "Load more listings"
-msgstr ""
-
-#: app/src\main.rs:3070
-msgid "Load more conversations"
-msgstr ""
+msgstr "Laadi veel kuulutusi"
 
 #: app/src\main.rs:3092
+msgid "Load more conversations"
+msgstr "Laadi veel vestlusi"
+
+#: app/src\main.rs:3114
 #, rust-format
 msgid "Reactions: {reactions}, comments: {comments}, shares: {shares}"
-msgstr ""
+msgstr "Reaktsioonid: {reactions}, kommentaarid: {comments}, jagamised: {shares}"
 
-#: app/src\main.rs:3098
+#: app/src\main.rs:3120
 #, rust-format
 msgid "Reactions / comments / shares: {counts}"
-msgstr ""
+msgstr "Reaktsioonid / kommentaarid / jagamised: {counts}"
 
-#: app/src\main.rs:3219
+#: app/src\main.rs:3241
 msgid "(nothing here)"
-msgstr ""
+msgstr "(siin pole midagi)"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:3222
+#: app/src\main.rs:3244
 #, rust-format
 msgid "{view} — {n} item"
 msgid_plural "{view} — {n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{view} — {n} üksus"
+msgstr[1] "{view} — {n} üksust"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:3323 crates/core/src\alerts.rs:67
+#: app/src\main.rs:3345 crates/core/src\alerts.rs:67
 #, rust-format
 msgid "{view}: no items to show."
-msgstr ""
+msgstr "{view}: üksusi pole."
 
-#: app/src\main.rs:3329
+#: app/src\main.rs:3351
 #, rust-format
 msgid "{n} new item loaded."
 msgid_plural "{n} new items loaded."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Laaditi {n} uus üksus."
+msgstr[1] "Laaditi {n} uut üksust."
 
-#: app/src\main.rs:3330 crates/core/src\alerts.rs:64
+#: app/src\main.rs:3352 crates/core/src\alerts.rs:64
 #, rust-format
 msgid "{n} item total."
 msgid_plural "{n} items total."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Kokku {n} üksus."
+msgstr[1] "Kokku {n} üksust."
 
-#: app/src\main.rs:3366
+#: app/src\main.rs:3388
 msgid "Messenger needs its history restored. Enter your PIN in the unlock dialog."
-msgstr ""
+msgstr "Messenger vajab ajaloo taastamist. Sisesta avamisaknas oma PIN."
 
-#: app/src\main.rs:3369
+#: app/src\main.rs:3391
 msgid "Messenger history is still locked. Use Chat → Unlock encrypted chats to retry."
-msgstr ""
+msgstr "Messengeri ajalugu on endiselt lukus. Uuesti proovimiseks vali Vestlus → Ava krüptitud vestlused."
 
-#: app/src\main.rs:3373
+#: app/src\main.rs:3395
 msgid "Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry."
-msgstr ""
+msgstr "Messenger blokeerib pärast avamist endiselt sisestust. Kontrolli PIN-i või taasta sõnumite ajalugu Messengeris, seejärel proovi uuesti."
 
-#: app/src\main.rs:3374
+#: app/src\main.rs:3396
 msgid "Messenger history"
-msgstr ""
+msgstr "Messengeri ajalugu"
 
-#: app/src\main.rs:3383
+#: app/src\main.rs:3405
 #, rust-format
 msgid "Could not update {view}. Showing earlier results."
-msgstr ""
+msgstr "{view} värskendamine ebaõnnestus. Näitan varasemaid tulemusi."
 
-#: app/src\main.rs:3388 app/src\main.rs:3519 app/src\main.rs:3530
-#: app/src\main.rs:3543 app/src\main.rs:3557 app/src\main.rs:3572
-#: app/src\main.rs:3585 app/src\main.rs:3643 app/src\update.rs:53
+#: app/src\main.rs:3410 app/src\main.rs:3541 app/src\main.rs:3552 app/src\main.rs:3565 app/src\main.rs:3579 app/src\main.rs:3594 app/src\main.rs:3607 app/src\main.rs:3665 app/src\update.rs:55
 msgid "Error"
-msgstr ""
+msgstr "Viga"
 
-#: app/src\main.rs:3395 app/src\main.rs:3448
+#: app/src\main.rs:3417 app/src\main.rs:3470
 msgid "Reaction set."
-msgstr ""
+msgstr "Reaktsioon pandud."
 
-#: app/src\main.rs:3423
+#: app/src\main.rs:3445
 msgid "Post ready."
-msgstr ""
+msgstr "Postitus valmis."
 
-#: app/src\main.rs:3426 app/src\main.rs:3550
+#: app/src\main.rs:3448 app/src\main.rs:3572
 msgid "Comment sent."
-msgstr ""
+msgstr "Kommentaar saadetud."
 
-#: app/src\main.rs:3429
+#: app/src\main.rs:3451
 msgid "Like changed."
-msgstr ""
+msgstr "Meeldimine muudetud."
 
-#: app/src\main.rs:3435
+#: app/src\main.rs:3457
 msgid "Shared to your feed."
-msgstr ""
+msgstr "Jagatud sinu voos."
 
-#: app/src\main.rs:3442 app/src\post_dialog.rs:538
+#: app/src\main.rs:3464 app/src\post_dialog.rs:539
 msgid "Share cancelled. Nothing was shared."
-msgstr ""
+msgstr "Jagamine tühistatud. Midagi ei jagatud."
 
-#: app/src\main.rs:3476
+#: app/src\main.rs:3498
 msgid "PIN accepted. Facebook is still restoring your chat history — loading your chats…"
-msgstr ""
+msgstr "PIN vastu võetud. Facebook taastab veel vestluste ajalugu — vestluste laadimine…"
 
-#: app/src\main.rs:3478
+#: app/src\main.rs:3500
 msgid "Messenger unlocked. Loading your chats…"
-msgstr ""
+msgstr "Messenger avatud. Vestluste laadimine…"
 
-#: app/src\main.rs:3484
+#: app/src\main.rs:3506
 msgid "PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes."
-msgstr ""
+msgstr "PIN vastu võetud. Facebook taastab veel vestluste ajalugu; vestlused avanevad, kui see lõpetab."
 
-#: app/src\main.rs:3486
+#: app/src\main.rs:3508
 msgid "Messenger unlocked."
-msgstr ""
+msgstr "Messenger avatud."
 
-#: app/src\main.rs:3491
+#: app/src\main.rs:3513
 msgid "Messenger could not be unlocked."
-msgstr ""
+msgstr "Messengeri avamine ebaõnnestus."
 
-#: app/src\main.rs:3495
+#: app/src\main.rs:3517
 #, rust-format
 msgid ""
 "Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n"
 "\n"
 "{error}"
 msgstr ""
+"Messenger ei suutnud ajalugu taastada. Kontrolli PIN-i või taasta ajalugu Messengeris ja proovi uuesti.\n"
+"\n"
+"{error}"
 
-#: app/src\main.rs:3498 app/src\main.rs:3826
+#: app/src\main.rs:3520 app/src\main.rs:3848
 msgid "Unlock encrypted chats"
-msgstr ""
+msgstr "Ava krüptitud vestlused"
 
-#: app/src\main.rs:3513
+#: app/src\main.rs:3535
 msgid "Debug report saved."
-msgstr ""
+msgstr "Silumisaruanne salvestatud."
 
-#: app/src\main.rs:3514 app/src\main.rs:3520
+#: app/src\main.rs:3536 app/src\main.rs:3542
 msgid "Debug report"
-msgstr ""
+msgstr "Silumisaruanne"
 
-#: app/src\main.rs:3532 app/src\main.rs:5070
+#: app/src\main.rs:3554 app/src\main.rs:5101
 msgid "New post"
 msgstr "Uus postitus"
 
-#: app/src\main.rs:3540 app/src\main.rs:3568 app/src\main.rs:3579
-#: app/src\main.rs:5183
+#: app/src\main.rs:3562 app/src\main.rs:3590 app/src\main.rs:3601 app/src\main.rs:5214
 msgid "Done"
-msgstr ""
+msgstr "Valmis"
 
-#: app/src\main.rs:3573
+#: app/src\main.rs:3595
 msgid "Join group"
-msgstr ""
+msgstr "Liitu grupiga"
 
-#: app/src\main.rs:3586 app/src\main.rs:5220
+#: app/src\main.rs:3608 app/src\main.rs:5251
 msgid "Leave group"
-msgstr ""
+msgstr "Lahku grupist"
 
-#: app/src\main.rs:3612
+#: app/src\main.rs:3634
 msgid "Sent"
-msgstr ""
+msgstr "Saadetud"
 
-#: app/src\main.rs:3623
+#: app/src\main.rs:3645
 msgid "Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
-msgstr ""
+msgstr "Sõnumit ei saadetud. Mustand ja manused jäid alles. Nupuga Manused saad faili eemaldada, näiteks üle Messengeri 25 MB piiri."
 
-#: app/src\main.rs:3625
+#: app/src\main.rs:3647
 msgid "Message could not be sent. Your draft has been kept."
-msgstr ""
+msgstr "Sõnumit ei saadetud. Mustand jäi alles."
 
-#: app/src\main.rs:3627
+#: app/src\main.rs:3649
 msgid "Send message"
-msgstr ""
+msgstr "Saada sõnum"
 
-#: app/src\main.rs:3637
+#: app/src\main.rs:3659
 msgid "Message removed"
-msgstr ""
+msgstr "Sõnum eemaldatud"
 
-#: app/src\main.rs:3656
+#: app/src\main.rs:3678
 msgid "The backend is installed but not signed in."
-msgstr ""
+msgstr "Moodul on paigaldatud, kuid sisse pole logitud."
 
-#: app/src\main.rs:3658 app/src\main.rs:3679 app/src\main.rs:3712
+#: app/src\main.rs:3680 app/src\main.rs:3701 app/src\main.rs:3734
 msgid "Signed out. Use Backend → Sign in when ready."
-msgstr ""
+msgstr "Välja logitud. Kui oled valmis, vali Moodul → Logi sisse."
 
-#: app/src\main.rs:3663
+#: app/src\main.rs:3685
 msgid "Installing the Facebook backend…"
-msgstr ""
+msgstr "Facebooki mooduli paigaldamine…"
 
-#: app/src\main.rs:3670
+#: app/src\main.rs:3692
 msgid "The Facebook backend could not start."
-msgstr ""
+msgstr "Facebooki moodulit ei õnnestunud käivitada."
 
-#: app/src\main.rs:3671
+#: app/src\main.rs:3693
 msgid "Backend startup"
-msgstr ""
+msgstr "Mooduli käivitamine"
 
-#: app/src\main.rs:3686
+#: app/src\main.rs:3708
 #, rust-format
 msgid ""
 "The backend could not be installed automatically: {error}\n"
 "You can retry from Backend → Install or update backend."
 msgstr ""
+"Moodulit ei õnnestunud automaatselt paigaldada: {error}\n"
+"Uuesti saad proovida menüüst Moodul → Paigalda või uuenda moodulit."
 
-#: app/src\main.rs:3689
+#: app/src\main.rs:3711
 msgid "Backend install failed"
-msgstr ""
-
-#: app/src\main.rs:3695
-msgid "Signed in."
-msgstr ""
-
-#: app/src\main.rs:3700
-msgid "Sign-in did not finish — see the details, or try Backend → Sign in."
-msgstr ""
-
-#: app/src\main.rs:3701
-msgid "Sign-in did not finish"
-msgstr ""
-
-#: app/src\main.rs:3705
-msgid "Sign-in failed. Use Backend → Sign in to retry."
-msgstr ""
-
-#: app/src\main.rs:3716 app/src\main.rs:3722
-msgid "Browser install"
-msgstr ""
+msgstr "Mooduli paigaldamine ebaõnnestus"
 
 #: app/src\main.rs:3717
+msgid "Signed in."
+msgstr "Sisse logitud."
+
+#: app/src\main.rs:3722
+msgid "Sign-in did not finish — see the details, or try Backend → Sign in."
+msgstr "Sisselogimine ei lõppenud — vaata üksikasju või proovi Moodul → Logi sisse."
+
+#: app/src\main.rs:3723
+msgid "Sign-in did not finish"
+msgstr "Sisselogimine ei lõppenud"
+
+#: app/src\main.rs:3727
+msgid "Sign-in failed. Use Backend → Sign in to retry."
+msgstr "Sisselogimine ebaõnnestus. Uuesti proovimiseks vali Moodul → Logi sisse."
+
+#: app/src\main.rs:3738 app/src\main.rs:3744
+msgid "Browser install"
+msgstr "Brauseri paigaldamine"
+
+#: app/src\main.rs:3739
 msgid "Browser installation failed."
-msgstr ""
+msgstr "Brauseri paigaldamine ebaõnnestus."
 
-#: app/src\main.rs:3826
+#: app/src\main.rs:3848
 msgid "Messenger PIN:"
-msgstr ""
+msgstr "Messengeri PIN:"
 
-#: app/src\main.rs:3835
+#: app/src\main.rs:3857
 msgid "Unlock cancelled."
-msgstr ""
+msgstr "Avamine tühistatud."
 
-#: app/src\main.rs:3858
+#: app/src\main.rs:3880
 msgid "Unlocking Messenger…"
-msgstr ""
+msgstr "Messengeri avamine…"
 
-#: app/src\main.rs:3873
+#: app/src\main.rs:3895
 msgid "Facebook post, video or reel link (full https:// URL):"
-msgstr ""
+msgstr "Facebooki postituse, video või reeli link (täielik https:// aadress):"
 
-#: app/src\main.rs:3874 app/src\main.rs:3888
+#: app/src\main.rs:3896 app/src\main.rs:3910
 msgid "Open Facebook link"
-msgstr ""
+msgstr "Ava Facebooki link"
 
-#: app/src\main.rs:3887
+#: app/src\main.rs:3909
 msgid "Paste a full https:// Facebook post, video or reel link. This link is invalid or unsupported."
-msgstr ""
+msgstr "Kleebi täielik https:// Facebooki postituse, video või reeli link. See link on vigane või ei ole toetatud."
 
-#: app/src\main.rs:3928
+#: app/src\main.rs:3950
 msgid "This row has no link, so there is no post to open. Sponsored and suggested rows usually have none."
-msgstr ""
+msgstr "Sellel real pole linki, nii et avada pole midagi. Sponsitud ja soovitatud ridadel seda tavaliselt pole."
 
-#: app/src\main.rs:3929 app/src\main.rs:3962 app/src\main.rs:5126
+#: app/src\main.rs:3951 app/src\main.rs:3984 app/src\main.rs:5157
 msgid "Open post"
-msgstr ""
+msgstr "Ava postitus"
 
-#: app/src\main.rs:3955
+#: app/src\main.rs:3977
 msgid "Opened notification on Facebook."
-msgstr ""
+msgstr "Märguanne avati Facebookis."
 
-#: app/src\main.rs:3961
+#: app/src\main.rs:3983
 msgid "BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?"
-msgstr ""
+msgstr "BlindFB ei oska seda tüüpi üksust veel lugeda (näiteks fotoalbumit). Kas avada see brauseris?"
 
-#: app/src\main.rs:3978
+#: app/src\main.rs:4000
 msgid "This page has no link, so there is nothing to open."
-msgstr ""
+msgstr "Sellel lehel pole linki, nii et avada pole midagi."
 
-#: app/src\main.rs:3979
+#: app/src\main.rs:4001
 msgid "Open page"
-msgstr ""
+msgstr "Ava leht"
 
-#: app/src\main.rs:3992
+#: app/src\main.rs:4014
 msgid "This row has no link, so there is nothing to open."
-msgstr ""
+msgstr "Sellel real pole linki, nii et avada pole midagi."
 
-#: app/src\main.rs:3993 app/src\main.rs:5137 app/src\main.rs:5147
+#: app/src\main.rs:4015 app/src\main.rs:5168 app/src\main.rs:5178
 msgid "Open"
 msgstr "Ava"
 
-#: app/src\main.rs:3997 app/src\main.rs:4011
+#: app/src\main.rs:4019 app/src\main.rs:4033
 msgid "Opened on Facebook in your browser."
-msgstr ""
-
-#: app/src\main.rs:4008
-msgid "This profile row has no link to open."
-msgstr ""
-
-#: app/src\main.rs:4016
-msgid "Information only. Applications or Shift+F10 opens this person's actions."
-msgstr ""
-
-#: app/src\main.rs:4028
-msgid "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
-msgstr ""
+msgstr "Avati brauseris Facebookis."
 
 #: app/src\main.rs:4030
+msgid "This profile row has no link to open."
+msgstr "Sellel profiili real pole linki, mida avada."
+
+#: app/src\main.rs:4038
+msgid "Information only. Applications or Shift+F10 opens this person's actions."
+msgstr "Ainult teave. Applications või Shift+F10 avab selle inimese toimingud."
+
+#: app/src\main.rs:4050
+msgid "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
+msgstr "Sellel real pole linki, nii et BlindFB ei saa seda avada, sellele reageerida ega seda kommenteerida. Sponsitud ja soovitatud ridadel seda tavaliselt pole."
+
+#: app/src\main.rs:4052
 msgid "Select a post first."
-msgstr ""
+msgstr "Vali esmalt postitus."
 
-#: app/src\main.rs:4044
+#: app/src\main.rs:4066
 msgid "Reaction"
-msgstr ""
+msgstr "Reaktsioon"
 
-#: app/src\main.rs:4076
+#: app/src\main.rs:4098
 msgid "Your comment:"
-msgstr ""
+msgstr "Sinu kommentaar:"
 
-#: app/src\main.rs:4230
+#: app/src\main.rs:4252
 msgid "This row has no web link (it is a suggestion or ad row)."
-msgstr ""
+msgstr "Sellel real pole veebilinki (see on soovituse või reklaami rida)."
 
-#: app/src\main.rs:4231
+#: app/src\main.rs:4253
 msgid "Open on Facebook"
-msgstr ""
+msgstr "Ava Facebookis"
 
-#: app/src\main.rs:4312
+#: app/src\main.rs:4334
 msgid "Select or open a chat first."
-msgstr ""
+msgstr "Vali või ava esmalt vestlus."
 
-#: app/src\main.rs:4313
+#: app/src\main.rs:4335
 msgid "Open in Messenger"
-msgstr ""
+msgstr "Ava Messengeris"
 
-#: app/src\main.rs:4332
+#: app/src\main.rs:4354
 msgid "Select one of your posts first."
-msgstr ""
+msgstr "Vali esmalt üks oma postitustest."
 
-#: app/src\main.rs:4337
+#: app/src\main.rs:4359
 msgid "Delete this post? Facebook moves it to the trash (permanent removal after 30 days)."
-msgstr ""
+msgstr "Kas kustutada see postitus? Facebook viib selle prügikasti (lõplik eemaldamine 30 päeva pärast)."
 
-#: app/src\main.rs:4367 app/src\main.rs:4377
+#: app/src\main.rs:4389 app/src\main.rs:4399
 msgid "Attached files"
-msgstr ""
+msgstr "Lisatud failid"
 
-#: app/src\main.rs:4374
+#: app/src\main.rs:4396
 msgid "Attached &files"
-msgstr ""
+msgstr "Lisatud &failid"
 
-#: app/src\main.rs:4393
+#: app/src\main.rs:4415
 msgid "&Remove selected"
-msgstr ""
+msgstr "&Eemalda valitud"
 
-#: app/src\main.rs:4395
+#: app/src\main.rs:4417
 msgid "Remove &all"
-msgstr ""
+msgstr "Eemalda &kõik"
 
-#: app/src\main.rs:4512
+#: app/src\main.rs:4534
 #, rust-format
 msgid "Replying to: {text}. Write your reply in the message box and send as usual."
-msgstr ""
+msgstr "Vastus sõnumile: {text}. Kirjuta vastus sõnumikasti ja saada nagu tavaliselt."
 
-#: app/src\main.rs:4540
+#: app/src\main.rs:4562
 msgid "Open a chat first, then write and send."
-msgstr ""
+msgstr "Ava esmalt vestlus, siis kirjuta ja saada."
 
-#: app/src\main.rs:4557
+#: app/src\main.rs:4579
 msgid "Wait for your message to finish sending."
-msgstr ""
+msgstr "Oota, kuni sõnum on saadetud."
 
-#: app/src\main.rs:4603
+#: app/src\main.rs:4625
 msgid "Share"
 msgstr "Jaga"
 
-#: app/src\main.rs:4608
+#: app/src\main.rs:4630
 msgid "BlindFB cannot share this kind of item yet. Open it on Facebook to share it."
-msgstr ""
+msgstr "BlindFB ei oska seda tüüpi üksust veel jagada. Jagamiseks ava see Facebookis."
 
-#: app/src\main.rs:4609 app/src\post_dialog.rs:519
+#: app/src\main.rs:4631 app/src\post_dialog.rs:520
 msgid "Share post"
-msgstr ""
+msgstr "Jaga postitust"
 
-#: app/src\main.rs:4622
+#: app/src\main.rs:4644
 msgid "Text copied."
-msgstr ""
+msgstr "Tekst kopeeritud."
 
-#: app/src\main.rs:4626 app/src\post_dialog.rs:572
+#: app/src\main.rs:4648 app/src\post_dialog.rs:573
 msgid "Link copied."
-msgstr ""
+msgstr "Link kopeeritud."
 
-#: app/src\main.rs:4627
+#: app/src\main.rs:4649
 msgid "Copy link"
 msgstr "Kopeeri link"
 
-#: app/src\main.rs:4627
+#: app/src\main.rs:4649
 msgid "This item has no link to copy."
-msgstr ""
+msgstr "Sellel üksusel pole linki, mida kopeerida."
 
-#: app/src\main.rs:4632
+#: app/src\main.rs:4654
 msgid "Opened Facebook's share page in your browser."
-msgstr ""
+msgstr "Brauseris avati Facebooki jagamisleht."
 
-#: app/src\main.rs:4636
+#: app/src\main.rs:4658
 msgid "This item has no link to share."
-msgstr ""
+msgstr "Sellel üksusel pole linki, mida jagada."
 
-#: app/src\main.rs:4637
+#: app/src\main.rs:4659
 msgid "Share on Facebook"
-msgstr ""
+msgstr "Jaga Facebookis"
 
-#: app/src\main.rs:4651 app/src\main.rs:5116
+#: app/src\main.rs:4673 app/src\main.rs:5147
 msgid "Opened the listing in your browser."
-msgstr ""
-
-#: app/src\main.rs:4671
-msgid "Downloading the Facebook backend…"
-msgstr ""
-
-#: app/src\main.rs:4689
-msgid "Remove your newest message in this chat for everyone?"
-msgstr ""
-
-#: app/src\main.rs:4690 app/src\main.rs:4698
-msgid "Unsend"
-msgstr ""
+msgstr "Kuulutus avati brauseris."
 
 #: app/src\main.rs:4698
-msgid "Open a chat first."
-msgstr ""
+msgid "Downloading the Facebook backend…"
+msgstr "Facebooki mooduli allalaadimine…"
 
-#: app/src\main.rs:4704
+#: app/src\main.rs:4716
+msgid "Remove your newest message in this chat for everyone?"
+msgstr "Kas eemaldada sinu uusim sõnum sellest vestlusest kõigi jaoks?"
+
+#: app/src\main.rs:4717 app/src\main.rs:4725
+msgid "Unsend"
+msgstr "Võta tagasi"
+
+#: app/src\main.rs:4725
+msgid "Open a chat first."
+msgstr "Ava esmalt vestlus."
+
+#: app/src\main.rs:4733
 msgid ""
 "Ctrl+O: open a Facebook post, video or reel link.\n"
 "Enter on an item: open it. Applications or Shift+F10: item actions.\n"
@@ -1832,1175 +1849,1282 @@ msgid ""
 "Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n"
 "Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."
 msgstr ""
+"Ctrl+O: ava Facebooki postituse, video või reeli link.\n"
+"Enter üksusel: ava see. Applications või Shift+F10: üksuse toimingud.\n"
+"End ja siis Enter real „Laadi veel postitusi” või „Laadi veel reelse” laadib järgmise osa.\n"
+"Ctrl+1 kuni Ctrl+9: vaate vahetamine. Ctrl+8 avab Reelsi, Ctrl+9 Marketplace'i. Vaadete loendis on ka Sündmused, Lehed ja Kohad. F5: värskenda. Ctrl+L: laadi veel.\n"
+"Alt+Ctrl+F (vaikimisi, muudetav menüüs Fail, Näita/peida kiirklahv): peida BlindFB süsteemsesse salve. Too see tagasi sama kiirklahviga või salve ikoonilt (topeltklõps või selle menüükäsk Näita / peida).\n"
+"Reelsid on vahemälus kuni F5-ni. Nooled muudavad valitud reeli; Enter avab selle ja alustab kohe esitust. Escape viib loendisse tagasi.\n"
+"Tab viib Üksustest valitud üksuse Linkidesse; Enter avab valitud lingi. Välislingid on eespool ja Täielik postitus Facebookis viimane.\n"
+"Postituse lugeja algab postituse linkidest. Applications või Shift+F10 postitusel sisaldab alammenüüd Lingid. Tab jõuab postituse teksti, video juhtnuppude, kommentaaride ja sisestuskastini.\n"
+"Enter valitud lingil või Ava link avab brauseri.\n"
+"Tab nuppudele Esita/Paus, Stopp, 10 sekundit tagasi või 10 sekundit edasi, seejärel vajuta tühikut.\n"
+"Nooled video helitugevusel muudavad selle protsenti.\n"
+"Applications või Shift+F10 postituse tekstil: kommenteeri, reageeri või jaga. Kommentaaril: vasta või meeldib.\n"
+"Ctrl+Enter kommentaarikastis saadab. Escape sulgeb lugeja ja peatab esituse."
 
-#: app/src\main.rs:4717
+#: app/src\main.rs:4746
+msgid "File, Keyboard shortcuts: change any of these shortcuts, or give any menu command one."
+msgstr "Fail, Kiirklahvid: muuda ükskõik millist neist kiirklahvidest või anna kiirklahv mis tahes menüükäsule."
+
+#: app/src\main.rs:4748
 msgid "Keyboard commands"
 msgstr "Klaviatuurikäsud"
 
-#: app/src\main.rs:4727
+#: app/src\main.rs:4758
 msgid ""
 "An accessible Facebook and Messenger client for screen reader users.\n"
 "Built with wxDragon on the facebook-cli (fb) backend."
 msgstr ""
+"Ligipääsetav Facebooki ja Messengeri klient ekraanilugeja kasutajatele.\n"
+"Tehtud wxDragoniga facebook-cli (fb) mooduli peal."
 
-#: app/src\main.rs:4751
+#: app/src\main.rs:4782
 msgid "Language saved. Restart BlindFB to use it."
 msgstr "Keel salvestatud. Taaskäivita BlindFB."
 
-#: app/src\main.rs:4752
+#: app/src\main.rs:4783
 msgid "Language"
 msgstr "Keel"
 
-#: app/src\main.rs:4759
+#: app/src\main.rs:4790
 msgid "Debug logging on. Repeat what failed, then use Help, Save debug report."
-msgstr ""
+msgstr "Silumislogi sees. Korda seda, mis ebaõnnestus, seejärel vali Abi, Salvesta silumisaruanne."
 
-#: app/src\main.rs:4761
+#: app/src\main.rs:4792
 msgid "Debug logging off."
-msgstr ""
+msgstr "Silumislogi väljas."
 
-#: app/src\main.rs:4762
+#: app/src\main.rs:4793
 msgid "Debug logging"
-msgstr ""
+msgstr "Silumislogi"
 
-#: app/src\main.rs:4767
+#: app/src\main.rs:4798
 msgid "Save debug report"
-msgstr ""
+msgstr "Salvesta silumisaruanne"
 
 #. TRANSLATORS: a file-type filter; translate "Text files" only, keep "(*.txt)|*.txt".
-#: app/src\main.rs:4770
+#: app/src\main.rs:4801
 msgid "Text files (*.txt)|*.txt"
-msgstr ""
+msgstr "Tekstifailid (*.txt)|*.txt"
 
-#: app/src\main.rs:4775
+#: app/src\main.rs:4806
 msgid "Saving the debug report…"
-msgstr ""
+msgstr "Silumisaruande salvestamine…"
 
-#: app/src\main.rs:4802
+#: app/src\main.rs:4833
 msgid "Copy"
-msgstr ""
+msgstr "Kopeeri"
 
-#: app/src\main.rs:4802
+#: app/src\main.rs:4833
 msgid "Could not copy to the clipboard."
-msgstr ""
+msgstr "Lõikelauale kopeerimine ebaõnnestus."
 
-#: app/src\main.rs:4862 app/src\main.rs:5015
+#: app/src\main.rs:4893 app/src\main.rs:5046
 msgid "&Open group"
-msgstr ""
+msgstr "&Ava grupp"
 
-#: app/src\main.rs:4863
+#: app/src\main.rs:4894
 msgid "&Join group"
-msgstr ""
+msgstr "&Liitu grupiga"
 
-#: app/src\main.rs:4864 app/src\main.rs:5017
+#: app/src\main.rs:4895 app/src\main.rs:5048
 msgid "Open group on &Facebook (web)"
-msgstr ""
+msgstr "Ava grupp &Facebookis (veebis)"
 
-#: app/src\main.rs:4865 app/src\main.rs:4876 app/src\main.rs:4886
-#: app/src\main.rs:4895 app/src\main.rs:4940 app/src\main.rs:4955
-#: app/src\main.rs:5009 app/src\main.rs:5029 app/src\main.rs:5032
+#: app/src\main.rs:4896 app/src\main.rs:4907 app/src\main.rs:4917 app/src\main.rs:4926 app/src\main.rs:4971 app/src\main.rs:4986 app/src\main.rs:5040 app/src\main.rs:5060 app/src\main.rs:5063
 msgid "Cop&y text"
-msgstr ""
+msgstr "&Kopeeri tekst"
 
-#: app/src\main.rs:4871 app/src\main.rs:4963
+#: app/src\main.rs:4902 app/src\main.rs:4994
 msgid "&Profile"
-msgstr ""
+msgstr "&Profiil"
 
-#: app/src\main.rs:4872 app/src\main.rs:4964 app/src\main.rs:5025
+#: app/src\main.rs:4903 app/src\main.rs:4995 app/src\main.rs:5056
 msgid "P&osts"
-msgstr ""
+msgstr "P&ostitused"
 
-#: app/src\main.rs:4875 app/src\main.rs:4897 app/src\main.rs:4957
-#: app/src\main.rs:4966 app/src\main.rs:5028 app/src\post_dialog.rs:1134
+#: app/src\main.rs:4906 app/src\main.rs:4928 app/src\main.rs:4988 app/src\main.rs:4997 app/src\main.rs:5059 app/src\post_dialog.rs:1141
 msgid "Open on &Facebook (web)"
-msgstr ""
+msgstr "Ava &Facebookis (veebis)"
 
-#: app/src\main.rs:4882
+#: app/src\main.rs:4913
 msgid "&Open listing in browser"
-msgstr ""
+msgstr "&Ava kuulutus brauseris"
 
-#: app/src\main.rs:4883
+#: app/src\main.rs:4914
 msgid "&Message seller…"
-msgstr ""
+msgstr "&Saada sõnum müüjale…"
 
-#: app/src\main.rs:4884 app/src\main.rs:4896 app/src\main.rs:4941
-#: app/src\main.rs:4956 app/src\main.rs:5016 app/src\post_dialog.rs:1131
+#: app/src\main.rs:4915 app/src\main.rs:4927 app/src\main.rs:4972 app/src\main.rs:4987 app/src\main.rs:5047 app/src\post_dialog.rs:1138
 msgid "Copy &link"
-msgstr ""
+msgstr "Kopeeri &link"
 
-#: app/src\main.rs:4885
+#: app/src\main.rs:4916
 msgid "Share on &Facebook…"
-msgstr ""
+msgstr "Jaga &Facebookis…"
 
-#: app/src\main.rs:4892 app/src\main.rs:4953
+#: app/src\main.rs:4923 app/src\main.rs:4984
 msgid "&Open"
-msgstr ""
+msgstr "&Ava"
 
-#: app/src\main.rs:4911
+#: app/src\main.rs:4942
 msgid "&Open post and comments"
-msgstr ""
+msgstr "&Ava postitus ja kommentaarid"
 
-#: app/src\main.rs:4922
+#: app/src\main.rs:4953
 msgid "Group's p&osts"
-msgstr ""
+msgstr "Grupi p&ostitused"
 
-#: app/src\main.rs:4930 app/src\post_dialog.rs:1126
+#: app/src\main.rs:4961 app/src\post_dialog.rs:1133
 msgid "&React"
-msgstr ""
+msgstr "&Reageeri"
 
-#: app/src\main.rs:4938
+#: app/src\main.rs:4969
 msgid "&Message author"
-msgstr ""
+msgstr "&Saada sõnum autorile"
 
-#: app/src\main.rs:4943
+#: app/src\main.rs:4974
 msgid "Open author on Fa&cebook (web)"
-msgstr ""
+msgstr "Ava autor Fa&cebookis (veebis)"
 
-#: app/src\main.rs:4973 app/src\main.rs:4999
+#: app/src\main.rs:5004 app/src\main.rs:5030
 msgid "Open in &Messenger (web)"
-msgstr ""
+msgstr "Ava &Messengeris (veebis)"
 
-#: app/src\main.rs:5006
+#: app/src\main.rs:5037
 msgid "Commenter &profile"
-msgstr ""
+msgstr "Kommenteerija &profiil"
 
-#: app/src\main.rs:5008
+#: app/src\main.rs:5039
 msgid "&Message commenter"
-msgstr ""
+msgstr "&Saada sõnum kommenteerijale"
 
-#: app/src\main.rs:5019
+#: app/src\main.rs:5050
 msgid "&Leave group…"
-msgstr ""
+msgstr "&Lahku grupist…"
 
-#: app/src\main.rs:5070
+#: app/src\main.rs:5101
 msgid "Post text:"
-msgstr ""
+msgstr "Postituse tekst:"
 
-#: app/src\main.rs:5084
+#: app/src\main.rs:5115
 msgid "Only me"
-msgstr ""
+msgstr "Ainult mina"
 
-#: app/src\main.rs:5084
+#: app/src\main.rs:5115
 msgid "Public"
-msgstr ""
-
-#: app/src\main.rs:5087
-msgid "Audience"
-msgstr ""
-
-#: app/src\main.rs:5087
-msgid "Who can see this?"
-msgstr ""
+msgstr "Avalik"
 
 #: app/src\main.rs:5118
+msgid "Audience"
+msgstr "Sihtrühm"
+
+#: app/src\main.rs:5118
+msgid "Who can see this?"
+msgstr "Kes seda näeb?"
+
+#: app/src\main.rs:5149
 msgid "This listing row has no link to open."
-msgstr ""
+msgstr "Sellel kuulutuse real pole linki, mida avada."
 
-#: app/src\main.rs:5125
+#: app/src\main.rs:5156
 msgid "This row has no link, so there is no post to open."
-msgstr ""
+msgstr "Sellel real pole linki, nii et postitust ei saa avada."
 
-#: app/src\main.rs:5136
+#: app/src\main.rs:5167
 msgid "This row has no link, so it cannot be opened."
-msgstr ""
+msgstr "Sellel real pole linki, nii et seda ei saa avada."
 
-#: app/src\main.rs:5146
+#: app/src\main.rs:5177
 msgid "BlindFB cannot read this kind of item yet. Open it in your web browser?"
-msgstr ""
+msgstr "BlindFB ei oska seda tüüpi üksust veel lugeda. Kas avada see brauseris?"
 
-#: app/src\main.rs:5163
+#: app/src\main.rs:5194
 msgid "This group row has no link, so it cannot be joined."
-msgstr ""
-
-#: app/src\main.rs:5166
-#, rust-format
-msgid "Joining {group}…"
-msgstr ""
-
-#: app/src\main.rs:5190
-msgid "Membership questions"
-msgstr ""
-
-#. TRANSLATORS: {question} is a group's membership question, asked in a text box.
-#: app/src\main.rs:5190
-#, rust-format
-msgid "{question}:"
-msgstr ""
-
-#: app/src\main.rs:5192
-msgid "Join cancelled: the membership questions were not answered."
-msgstr ""
+msgstr "Sellel grupi real pole linki, nii et sellega ei saa liituda."
 
 #: app/src\main.rs:5197
+#, rust-format
+msgid "Joining {group}…"
+msgstr "Liitumine grupiga {group}…"
+
+#: app/src\main.rs:5221
+msgid "Membership questions"
+msgstr "Liikmeks saamise küsimused"
+
+#. TRANSLATORS: {question} is a group's membership question, asked in a text box.
+#: app/src\main.rs:5221
+#, rust-format
+msgid "{question}:"
+msgstr "{question}:"
+
+#: app/src\main.rs:5223
+msgid "Join cancelled: the membership questions were not answered."
+msgstr "Liitumine tühistatud: liikmeks saamise küsimustele ei vastatud."
+
+#: app/src\main.rs:5228
 msgid "Submitting your answers…"
-msgstr ""
+msgstr "Vastuste saatmine…"
 
-#: app/src\main.rs:5210
+#: app/src\main.rs:5241
 msgid "This group row has no link, so it cannot be left."
-msgstr ""
+msgstr "Sellel grupi real pole linki, nii et sellest ei saa lahkuda."
 
-#: app/src\main.rs:5217
+#: app/src\main.rs:5248
 #, rust-format
 msgid "Leave the group {name}? You can rejoin later, but private groups will need approval again."
-msgstr ""
+msgstr "Kas lahkuda grupist {name}? Hiljem saad uuesti liituda, kuid privaatsed grupid vajavad taas heakskiitu."
 
-#: app/src\main.rs:5224
+#: app/src\main.rs:5255
 #, rust-format
 msgid "Leaving {name}…"
-msgstr ""
-
-#: app/src\main.rs:5237
-msgid "This listing row has no link, so its seller cannot be messaged."
-msgstr ""
-
-#: app/src\main.rs:5242
-#, rust-format
-msgid "Message to the seller of {listing}:"
-msgstr ""
-
-#: app/src\main.rs:5243
-msgid "Message seller"
-msgstr ""
-
-#: app/src\main.rs:5250
-msgid "Messaging the seller…"
-msgstr ""
-
-#: app/src\main.rs:5260
-msgid "Listing title:"
-msgstr ""
-
-#: app/src\main.rs:5260 app/src\main.rs:5269 app/src\main.rs:5279
-#: app/src\main.rs:5293 app/src\main.rs:5310 app/src\main.rs:5316
-#: app/src\main.rs:5326
-msgid "Sell on Marketplace"
-msgstr ""
+msgstr "Lahkumine grupist {name}…"
 
 #: app/src\main.rs:5268
+msgid "This listing row has no link, so its seller cannot be messaged."
+msgstr "Sellel kuulutuse real pole linki, nii et müüjale ei saa sõnumit saata."
+
+#: app/src\main.rs:5273
+#, rust-format
+msgid "Message to the seller of {listing}:"
+msgstr "Sõnum kuulutuse {listing} müüjale:"
+
+#: app/src\main.rs:5274
+msgid "Message seller"
+msgstr "Saada sõnum müüjale"
+
+#: app/src\main.rs:5281
+msgid "Messaging the seller…"
+msgstr "Sõnumi saatmine müüjale…"
+
+#: app/src\main.rs:5291
+msgid "Listing title:"
+msgstr "Kuulutuse pealkiri:"
+
+#: app/src\main.rs:5291 app/src\main.rs:5300 app/src\main.rs:5310 app/src\main.rs:5324 app/src\main.rs:5341 app/src\main.rs:5347 app/src\main.rs:5357
+msgid "Sell on Marketplace"
+msgstr "Müü Marketplace'is"
+
+#: app/src\main.rs:5299
 msgid "Price (0 lists it as free):"
-msgstr ""
-
-#: app/src\main.rs:5278
-msgid "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing."
-msgstr ""
-
-#: app/src\main.rs:5284
-msgid "New"
-msgstr ""
-
-#: app/src\main.rs:5285
-msgid "Used - like new"
-msgstr ""
-
-#: app/src\main.rs:5286
-msgid "Used - good"
-msgstr ""
-
-#: app/src\main.rs:5287
-msgid "Used - fair"
-msgstr ""
-
-#: app/src\main.rs:5292
-msgid "Condition:"
-msgstr ""
+msgstr "Hind (0 tähendab tasuta):"
 
 #: app/src\main.rs:5309
-msgid "Category (leave empty to skip):"
-msgstr ""
+msgid "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing."
+msgstr "Sisesta hind arvuna, näiteks 40 või 12.50. Tasuta kuulutuse jaoks kasuta 0."
 
 #: app/src\main.rs:5315
+msgid "New"
+msgstr "Uus"
+
+#: app/src\main.rs:5316
+msgid "Used - like new"
+msgstr "Kasutatud - nagu uus"
+
+#: app/src\main.rs:5317
+msgid "Used - good"
+msgstr "Kasutatud - hea"
+
+#: app/src\main.rs:5318
+msgid "Used - fair"
+msgstr "Kasutatud - rahuldav"
+
+#: app/src\main.rs:5323
+msgid "Condition:"
+msgstr "Seisukord:"
+
+#: app/src\main.rs:5340
+msgid "Category (leave empty to skip):"
+msgstr "Kategooria (vahelejätmiseks jäta tühjaks):"
+
+#: app/src\main.rs:5346
 msgid "Description (leave empty to skip):"
-msgstr ""
+msgstr "Kirjeldus (vahelejätmiseks jäta tühjaks):"
 
-#: app/src\main.rs:5325
+#: app/src\main.rs:5356
 msgid "Marketplace allows at most 10 photos and videos per listing."
-msgstr ""
+msgstr "Marketplace lubab kuulutuses kuni 10 fotot ja videot."
 
-#: app/src\main.rs:5330
+#: app/src\main.rs:5361
 #, rust-format
 msgid "Listing {title} on Marketplace…"
-msgstr ""
+msgstr "Kuulutuse {title} lisamine Marketplace'i…"
 
-#: app/src\main.rs:5353
+#: app/src\main.rs:5384
 msgid "Everything"
-msgstr ""
+msgstr "Kõik"
 
-#: app/src\main.rs:5355
+#: app/src\main.rs:5386
 msgid "People"
-msgstr ""
-
-#: app/src\main.rs:5357
-msgid "Photos"
-msgstr ""
-
-#: app/src\main.rs:5358
-msgid "Videos"
-msgstr ""
+msgstr "Inimesed"
 
 #: app/src\main.rs:5388
+msgid "Photos"
+msgstr "Fotod"
+
+#: app/src\main.rs:5389
+msgid "Videos"
+msgstr "Videod"
+
+#: app/src\main.rs:5419
 msgid "Search Facebook"
-msgstr ""
+msgstr "Otsi Facebookist"
 
-#: app/src\main.rs:5395
+#: app/src\main.rs:5426
 msgid "Search &for:"
-msgstr ""
+msgstr "&Otsi:"
 
-#: app/src\main.rs:5400
+#: app/src\main.rs:5431
 msgid "Search for"
-msgstr ""
+msgstr "Otsi"
 
-#: app/src\main.rs:5402
+#: app/src\main.rs:5433
 msgid "Search &in:"
-msgstr ""
+msgstr "Otsi &kohast:"
 
-#: app/src\main.rs:5410
+#: app/src\main.rs:5441
 msgid "Search in"
-msgstr ""
+msgstr "Otsi kohast"
 
-#: app/src\main.rs:5415
+#: app/src\main.rs:5446
 msgid "&Search"
-msgstr ""
+msgstr "&Otsi"
 
-#: app/src\main.rs:5417
+#: app/src\main.rs:5448
 msgid "Search"
 msgstr "Otsing"
 
-#: app/src\main.rs:5421 app/src\main.rs:5423 app/src\update.rs:48
+#: app/src\main.rs:5452 app/src\main.rs:5454 app/src\shortcuts_dialog.rs:358 app/src\update.rs:50
 msgid "Cancel"
 msgstr "Tühista"
 
-#: app/src\main.rs:5450
+#: app/src\main.rs:5481
 msgid "No OCR engine is available on this system. On Linux, install tesseract-ocr."
-msgstr ""
+msgstr "Selles süsteemis pole tekstituvastust. Linuxis paigalda tesseract-ocr."
 
-#: app/src\main.rs:5451
+#: app/src\main.rs:5482
 msgid "OCR an image"
-msgstr ""
+msgstr "Tuvasta pildilt tekst"
 
-#: app/src\main.rs:5463
+#: app/src\main.rs:5494
 msgid "Reading image text…"
-msgstr ""
+msgstr "Pildi teksti lugemine…"
 
-#: app/src\main.rs:5475
+#: app/src\main.rs:5506
 #, rust-format
 msgid "could not open image: {error}"
-msgstr ""
+msgstr "pilti ei õnnestunud avada: {error}"
 
-#: app/src\main.rs:5479
+#: app/src\main.rs:5510
 #, rust-format
 msgid "OCR failed: {error}"
-msgstr ""
+msgstr "Tekstituvastus ebaõnnestus: {error}"
 
 #: app/src\player.rs:36 app/src\player.rs:286
 msgid "Video display"
-msgstr ""
+msgstr "Video kuva"
 
 #: app/src\player.rs:57
 msgid "The media backend could not load this video."
-msgstr ""
+msgstr "Meediamoodul ei suutnud seda videot laadida."
 
 #: app/src\player.rs:176
 msgid "The video player could not complete that action."
-msgstr ""
+msgstr "Videomängija ei suutnud seda toimingut lõpetada."
 
 #: app/src\player.rs:211
 msgid "The video could not be played. Try another video or check your connection."
-msgstr ""
+msgstr "Videot ei õnnestunud esitada. Proovi teist videot või kontrolli ühendust."
 
 #: app/src\player.rs:402
 msgid "The video player is not installed."
-msgstr ""
+msgstr "Videomängija pole paigaldatud."
 
 #: app/src\player.rs:461
 msgid "The video player could not start."
-msgstr ""
+msgstr "Videomängijat ei õnnestunud käivitada."
 
 #: app/src\player.rs:624
 msgid "The video player disconnected. Close this post and try again."
-msgstr ""
+msgstr "Videomängija ühendus katkes. Sulge see postitus ja proovi uuesti."
 
-#: app/src\post_dialog.rs:29
+#: app/src\post_dialog.rs:30
 msgid "&Write a comment (Ctrl+Enter to send)"
-msgstr ""
+msgstr "&Kirjuta kommentaar (Ctrl+Enter saadab)"
 
-#: app/src\post_dialog.rs:225 app/src\post_dialog.rs:256
+#: app/src\post_dialog.rs:226 app/src\post_dialog.rs:257
 msgid "Nothing to copy yet."
-msgstr ""
+msgstr "Veel pole midagi kopeerida."
 
-#: app/src\post_dialog.rs:229
+#: app/src\post_dialog.rs:230
 msgid "Copied."
-msgstr ""
+msgstr "Kopeeritud."
 
-#: app/src\post_dialog.rs:260
+#: app/src\post_dialog.rs:261
 msgid "Post and comments copied."
 msgstr "Postitus ja kommentaarid kopeeritud."
 
-#: app/src\post_dialog.rs:281
+#: app/src\post_dialog.rs:282
 msgid "This comment has no link to open."
-msgstr ""
+msgstr "Sellel kommentaaril pole linki, mida avada."
 
-#: app/src\post_dialog.rs:299
+#: app/src\post_dialog.rs:300
 #, rust-format
 msgid "Links in {author}'s comment. Enter opens the selected link in your browser"
-msgstr ""
+msgstr "Lingid kasutaja {author} kommentaaris. Enter avab valitud lingi brauseris"
 
-#: app/src\post_dialog.rs:306 app/src\post_dialog.rs:772
+#: app/src\post_dialog.rs:307 app/src\post_dialog.rs:773
 msgid "Post links. Enter opens the selected link in your browser"
 msgstr "Postituse lingid. Enter avab valitud lingi brauseris"
 
-#: app/src\post_dialog.rs:324
+#: app/src\post_dialog.rs:325
 msgid "&Pause video"
-msgstr ""
+msgstr "&Peata video"
 
-#: app/src\post_dialog.rs:326 app/src\post_dialog.rs:794
+#: app/src\post_dialog.rs:327 app/src\post_dialog.rs:795
 msgid "&Play video"
-msgstr ""
+msgstr "&Esita video"
 
-#: app/src\post_dialog.rs:343
+#: app/src\post_dialog.rs:344
 msgid "Video paused."
-msgstr ""
+msgstr "Video peatatud."
 
-#: app/src\post_dialog.rs:345 app/src\post_dialog.rs:449
+#: app/src\post_dialog.rs:346 app/src\post_dialog.rs:450
 msgid "Playing video."
-msgstr ""
+msgstr "Video esitamine."
 
-#: app/src\post_dialog.rs:355 app/src\post_dialog.rs:451
+#: app/src\post_dialog.rs:356 app/src\post_dialog.rs:452
 msgid "Playback failed. Press Play to retry."
-msgstr ""
+msgstr "Esitamine ebaõnnestus. Uuesti proovimiseks vajuta Esita."
 
-#: app/src\post_dialog.rs:377
+#: app/src\post_dialog.rs:378
 msgid "Preparing video…"
-msgstr ""
+msgstr "Video ettevalmistamine…"
 
-#: app/src\post_dialog.rs:389
+#: app/src\post_dialog.rs:390
 msgid "Loading video…"
-msgstr ""
+msgstr "Video laadimine…"
 
-#: app/src\post_dialog.rs:392
+#: app/src\post_dialog.rs:393
 msgid "Could not load video. Press Play to retry."
-msgstr ""
+msgstr "Videot ei õnnestunud laadida. Uuesti proovimiseks vajuta Esita."
 
-#: app/src\post_dialog.rs:411
+#: app/src\post_dialog.rs:412
 msgid "Could not stop video. Try Pause or close the reader."
-msgstr ""
+msgstr "Videot ei õnnestunud peatada. Proovi Paus või sulge lugeja."
 
-#: app/src\post_dialog.rs:413
+#: app/src\post_dialog.rs:414
 msgid "Video stopped."
-msgstr ""
+msgstr "Video peatatud."
 
-#: app/src\post_dialog.rs:421
+#: app/src\post_dialog.rs:422
 msgid "This video could not seek."
-msgstr ""
+msgstr "Selles videos ei saa kerida."
 
-#: app/src\post_dialog.rs:426
+#: app/src\post_dialog.rs:427
 #, rust-format
 msgid "Video position: {n} second."
 msgid_plural "Video position: {n} seconds."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Video asukoht: {n} sekund."
+msgstr[1] "Video asukoht: {n} sekundit."
 
-#: app/src\post_dialog.rs:460
+#: app/src\post_dialog.rs:461
 msgid "Video finished."
-msgstr ""
+msgstr "Video lõppes."
 
-#: app/src\post_dialog.rs:469 app/src\post_dialog.rs:1280
+#: app/src\post_dialog.rs:470 app/src\post_dialog.rs:1287
 #, rust-format
 msgid "{error} Press Play to retry."
-msgstr ""
+msgstr "{error} Uuesti proovimiseks vajuta Esita."
 
-#: app/src\post_dialog.rs:507
+#: app/src\post_dialog.rs:508
 msgid "Opening Facebook's share dialog…"
-msgstr ""
+msgstr "Facebooki jagamisakna avamine…"
 
-#: app/src\post_dialog.rs:516
+#: app/src\post_dialog.rs:517
 #, rust-format
 msgid ""
 "Share this post to your feed. Audience: {audience}.\n"
 "Say something about it (optional), then press OK to share:"
 msgstr ""
+"Jaga seda postitust oma voos. Sihtrühm: {audience}.\n"
+"Ütle selle kohta midagi (valikuline), seejärel vajuta jagamiseks OK:"
 
-#: app/src\post_dialog.rs:531
+#: app/src\post_dialog.rs:532
 msgid "Sharing…"
-msgstr ""
+msgstr "Jagamine…"
 
-#: app/src\post_dialog.rs:554
+#: app/src\post_dialog.rs:555
 msgid "The post has not loaded yet. Try again in a moment."
-msgstr ""
+msgstr "Postitus pole veel laaditud. Proovi hetke pärast uuesti."
 
-#: app/src\post_dialog.rs:561
+#: app/src\post_dialog.rs:562
 msgid "Post copied."
 msgstr "Postitus kopeeritud."
 
-#: app/src\post_dialog.rs:563
+#: app/src\post_dialog.rs:564
 msgid "Could not copy the post."
-msgstr ""
+msgstr "Postitust ei õnnestunud kopeerida."
 
-#: app/src\post_dialog.rs:574
+#: app/src\post_dialog.rs:575
 msgid "Could not copy the link."
-msgstr ""
+msgstr "Linki ei õnnestunud kopeerida."
 
-#: app/src\post_dialog.rs:590 app/src\post_dialog.rs:598
+#: app/src\post_dialog.rs:591 app/src\post_dialog.rs:599
 msgid "Reacting…"
-msgstr ""
+msgstr "Reageerimine…"
 
-#: app/src\post_dialog.rs:607
+#: app/src\post_dialog.rs:608
 msgid "Write a comment or reply first."
-msgstr ""
+msgstr "Kirjuta esmalt kommentaar või vastus."
 
-#: app/src\post_dialog.rs:628
+#: app/src\post_dialog.rs:629
 msgid "Sending comment…"
-msgstr ""
+msgstr "Kommentaari saatmine…"
 
-#: app/src\post_dialog.rs:658
+#: app/src\post_dialog.rs:659
 #, rust-format
 msgid "Reply to {author} (Ctrl+Enter to send)"
-msgstr ""
+msgstr "Vastus kasutajale {author} (Ctrl+Enter saadab)"
 
-#: app/src\post_dialog.rs:663
+#: app/src\post_dialog.rs:664
 #, rust-format
 msgid "Replying to {author}."
-msgstr ""
+msgstr "Vastad kasutajale {author}."
 
-#: app/src\post_dialog.rs:667
+#: app/src\post_dialog.rs:668
 msgid "Comment copied."
 msgstr "Kommentaar kopeeritud."
 
-#: app/src\post_dialog.rs:669
+#: app/src\post_dialog.rs:670
 msgid "Could not copy the comment."
-msgstr ""
+msgstr "Kommentaari ei õnnestunud kopeerida."
 
-#: app/src\post_dialog.rs:684
+#: app/src\post_dialog.rs:685
 #, rust-format
 msgid "Changing your Like on {author}'s comment…"
-msgstr ""
+msgstr "Meeldimise muutmine kasutaja {author} kommentaaril…"
 
-#: app/src\post_dialog.rs:691
+#: app/src\post_dialog.rs:692
 msgid "Opening the commenter's profile…"
-msgstr ""
+msgstr "Kommenteerija profiili avamine…"
 
-#: app/src\post_dialog.rs:701
+#: app/src\post_dialog.rs:702
 #, rust-format
 msgid "Sending a friend request to {author}…"
-msgstr ""
+msgstr "Sõbrakutse saatmine kasutajale {author}…"
 
-#: app/src\post_dialog.rs:769
+#: app/src\post_dialog.rs:770
 msgid "Post lin&ks"
-msgstr ""
+msgstr "Postituse lin&gid"
 
-#: app/src\post_dialog.rs:777
+#: app/src\post_dialog.rs:778
 msgid "&Open link"
-msgstr ""
+msgstr "&Ava link"
 
-#: app/src\post_dialog.rs:779
+#: app/src\post_dialog.rs:780
 msgid "&Full post"
-msgstr ""
+msgstr "&Täielik postitus"
 
-#: app/src\post_dialog.rs:785
+#: app/src\post_dialog.rs:786
 msgid "Full post. Applications or Shift+F10 for links, comment, react, share and copy"
-msgstr ""
+msgstr "Täielik postitus. Applications või Shift+F10 linkide, kommenteerimise, reageerimise, jagamise ja kopeerimise jaoks"
 
-#: app/src\post_dialog.rs:787
+#: app/src\post_dialog.rs:788
 msgid "Loading post and comments…"
-msgstr ""
+msgstr "Postituse ja kommentaaride laadimine…"
 
-#: app/src\post_dialog.rs:790
+#: app/src\post_dialog.rs:791
 msgid "Video player"
-msgstr ""
+msgstr "Videomängija"
 
-#: app/src\post_dialog.rs:795
+#: app/src\post_dialog.rs:796
 msgid "S&top video"
-msgstr ""
+msgstr "&Peata video"
 
-#: app/src\post_dialog.rs:797
+#: app/src\post_dialog.rs:798
 msgid "Back 10 seconds"
-msgstr ""
+msgstr "10 sekundit tagasi"
 
-#: app/src\post_dialog.rs:800
+#: app/src\post_dialog.rs:801
 msgid "Forward 10 seconds"
-msgstr ""
+msgstr "10 sekundit edasi"
 
-#: app/src\post_dialog.rs:809
+#: app/src\post_dialog.rs:810
 msgid "Video &volume (percent)"
-msgstr ""
+msgstr "Video &helitugevus (protsent)"
 
-#: app/src\post_dialog.rs:816
+#: app/src\post_dialog.rs:817
 msgid "Video volume, percent"
 msgstr "Video helitugevus, protsent"
 
-#: app/src\post_dialog.rs:817
+#: app/src\post_dialog.rs:818
 msgid "&Comments"
-msgstr ""
+msgstr "&Kommentaarid"
 
-#: app/src\post_dialog.rs:820
-msgid "Comments. Ctrl+C copies the comment. Ctrl+Shift+C copies the post and all comments. Ctrl+Enter opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
-msgstr ""
+#: app/src\post_dialog.rs:821 app/src\shortcuts_dialog.rs:175 app/src\shortcuts_dialog.rs:343
+msgid "no shortcut"
+msgstr "kiirklahv puudub"
 
-#: app/src\post_dialog.rs:829 app/src\post_dialog.rs:834
+#: app/src\post_dialog.rs:823
+#, rust-format
+msgid "Comments. {copy} copies the comment. {copy_all} copies the post and all comments. {open} opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
+msgstr "Kommentaarid. {copy} kopeerib kommentaari. {copy_all} kopeerib postituse ja kõik kommentaarid. {open} avab kommentaari esimese lingi. Applications või Shift+F10 vastamise, meeldimise, profiili, sõbra, kopeerimise ja Facebooki toimingute jaoks"
+
+#: app/src\post_dialog.rs:835 app/src\post_dialog.rs:840
 msgid "Reader status"
-msgstr ""
+msgstr "Lugeja olek"
 
-#: app/src\post_dialog.rs:838
+#: app/src\post_dialog.rs:844
 msgid "&Send (Ctrl+Enter)"
-msgstr ""
+msgstr "&Saada (Ctrl+Enter)"
 
-#: app/src\post_dialog.rs:842
+#: app/src\post_dialog.rs:848
 msgid "Ca&ncel reply"
-msgstr ""
+msgstr "Tü&hista vastus"
 
-#: app/src\post_dialog.rs:981
+#: app/src\post_dialog.rs:988
 msgid "Could not set video volume."
-msgstr ""
+msgstr "Video helitugevust ei õnnestunud muuta."
 
-#: app/src\post_dialog.rs:1026
+#: app/src\post_dialog.rs:1033
 msgid "Refreshing comments…"
-msgstr ""
+msgstr "Kommentaaride värskendamine…"
 
-#: app/src\post_dialog.rs:1050
+#: app/src\post_dialog.rs:1057
 msgid "Reply to this exact comment"
-msgstr ""
-
-#: app/src\post_dialog.rs:1053
-msgid "&Like / unlike"
-msgstr ""
-
-#: app/src\post_dialog.rs:1054
-msgid "Like this comment, or remove your Like"
-msgstr ""
-
-#: app/src\post_dialog.rs:1056
-msgid "&Copy comment"
-msgstr ""
-
-#: app/src\post_dialog.rs:1056
-msgid "Copy the full comment"
-msgstr ""
-
-#: app/src\post_dialog.rs:1059 app/src\post_dialog.rs:1130
-msgid "Copy &all comments"
-msgstr ""
+msgstr "Vasta just sellele kommentaarile"
 
 #: app/src\post_dialog.rs:1060
+msgid "&Like / unlike"
+msgstr "&Meeldib / ei meeldi"
+
+#: app/src\post_dialog.rs:1061
+msgid "Like this comment, or remove your Like"
+msgstr "Märgi kommentaar meeldivaks või eemalda meeldimine"
+
+#: app/src\post_dialog.rs:1063
+msgid "&Copy comment"
+msgstr "&Kopeeri kommentaar"
+
+#: app/src\post_dialog.rs:1063
+msgid "Copy the full comment"
+msgstr "Kopeeri kogu kommentaar"
+
+#: app/src\post_dialog.rs:1066 app/src\post_dialog.rs:1137
+msgid "Copy &all comments"
+msgstr "Kopeeri &kõik kommentaarid"
+
+#: app/src\post_dialog.rs:1067
 msgid "Copy the post and every comment"
-msgstr ""
-
-#: app/src\post_dialog.rs:1064
-msgid "Open comment on &Facebook"
-msgstr ""
-
-#: app/src\post_dialog.rs:1065
-msgid "Open the comment permalink"
-msgstr ""
+msgstr "Kopeeri postitus ja kõik kommentaarid"
 
 #: app/src\post_dialog.rs:1071
+msgid "Open comment on &Facebook"
+msgstr "Ava kommentaar &Facebookis"
+
+#: app/src\post_dialog.rs:1072
+msgid "Open the comment permalink"
+msgstr "Ava kommentaari püsilink"
+
+#: app/src\post_dialog.rs:1078
 msgid "Open the commenter's profile"
-msgstr ""
+msgstr "Ava kommenteerija profiil"
 
-#: app/src\post_dialog.rs:1076
+#: app/src\post_dialog.rs:1083
 msgid "Send the commenter a friend request"
-msgstr ""
+msgstr "Saada kommenteerijale sõbrakutse"
 
-#: app/src\post_dialog.rs:1081
+#: app/src\post_dialog.rs:1088
 msgid "Comment on the &post"
-msgstr ""
+msgstr "Kommenteeri &postitust"
 
-#: app/src\post_dialog.rs:1082
+#: app/src\post_dialog.rs:1089
 msgid "Write a new top-level comment"
-msgstr ""
+msgstr "Kirjuta uus ülemise taseme kommentaar"
 
-#: app/src\post_dialog.rs:1113
+#: app/src\post_dialog.rs:1120
 msgid "Write a comment on this post"
-msgstr ""
+msgstr "Kirjuta sellele postitusele kommentaar"
 
-#: app/src\post_dialog.rs:1118
+#: app/src\post_dialog.rs:1125
 msgid "Share with Facebook's own share dialog"
-msgstr ""
+msgstr "Jaga Facebooki enda jagamisaknaga"
 
-#: app/src\post_dialog.rs:1129
+#: app/src\post_dialog.rs:1136
 msgid "Cop&y post text"
-msgstr ""
+msgstr "&Kopeeri postituse tekst"
 
-#: app/src\post_dialog.rs:1185
+#: app/src\post_dialog.rs:1192
 msgid "Video loading timed out. Press Play to retry."
-msgstr ""
+msgstr "Video laadimise aeg sai läbi. Uuesti proovimiseks vajuta Esita."
 
-#: app/src\post_dialog.rs:1310
+#: app/src\post_dialog.rs:1317
 #, rust-format
 msgid "Reply to {author}"
-msgstr ""
+msgstr "Vasta kasutajale {author}"
 
-#: app/src\post_dialog.rs:1366
+#: app/src\post_dialog.rs:1373
 #, rust-format
 msgid "{error} Your draft has been kept."
-msgstr ""
+msgstr "{error} Mustand jäi alles."
 
-#: app/src\post_dialog.rs:1439
+#: app/src\post_dialog.rs:1446
 #, rust-format
 msgid "{n} comment loaded."
 msgid_plural "{n} comments loaded."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Laaditi {n} kommentaar."
+msgstr[1] "Laaditi {n} kommentaari."
 
-#: app/src\update.rs:44
-msgid "Update to %s"
-msgstr ""
+#: app/src\shortcuts_dialog.rs:158
+msgid "Post window"
+msgstr "Postituse aken"
 
-#: app/src\update.rs:45
-msgid "A new version of %s is available. Here's what's new:"
-msgstr ""
+#: app/src\shortcuts_dialog.rs:160
+msgid "copy the selected comment"
+msgstr "kopeeri valitud kommentaar"
+
+#: app/src\shortcuts_dialog.rs:161
+msgid "copy the post and all comments"
+msgstr "kopeeri postitus ja kõik kommentaarid"
+
+#: app/src\shortcuts_dialog.rs:162
+msgid "open the comment's first link"
+msgstr "ava kommentaari esimene link"
+
+#: app/src\shortcuts_dialog.rs:186 app/src\shortcuts_dialog.rs:224 app/src\shortcuts_dialog.rs:243 app/src\shortcuts_dialog.rs:252 app/src\shortcuts_dialog.rs:269 app/src\shortcuts_dialog.rs:312
+msgid "Keyboard shortcuts"
+msgstr "Kiirklahvid"
+
+#: app/src\shortcuts_dialog.rs:192
+msgid "&Commands"
+msgstr "&Käsud"
+
+#: app/src\shortcuts_dialog.rs:194
+msgid "Commands and their shortcuts"
+msgstr "Käsud ja nende kiirklahvid"
+
+#: app/src\shortcuts_dialog.rs:207
+msgid "C&hange shortcut…"
+msgstr "&Muuda kiirklahvi…"
+
+#: app/src\shortcuts_dialog.rs:208
+msgid "&Remove shortcut"
+msgstr "&Eemalda kiirklahv"
+
+#: app/src\shortcuts_dialog.rs:209
+msgid "Reset to &default"
+msgstr "Taasta &vaikimisi"
+
+#: app/src\shortcuts_dialog.rs:210
+msgid "Reset &all"
+msgstr "Taasta &kõik"
+
+#: app/src\shortcuts_dialog.rs:242
+#, rust-format
+msgid "{key} copies, pastes and edits text, so a menu cannot use it."
+msgstr "{key} kopeerib, kleebib ja muudab teksti, nii et menüü ei saa seda kasutada."
+
+#: app/src\shortcuts_dialog.rs:251
+#, rust-format
+msgid "{key} is the show/hide hotkey. Pick another, or change the hotkey first."
+msgstr "{key} on näita/peida kiirklahv. Vali teine või muuda esmalt seda kiirklahvi."
+
+#: app/src\shortcuts_dialog.rs:264
+#, rust-format
+msgid "{key} already runs \"{other}\". Move it to \"{this}\"?"
+msgstr "{key} käivitab juba käsu „{other}”. Kas tõsta see käsule „{this}”?"
+
+#: app/src\shortcuts_dialog.rs:312
+msgid "Put every shortcut back to its default?"
+msgstr "Kas taastada kõik kiirklahvid vaikimisi?"
+
+#: app/src\shortcuts_dialog.rs:334 app/src\shortcuts_dialog.rs:391
+msgid "Change shortcut"
+msgstr "Muuda kiirklahvi"
+
+#: app/src\shortcuts_dialog.rs:337
+#, rust-format
+msgid "Shortcut for {command}"
+msgstr "Kiirklahv käsule {command}"
+
+#: app/src\shortcuts_dialog.rs:338
+msgid "&Ctrl"
+msgstr "&Ctrl"
+
+#: app/src\shortcuts_dialog.rs:339
+msgid "&Alt"
+msgstr "&Alt"
+
+#: app/src\shortcuts_dialog.rs:340
+msgid "&Shift"
+msgstr "&Shift"
+
+#: app/src\shortcuts_dialog.rs:341
+msgid "&Key"
+msgstr "&Klahv"
+
+#: app/src\shortcuts_dialog.rs:357
+msgid "OK"
+msgstr "OK"
+
+#: app/src\shortcuts_dialog.rs:390
+msgid "A letter, digit, space or punctuation key needs Ctrl or Alt, or it would type text."
+msgstr "Täht, number, tühik või kirjavahemärk vajab Ctrl- või Alt-klahvi, muidu kirjutaks see teksti."
 
 #: app/src\update.rs:46
-msgid "&Yes"
-msgstr ""
+msgid "Update to %s"
+msgstr "Uuenda versioonile %s"
 
 #: app/src\update.rs:47
-msgid "&No"
-msgstr ""
+msgid "A new version of %s is available. Here's what's new:"
+msgstr "%s uus versioon on saadaval. Mis on uut:"
+
+#: app/src\update.rs:48
+msgid "&Yes"
+msgstr "&Jah"
 
 #: app/src\update.rs:49
-msgid "No release notes provided."
-msgstr ""
-
-#: app/src\update.rs:50
-msgid "%s Update"
-msgstr ""
+msgid "&No"
+msgstr "&Ei"
 
 #: app/src\update.rs:51
-msgid "Downloading update..."
-msgstr ""
+msgid "No release notes provided."
+msgstr "Väljalaske märkmeid pole."
 
 #: app/src\update.rs:52
-msgid "Preparing update..."
-msgstr ""
+msgid "%s Update"
+msgstr "%s uuendus"
+
+#: app/src\update.rs:53
+msgid "Downloading update..."
+msgstr "Uuenduse allalaadimine..."
 
 #: app/src\update.rs:54
-msgid "Update Ready"
-msgstr ""
-
-#: app/src\update.rs:55
-msgid "No updates available."
-msgstr ""
+msgid "Preparing update..."
+msgstr "Uuenduse ettevalmistamine..."
 
 #: app/src\update.rs:56
-msgid "No updates available. Latest version: %s"
-msgstr ""
+msgid "Update Ready"
+msgstr "Uuendus valmis"
 
 #: app/src\update.rs:57
-msgid "Info"
-msgstr ""
+msgid "No updates available."
+msgstr "Uuendusi pole."
 
 #: app/src\update.rs:58
-msgid "Security verification failed. The update might have been tampered with: %s"
-msgstr ""
+msgid "No updates available. Latest version: %s"
+msgstr "Uuendusi pole. Uusim versioon: %s"
 
 #: app/src\update.rs:59
-msgid "Security Error"
-msgstr ""
+msgid "Info"
+msgstr "Teave"
 
 #: app/src\update.rs:60
-msgid "The update server returned HTTP error %s."
-msgstr ""
+msgid "Security verification failed. The update might have been tampered with: %s"
+msgstr "Turvakontroll ebaõnnestus. Uuendust võidi muuta: %s"
 
 #: app/src\update.rs:61
-msgid "Could not reach the update server: %s"
-msgstr ""
+msgid "Security Error"
+msgstr "Turvaviga"
 
 #: app/src\update.rs:62
-msgid "Update cancelled."
-msgstr ""
+msgid "The update server returned HTTP error %s."
+msgstr "Uuendusserver tagastas HTTP vea %s."
 
 #: app/src\update.rs:63
-msgid "Current version is not a valid semver."
-msgstr ""
+msgid "Could not reach the update server: %s"
+msgstr "Uuendusserveriga ei saadud ühendust: %s"
 
 #: app/src\update.rs:64
-msgid "Latest release tag is not a valid semver."
-msgstr ""
+msgid "Update cancelled."
+msgstr "Uuendus tühistatud."
 
 #: app/src\update.rs:65
-msgid "Latest release does not include downloadable assets."
-msgstr ""
+msgid "Current version is not a valid semver."
+msgstr "Praegune versioon pole kehtiv semver."
 
 #: app/src\update.rs:66
-msgid "Update is available but no matching download asset or signature was found."
-msgstr ""
+msgid "Latest release tag is not a valid semver."
+msgstr "Uusima väljalaske silt pole kehtiv semver."
 
 #: app/src\update.rs:67
-msgid "Failed to parse release JSON"
-msgstr ""
+msgid "Latest release does not include downloadable assets."
+msgstr "Uusimas väljalaskes pole allalaaditavaid faile."
 
 #: app/src\update.rs:68
-msgid "Invalid public key"
-msgstr ""
+msgid "Update is available but no matching download asset or signature was found."
+msgstr "Uuendus on saadaval, kuid sobivat faili või allkirja ei leitud."
 
 #: app/src\update.rs:69
-msgid "Invalid signature"
-msgstr ""
+msgid "Failed to parse release JSON"
+msgstr "Väljalaske JSON-i ei õnnestunud lugeda"
 
 #: app/src\update.rs:70
-msgid "Failed to read signature"
-msgstr ""
+msgid "Invalid public key"
+msgstr "Vigane avalik võti"
 
 #: app/src\update.rs:71
-msgid "Signature verification failed"
-msgstr ""
+msgid "Invalid signature"
+msgstr "Vigane allkiri"
 
 #: app/src\update.rs:72
-msgid "Failed to create private download directory"
-msgstr ""
+msgid "Failed to read signature"
+msgstr "Allkirja ei õnnestunud lugeda"
 
 #: app/src\update.rs:73
-msgid "Failed to create file"
-msgstr ""
+msgid "Signature verification failed"
+msgstr "Allkirja kontroll ebaõnnestus"
 
 #: app/src\update.rs:74
-msgid "Failed to write file"
-msgstr ""
+msgid "Failed to create private download directory"
+msgstr "Privaatset allalaadimiskausta ei õnnestunud luua"
 
 #: app/src\update.rs:75
-msgid "Failed to read file for verification"
-msgstr ""
+msgid "Failed to create file"
+msgstr "Faili ei õnnestunud luua"
 
 #: app/src\update.rs:76
+msgid "Failed to write file"
+msgstr "Faili ei õnnestunud kirjutada"
+
+#: app/src\update.rs:77
+msgid "Failed to read file for verification"
+msgstr "Faili ei õnnestunud kontrollimiseks lugeda"
+
+#: app/src\update.rs:78
 msgid "Failed to rename verified file"
-msgstr ""
+msgstr "Kontrollitud faili ei õnnestunud ümber nimetada"
 
 #: crates/core/src\alerts.rs:59
 #, rust-format
 msgid "{view}: {n} new item loaded."
 msgid_plural "{view}: {n} new items loaded."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{view}: laaditi {n} uus üksus."
+msgstr[1] "{view}: laaditi {n} uut üksust."
 
 #: crates/core/src\alerts.rs:69
 #, rust-format
 msgid "{view} loaded. {n} item."
 msgid_plural "{view} loaded. {n} items."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{view} laaditud. {n} üksus."
+msgstr[1] "{view} laaditud. {n} üksust."
 
-#: crates/core/src\alerts.rs:74 crates/core/src\alerts.rs:76
-#: crates/core/src\debug.rs:48 crates/core/src\debug.rs:50
-#: crates/core/src\i18n.rs:82 crates/core/src\media.rs:41
-#: crates/core/src\media.rs:415 crates/core/src\tray_hotkey.rs:123
+#: crates/core/src\alerts.rs:74 crates/core/src\alerts.rs:76 crates/core/src\debug.rs:48 crates/core/src\debug.rs:50 crates/core/src\i18n.rs:82 crates/core/src\media.rs:41 crates/core/src\media.rs:415 crates/core/src\tray_hotkey.rs:123
 msgid "could not find BlindFB's data folder"
-msgstr ""
+msgstr "BlindFB andmekausta ei leitud"
 
-#: crates/core/src\alerts.rs:78 crates/core/src\alerts.rs:80
-#: crates/core/src\alerts.rs:83 crates/core/src\debug.rs:52
-#: crates/core/src\debug.rs:54 crates/core/src\debug.rs:57
-#: crates/core/src\i18n.rs:85 crates/core/src\i18n.rs:88
-#: crates/core/src\media.rs:43 crates/core/src\media.rs:46
-#: crates/core/src\tray_hotkey.rs:126 crates/core/src\tray_hotkey.rs:129
+#: crates/core/src\alerts.rs:78 crates/core/src\alerts.rs:80 crates/core/src\alerts.rs:83 crates/core/src\debug.rs:52 crates/core/src\debug.rs:54 crates/core/src\debug.rs:57 crates/core/src\i18n.rs:85 crates/core/src\i18n.rs:88 crates/core/src\media.rs:43 crates/core/src\media.rs:46 crates/core/src\tray_hotkey.rs:126 crates/core/src\tray_hotkey.rs:129
 #, rust-format
 msgid "could not save the setting: {error}"
-msgstr ""
+msgstr "seadet ei õnnestunud salvestada: {error}"
 
 #: crates/core/src\alerts.rs:142
 #, rust-format
 msgid "And {n} more."
 msgid_plural "And {n} more."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Ja veel {n}."
+msgstr[1] "Ja veel {n}."
 
-#: crates/core/src\backend.rs:111 crates/core/src\backend.rs:113
-#: crates/core/src\backend.rs:186
+#: crates/core/src\backend.rs:114 crates/core/src\backend.rs:116 crates/core/src\backend.rs:200
 #, rust-format
 msgid "download failed: {error}"
-msgstr ""
+msgstr "allalaadimine ebaõnnestus: {error}"
 
-#: crates/core/src\backend.rs:135 crates/core/src\backend.rs:158
+#: crates/core/src\backend.rs:138 crates/core/src\backend.rs:161
 #, rust-format
 msgid "could not open the backend download: {error}"
-msgstr ""
-
-#: crates/core/src\backend.rs:139 crates/core/src\backend.rs:161
-#, rust-format
-msgid "could not read the backend download: {error}"
-msgstr ""
+msgstr "mooduli allalaadimist ei õnnestunud avada: {error}"
 
 #: crates/core/src\backend.rs:142 crates/core/src\backend.rs:164
 #, rust-format
-msgid "bad backend download: {error}"
-msgstr ""
+msgid "could not read the backend download: {error}"
+msgstr "mooduli allalaadimist ei õnnestunud lugeda: {error}"
 
-#: crates/core/src\backend.rs:148 crates/core/src\backend.rs:170
+#: crates/core/src\backend.rs:145 crates/core/src\backend.rs:167
+#, rust-format
+msgid "bad backend download: {error}"
+msgstr "vigane mooduli allalaadimine: {error}"
+
+#: crates/core/src\backend.rs:151 crates/core/src\backend.rs:173
 #, rust-format
 msgid "could not unpack the backend: {error}"
-msgstr ""
+msgstr "moodulit ei õnnestunud lahti pakkida: {error}"
 
-#: crates/core/src\backend.rs:152 crates/core/src\backend.rs:174
+#: crates/core/src\backend.rs:155 crates/core/src\backend.rs:177
 #, rust-format
 msgid "the backend download did not contain {want}"
-msgstr ""
+msgstr "mooduli allalaadimises polnud faili {want}"
 
-#: crates/core/src\backend.rs:182
+#: crates/core/src\backend.rs:185
 msgid "no prebuilt backend for this platform"
-msgstr ""
+msgstr "selle platvormi jaoks pole valmis moodulit"
 
-#: crates/core/src\backend.rs:183
+#: crates/core/src\backend.rs:186
 msgid "could not find a place to install the backend"
-msgstr ""
+msgstr "mooduli paigaldamiseks ei leitud kohta"
 
-#: crates/core/src\backend.rs:190
+#: crates/core/src\backend.rs:204
 msgid "download failed: no tag in the release response"
-msgstr ""
+msgstr "allalaadimine ebaõnnestus: väljalaske vastuses pole silti"
 
-#: crates/core/src\backend.rs:195
+#: crates/core/src\backend.rs:209
 msgid "download failed: no assets in the release response"
-msgstr ""
+msgstr "allalaadimine ebaõnnestus: väljalaske vastuses pole faile"
 
-#: crates/core/src\backend.rs:208
+#: crates/core/src\backend.rs:222
 msgid "download failed: release has no build for this platform"
-msgstr ""
+msgstr "allalaadimine ebaõnnestus: väljalaskes pole selle platvormi järku"
 
-#: crates/core/src\backend.rs:210
+#: crates/core/src\backend.rs:224
 msgid "download failed: release has no checksums file"
-msgstr ""
-
-#: crates/core/src\backend.rs:215
-msgid "download failed: no checksum for this build"
-msgstr ""
-
-#: crates/core/src\backend.rs:217
-msgid "the backend download failed its checksum — not installing it"
-msgstr ""
-
-#: crates/core/src\backend.rs:225 crates/core/src\media.rs:180
-msgid "bad install path"
-msgstr ""
-
-#: crates/core/src\backend.rs:227 crates/core/src\media.rs:182
-#, rust-format
-msgid "could not create the install folder: {error}"
-msgstr ""
+msgstr "allalaadimine ebaõnnestus: väljalaskes pole kontrollsummade faili"
 
 #: crates/core/src\backend.rs:229
+msgid "download failed: no checksum for this build"
+msgstr "allalaadimine ebaõnnestus: selle järgu kontrollsumma puudub"
+
+#: crates/core/src\backend.rs:231
+msgid "the backend download failed its checksum — not installing it"
+msgstr "mooduli allalaadimine ei läbinud kontrollsumma kontrolli — seda ei paigaldata"
+
+#: crates/core/src\backend.rs:241 crates/core/src\media.rs:180
+msgid "bad install path"
+msgstr "vigane paigaldustee"
+
+#: crates/core/src\backend.rs:243 crates/core/src\media.rs:182
+#, rust-format
+msgid "could not create the install folder: {error}"
+msgstr "paigalduskausta ei õnnestunud luua: {error}"
+
+#: crates/core/src\backend.rs:245
 #, rust-format
 msgid "could not write the backend: {error}"
-msgstr ""
+msgstr "moodulit ei õnnestunud kirjutada: {error}"
 
-#: crates/core/src\backend.rs:236
+#: crates/core/src\backend.rs:252
 #, rust-format
 msgid "could not install the backend: {error}"
-msgstr ""
+msgstr "moodulit ei õnnestunud paigaldada: {error}"
 
-#: crates/core/src\backend.rs:238
+#: crates/core/src\backend.rs:254
 #, rust-format
 msgid "Installed the Facebook backend {version} to {path}"
-msgstr ""
+msgstr "Facebooki moodul {version} paigaldati kausta {path}"
 
 #: crates/core/src\browsers.rs:633
 #, rust-format
 msgid "cannot read {path}: {error}"
-msgstr ""
+msgstr "ei saa lugeda {path}: {error}"
 
 #: crates/core/src\browsers.rs:637
 #, rust-format
 msgid "cannot back up Local State: {error}"
-msgstr ""
+msgstr "Local State varundamine ebaõnnestus: {error}"
 
 #: crates/core/src\browsers.rs:646
 #, rust-format
 msgid "cannot update Local State: {error}"
-msgstr ""
+msgstr "Local State uuendamine ebaõnnestus: {error}"
 
 #: crates/core/src\browsers.rs:655
 #, rust-format
 msgid "{browser} is not installed"
-msgstr ""
+msgstr "{browser} pole paigaldatud"
 
 #: crates/core/src\browsers.rs:663 crates/core/src\engine.rs:70
 #, rust-format
 msgid "cannot start {browser}: {error}"
-msgstr ""
+msgstr "{browser} käivitamine ebaõnnestus: {error}"
 
 #: crates/core/src\browsers.rs:704
 #, rust-format
 msgid "{browser} has not run yet — open it once, sign in to Facebook there, then try again"
-msgstr ""
+msgstr "{browser} pole veel käivitatud — ava see korra, logi seal Facebooki sisse ja proovi uuesti"
 
 #. TRANSLATORS: {page} is the browser's inspect page address; "Allow remote debugging
 #. for this browser instance" is the browser's own checkbox, in its own language.
 #: crates/core/src\browsers.rs:728
 #, rust-format
 msgid "{browser} did not offer a debugging endpoint — in {page}, tick \"Allow remote debugging for this browser instance\", then try again"
-msgstr ""
+msgstr "{browser} ei pakkunud silumisliidest — lehel {page} märgi „Allow remote debugging for this browser instance” ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:740
 #, rust-format
 msgid "{browser} is not signed in to Facebook — sign in there first, then try again"
-msgstr ""
+msgstr "{browser} pole Facebooki sisse logitud — logi esmalt seal sisse ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:751
 msgid "this browser has no profile yet; sign in to Facebook there first"
-msgstr ""
+msgstr "sellel brauseril pole veel profiili; logi esmalt seal Facebooki sisse"
 
 #: crates/core/src\browsers.rs:776
 msgid "no signed-in Facebook profile found"
-msgstr ""
+msgstr "Facebooki sisse logitud profiili ei leitud"
 
 #: crates/core/src\browsers.rs:814
 msgid "the cookie database could not be read; close this browser normally and retry"
-msgstr ""
+msgstr "küpsiste andmebaasi ei õnnestunud lugeda; sulge see brauser tavapäraselt ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:818
 #, rust-format
 msgid "cookie extraction failed ({code}): {error}"
-msgstr ""
+msgstr "küpsiste väljavõtmine ebaõnnestus ({code}): {error}"
 
 #: crates/core/src\browsers.rs:827
 #, rust-format
 msgid "Could not import {browser}: {error}. Sign in to Facebook there, or choose a new browser window."
-msgstr ""
+msgstr "{browser} importimine ebaõnnestus: {error}. Logi seal Facebooki sisse või vali uus brauseriaken."
 
 #: crates/core/src\browsers.rs:852
 msgid "The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."
-msgstr ""
+msgstr "Valitud profiilil pole kehtivat Facebooki seanssi. Logi esmalt selles brauseris Facebooki sisse."
 
 #: crates/core/src\browsers.rs:867
 msgid "Facebook did not accept the imported session. Choose a new browser window to sign in directly."
-msgstr ""
+msgstr "Facebook ei võtnud imporditud seanssi vastu. Vali uus brauseriaken, et otse sisse logida."
 
 #: crates/core/src\browsers.rs:963
 msgid "this Firefox profile has no cookie database — sign in to Facebook in Firefox first"
-msgstr ""
+msgstr "sellel Firefoxi profiilil pole küpsiste andmebaasi — logi esmalt Firefoxis Facebooki sisse"
 
 #: crates/core/src\browsers.rs:972
 #, rust-format
 msgid "cannot open the Firefox cookie database: {error}"
-msgstr ""
+msgstr "Firefoxi küpsiste andmebaasi ei saa avada: {error}"
 
 #: crates/core/src\browsers.rs:978
 #, rust-format
 msgid "cannot query the Firefox cookie database: {error}"
-msgstr ""
+msgstr "Firefoxi küpsiste andmebaasi ei saa pärida: {error}"
 
 #: crates/core/src\browsers.rs:994 crates/core/src\browsers.rs:998
 #, rust-format
 msgid "cannot read the Firefox cookies: {error}"
-msgstr ""
+msgstr "Firefoxi küpsiseid ei saa lugeda: {error}"
 
 #: crates/core/src\browsers.rs:1022
 msgid "Firefox is not signed in to Facebook — sign in there first, then try again"
-msgstr ""
+msgstr "Firefox pole Facebooki sisse logitud — logi esmalt seal sisse ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:1072
 #, rust-format
 msgid "cannot reach the backend browser: {error}"
-msgstr ""
+msgstr "mooduli brauserini ei jõua: {error}"
 
 #: crates/core/src\browsers.rs:1079
 #, rust-format
 msgid "cannot talk to the backend browser: {error}"
-msgstr ""
+msgstr "mooduli brauseriga ei saa suhelda: {error}"
 
 #: crates/core/src\browsers.rs:1083
 #, rust-format
 msgid "the backend browser did not answer: {error}"
-msgstr ""
+msgstr "mooduli brauser ei vastanud: {error}"
 
 #: crates/core/src\browsers.rs:1095
 #, rust-format
 msgid "the backend browser refused {method}: {error}"
-msgstr ""
+msgstr "mooduli brauser keeldus käsust {method}: {error}"
 
 #: crates/core/src\browsers.rs:1108
 msgid "Firefox has not run yet — open it once, sign in to Facebook there, then try again"
-msgstr ""
+msgstr "Firefox pole veel käivitatud — ava see korra, logi seal Facebooki sisse ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:1111
 msgid "no Firefox profile found — sign in to Facebook in Firefox first"
-msgstr ""
+msgstr "Firefoxi profiili ei leitud — logi esmalt Firefoxis Facebooki sisse"
 
 #: crates/core/src\browsers.rs:1126 crates/core/src\browsers.rs:1128
 #, rust-format
 msgid "download of {url} failed: {error}"
-msgstr ""
+msgstr "{url} allalaadimine ebaõnnestus: {error}"
 
 #: crates/core/src\browsers.rs:1148
 #, rust-format
 msgid "cannot run winget: {error}"
-msgstr ""
+msgstr "winget käivitamine ebaõnnestus: {error}"
 
 #: crates/core/src\browsers.rs:1150
 #, rust-format
 msgid "installed via winget ({id})"
-msgstr ""
+msgstr "paigaldatud wingeti kaudu ({id})"
 
 #: crates/core/src\browsers.rs:1153
 #, rust-format
 msgid "winget could not install {id} (it may have asked for administrator approval)"
-msgstr ""
+msgstr "winget ei suutnud paigaldada {id} (võib-olla küsis administraatori luba)"
 
 #: crates/core/src\browsers.rs:1178 crates/core/src\browsers.rs:1190
 #, rust-format
 msgid "cannot save the installer: {error}"
-msgstr ""
+msgstr "paigaldajat ei saa salvestada: {error}"
 
 #: crates/core/src\browsers.rs:1182
 msgid "installer downloaded and started — follow its prompts, then try again"
-msgstr ""
+msgstr "paigaldaja laaditi alla ja käivitati — järgi selle juhiseid ja proovi siis uuesti"
 
 #: crates/core/src\browsers.rs:1183
 #, rust-format
 msgid "cannot start the installer: {error}"
-msgstr ""
+msgstr "paigaldajat ei saa käivitada: {error}"
 
 #: crates/core/src\browsers.rs:1198
 #, rust-format
 msgid "cannot open the installer image: {error}"
-msgstr ""
+msgstr "paigaldaja tõmmist ei saa avada: {error}"
 
 #: crates/core/src\browsers.rs:1200
 msgid "the installer image did not open"
-msgstr ""
+msgstr "paigaldaja tõmmis ei avanenud"
 
 #: crates/core/src\browsers.rs:1215
 #, rust-format
 msgid "{browser} installed to your Applications folder"
-msgstr ""
+msgstr "{browser} paigaldati kausta Rakendused"
 
 #: crates/core/src\browsers.rs:1219
 #, rust-format
 msgid "could not copy {browser} into your Applications folder"
-msgstr ""
+msgstr "{browser} kopeerimine kausta Rakendused ebaõnnestus"
 
 #: crates/core/src\browsers.rs:1257
 msgid "Chromium has no official Windows installer — install Google Chrome instead"
-msgstr ""
+msgstr "Chromiumil pole ametlikku Windowsi paigaldajat — paigalda selle asemel Google Chrome"
 
 #: crates/core/src\browsers.rs:1287
 msgid "Chromium has no official macOS installer — install Google Chrome instead"
-msgstr ""
+msgstr "Chromiumil pole ametlikku macOS-i paigaldajat — paigalda selle asemel Google Chrome"
 
 #: crates/core/src\browsers.rs:1297
 #, rust-format
 msgid "{package} (from Google's download page)"
-msgstr ""
+msgstr "{package} (Google'i allalaadimislehelt)"
 
 #: crates/core/src\browsers.rs:1302
 #, rust-format
 msgid "{package} (from Brave's download page)"
-msgstr ""
+msgstr "{package} (Brave'i allalaadimislehelt)"
 
 #: crates/core/src\browsers.rs:1305
 #, rust-format
 msgid "{package} (from Microsoft's download page)"
-msgstr ""
+msgstr "{package} (Microsofti allalaadimislehelt)"
 
 #: crates/core/src\browsers.rs:1311
 #, rust-format
 msgid "installing a browser on Linux needs the administrator — run your package manager to install {package}, then try again"
-msgstr ""
+msgstr "brauseri paigaldamine Linuxis vajab administraatorit — paigalda {package} paketihalduriga ja proovi uuesti"
 
 #: crates/core/src\browsers.rs:1316
 msgid "browser installs are not supported on this system"
-msgstr ""
+msgstr "brauserite paigaldamine pole selles süsteemis toetatud"
 
 #: crates/core/src\debug.rs:254
 #, rust-format
 msgid "could not save the debug report: {error}"
-msgstr ""
+msgstr "silumisaruannet ei õnnestunud salvestada: {error}"
 
 #: crates/core/src\debug.rs:256
 #, rust-format
@@ -3009,587 +3133,589 @@ msgid ""
 "\n"
 "Send that file to the developer. It holds what BlindFB ran and the errors it got, plus Facebook links you opened or reacted to. It does not hold your post text, messages or PIN."
 msgstr ""
+"Silumisaruanne salvestati: {path}.\n"
+"\n"
+"Saada see fail arendajale. Selles on, mida BlindFB käivitas ja milliseid vigu sai, ning Facebooki lingid, mida avasid või millele reageerisid. Sinu postituste teksti, sõnumeid ega PIN-i selles pole."
 
 #: crates/core/src\engine.rs:15
 msgid "cannot find BlindFB's browser data folder"
-msgstr ""
+msgstr "BlindFB brauseri andmekausta ei leitud"
 
 #: crates/core/src\engine.rs:34
 #, rust-format
 msgid "cannot create the browser profile: {error}"
-msgstr ""
+msgstr "brauseriprofiili ei saa luua: {error}"
 
 #: crates/core/src\engine.rs:39
 #, rust-format
 msgid "cannot clear the stopped browser endpoint: {error}"
-msgstr ""
+msgstr "peatatud brauseri ühenduspunkti ei saa eemaldada: {error}"
 
 #: crates/core/src\engine.rs:44
 msgid "the selected browser is not installed"
-msgstr ""
+msgstr "valitud brauser pole paigaldatud"
 
 #: crates/core/src\engine.rs:82
 #, rust-format
 msgid "{browser} exited before its browser connection was ready: {status}"
-msgstr ""
+msgstr "{browser} sulgus enne, kui brauseriühendus oli valmis: {status}"
 
 #: crates/core/src\engine.rs:92
 #, rust-format
 msgid "{browser} did not start its dedicated BlindFB browser within 40 seconds"
-msgstr ""
+msgstr "{browser} ei käivitanud BlindFB eraldi brauserit 40 sekundi jooksul"
 
 #: crates/core/src\engine.rs:112
 msgid "BlindFB's dedicated browser did not close; close its window and retry sign-in"
-msgstr ""
+msgstr "BlindFB eraldi brauser ei sulgunud; sulge selle aken ja proovi uuesti sisse logida"
 
 #: crates/core/src\fb.rs:168
 msgid "The backend returned unreadable notifications. Refresh to retry."
-msgstr ""
+msgstr "Moodul tagastas loetamatud märguanded. Uuesti proovimiseks värskenda."
 
 #: crates/core/src\fb.rs:175
 msgid "The backend returned no notification list"
-msgstr ""
+msgstr "Moodul ei tagastanud märguannete loendit"
 
 #: crates/core/src\fb.rs:207
 msgid "The backend returned no readable notifications. Refresh to retry."
-msgstr ""
+msgstr "Moodul ei tagastanud loetavaid märguandeid. Uuesti proovimiseks värskenda."
 
 #: crates/core/src\fb.rs:282
 msgid "Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."
-msgstr ""
+msgstr "Küpsiste importimine pole kohandatud FB_CDP brauseriga võimalik. Logi selle asemel otse selles brauseris sisse."
 
 #: crates/core/src\fb.rs:289
 msgid "the backend browser is not running"
-msgstr ""
+msgstr "mooduli brauser ei tööta"
 
-#: crates/core/src\fb.rs:325 crates/core/src\fb.rs:442
-#: crates/core/src\fb.rs:454
+#: crates/core/src\fb.rs:325 crates/core/src\fb.rs:442 crates/core/src\fb.rs:454
 #, rust-format
 msgid "could not run {program}: {error}"
-msgstr ""
+msgstr "{program} käivitamine ebaõnnestus: {error}"
 
 #: crates/core/src\fb.rs:371
 msgid "no dedicated browser selected"
-msgstr ""
+msgstr "eraldi brauserit pole valitud"
 
 #: crates/core/src\fb.rs:401
 msgid "Sign-in was cancelled: the browser window was closed"
-msgstr ""
+msgstr "Sisselogimine tühistati: brauseriaken suleti"
 
 #. TRANSLATORS: "Backend → Sign in" is a menu path; {error} is the backend's last error.
 #: crates/core/src\fb.rs:418
 #, rust-format
 msgid "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {error}"
-msgstr ""
+msgstr "Sisselogimine ei lõppenud 15 minutiga. Uuesti proovimiseks vali Moodul → Logi sisse. {error}"
 
 #: crates/core/src\fb.rs:506
 #, rust-format
 msgid "fb exited with {status}"
-msgstr ""
+msgstr "fb lõpetas koodiga {status}"
 
 #. TRANSLATORS: "My posts" is a view name in BlindFB.
 #: crates/core/src\fb.rs:722
 msgid "Facebook accepted your post and is still publishing it. It should appear in My posts soon. You do not need to post it again."
-msgstr ""
+msgstr "Facebook võttis sinu postituse vastu ja avaldab seda veel. See peaks peagi ilmuma jaotisse Minu postitused. Seda pole vaja uuesti postitada."
 
 #: crates/core/src\fb.rs:725
 msgid "Your post is published."
-msgstr ""
+msgstr "Sinu postitus on avaldatud."
 
 #. TRANSLATORS: "My posts" is a view name in BlindFB.
 #: crates/core/src\fb.rs:735
 msgid "Facebook may have published your post, but BlindFB could not confirm it. Check My posts before posting it again."
-msgstr ""
+msgstr "Facebook võis sinu postituse avaldada, kuid BlindFB ei saanud seda kinnitada. Enne uuesti postitamist kontrolli jaotist Minu postitused."
 
 #: crates/core/src\i18n.rs:172 crates/core/src\i18n.rs:173
 #, rust-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} üksus"
+msgstr[1] "{n} üksust"
 
 #: crates/core/src\media.rs:64
 msgid "Invalid video metadata"
-msgstr ""
+msgstr "Vigased video metaandmed"
 
 #: crates/core/src\media.rs:71
 msgid "Invalid video stream URL"
-msgstr ""
+msgstr "Vigane videovoo aadress"
 
 #: crates/core/src\media.rs:158
 msgid "the video helper installer was interrupted"
-msgstr ""
+msgstr "videoabilise paigaldamine katkes"
 
 #: crates/core/src\media.rs:160
 msgid "could not find a place to install the video helper"
-msgstr ""
+msgstr "videoabilise paigaldamiseks ei leitud kohta"
 
 #: crates/core/src\media.rs:172
 msgid "no video helper is available for this platform"
-msgstr ""
+msgstr "selle platvormi jaoks pole videoabilist"
 
 #: crates/core/src\media.rs:176
 msgid "the video helper has no checksum"
-msgstr ""
+msgstr "videoabilisel pole kontrollsummat"
 
 #: crates/core/src\media.rs:178
 msgid "the video helper download failed its checksum — not installing it"
-msgstr ""
+msgstr "videoabilise allalaadimine ei läbinud kontrollsumma kontrolli — seda ei paigaldata"
 
 #: crates/core/src\media.rs:185
 #, rust-format
 msgid "could not write the video helper: {error}"
-msgstr ""
+msgstr "videoabilist ei õnnestunud kirjutada: {error}"
 
 #: crates/core/src\media.rs:190
 #, rust-format
 msgid "could not make the video helper executable: {error}"
-msgstr ""
+msgstr "videoabilist ei õnnestunud käivitatavaks muuta: {error}"
 
 #: crates/core/src\media.rs:193
 #, rust-format
 msgid "could not install the video helper: {error}"
-msgstr ""
+msgstr "videoabilist ei õnnestunud paigaldada: {error}"
 
 #: crates/core/src\media.rs:311
 #, rust-format
 msgid "could not create a private video helper file: {error}"
-msgstr ""
+msgstr "videoabilise privaatset faili ei õnnestunud luua: {error}"
 
 #: crates/core/src\media.rs:315
 #, rust-format
 msgid "could not write the video helper file: {error}"
-msgstr ""
+msgstr "videoabilise faili ei õnnestunud kirjutada: {error}"
 
 #: crates/core/src\media.rs:348
 #, rust-format
 msgid "could not capture the video helper output: {error}"
-msgstr ""
+msgstr "videoabilise väljundit ei õnnestunud püüda: {error}"
 
 #: crates/core/src\media.rs:356
 #, rust-format
 msgid "could not start the video helper: {error}"
-msgstr ""
+msgstr "videoabilist ei õnnestunud käivitada: {error}"
 
 #: crates/core/src\media.rs:367
 #, rust-format
 msgid "could not wait for the video helper: {error}"
-msgstr ""
+msgstr "videoabilise ootamine ebaõnnestus: {error}"
 
 #: crates/core/src\media.rs:369
 msgid "the video helper timed out; try the video again"
-msgstr ""
+msgstr "videoabilise aeg sai läbi; proovi videot uuesti"
 
 #: crates/core/src\media.rs:378
 #, rust-format
 msgid "could not read the video helper output: {error}"
-msgstr ""
+msgstr "videoabilise väljundit ei õnnestunud lugeda: {error}"
 
 #: crates/core/src\media.rs:393
 msgid "This video is not on Facebook or a video site BlindFB can play."
-msgstr ""
+msgstr "See video pole Facebookis ega saidil, mida BlindFB esitada oskab."
 
 #: crates/core/src\media.rs:402
 msgid "Videos from other sites play in BlindFB's own player, which this build does not have."
-msgstr ""
+msgstr "Teiste saitide videod mängivad BlindFB oma mängijas, mida selles järgus pole."
 
 #: crates/core/src\media.rs:414
 msgid "could not read your Facebook session for the video helper"
-msgstr ""
+msgstr "videoabilise jaoks ei õnnestunud lugeda sinu Facebooki seanssi"
 
 #: crates/core/src\media.rs:450
 msgid "no video found"
-msgstr ""
+msgstr "videot ei leitud"
 
 #. TRANSLATORS: {reason} is the video helper's own error, usually in English.
 #: crates/core/src\media.rs:454
 #, rust-format
 msgid "Facebook did not give a playable video. {reason}"
-msgstr ""
+msgstr "Facebook ei andnud esitatavat videot. {reason}"
 
 #: crates/core/src\mpv.rs:29
 msgid "the managed mpv player is available only on Windows with a local data folder"
-msgstr ""
+msgstr "hallatud mpv mängija on saadaval ainult Windowsis kohaliku andmekaustaga"
 
 #: crates/core/src\mpv.rs:33
 msgid "the mpv installer lock was poisoned"
-msgstr ""
+msgstr "mpv paigaldaja lukk on rikutud"
 
 #: crates/core/src\mpv.rs:45
 msgid "the mpv download failed its checksum; it was not installed"
-msgstr ""
+msgstr "mpv allalaadimine ei läbinud kontrollsumma kontrolli; seda ei paigaldatud"
 
 #: crates/core/src\mpv.rs:48 crates/core/src\mpv.rs:49
 msgid "bad mpv install path"
-msgstr ""
+msgstr "vigane mpv paigaldustee"
 
 #: crates/core/src\mpv.rs:51
 #, rust-format
 msgid "could not create the mpv install folder: {error}"
-msgstr ""
+msgstr "mpv paigalduskausta ei õnnestunud luua: {error}"
 
 #: crates/core/src\mpv.rs:56
 msgid "the mpv download did not contain mpv.exe"
-msgstr ""
+msgstr "mpv allalaadimises polnud faili mpv.exe"
 
 #: crates/core/src\mpv.rs:62
 #, rust-format
 msgid "could not install mpv: {error}"
-msgstr ""
+msgstr "mpv paigaldamine ebaõnnestus: {error}"
 
 #: crates/core/src\mpv.rs:68
 #, rust-format
 msgid "could not remove the mpv staging folder: {error}"
-msgstr ""
+msgstr "mpv ajutist kausta ei õnnestunud eemaldada: {error}"
 
 #: crates/core/src\mpv.rs:80
 #, rust-format
 msgid "could not create the mpv staging folder: {error}"
-msgstr ""
+msgstr "mpv ajutist kausta ei õnnestunud luua: {error}"
 
 #: crates/core/src\mpv.rs:84
 msgid "could not find an unused mpv staging folder"
-msgstr ""
+msgstr "vaba mpv ajutist kausta ei leitud"
 
 #: crates/core/src\mpv.rs:89
 #, rust-format
 msgid "could not open the mpv download: {error}"
-msgstr ""
+msgstr "mpv allalaadimist ei õnnestunud avada: {error}"
 
 #: crates/core/src\mpv.rs:91
 msgid "unexpected mpv release archive contents"
-msgstr ""
+msgstr "ootamatu mpv väljalaske arhiivi sisu"
 
 #: crates/core/src\mpv.rs:95
 #, rust-format
 msgid "could not read the mpv download: {error}"
-msgstr ""
+msgstr "mpv allalaadimist ei õnnestunud lugeda: {error}"
 
 #: crates/core/src\mpv.rs:97
 msgid "unexpected mpv bundle name"
-msgstr ""
+msgstr "ootamatu mpv paketi nimi"
 
 #: crates/core/src\mpv.rs:102 crates/core/src\mpv.rs:137
 #, rust-format
 msgid "could not read the mpv bundle: {error}"
-msgstr ""
+msgstr "mpv paketti ei õnnestunud lugeda: {error}"
 
 #: crates/core/src\mpv.rs:133
 #, rust-format
 msgid "could not open the mpv bundle: {error}"
-msgstr ""
+msgstr "mpv paketti ei õnnestunud avada: {error}"
 
 #: crates/core/src\mpv.rs:140
 #, rust-format
 msgid "bad mpv archive name: {error}"
-msgstr ""
+msgstr "vigane mpv arhiivi nimi: {error}"
 
 #: crates/core/src\mpv.rs:147
 #, rust-format
 msgid "unsafe path in the mpv bundle: {name}"
-msgstr ""
+msgstr "ebaturvaline tee mpv paketis: {name}"
 
 #: crates/core/src\mpv.rs:151
 msgid "unsafe path in the mpv bundle"
-msgstr ""
+msgstr "ebaturvaline tee mpv paketis"
 
 #: crates/core/src\mpv.rs:155 crates/core/src\mpv.rs:159
 #, rust-format
 msgid "could not create an mpv folder: {error}"
-msgstr ""
+msgstr "mpv kausta ei õnnestunud luua: {error}"
 
 #: crates/core/src\mpv.rs:165
 #, rust-format
 msgid "could not create an mpv file: {error}"
-msgstr ""
+msgstr "mpv faili ei õnnestunud luua: {error}"
 
 #: crates/core/src\mpv.rs:167
 #, rust-format
 msgid "could not unpack mpv: {error}"
-msgstr ""
+msgstr "mpv lahtipakkimine ebaõnnestus: {error}"
 
 #: crates/core/src\page_errors.rs:22
 msgid "Ambiguous comment permalink; refresh the post."
-msgstr ""
+msgstr "Kommentaari püsilink on mitmetähenduslik; värskenda postitust."
 
 #: crates/core/src\page_errors.rs:23
 msgid "Duplicate comment identity; refresh the post."
-msgstr ""
+msgstr "Kommentaari identiteet kordub; värskenda postitust."
 
 #: crates/core/src\page_errors.rs:24
 msgid "Facebook did not confirm the Like. Refresh to check."
-msgstr ""
+msgstr "Facebook ei kinnitanud meeldimist. Kontrollimiseks värskenda."
 
 #: crates/core/src\page_errors.rs:25
 msgid "Facebook did not confirm the reaction. Refresh to check."
-msgstr ""
+msgstr "Facebook ei kinnitanud reaktsiooni. Kontrollimiseks värskenda."
 
 #: crates/core/src\page_errors.rs:26
 msgid "Facebook did not confirm the share. Check your profile before trying again; do not share again automatically."
-msgstr ""
+msgstr "Facebook ei kinnitanud jagamist. Enne uuesti proovimist kontrolli oma profiili; ära jaga automaatselt uuesti."
 
 #: crates/core/src\page_errors.rs:27
 msgid "Facebook did not open its share dialog. Nothing was shared."
-msgstr ""
+msgstr "Facebook ei avanud jagamisakent. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:28
 msgid "Facebook did not show its reactions. Nothing was changed."
-msgstr ""
+msgstr "Facebook ei näidanud reaktsioone. Midagi ei muudetud."
 
 #: crates/core/src\page_errors.rs:29
 msgid "Facebook has not expanded all text. Refresh the reader to retry."
-msgstr ""
+msgstr "Facebook pole kogu teksti avanud. Uuesti proovimiseks värskenda lugejat."
 
 #: crates/core/src\page_errors.rs:30
 msgid "Facebook has not expanded the reel caption. Refresh the reader to retry."
-msgstr ""
+msgstr "Facebook pole reeli pealdist avanud. Uuesti proovimiseks värskenda lugejat."
 
 #: crates/core/src\page_errors.rs:31
 msgid "Facebook has not expanded the reel caption. Refresh to retry."
-msgstr ""
+msgstr "Facebook pole reeli pealdist avanud. Uuesti proovimiseks värskenda."
 
 #: crates/core/src\page_errors.rs:32
 msgid "More than one post dialog is open."
-msgstr ""
+msgstr "Avatud on rohkem kui üks postituse aken."
 
 #: crates/core/src\page_errors.rs:33
 msgid "More than one post is visible. Open the individual post permalink."
-msgstr ""
+msgstr "Nähtav on rohkem kui üks postitus. Ava postituse enda püsilink."
 
 #: crates/core/src\page_errors.rs:34
 msgid "No unique comment box on this post. Nothing was sent."
-msgstr ""
+msgstr "Selle postituse juures pole ühtainsat kommentaarikasti. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:35
 msgid "No unique editor inside the selected comment thread. Nothing was sent."
-msgstr ""
+msgstr "Valitud kommentaarilõimes pole ühtainsat sisestuskasti. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:36
 msgid "Post changed or reader expired. Refresh or reopen the post."
-msgstr ""
+msgstr "Postitus muutus või lugeja aegus. Värskenda või ava postitus uuesti."
 
 #: crates/core/src\page_errors.rs:37
 msgid "Selected comment changed or disappeared. Refresh and select it again."
-msgstr ""
+msgstr "Valitud kommentaar muutus või kadus. Värskenda ja vali see uuesti."
 
 #: crates/core/src\page_errors.rs:38
 msgid "Selected comment is ambiguous or stale."
-msgstr ""
+msgstr "Valitud kommentaar on mitmetähenduslik või aegunud."
 
 #: crates/core/src\page_errors.rs:39
 msgid "Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically."
-msgstr ""
+msgstr "Saatmist ei kinnitatud valitud lõimes. Enne uuesti proovimist värskenda; ära saada automaatselt uuesti."
 
 #: crates/core/src\page_errors.rs:40
 msgid "The Facebook editor already contains a draft. Nothing was overwritten."
-msgstr ""
+msgstr "Facebooki sisestuskastis on juba mustand. Midagi ei kirjutatud üle."
 
 #: crates/core/src\page_errors.rs:41
 msgid "The Share now button is missing. Nothing was shared."
-msgstr ""
+msgstr "Nupp „Jaga kohe” puudub. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:42
 msgid "The comment editor has no reliable accessible name. Nothing was sent."
-msgstr ""
+msgstr "Kommentaarikastil pole usaldusväärset ligipääsetavat nime. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:43
 msgid "The comment editor is ambiguous. Nothing was sent."
-msgstr ""
+msgstr "Kommentaarikast on mitmetähenduslik. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:44
 msgid "The post could not be read."
-msgstr ""
+msgstr "Postitust ei õnnestunud lugeda."
 
 #: crates/core/src\page_errors.rs:45
 msgid "The reel could not be read."
-msgstr ""
+msgstr "Reeli ei õnnestunud lugeda."
 
 #: crates/core/src\page_errors.rs:46
 msgid "The reel's comments could not be opened."
-msgstr ""
+msgstr "Reeli kommentaare ei õnnestunud avada."
 
 #: crates/core/src\page_errors.rs:47
 msgid "The selected comment editor changed. Nothing was sent."
-msgstr ""
+msgstr "Valitud kommentaarikast muutus. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:48
 msgid "The selected comment has no unique Like button. Nothing was changed."
-msgstr ""
+msgstr "Valitud kommentaaril pole ühtainsat meeldimise nuppu. Midagi ei muudetud."
 
 #: crates/core/src\page_errors.rs:49
 msgid "The selected comment has no unique Reply action. Nothing was sent."
-msgstr ""
+msgstr "Valitud kommentaaril pole ühtainsat vastamise toimingut. Midagi ei saadetud."
 
 #: crates/core/src\page_errors.rs:50
 msgid "The share dialog closed. Nothing was shared."
-msgstr ""
+msgstr "Jagamisaken sulgus. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:51
 msgid "The share dialog has no unique text box. Nothing was shared."
-msgstr ""
+msgstr "Jagamisaknas pole ühtainsat tekstikasti. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:52
 msgid "The share text box already contains text. Nothing was shared."
-msgstr ""
+msgstr "Jagamise tekstikastis on juba tekst. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:53
 msgid "The share text box is ambiguous. Nothing was shared."
-msgstr ""
+msgstr "Jagamise tekstikast on mitmetähenduslik. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:54
 msgid "The share text did not match. Nothing was shared."
-msgstr ""
+msgstr "Jagamise tekst ei klappinud. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:55
 msgid "The video comments could not be opened."
-msgstr ""
+msgstr "Video kommentaare ei õnnestunud avada."
 
 #: crates/core/src\page_errors.rs:56
 msgid "There is no pending submission."
-msgstr ""
+msgstr "Ootel saatmist pole."
 
 #: crates/core/src\page_errors.rs:57
 msgid "This post has no unique Share button. Nothing was shared."
-msgstr ""
+msgstr "Sellel postitusel pole ühtainsat jagamisnuppu. Midagi ei jagatud."
 
 #: crates/core/src\page_errors.rs:58
 msgid "This reel has no Like button. Nothing was changed."
-msgstr ""
+msgstr "Sellel reelil pole meeldimise nuppu. Midagi ei muudetud."
 
 #: crates/core/src\page_errors.rs:59
 msgid "This reel has no unique Comment button."
-msgstr ""
+msgstr "Sellel reelil pole ühtainsat kommenteerimise nuppu."
 
 #: crates/core/src\page_errors.rs:60
 msgid "This reel has no unique React button. Nothing was changed."
-msgstr ""
+msgstr "Sellel reelil pole ühtainsat reageerimise nuppu. Midagi ei muudetud."
 
 #: crates/core/src\page_errors.rs:61
 msgid "This reels list expired. Refresh it to continue."
-msgstr ""
+msgstr "See reelsi loend aegus. Jätkamiseks värskenda seda."
 
 #: crates/core/src\page_errors.rs:62
 msgid "Unknown reaction. Nothing was changed."
-msgstr ""
+msgstr "Tundmatu reaktsioon. Midagi ei muudetud."
 
 #: crates/core/src\posts.rs:94
 #, rust-format
 msgid "Invalid post detail: {field} must be text"
-msgstr ""
+msgstr "Vigased postituse andmed: {field} peab olema tekst"
 
 #: crates/core/src\posts.rs:101
 #, rust-format
 msgid "Invalid post detail: {field}"
-msgstr ""
+msgstr "Vigased postituse andmed: {field}"
 
 #: crates/core/src\posts.rs:132
 msgid "The post reader returned invalid JSON"
-msgstr ""
+msgstr "Postituse lugeja tagastas vigase JSON-i"
 
 #: crates/core/src\posts.rs:137
 msgid "Invalid post detail: comments must be a list"
-msgstr ""
+msgstr "Vigased postituse andmed: kommentaarid peavad olema loend"
 
 #: crates/core/src\posts.rs:143
 msgid "Invalid post detail: empty or duplicate comment identity"
-msgstr ""
+msgstr "Vigased postituse andmed: tühi või korduv kommentaari identiteet"
 
 #: crates/core/src\posts.rs:172
 msgid "Invalid post detail: cyclic comment thread"
-msgstr ""
+msgstr "Vigased postituse andmed: tsükliline kommentaarilõim"
 
 #: crates/core/src\posts.rs:176
 msgid "Invalid post detail: missing parent comment"
-msgstr ""
+msgstr "Vigased postituse andmed: ülemkommentaar puudub"
 
 #: crates/core/src\posts.rs:344
 msgid "This item has no supported Facebook post URL. Refresh the list and open the post again."
-msgstr ""
+msgstr "Sellel üksusel pole toetatud Facebooki postituse aadressi. Värskenda loendit ja ava postitus uuesti."
 
 #: crates/core/src\posts.rs:424
 msgid "Enter a comment before sending"
-msgstr ""
+msgstr "Sisesta enne saatmist kommentaar"
 
 #: crates/core/src\posts.rs:437
 msgid "Could not identify the selected comment editor"
-msgstr ""
+msgstr "Valitud kommentaarikasti ei õnnestunud tuvastada"
 
 #: crates/core/src\posts.rs:444
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically."
-msgstr ""
+msgstr "Saatmist ei õnnestunud kinnitada. Enne uuesti proovimist värskenda; ära saada automaatselt uuesti."
 
 #: crates/core/src\posts.rs:448
 #, rust-format
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}"
-msgstr ""
+msgstr "Saatmist ei õnnestunud kinnitada. Enne uuesti proovimist värskenda; ära saada automaatselt uuesti. {error}"
 
 #: crates/core/src\posts.rs:494 crates/core/src\posts.rs:498
 msgid "Could not read Facebook's share audience. Nothing was shared."
-msgstr ""
+msgstr "Facebooki jagamise sihtrühma ei õnnestunud lugeda. Midagi ei jagatud."
 
 #: crates/core/src\posts.rs:511
 msgid "Could not identify the share text box. Nothing was shared."
-msgstr ""
+msgstr "Jagamise tekstikasti ei õnnestunud tuvastada. Midagi ei jagatud."
 
 #: crates/core/src\reels.rs:26
 #, rust-format
 msgid "Reels from {author}"
-msgstr ""
+msgstr "Kasutaja {author} reelsid"
 
 #: crates/core/src\reels.rs:67
 msgid "Facebook returned an unreadable reels list"
-msgstr ""
+msgstr "Facebook tagastas loetamatu reelsi loendi"
 
 #: crates/core/src\reels.rs:70
 msgid "Facebook returned no reels list"
-msgstr ""
+msgstr "Facebook ei tagastanud reelsi loendit"
 
 #: crates/core/src\reels.rs:77
 msgid "Facebook returned an invalid reel link"
-msgstr ""
+msgstr "Facebook tagastas vigase reeli lingi"
 
 #: crates/core/src\reels.rs:86
 msgid "Reel"
-msgstr ""
+msgstr "Reel"
 
 #: crates/core/src\reels.rs:186
 msgid "Reel loading was interrupted. Refresh to retry."
-msgstr ""
+msgstr "Reelsi laadimine katkes. Uuesti proovimiseks värskenda."
 
 #: crates/core/src\reels.rs:190
 msgid "Reel loading was interrupted"
-msgstr ""
+msgstr "Reelsi laadimine katkes"
 
 #: crates/core/src\reels.rs:193
 msgid "This older reels list expired. Refresh it to load more."
-msgstr ""
+msgstr "See vanem reelsi loend aegus. Rohkem laadimiseks värskenda seda."
 
 #: crates/core/src\reels.rs:234
 msgid "This notification has no valid reel link"
-msgstr ""
+msgstr "Selles märguandes pole kehtivat reeli linki"
 
 #: crates/core/src\reels.rs:251
 msgid "Could not read the notification's reels"
-msgstr ""
+msgstr "Märguande reelse ei õnnestunud lugeda"
 
 #: crates/core/src\reels.rs:283
 #, rust-format
 msgid "Reel {number}"
-msgstr ""
+msgstr "Reel {number}"
 
 #: crates/core/src\reels.rs:284
 #, rust-format
 msgid "Reel {number}. Preview unavailable; open this reel to retry."
-msgstr ""
+msgstr "Reel {number}. Eelvaade pole saadaval; uuesti proovimiseks ava see reel."
 
 #: crates/core/src\reels.rs:318
 msgid "Facebook did not expose the other reels or the account's reels page"
-msgstr ""
+msgstr "Facebook ei näidanud teisi reelse ega konto reelsi lehte"
 
 #: crates/core/src\reels.rs:322
 #, rust-format
 msgid "Facebook did not expose the exact set. Showing {author}'s reels instead."
-msgstr ""
+msgstr "Facebook ei näidanud täpset komplekti. Näitan hoopis kasutaja {author} reelse."
 
 #: crates/core/src\tray_hotkey.rs:82
 msgid "Off (no hotkey)"

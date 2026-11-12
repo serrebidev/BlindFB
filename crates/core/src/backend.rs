@@ -1,5 +1,5 @@
 //! Automatic backend install: download the matching `fb` (facebook-cli)
-//! release from Forgejo, verify its SHA-256 against the release's
+//! release from Forgejo (or its GitHub mirror when Forgejo fails), verify its SHA-256 against the release's
 //! SHA256SUMS, and unpack it into BlindFB's managed bin directory.
 //!
 //! The user never needs a terminal or a Rust toolchain: the app installs
@@ -19,8 +19,11 @@ use crate::tf;
 /// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
 /// once those merge.
 pub const BACKEND_VERSION: &str = "0.1.5-blindfb.42";
-const RELEASE_URL: &str =
-    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.42";
+/// Forgejo first; the GitHub mirror (synced from Forgejo) when Forgejo is down or errors.
+const RELEASE_URLS: [&str; 2] = [
+    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.42",
+    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.42",
+];
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {
@@ -182,7 +185,18 @@ pub fn install_or_update() -> Result<String, String> {
     let asset = asset_name().ok_or_else(|| t("no prebuilt backend for this platform"))?;
     let target = managed_bin().ok_or_else(|| t("could not find a place to install the backend"))?;
 
-    let json: serde_json::Value = serde_json::from_slice(&get(RELEASE_URL)?)
+    // The first source's error explains the failure best; the mirror is only a backup.
+    let (tag, binary) = match download_backend(RELEASE_URLS[0], asset) {
+        Ok(found) => found,
+        Err(error) => download_backend(RELEASE_URLS[1], asset).map_err(|_| error)?,
+    };
+    finish_install(tag, binary, target)
+}
+
+/// Fetch the release at `release_url`, download `asset`, check it against the
+/// release's SHA256SUMS and unpack the `fb` binary. Returns the tag and binary.
+fn download_backend(release_url: &str, asset: &str) -> Result<(String, Vec<u8>), String> {
+    let json: serde_json::Value = serde_json::from_slice(&get(release_url)?)
         .map_err(|e| tf!("download failed: {error}", error = e))?;
     let tag = json
         .get("tag_name")
@@ -216,8 +230,10 @@ pub fn install_or_update() -> Result<String, String> {
     if sha256_hex(&bytes) != expected {
         return Err(t("the backend download failed its checksum — not installing it"));
     }
-    let binary = extract(asset, &bytes)?;
+    Ok((tag, extract(asset, &bytes)?))
+}
 
+fn finish_install(tag: String, binary: Vec<u8>, target: PathBuf) -> Result<String, String> {
     if target.exists() {
         // Replacing a running daemon's binary fails on Windows; stop it first.
         let _ = crate::fb::Fb::with_program(target.clone()).run(&["quit"]);

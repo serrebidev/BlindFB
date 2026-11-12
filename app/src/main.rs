@@ -25,6 +25,7 @@ mod group_dialog;
 mod player;
 mod post_dialog;
 mod reel_cache;
+mod shortcuts_dialog;
 mod update;
 
 use std::cell::RefCell;
@@ -134,6 +135,7 @@ const ID_LANG_ENGLISH: i32 = 10095;
 const ID_LANG_FRENCH: i32 = 10096;
 const ID_LANG_RUSSIAN: i32 = 10120;
 const ID_LANG_ESTONIAN: i32 = 10121;
+const ID_SHORTCUTS: i32 = 10122;
 
 const REACTIONS: [&str; 8] = [
     "like", "love", "care", "haha", "wow", "sad", "angry", "none",
@@ -1029,6 +1031,12 @@ fn run() {
         // Take the tray icon down with the window; a leaked icon whose
         // app has exited lingers in the tray as a ghost (issue #26).
         tray_destroy.remove_icon();
+        // The tray icon's hidden window counts as an open window, so wx can keep running
+        // with nothing on screen: a closed BlindFB lingered as a process, holding
+        // blindfb.exe so the updater could not replace it. End the loop outright.
+        if let Some(app) = wxdragon::app::get_app_instance() {
+            app.exit_main_loop();
+        }
     });
 
     frame.centre();
@@ -1473,21 +1481,30 @@ fn spawn_tray_hotkey_thread() {
             time: 0,
             pt: Point { x: 0, y: 0 },
         };
+        // A hotkey another app owns is retried every 5 s (100 ticks) and logged once, not
+        // every tick: the log grew by 20 lines a second while another copy held it.
+        let mut refused = None;
+        let mut ticks: u32 = 0;
         loop {
+            ticks = ticks.wrapping_add(1);
             let want = tray_hotkey_spec();
-            if want != registered {
+            if want != registered && (want != refused || ticks.is_multiple_of(100)) {
                 if registered.is_some() {
                     UnregisterHotKey(std::ptr::null_mut(), 1);
                 }
                 match want {
                     Some((modifiers, vk)) => {
                         if RegisterHotKey(std::ptr::null_mut(), 1, modifiers, vk) == 0 {
-                            startup_log(
-                                "hotkey: the hotkey is owned by another app; it only works while BlindFB is focused",
-                            );
+                            if want != refused {
+                                startup_log(
+                                    "hotkey: the hotkey is owned by another app; it only works while BlindFB is focused",
+                                );
+                            }
+                            refused = want;
                             registered = None;
                         } else {
                             startup_log("hotkey: registered system-wide for the tray toggle");
+                            refused = None;
                             registered = want;
                         }
                     }
@@ -1570,34 +1587,34 @@ fn build_menus(frame: &Frame) {
     let file_menu = Menu::builder()
         .append_item(
             ID_OPEN_LINK,
-            &t("Open Facebook &link…\tCtrl+O"),
+            &shortcuts_dialog::menu_label(ID_OPEN_LINK, t("Open Facebook &link…")),
             &t("Open a Facebook post, video or reel link"),
         )
-        .append_item(ID_NEW_POST, &t("&New post…\tCtrl+N"), &t("Write a new post"))
+        .append_item(ID_NEW_POST, &shortcuts_dialog::menu_label(ID_NEW_POST, t("&New post…")), &t("Write a new post"))
         .append_item(
             ID_NEW_POST_IMAGES,
-            &t("New post with &media…"),
+            &shortcuts_dialog::menu_label(ID_NEW_POST_IMAGES, t("New post with &media…")),
             &t("Write a post with photos and videos attached"),
         )
         .append_item(
             ID_SELL,
-            &t("Sell on &Marketplace…"),
+            &shortcuts_dialog::menu_label(ID_SELL, t("Sell on &Marketplace…")),
             &t("Create a Marketplace listing with photos or video"),
         )
         .append_item(
             ID_SEARCH,
-            &t("&Search Facebook…\tCtrl+/"),
+            &shortcuts_dialog::menu_label(ID_SEARCH, t("&Search Facebook…")),
             &t("Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"),
         )
         .append_item(
             ID_OCR,
-            &t("&OCR an image…"),
+            &shortcuts_dialog::menu_label(ID_OCR, t("&OCR an image…")),
             &t("Read the text in an image file with the operating system's OCR engine"),
         )
         .append_item(
             ID_UPDATE,
-            &t("Check for &updates…"),
-            &t("Check Forgejo for a newer BlindFB"),
+            &shortcuts_dialog::menu_label(ID_UPDATE, t("Check for &updates…")),
+            &t("Check for a newer BlindFB"),
         )
         .append_separator()
         .append_item(
@@ -1607,107 +1624,112 @@ fn build_menus(frame: &Frame) {
         )
         .append_item(
             ID_TRAY_HOTKEY,
-            &t("Show/hide &hotkey…"),
+            &shortcuts_dialog::menu_label(ID_TRAY_HOTKEY, t("Show/hide &hotkey…")),
             &t("Pick the shortcut that hides and restores BlindFB, or turn it off"),
         )
-        .append_item(ID_EXIT, &t("E&xit\tCtrl+Q"), &t("Close BlindFB"))
+        .append_item(
+            ID_SHORTCUTS,
+            &shortcuts_dialog::menu_label(ID_SHORTCUTS, t("&Keyboard shortcuts…")),
+            &t("Give any command a shortcut, or change or remove one"),
+        )
+        .append_item(ID_EXIT, &shortcuts_dialog::menu_label(ID_EXIT, t("E&xit")), &t("Close BlindFB"))
         .build();
 
     let view_menu = Menu::builder()
-        .append_item(ID_FEED, &t("News &feed\tCtrl+1"), &t("Your news feed"))
-        .append_item(ID_NOTIFS, &t("&Notifications\tCtrl+2"), &t("Your notifications"))
-        .append_item(ID_FRIENDS, &t("Fr&iends\tCtrl+3"), &t("Your friends list"))
-        .append_item(ID_MYPOSTS, &t("&My posts\tCtrl+4"), &t("Posts on your own profile"))
-        .append_item(ID_CHATS, &t("&Chats\tCtrl+5"), &t("Messenger chats"))
-        .append_item(ID_GROUPS_VIEW, &t("&Groups\tCtrl+6"), &t("Groups you belong to"))
+        .append_item(ID_FEED, &shortcuts_dialog::menu_label(ID_FEED, t("News &feed")), &t("Your news feed"))
+        .append_item(ID_NOTIFS, &shortcuts_dialog::menu_label(ID_NOTIFS, t("&Notifications")), &t("Your notifications"))
+        .append_item(ID_FRIENDS, &shortcuts_dialog::menu_label(ID_FRIENDS, t("Fr&iends")), &t("Your friends list"))
+        .append_item(ID_MYPOSTS, &shortcuts_dialog::menu_label(ID_MYPOSTS, t("&My posts")), &t("Posts on your own profile"))
+        .append_item(ID_CHATS, &shortcuts_dialog::menu_label(ID_CHATS, t("&Chats")), &t("Messenger chats"))
+        .append_item(ID_GROUPS_VIEW, &shortcuts_dialog::menu_label(ID_GROUPS_VIEW, t("&Groups")), &t("Groups you belong to"))
         .append_item(
             ID_RECENT_FEED,
-            &t("Feeds (most &recent)\tCtrl+7"),
+            &shortcuts_dialog::menu_label(ID_RECENT_FEED, t("Feeds (most &recent)")),
             &t("Newest posts from followed friends, pages and groups"),
         )
         .append_item(
             ID_REELS,
-            &t("Re&els\tCtrl+8"),
+            &shortcuts_dialog::menu_label(ID_REELS, t("Re&els")),
             &t("Browse reels with the accessible player"),
         )
         .append_item(
             ID_MARKETPLACE,
-            &t("&Marketplace\tCtrl+9"),
+            &shortcuts_dialog::menu_label(ID_MARKETPLACE, t("&Marketplace")),
             &t("Browse Marketplace listings"),
         )
-        .append_item(ID_EVENTS_VIEW, &t("&Events"), &t("Events from your events page"))
-        .append_item(ID_PAGES_VIEW, &t("Pa&ges"), &t("Pages from your pages page"))
-        .append_item(ID_PLACES_VIEW, &t("P&laces"), &t("Places from the places page"))
+        .append_item(ID_EVENTS_VIEW, &shortcuts_dialog::menu_label(ID_EVENTS_VIEW, t("&Events")), &t("Events from your events page"))
+        .append_item(ID_PAGES_VIEW, &shortcuts_dialog::menu_label(ID_PAGES_VIEW, t("Pa&ges")), &t("Pages from your pages page"))
+        .append_item(ID_PLACES_VIEW, &shortcuts_dialog::menu_label(ID_PLACES_VIEW, t("P&laces")), &t("Places from the places page"))
         .append_item(
             ID_UNREAD_CHATS,
-            &t("&Unread chats only"),
+            &shortcuts_dialog::menu_label(ID_UNREAD_CHATS, t("&Unread chats only")),
             &t("Chats with unread messages"),
         )
         .append_separator()
-        .append_item(ID_REFRESH, &t("&Refresh\tF5"), &t("Reload the current view"))
+        .append_item(ID_REFRESH, &shortcuts_dialog::menu_label(ID_REFRESH, t("&Refresh")), &t("Reload the current view"))
         .append_item(
             ID_MORE,
-            &t("&Load more\tCtrl+L"),
+            &shortcuts_dialog::menu_label(ID_MORE, t("&Load more")),
             &t("Append more items and keep your reading position"),
         )
         .append_separator()
         .append_check_item(
             ID_VOICE_ALERTS,
-            &t("&Voice alerts"),
+            &shortcuts_dialog::menu_label(ID_VOICE_ALERTS, t("&Voice alerts")),
             &t("Say new notifications and unread chats aloud"),
         )
         .append_check_item(
             ID_SOUND_ALERTS,
-            &t("&Sound alerts"),
+            &shortcuts_dialog::menu_label(ID_SOUND_ALERTS, t("&Sound alerts")),
             &t("Play a sound for new notifications and unread chats"),
         )
         .append_check_item(
             ID_LIST_VOICE_ALERTS,
-            &t("Voice alert when a &list loads"),
+            &shortcuts_dialog::menu_label(ID_LIST_VOICE_ALERTS, t("Voice alert when a &list loads")),
             &t("Say the name and size of a list when it finishes loading"),
         )
         .append_check_item(
             ID_LIST_SOUND_ALERTS,
-            &t("Sound alert when a list &loads"),
+            &shortcuts_dialog::menu_label(ID_LIST_SOUND_ALERTS, t("Sound alert when a list &loads")),
             &t("Play a sound when a list finishes loading"),
         )
         .build();
 
     let mut post_menu = Menu::builder()
-        .append_item(ID_OPEN, &t("&Open post / comments"), &t("Open the selected item; Enter in the items list"))
-        .append_item(ID_SHARE, &t("S&hare…"), &t("Share the selected post"))
-        .append_item(ID_COMMENT, &t("&Comment…"), &t("Comment on the selected post"))
-        .append_item(ID_PROFILE, &t("Author &profile"), &t("Show the profile of the selected item's author or owner"))
-        .append_item(ID_AUTHOR_POSTS, &t("Author's p&osts"), &t("Posts by the selected item's author"))
-        .append_item(ID_MESSAGE, &t("&Message author / friend"), &t("Open a Messenger chat with this person"))
-        .append_item(ID_WEB_POST, &t("Open post on &Facebook (web)"), &t("Open the selected post in your browser"))
-        .append_item(ID_WEB_PERSON, &t("Open person or group on Fa&cebook (web)"), &t("Open the selected person's profile (or the group) in your browser, where friend management lives"))
+        .append_item(ID_OPEN, &shortcuts_dialog::menu_label(ID_OPEN, t("&Open post / comments")), &t("Open the selected item; Enter in the items list"))
+        .append_item(ID_SHARE, &shortcuts_dialog::menu_label(ID_SHARE, t("S&hare…")), &t("Share the selected post"))
+        .append_item(ID_COMMENT, &shortcuts_dialog::menu_label(ID_COMMENT, t("&Comment…")), &t("Comment on the selected post"))
+        .append_item(ID_PROFILE, &shortcuts_dialog::menu_label(ID_PROFILE, t("Author &profile")), &t("Show the profile of the selected item's author or owner"))
+        .append_item(ID_AUTHOR_POSTS, &shortcuts_dialog::menu_label(ID_AUTHOR_POSTS, t("Author's p&osts")), &t("Posts by the selected item's author"))
+        .append_item(ID_MESSAGE, &shortcuts_dialog::menu_label(ID_MESSAGE, t("&Message author / friend")), &t("Open a Messenger chat with this person"))
+        .append_item(ID_WEB_POST, &shortcuts_dialog::menu_label(ID_WEB_POST, t("Open post on &Facebook (web)")), &t("Open the selected post in your browser"))
+        .append_item(ID_WEB_PERSON, &shortcuts_dialog::menu_label(ID_WEB_PERSON, t("Open person or group on Fa&cebook (web)")), &t("Open the selected person's profile (or the group) in your browser, where friend management lives"))
         .append_separator()
-        .append_item(ID_DELETE, &t("&Delete post…"), &t("Delete the selected post (your own posts only)"));
+        .append_item(ID_DELETE, &shortcuts_dialog::menu_label(ID_DELETE, t("&Delete post…")), &t("Delete the selected post (your own posts only)"));
     for (i, reaction) in REACTIONS.iter().enumerate() {
         post_menu = post_menu.append_item(
             ID_REACT_BASE + i as i32,
-            &react_menu_label(reaction),
+            &shortcuts_dialog::menu_label(ID_REACT_BASE + i as i32, react_menu_label(reaction)),
             &t("Set this reaction on the selected post"),
         );
     }
     let post_menu = post_menu.build();
 
     let chat_menu = Menu::builder()
-        .append_item(ID_OPEN, &t("&Open chat"), &t("Open the selected chat"))
+        .append_item(ID_OPEN, &shortcuts_dialog::menu_label(ID_OPEN, t("&Open chat")), &t("Open the selected chat"))
         .append_item(
             ID_WEB_CHAT,
-            &t("Open chat in &Messenger (web)"),
+            &shortcuts_dialog::menu_label(ID_WEB_CHAT, t("Open chat in &Messenger (web)")),
             &t("Open this chat in your browser — voice and video calls live there"),
         )
         .append_item(
             ID_UNSEND,
-            &t("&Unsend my last message…"),
+            &shortcuts_dialog::menu_label(ID_UNSEND, t("&Unsend my last message…")),
             &t("Remove your newest message in the open chat for everyone"),
         )
         .append_item(
             ID_UNLOCK,
-            &t("Unloc&k encrypted chats…"),
+            &shortcuts_dialog::menu_label(ID_UNLOCK, t("Unloc&k encrypted chats…")),
             &t("Enter your Messenger PIN to read end-to-end encrypted chats"),
         )
         .build();
@@ -1715,20 +1737,20 @@ fn build_menus(frame: &Frame) {
     let backend_menu = Menu::builder()
         .append_item(
             ID_INSTALL_BACKEND,
-            &t("&Install or update backend…"),
+            &shortcuts_dialog::menu_label(ID_INSTALL_BACKEND, t("&Install or update backend…")),
             &t("Download BlindFB's supported facebook-cli backend from Forgejo"),
         )
-        .append_item(ID_STATUS, &t("Backend &status"), &t("Show fb daemon status"))
-        .append_item(ID_LOGIN, &t("&Sign in…"), &t("Sign in through your browser"))
+        .append_item(ID_STATUS, &shortcuts_dialog::menu_label(ID_STATUS, t("Backend &status")), &t("Show fb daemon status"))
+        .append_item(ID_LOGIN, &shortcuts_dialog::menu_label(ID_LOGIN, t("&Sign in…")), &t("Sign in through your browser"))
         .append_item(
             ID_INSTALL_BROWSER,
-            &t("Install a &browser…"),
+            &shortcuts_dialog::menu_label(ID_INSTALL_BROWSER, t("Install a &browser…")),
             &t("Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"),
         )
-        .append_item(ID_STOP_DAEMON, &t("S&top daemon"), &t("Stop the fb daemon"))
+        .append_item(ID_STOP_DAEMON, &shortcuts_dialog::menu_label(ID_STOP_DAEMON, t("S&top daemon")), &t("Stop the fb daemon"))
         .append_item(
             ID_QUIT_DAEMON,
-            &t("&Quit daemon and Chrome"),
+            &shortcuts_dialog::menu_label(ID_QUIT_DAEMON, t("&Quit daemon and Chrome")),
             &t("Stop the daemon and close its hidden Chrome"),
         )
         .build();
@@ -1736,30 +1758,30 @@ fn build_menus(frame: &Frame) {
     let help_menu = Menu::builder()
         .append_item(
             ID_KEYS,
-            &t("&Keyboard commands\tF1"),
+            &shortcuts_dialog::menu_label(ID_KEYS, t("&Keyboard commands")),
             &t("Keyboard commands and reader controls"),
         )
         .append_item(
             ID_GITHUB,
-            &t("BlindFB on &Forgejo"),
+            &shortcuts_dialog::menu_label(ID_GITHUB, t("BlindFB on &Forgejo")),
             &t("Open the BlindFB repository"),
         )
         .append_separator()
         .append_check_item(
             ID_DEBUG_LOGGING,
-            &t("&Debug logging"),
+            &shortcuts_dialog::menu_label(ID_DEBUG_LOGGING, t("&Debug logging")),
             &t("Record what BlindFB runs and the errors it gets, for a bug report"),
         )
         .append_item(
             ID_DEBUG_REPORT,
-            &t("Save debug &report…"),
+            &shortcuts_dialog::menu_label(ID_DEBUG_REPORT, t("Save debug &report…")),
             &t("Save a file you can send to the developer"),
         )
         .append_separator()
         // Language names stay in their own language, so anyone can find theirs.
         .append_radio_item(
             ID_LANG_SYSTEM,
-            &t("Language: &system default"),
+            &shortcuts_dialog::menu_label(ID_LANG_SYSTEM, t("Language: &system default")),
             &t("Use the system language when BlindFB has it, English otherwise"),
         )
         .append_radio_item(ID_LANG_ENGLISH, "Language: &English", "Show BlindFB in English")
@@ -1779,7 +1801,7 @@ fn build_menus(frame: &Frame) {
             "Näita BlindFB eesti keeles",
         )
         .append_separator()
-        .append_item(ID_ABOUT, &t("&About BlindFB"), &t("About this program"))
+        .append_item(ID_ABOUT, &shortcuts_dialog::menu_label(ID_ABOUT, t("&About BlindFB")), &t("About this program"))
         .build();
 
     let menu_bar = MenuBar::builder()
@@ -4655,6 +4677,11 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SEARCH => search_dialog(ui),
         ID_OCR => ocr_dialog(ui),
         ID_UPDATE => update::check(&ui.frame, ship_shape::ui::CheckTrigger::Manual),
+        ID_SHORTCUTS => {
+            shortcuts_dialog::show(&ui.frame);
+            // Menu accelerators come from the item labels, so new labels apply the change.
+            build_menus(&ui.frame);
+        }
         ID_STATUS => ui.send(Job {
             task: Task::Fb(vec!["status".into()], None),
             tag: Tag::Text,
@@ -4701,7 +4728,9 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_KEYS => {
             let dialog = MessageDialog::builder(
                 &ui.frame,
-                &t("Ctrl+O: open a Facebook post, video or reel link.\n\
+                &format!(
+                    "{}\n{}",
+                    t("Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
                  Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. The Views list also has Events, Pages and Places. F5: refresh. Ctrl+L: load more.\n\
@@ -4714,6 +4743,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Arrow keys on Video volume change its percentage.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
                  Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."),
+                    t("File, Keyboard shortcuts: change any of these shortcuts, or give any menu command one.")
+                ),
                 &t("Keyboard commands"),
             ).build();
             dialog.show_modal();

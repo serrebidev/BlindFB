@@ -4,6 +4,27 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.41 - 2026-11-12
+
+Fixes from the second feedback mail. Updating from the File menu no
+longer reopens the old version: the hidden installer step could fail
+silently (an app started from PowerShell 7 handed Windows PowerShell
+the wrong Archive module, and a closed BlindFB could linger as a hidden
+process that kept blindfb.exe locked), then relaunch the copy it had
+not replaced. The installer now uses Windows PowerShell's own modules,
+retries while the file is locked, ends leftover copies, and keeps the
+download until it is unpacked; closing BlindFB now always ends the
+process. Updates and the backend download fall back to the GitHub
+mirror when Forgejo fails, which covers the HTTP 500 seen from Backend,
+Install or update backend. New File > Keyboard shortcuts gives any menu
+command a shortcut, or changes or removes one, and covers the post
+reader's comment keys (copy, copy all, open link), so a shortcut taken
+by a screen reader add-on can move. Russian and Estonian are now fully
+translated, French covers the new strings. The show/hide hotkey no
+longer floods the startup log when another program holds it. Install
+this one by hand if the in-app update keeps reopening v0.7.40: that
+copy still has the old installer step. No backend changes.
+
 ## v0.7.40 - 2026-11-12
 
 Six requests from the feedback mail: Ctrl+C copies the selected

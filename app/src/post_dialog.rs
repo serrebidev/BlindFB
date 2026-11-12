@@ -1,5 +1,6 @@
 //! Native post reader. The modal is entered by item activation, never the result timer.
 use super::player::{Player, PlayerEvent};
+use super::shortcuts_dialog::{post_key, COMMENT_COPY, COMMENT_COPY_ALL, COMMENT_OPEN_LINK};
 use super::{append_links_menu, open_url, Job, Tag, Task, Ui, REACTIONS};
 use blindfb_core::fb::{friend_add_args, react_args};
 use blindfb_core::{ntf, tf};
@@ -241,7 +242,7 @@ impl PostReader {
             let state = self.state.borrow();
             let mut out = self.post.get_value().to_string();
             for comment in &state.comments {
-                out.push_str("\n");
+                out.push('\n');
                 if comment.parent_id.is_some() {
                     out.push_str("  ");
                 }
@@ -816,8 +817,13 @@ fn open_requested(
     volume.set_name(&t("Video volume, percent"));
     let comments_label = StaticText::builder(&dialog).with_label(&t("&Comments")).build();
     let comments = ListBox::builder(&dialog).build();
-    comments.set_name(&t(
-        "Comments. Ctrl+C copies the comment. Ctrl+Shift+C copies the post and all comments. Ctrl+Enter opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
+    // The keys are the user's, from File > Keyboard shortcuts.
+    let none = t("no shortcut");
+    comments.set_name(&tf!(
+        "Comments. {copy} copies the comment. {copy_all} copies the post and all comments. {open} opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions",
+        copy = post_key(COMMENT_COPY).unwrap_or_else(|| none.clone()),
+        copy_all = post_key(COMMENT_COPY_ALL).unwrap_or_else(|| none.clone()),
+        open = post_key(COMMENT_OPEN_LINK).unwrap_or(none),
     ));
     let composer_text = composer_label();
     let composer_label = StaticText::builder(&dialog).with_label(&composer_text).build();
@@ -924,25 +930,26 @@ fn open_requested(
     comments.on_selection_changed(move |_| r.follow_comment_links());
     let (r, u) = (reader.clone(), ui.clone());
     comments.bind_internal(EventType::KEY_DOWN, move |event| {
-        // Ctrl+C copies the selected comment, Ctrl+Shift+C the whole
-        // discussion, Ctrl+Enter opens the comment's first link.
-        // wxdragon exposes Shift via `shift_down()`.
+        // Copy the selected comment (Ctrl+C), the whole discussion
+        // (Ctrl+Shift+C), or open the comment's first link (Ctrl+Enter),
+        // unless File > Keyboard shortcuts changed them.
         if r.comments.has_focus() {
-            let code = event.get_key_code();
-            // Letters arrive as their ASCII code ('C' = 67, 'c' = 99).
-            let is_c = matches!(code, Some(67 | 99));
-            if event.control_down() {
-                if is_c && event.shift_down() {
+            if let Some(code) = event.get_key_code() {
+                let (ctrl, alt, shift) = (event.control_down(), event.alt_down(), event.shift_down());
+                let pressed = |key| {
+                    blindfb_core::shortcuts::matches(post_key(key).as_deref(), code, ctrl, alt, shift)
+                };
+                if pressed(COMMENT_COPY_ALL) {
                     event.skip(false);
                     r.copy_all(&u);
                     return;
                 }
-                if is_c {
+                if pressed(COMMENT_COPY) {
                     event.skip(false);
                     r.copy_comment(&u);
                     return;
                 }
-                if matches!(code, Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
+                if pressed(COMMENT_OPEN_LINK) {
                     event.skip(false);
                     r.open_first_comment_link(&u);
                     return;
