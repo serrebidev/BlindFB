@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.39 - 2026-11-12
+
+The show/hide hotkey is now Alt+Ctrl+F and can be changed: File >
+Show/hide hotkey offers presets (Ctrl+T, Alt+T, Ctrl+Alt+T,
+Ctrl+Shift+T, Alt+F9) and Off, so it no longer fights Chrome for
+Ctrl+T. The new shortcut applies right away.
+
 ## v0.7.38 - 2026-11-10
 
 Sending a message no longer fails with "Messenger dialog blocks input" on

@@ -30,6 +30,7 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored.
 - OCR an image file with the OCR engine built into your operating system.
 - F1 lists the keyboard commands; Ctrl+1 to Ctrl+9 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
+- Alt+Ctrl+F hides BlindFB to the system tray and brings it back. File > Show/hide hotkey changes the shortcut (or turns it off); the new one applies right away.
 - Help, Check for updates downloads the new release, verifies its minisign signature, installs it and restarts.
 
 Some things the `fb` backend cannot do are linked out instead of faked: voice and video calls open the conversation in Messenger on the web, adding or removing friends opens the person's real profile, and posting into a group opens the group's web page. Photo albums open in your browser. A few feed rows (often ads and suggestions) never expose a link to Facebook's own scripts; BlindFB marks those "(no link)" and cannot open them.

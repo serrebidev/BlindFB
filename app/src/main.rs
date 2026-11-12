@@ -54,6 +54,7 @@ use wx_utils::{confirm, prompt_text, show_error, show_warning, AboutBoxBuilder};
 use wxdragon::prelude::*;
 
 use blindfb_core::i18n::{self, Language};
+use blindfb_core::tray_hotkey;
 use blindfb_core::{ntf, tf};
 use patois::t;
 
@@ -78,6 +79,7 @@ const ID_EVENTS_VIEW: i32 = 10097;
 const ID_PAGES_VIEW: i32 = 10098;
 const ID_PLACES_VIEW: i32 = 10099;
 const ID_TRAY_TOGGLE: i32 = 10110;
+const ID_TRAY_HOTKEY: i32 = 10111;
 const ID_TRAY_MENU_TOGGLE: i32 = 10201;
 const ID_TRAY_MENU_EXIT: i32 = 10202;
 const ID_WEB_POST: i32 = 10080;
@@ -773,7 +775,7 @@ fn run() {
         let frame_tray = frame;
         tray.on_left_double_click(move |_| toggle_tray_window(&frame_tray));
     }
-    // Windows: Ctrl+T must also restore, and a menu accelerator cannot
+    // Windows: the show/hide hotkey must also restore, and a menu accelerator cannot
     // reach a hidden window — register it system-wide (issue #26).
     #[cfg(target_os = "windows")]
     spawn_tray_hotkey_thread();
@@ -1402,31 +1404,32 @@ fn refs(args: &[String]) -> Vec<&str> {
     args.iter().map(String::as_str).collect()
 }
 
-/// Win32 RegisterHotKey spec for the tray toggle (issue #26):
-/// (modifier flags, virtual-key code) — Ctrl+T, no auto-repeat, so
-/// holding the key down does not strobe the window. Only the Windows
-/// hotkey thread calls this in production; the unit test pins the spec
-/// on every platform.
+/// Win32 RegisterHotKey spec for the tray toggle (issue #26): the saved
+/// choice from `blindfb_core::tray_hotkey` (default Alt+Ctrl+F), or `None`
+/// when the user turned the hotkey off. Only the Windows hotkey thread
+/// calls this in production on Windows; the app test pins the default
+/// spec on every platform.
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-fn tray_hotkey_spec() -> (u32, u32) {
-    const MOD_CONTROL: u32 = 0x0002;
-    const MOD_NOREPEAT: u32 = 0x4000;
-    const VK_T: u32 = 0x54;
-    (MOD_CONTROL | MOD_NOREPEAT, VK_T)
+fn tray_hotkey_spec() -> Option<(u32, u32)> {
+    tray_hotkey::saved().win_spec()
 }
 
-/// Set by the Windows hotkey thread when Ctrl+T is pressed; the GUI
+/// Set by the Windows hotkey thread when the hotkey is pressed; the GUI
 /// timer consumes it and toggles (issue #26).
 #[cfg(target_os = "windows")]
 static TRAY_HOTKEY_PENDING: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
-/// Register Ctrl+T as a system-wide hotkey on its own message-loop
+/// Register the show/hide hotkey as a system-wide hotkey on its own
 /// thread (Windows, issue #26). A menu accelerator cannot reach a
 /// hidden window, so the v0.7.31 shortcut hid BlindFB but never
 /// restored it. RegisterHotKey with no window posts WM_HOTKEY to this
 /// thread's queue; the flag above hands the press to the GUI timer,
 /// which toggles on the GUI thread where wx calls belong.
+/// The choice lives in the saved setting (default Alt+Ctrl+F) and is
+/// re-read while the thread runs, so picking a new preset — or turning
+/// the hotkey off — takes effect without restarting; the thread drops
+/// the old registration and registers the new one.
 #[cfg(target_os = "windows")]
 fn spawn_tray_hotkey_thread() {
     use std::ffi::c_void;
@@ -1448,18 +1451,14 @@ fn spawn_tray_hotkey_thread() {
     #[link(name = "user32")]
     unsafe extern "system" {
         fn RegisterHotKey(hwnd: *mut c_void, id: i32, modifiers: u32, vk: u32) -> i32;
-        fn GetMessageW(msg: *mut Msg, hwnd: *mut c_void, min: u32, max: u32) -> i32;
+        fn UnregisterHotKey(hwnd: *mut c_void, id: i32) -> i32;
+        fn PeekMessageW(msg: *mut Msg, hwnd: *mut c_void, min: u32, max: u32, flags: u32) -> i32;
+        fn Sleep(dw_ms: u32);
     }
     const WM_HOTKEY: u32 = 0x0312;
-    let (modifiers, vk) = tray_hotkey_spec();
+    const PM_REMOVE: u32 = 0x0001;
     std::thread::spawn(move || unsafe {
-        if RegisterHotKey(std::ptr::null_mut(), 1, modifiers, vk) == 0 {
-            startup_log(
-                "hotkey: Ctrl+T is owned by another app; it only works while BlindFB is focused",
-            );
-            return;
-        }
-        startup_log("hotkey: Ctrl+T registered system-wide for the tray toggle");
+        let mut registered: Option<(u32, u32)> = None;
         let mut msg = Msg {
             hwnd: std::ptr::null_mut(),
             message: 0,
@@ -1468,16 +1467,86 @@ fn spawn_tray_hotkey_thread() {
             time: 0,
             pt: Point { x: 0, y: 0 },
         };
-        while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
-            if msg.message == WM_HOTKEY {
-                TRAY_HOTKEY_PENDING.store(true, Ordering::SeqCst);
+        loop {
+            let want = tray_hotkey_spec();
+            if want != registered {
+                if registered.is_some() {
+                    UnregisterHotKey(std::ptr::null_mut(), 1);
+                }
+                match want {
+                    Some((modifiers, vk)) => {
+                        if RegisterHotKey(std::ptr::null_mut(), 1, modifiers, vk) == 0 {
+                            startup_log(
+                                "hotkey: the hotkey is owned by another app; it only works while BlindFB is focused",
+                            );
+                            registered = None;
+                        } else {
+                            startup_log("hotkey: registered system-wide for the tray toggle");
+                            registered = want;
+                        }
+                    }
+                    None => {
+                        startup_log("hotkey: off; the tray icon and menus toggle");
+                        registered = None;
+                    }
+                }
             }
+            while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) > 0 {
+                if msg.message == WM_HOTKEY {
+                    TRAY_HOTKEY_PENDING.store(true, Ordering::SeqCst);
+                }
+            }
+            Sleep(50);
         }
     });
 }
 
+/// The File menu label for the tray toggle, with the current hotkey
+/// after the tab (nothing after it when the hotkey is off).
+fn tray_toggle_text() -> String {
+    match tray_hotkey::saved().label() {
+        Some(label) => format!("{}\t{label}", t("Hide to system &tray")),
+        None => t("Hide to system &tray"),
+    }
+}
+
+/// Let the user pick the show/hide hotkey: the presets from
+/// `tray_hotkey::Hotkey::choices` (default Alt+Ctrl+F) or off. The
+/// choice is remembered and the Windows thread re-registers live.
+fn prompt_tray_hotkey(ui: &Ui) {
+    let choices = tray_hotkey::Hotkey::choices();
+    let labels: Vec<String> = choices.iter().map(|(_, label)| label.clone()).collect();
+    let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let dialog = SingleChoiceDialog::builder(
+        &ui.frame,
+        &t("Show/hide hotkey"),
+        &t("Pick the shortcut that hides and restores BlindFB, or turn it off"),
+        &refs,
+    )
+    .build();
+    let picked = (dialog.show_modal() == ID_OK).then(|| dialog.get_selection());
+    dialog.destroy();
+    let Some(index) = picked.filter(|index| *index >= 0) else {
+        return;
+    };
+    let hotkey = choices[index as usize].0;
+    match tray_hotkey::save(hotkey) {
+        Ok(()) => {
+            // The menu label is built once; the new shortcut shows in
+            // the File menu from the next launch, but the Windows
+            // thread re-registers it right away.
+            let words = match hotkey.label() {
+                Some(label) => tf!("Show/hide hotkey: {label}", label = label),
+                None => t("Show/hide hotkey off."),
+            };
+            ui.status(&words);
+        }
+        Err(error) => show_error(&ui.frame, &error, &t("Show/hide hotkey")),
+    }
+}
+
 /// Hide the window to the system tray, or bring it back (issue #26).
-/// One toggle for both directions. On Windows Ctrl+T is registered
+/// One toggle for both directions. On Windows the hotkey is registered
 /// system-wide (see spawn_tray_hotkey_thread), so the same shortcut
 /// restores a hidden window; elsewhere the tray icon's double-click or
 /// its Show / hide menu item is the restore side.
@@ -1527,8 +1596,13 @@ fn build_menus(frame: &Frame) {
         .append_separator()
         .append_item(
             ID_TRAY_TOGGLE,
-            &t("Hide to system &tray\tCtrl+T"),
+            &tray_toggle_text(),
             &t("Hide BlindFB to the system tray; the tray icon or its menu brings it back"),
+        )
+        .append_item(
+            ID_TRAY_HOTKEY,
+            &t("Show/hide &hotkey…"),
+            &t("Pick the shortcut that hides and restores BlindFB, or turn it off"),
         )
         .append_item(ID_EXIT, &t("E&xit\tCtrl+Q"), &t("Close BlindFB"))
         .build();
@@ -4459,6 +4533,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_PAGES_VIEW => load_view(ui, View::Pages),
         ID_PLACES_VIEW => load_view(ui, View::Places),
         ID_TRAY_TOGGLE => toggle_tray_window(&ui.frame),
+        ID_TRAY_HOTKEY => prompt_tray_hotkey(ui),
         ID_WEB_POST => open_post_web(ui),
         ID_WEB_PERSON => open_person_web(ui),
         ID_WEB_CHAT => open_chat_web(ui),
@@ -4574,7 +4649,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
                  Ctrl+1 through Ctrl+9: switch views. Ctrl+8 opens Reels, Ctrl+9 opens Marketplace. The Views list also has Events, Pages and Places. F5: refresh. Ctrl+L: load more.\n\
-                 Ctrl+T: hide BlindFB to the system tray. Bring it back from the tray icon (double-click it, or its Show / hide menu item).\n\
+                 Alt+Ctrl+F (default, changeable in File, Show/hide hotkey): hide BlindFB to the system tray. Bring it back with the same shortcut, from the tray icon (double-click it, or its Show / hide menu item).\n\
                  Reels stay cached until F5. Arrows change the selected reel; Enter opens it and starts playback automatically. Escape returns to the list.\n\
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
@@ -5687,11 +5762,17 @@ mod tests {
     }
 
     #[test]
-    fn tray_hotkey_is_ctrl_t_without_repeat() {
-        // Issue #26: one shortcut toggles hide/restore. MOD_CONTROL |
-        // MOD_NOREPEAT, VK_T — the spec the Windows hotkey thread
-        // registers system-wide so it also fires while hidden.
-        assert_eq!(tray_hotkey_spec(), (0x4002, 0x54));
+    fn tray_hotkey_default_is_alt_ctrl_f_without_repeat() {
+        // One shortcut toggles hide/restore. MOD_ALT | MOD_CONTROL |
+        // MOD_NOREPEAT, VK_F — the default the Windows hotkey thread
+        // registers system-wide so it also fires while hidden. The
+        // saved setting decides the real spec (off returns None).
+        assert_eq!(
+            blindfb_core::tray_hotkey::Hotkey::AltCtrlF.win_spec(),
+            Some((0x4003, 0x46))
+        );
+        assert_eq!(blindfb_core::tray_hotkey::Hotkey::Off.win_spec(), None);
+        assert!(tray_hotkey::Hotkey::choices().len() == 7);
     }
 
     #[test]
