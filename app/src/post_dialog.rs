@@ -711,6 +711,12 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     open_requested(ui, target, share_requested, None, None);
 }
 
+/// Open the reader over another dialog (the group window). False when it did
+/// not open or left for another view (a profile), so that dialog closes too.
+pub(super) fn open_over(ui: &Ui, target: &str) -> bool {
+    open_requested(ui, target, false, None, None)
+}
+
 pub(super) fn open_reel(ui: &Ui, target: &str, stream: Option<String>, preparing: bool) {
     open_requested(
         ui,
@@ -737,9 +743,9 @@ fn open_requested(
     share_requested: bool,
     action_requested: Option<i32>,
     playback: Option<ReelPlayback>,
-) {
+) -> bool {
     if ui.post_reader.borrow().is_some() {
-        return;
+        return false;
     }
     let selection = ui.items.get_selection();
     let preview = super::selected(ui)
@@ -1242,12 +1248,13 @@ fn open_requested(
     dialog.destroy();
     if let Some(who) = reader.state.borrow_mut().pending_profile.take() {
         super::load_view(ui, super::View::ProfileOf(who));
-        return;
+        return false;
     }
     if let Some(index) = selection.filter(|i| *i < ui.items.get_count()) {
         ui.items.set_selection(index, true);
     }
     ui.items.set_focus();
+    true
 }
 
 pub(super) fn is_video_page(url: &str) -> bool {
@@ -1304,21 +1311,31 @@ pub(super) fn prepared(ui: &Ui, target: &str, result: Result<String, String>) {
     }
 }
 
-/// One comments-list row. A reply names the comment it answers, so it cannot
-/// be mistaken for a top-level comment (issue #22).
+/// One comments-list row, speaker first. A reply names the comment it answers,
+/// so it cannot be mistaken for a top-level comment (issue #22).
 fn comment_row(comment: &Comment, comments: &[Comment]) -> String {
     match comment
         .parent_id
         .as_ref()
         .and_then(|parent| comments.iter().find(|other| &other.id == parent))
     {
-        Some(parent) => format!(
-            "{} — {}: {} — {}",
-            tf!("Reply to {author}", author = parent.author),
-            comment.author,
-            comment.text,
-            comment.time
-        ),
+        Some(parent) => {
+            // Facebook starts a reply with a mention of the person answered; the
+            // row already names them.
+            let text = comment
+                .text
+                .strip_prefix(parent.author.as_str())
+                .filter(|rest| rest.starts_with('\n'))
+                .map_or(comment.text.as_str(), str::trim_start);
+            format!(
+                "{}: {} — {}",
+                // TRANSLATORS: a reply in the comments list: who wrote it, then
+                // whose comment it answers ("Bob to Ann: text — 2h")
+                tf!("{author} to {parent}", author = comment.author, parent = parent.author),
+                text,
+                comment.time
+            )
+        }
         None => format!("{}: {} — {}", comment.author, comment.text, comment.time),
     }
 }
@@ -1538,10 +1555,11 @@ mod tests {
     fn reply_rows_name_the_comment_they_answer() {
         let comments = parse_detail(r#"{"url":"https://www.facebook.com/a/posts/1","author":"A","time":"now","text":"Post","comments":[{"id":"1","author":"Ann","time":"1h","text":"Top level","parent_id":null,"url":null},{"id":"2","author":"Bob","time":"2h","text":"A reply","parent_id":"1","url":null}]}"#).unwrap().comments;
         assert_eq!(comment_row(&comments[0], &comments), "Ann: Top level — 1h");
-        assert_eq!(
-            comment_row(&comments[1], &comments),
-            "Reply to Ann — Bob: A reply — 2h"
-        );
+        assert_eq!(comment_row(&comments[1], &comments), "Bob to Ann: A reply — 2h");
+        // The leading mention of the person answered is dropped.
+        let mut mention = comments[1].clone();
+        mention.text = "Ann\nexactly.".into();
+        assert_eq!(comment_row(&mention, &comments), "Bob to Ann: exactly. — 2h");
     }
 
     #[test]

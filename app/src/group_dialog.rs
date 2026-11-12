@@ -1,8 +1,10 @@
 //! The group window: a group's posts and its full member list in one
 //! dialog. Opened by activating a group in the Groups list. Enter on a
-//! post opens it in the post reader; members carry the usual people
+//! post opens it in the post reader over this window, so closing the
+//! reader lands back on the same post; members carry the usual people
 //! actions (profile, message, friend request, web) on their context menu.
 use super::{load_view, open_url, Job, Tag, Task, Ui, View};
+use blindfb_core::fb::web_url;
 use blindfb_core::fb::{
     friend_add_args, members_args, parse_feed, parse_records, posts_args, Record,
 };
@@ -12,6 +14,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use wxdragon::keycode::{WXK_NUMPAD_ENTER, WXK_RETURN};
 use wxdragon::prelude::*;
+use wx_utils::confirm;
 
 const ID_MEMBER_PROFILE: i32 = 12201;
 const ID_MEMBER_MESSAGE: i32 = 12202;
@@ -55,7 +58,6 @@ struct GroupState {
 
 enum Pending {
     View(View),
-    Post(String),
 }
 
 /// The view a member context-menu action should open, or None when the row is
@@ -214,17 +216,17 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         tag: Tag::GroupMembers(session),
     });
 
-    let w = window.clone();
+    let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
-    posts.on_item_double_clicked(move |_| w.open_selected_post(&d));
-    let w = window.clone();
+    posts.on_item_double_clicked(move |_| w.open_selected_post(&u, &d));
+    let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
     dialog.on_char_hook(move |event| {
         if let WindowEventData::Keyboard(key) = &event {
             if matches!(key.get_key_code(), Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
                 if w.posts.has_focus() {
                     event.skip(false);
-                    w.open_selected_post(&d);
+                    w.open_selected_post(&u, &d);
                     return;
                 }
                 if w.members.has_focus() {
@@ -302,14 +304,16 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     if let Some(pending) = window.state.lock().unwrap().take_pending() {
         match pending {
             Pending::View(view) => load_view(ui, view),
-            Pending::Post(target) => super::post_dialog::open(ui, &target, false),
         }
     }
     ui.items.set_focus();
 }
 
 impl GroupWindow {
-    fn open_selected_post(&self, dialog: &Dialog) {
+    /// Opens the reader on top of this window. Rows carry relative links
+    /// (`/groups/<id>/posts/<post>/`), so they go through `reader_url` like
+    /// the main list's rows; the reader rejects anything else.
+    fn open_selected_post(&self, ui: &Ui, dialog: &Dialog) {
         let Some(index) = self.posts.get_selection() else {
             return;
         };
@@ -319,12 +323,28 @@ impl GroupWindow {
                 super::post_target(&View::PostsOf(state.url.clone()), record).map(str::to_owned)
             })
         };
-        match target {
-            Some(target) => {
-                self.state.lock().unwrap().pending = Some(Pending::Post(target));
-                dialog.end_modal(ID_OK);
+        let Some(target) = target else {
+            self.note(&t("This post row has no link, so it cannot be opened."));
+            return;
+        };
+        match blindfb_core::posts::reader_url(&target) {
+            Some(url) => {
+                if super::post_dialog::open_over(ui, &url) {
+                    self.posts.set_focus();
+                } else {
+                    // The reader left for a profile; that view is loading behind us.
+                    dialog.end_modal(ID_OK);
+                }
             }
-            None => self.note(&t("This post row has no link, so it cannot be opened.")),
+            None => {
+                if confirm(
+                    dialog,
+                    t("BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?"),
+                    &t("Open post"),
+                ) {
+                    open_url(&web_url(&target));
+                }
+            }
         }
     }
 }

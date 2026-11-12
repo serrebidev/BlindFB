@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.42 - 2026-11-12
+
+Group posts open again. Enter on a post in a group window waited about
+a minute and then failed with "This item has no supported Facebook post
+URL": the group window's background reads (50 posts, 500 members) held
+the only job worker, and its post links were relative paths the reader
+rejected. Group reads now run beside other work like section reads, the
+links are made full addresses, and the post opens over the group window,
+so closing it lands back on the same post. Comments read shorter: the
+hidden full date ("Thursday, November 12, 2026 at 3:48 PM") no longer
+starts every comment, and a reply reads "Bob to Ann: text — 2h" without
+repeating Ann's name. Backend v0.1.5-blindfb.43: group post authors no
+longer repeat with the Follow button ("Parker Hankins / Parker Hankins ·
+Follow" is now "Parker Hankins").
+
 ## v0.7.41 - 2026-11-12
 
 Fixes from the second feedback mail. Updating from the File menu no

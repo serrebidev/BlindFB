@@ -696,6 +696,11 @@ mod tests {
         );
         assert_eq!(reader_url("/2284937812074776/x"), None);
         assert!(reader_url("/alice/posts/pfbid0x").is_some());
+        // Group window rows (`posts <group>`) carry relative links.
+        assert_eq!(
+            reader_url("/groups/aiofanclub/posts/4662680307309535/").as_deref(),
+            Some("https://www.facebook.com/groups/aiofanclub/posts/4662680307309535/")
+        );
     }
 
     #[test]

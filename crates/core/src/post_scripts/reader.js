@@ -193,7 +193,9 @@
       const picture = node.nodeType === 1;
       if (picture && !(node.tagName === 'IMG' && EMOJI.test(node.alt))) continue;
       const element = picture ? node : node.parentElement;
-      if (!own(element, article) || element.closest(EDITOR + ',script,style') || !F.visible(element)) continue;
+      // aria-hidden skips Facebook's 1x1 screen-reader tooltip with the full date
+      // ("Thursday, November 12, 2026 at 3:48 PM"), which led every comment's text.
+      if (!own(element, article) || element.closest(EDITOR + ',script,style,[aria-hidden=true]') || !F.visible(element)) continue;
       const block = element.closest('[dir=auto]'), last = rows[rows.length - 1];
       const text = picture ? node.alt : node.nodeValue || '';
       if (last && block && last.block === block && (picture || last.picture)) last.text += text;

@@ -66,7 +66,7 @@ function fixture(mode = false) {
         const line = lines[at];
         // A line is plain text, or {text|alt, block} when it shares a text block with its neighbours.
         if (line.alt) return {nodeType: 1, tagName: 'IMG', alt: line.alt, closest: selector => selector === '[dir=auto]' ? line.block : article.closest(selector), getAttribute: () => ''};
-        if (line.text !== undefined) return {nodeValue: line.text, parentElement: {closest: selector => selector === '[dir=auto]' ? line.block || null : article.closest(selector)}};
+        if (line.text !== undefined) return {nodeValue: line.text, parentElement: {closest: selector => selector === '[dir=auto]' ? line.block || null : line.hidden && selector.includes('[aria-hidden=true]') ? {} : article.closest(selector)}};
         return {nodeValue: line, parentElement: article === reelCard && at >= 2 ? {closest: () => true} : article};
       }};
     },
@@ -308,7 +308,11 @@ function fixture(mode = false) {
   const onlyEmoji = f.article('7'); onlyEmoji.lines = [{text: 'Comment author'}, {text: '1h'}, {alt: '\u{1F44D}', block}, {text: 'Like'}];
   // A picture that is not an emoji stays out.
   const pictured = f.article('8'); pictured.lines = [{text: 'Comment author'}, {text: '1h'}, {text: 'Look', block}, {alt: 'May be an image of a dog', block}];
+  // Facebook's hidden full-date tooltip stays out of the text.
+  const dated = f.article('10'); dated.lines = [{text: 'Comment author'}, {text: 'Thursday, November 12, 2026 at 3:48 PM', hidden: true}, {text: '1h'}, {text: 'Body', block}];
   const read = JSON.parse(await f.api.read()).comments;
+  assert.equal(read.find(c => c.id === '10').text, 'Body');
+  assert.equal(read.find(c => c.id === '10').time, '1h');
   assert.equal(read.find(c => c.id === '7').text, '\u{1F44D}');
   assert.equal(read.find(c => c.id === '8').text, 'Look');
 

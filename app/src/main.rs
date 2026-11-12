@@ -1194,8 +1194,16 @@ fn spawn_worker(
                     continue;
                 }
             }
-            let read = matches!(job.tag, Tag::List { .. } | Tag::AlertNotifications | Tag::AlertChats)
-                && matches!(job.task, Task::Fb(_, None));
+            // Group window reads count too: run inline they held the worker for a
+            // minute (50 posts + 500 members), so a post opened from the group waited.
+            let read = matches!(
+                job.tag,
+                Tag::List { .. }
+                    | Tag::AlertNotifications
+                    | Tag::AlertChats
+                    | Tag::GroupPosts(_)
+                    | Tag::GroupMembers(_)
+            ) && matches!(job.task, Task::Fb(_, None));
             if read && fb.is_none() {
                 fb = Fb::discover();
             }
