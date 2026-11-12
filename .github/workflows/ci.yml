@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [wsl-linux, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v5
 
@@ -77,12 +77,22 @@ jobs:
           ln -s "$dir" target
           echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
 
-      # Linux runs in a container with a stable path: rust-cache
-      # works there and stays the only cache.
-      - uses: Swatinem/rust-cache@v2
+      # Linux legs run on desknasbox's WSL (runner wsl-linux-x64) in a job
+      # container. The runner mounts persistent volumes at
+      # /root/forgejo-runner/cargo-target and cargo's registry and git
+      # caches, so target/ points at a fixed folder there exactly as on
+      # the host runners, and the job image ships the apt packages and
+      # Rust (owner request 2026-11-11: Linux as fast as the other legs).
+      # CARGO_TARGET_DIR is the real path: CMake caches absolute paths.
+      - name: Persistent target folder (Linux WSL runner)
         if: runner.os == 'Linux'
-        with:
-          cache-on-failure: true
+        shell: bash
+        run: |
+          dir="$HOME/forgejo-runner/cargo-target/BlindFB/build"
+          mkdir -p "$dir"
+          rm -rf target
+          ln -s "$dir" target
+          echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -112,5 +122,10 @@ jobs:
 
       - name: Unlink persistent target folder (macOS)
         if: always() && runner.os == 'macOS'
+        shell: bash
+        run: rm -f target
+
+      - name: Unlink persistent target folder (Linux)
+        if: always() && runner.os == 'Linux'
         shell: bash
         run: rm -f target
