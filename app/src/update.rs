@@ -1,4 +1,4 @@
-//! In-app updates: ship-shape against this repository's GitHub Releases, verified with
+//! In-app updates: ship-shape against this repository's Forgejo Releases, verified with
 //! minisign.
 //!
 //! The public key below is the one `cargo xtask minisign-key` made; its secret half signs
