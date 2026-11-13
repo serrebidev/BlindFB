@@ -38,6 +38,17 @@ const MEMBER_CAP: u32 = 500;
 /// once, then one background top-up fills the rest in.
 const POSTS_FIRST: u32 = 10;
 const POSTS_CAP: u32 = 50;
+/// Load more re-reads from the top, so each step asks for this many more.
+/// The backend scrolls posts for at most 90 s (~150 posts) and members for
+/// at most 120 s (~2000).
+const POSTS_STEP: u32 = 50;
+const MEMBERS_STEP: u32 = 500;
+
+#[derive(Clone, Copy)]
+enum List {
+    Posts,
+    Members,
+}
 const MEMBERS_FIRST: u32 = 50;
 
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
@@ -229,9 +240,23 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         tag: Tag::GroupMembers(session),
     });
 
+    super::type_ahead::attach(&posts, |_| {});
+    super::type_ahead::attach(&members, |_| {});
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
-    posts.on_item_double_clicked(move |_| w.open_selected_post(&u, &d, Over::Read));
+    posts.on_item_double_clicked(move |_| {
+        if w.on_more_row(List::Posts) {
+            w.load_more(&u, List::Posts);
+        } else {
+            w.open_selected_post(&u, &d, Over::Read);
+        }
+    });
+    let (w, u) = (window.clone(), ui.clone());
+    members.on_item_double_clicked(move |_| {
+        if w.on_more_row(List::Members) {
+            w.load_more(&u, List::Members);
+        }
+    });
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
     dialog.on_char_hook(move |event| {
@@ -239,7 +264,16 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             if matches!(key.get_key_code(), Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
                 if w.posts.has_focus() {
                     event.skip(false);
-                    w.open_selected_post(&u, &d, Over::Read);
+                    if w.on_more_row(List::Posts) {
+                        w.load_more(&u, List::Posts);
+                    } else {
+                        w.open_selected_post(&u, &d, Over::Read);
+                    }
+                    return;
+                }
+                if w.members.has_focus() && w.on_more_row(List::Members) {
+                    event.skip(false);
+                    w.load_more(&u, List::Members);
                     return;
                 }
                 if w.members.has_focus() {
@@ -359,6 +393,81 @@ pub(super) fn open(ui: &Ui, record: &Record) {
 }
 
 impl GroupWindow {
+    fn list(&self, which: List) -> ListBox {
+        match which {
+            List::Posts => self.posts,
+            List::Members => self.members,
+        }
+    }
+
+    /// Rows shown for `which`, not counting its "Load more" row.
+    fn rows(&self, which: List) -> usize {
+        let state = self.state.lock().unwrap();
+        match which {
+            List::Posts => state.posts.len(),
+            List::Members => state.members.len(),
+        }
+    }
+
+    /// Whether the selected row of `which` is its trailing "Load more" row.
+    fn on_more_row(&self, which: List) -> bool {
+        let list = self.list(which);
+        let rows = self.rows(which);
+        list.get_selection().is_some_and(|i| i as usize == rows)
+            && list.get_count() as usize > rows
+    }
+
+    /// Show or drop the trailing "Load more" row.
+    fn show_more(&self, which: List, show: bool) {
+        let (list, rows) = (self.list(which), self.rows(which));
+        if list.get_count() as usize > rows {
+            if list.get_selection().is_some_and(|i| i as usize == rows) && rows > 0 {
+                list.set_selection(rows as u32 - 1, true);
+            }
+            list.delete(rows as u32);
+        }
+        if show {
+            list.append(&match which {
+                List::Posts => t("Load more posts"),
+                List::Members => t("Load more members"),
+            });
+        }
+    }
+
+    /// Ask for the next step of rows; the answer appends only new ones.
+    fn load_more(&self, ui: &Ui, which: List) {
+        let args = {
+            let mut state = self.state.lock().unwrap();
+            let url = state.url.clone();
+            match which {
+                List::Posts if !state.posts_loading => {
+                    state.posts_loading = true;
+                    state.posts_want += POSTS_STEP;
+                    Some((posts_args(&url, state.posts_want, true), Tag::GroupPosts(self.session)))
+                }
+                List::Members if !state.members_loading => {
+                    state.members_loading = true;
+                    state.members_want += MEMBERS_STEP;
+                    Some((
+                        members_args(&url, state.members_want, true),
+                        Tag::GroupMembers(self.session),
+                    ))
+                }
+                _ => None,
+            }
+        };
+        let Some((args, tag)) = args else {
+            self.note(&t("Items are already loading…"));
+            return;
+        };
+        self.show_more(which, false);
+        refresh_note(self);
+        ui.send(Job {
+            task: Task::Fb(args, None),
+            tag,
+        });
+    }
+
     fn selected_post(&self) -> Option<Record> {
         let index = self.posts.get_selection()? as usize;
         self.state.lock().unwrap().posts.get(index).cloned()
@@ -482,9 +591,7 @@ fn refresh_note(window: &GroupWindow) {
     let members = state
         .members_count
         .map(|n| {
-            if n >= MEMBER_CAP as usize {
-                tf!("first {cap} members (list capped)", cap = MEMBER_CAP)
-            } else if state.members_loading {
+            if state.members_loading {
                 ntf!("{n} member so far", "{n} members so far", n)
             } else {
                 ntf!("{n} member", "{n} members", n)
@@ -530,6 +637,7 @@ fn fill_posts(window: &GroupWindow, raw: &str) {
         state.posts_count = Some(records.len());
         state.posts = records;
     } else {
+        window.show_more(List::Posts, false);
         let known: std::collections::HashSet<String> = window
             .state
             .lock()
@@ -569,6 +677,7 @@ fn fill_members(window: &GroupWindow, raw: &str) {
         state.members_count = Some(records.len());
         state.members = records;
     } else {
+        window.show_more(List::Members, false);
         let known: std::collections::HashSet<String> = window
             .state
             .lock()
@@ -614,10 +723,17 @@ pub(super) fn deliver_posts(ui: &Ui, session: u64, result: Result<String, String
                 });
             } else {
                 window.state.lock().unwrap().posts_loading = false;
+                // A full answer means Facebook may hold more: offer them.
+                window.show_more(List::Posts, returned >= want as usize);
                 refresh_note(&window);
             }
         }
-        Err(e) => window.note(&tf!("Posts could not load: {error}", error = e)),
+        Err(e) => {
+            window.state.lock().unwrap().posts_loading = false;
+            let shown = !window.state.lock().unwrap().posts.is_empty();
+            window.show_more(List::Posts, shown);
+            window.note(&tf!("Posts could not load: {error}", error = e));
+        }
     }
 }
 
@@ -642,10 +758,16 @@ pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, Stri
                 });
             } else {
                 window.state.lock().unwrap().members_loading = false;
+                window.show_more(List::Members, returned >= want as usize);
                 refresh_note(&window);
             }
         }
-        Err(e) => window.note(&tf!("Members could not load: {error}", error = e)),
+        Err(e) => {
+            window.state.lock().unwrap().members_loading = false;
+            let shown = !window.state.lock().unwrap().members.is_empty();
+            window.show_more(List::Members, shown);
+            window.note(&tf!("Members could not load: {error}", error = e));
+        }
     }
 }
 

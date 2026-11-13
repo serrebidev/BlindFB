@@ -950,6 +950,8 @@ fn open_requested(
     links.on_selection_changed(move |_| r.controls());
     let r = reader.clone();
     comments.on_selection_changed(move |_| r.follow_comment_links());
+    let r = reader.clone();
+    super::type_ahead::attach(&comments, move |_| r.follow_comment_links());
     let (r, u) = (reader.clone(), ui.clone());
     comments.bind_internal(EventType::KEY_DOWN, move |event| {
         // Copy the selected comment (Ctrl+C), the whole discussion

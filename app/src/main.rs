@@ -26,6 +26,7 @@ mod player;
 mod post_dialog;
 mod reel_cache;
 mod shortcuts_dialog;
+mod type_ahead;
 mod update;
 
 use std::cell::RefCell;
@@ -204,6 +205,9 @@ const FEED_FIRST: u32 = 10;
 /// The read-ahead batch. A feed request re-scrolls from the top, so 30 more
 /// posts is nearly the same reading as 100 for the first screenful.
 const FEED_AHEAD: u32 = 30;
+/// Groups read ahead like the feed: the first page paints, then the rest of
+/// the list (40 groups read in about 4 s) fills in without Load more.
+const GROUPS_AHEAD: u32 = 100;
 /// Your own posts are few and the section is expensive to scroll, so it opens small.
 const MY_POSTS_FIRST: u32 = 5;
 /// A cached section younger than this is shown without asking Facebook again.
@@ -874,15 +878,11 @@ fn run() {
     let ui_sel = ui.clone();
     items.on_selection_changed(move |event| {
         if let Some(sel) = event.get_selection() {
-            // Debounce the details pane: it rebuilds the text and the link
-            // list, which is real work per row and makes a screen reader
-            // process a flood of changes while arrowing. The resting row
-            // pays it once; rows passed over pay nothing.
-            ui_sel.state.borrow_mut().pending_details = Some((sel as usize, Instant::now()));
-            refresh_controls(&ui_sel);
-            prepare_reels(&ui_sel);
+            item_selected(&ui_sel, sel as u32);
         }
     });
+    let ui_typed = ui.clone();
+    type_ahead::attach(&items, move |sel| item_selected(&ui_typed, sel));
     let ui_links = ui.clone();
     links.on_selection_changed(move |_| {
         ui_links
@@ -2092,7 +2092,7 @@ fn go_back(ui: &Ui) {
 /// spending that at launch delays every other read for no visible gain —
 /// they load on first visit like any other section.
 fn prefetch(ui: &Ui) {
-    for view in [View::Notifications, View::Friends, View::Chats] {
+    for view in [View::Notifications, View::Friends, View::Chats, View::Groups] {
         if let Some(args) = default_args(&view) {
             let request = {
                 let mut requests = ui.latest_list.lock().unwrap();
@@ -2453,8 +2453,13 @@ fn load_feed_ahead(ui: &Ui) {
     if ui.latest_list.lock().unwrap().pending.contains(&view) {
         return;
     }
-    let args = feed_args(FEED_AHEAD, false, true, true);
     activate_view(ui, &view);
+    send_ahead(ui, view, feed_args(FEED_AHEAD, false, true, true));
+}
+
+/// Queue a read-ahead as background work that appends to `view`'s rows: on
+/// screen when the section is showing, else into its cache.
+fn send_ahead(ui: &Ui, view: View, args: Vec<String>) {
     let request = ui.latest_list.lock().unwrap().begin_background(&view);
     let _ = ui.jobs.send(Job {
         task: Task::Fb(args.clone(), None),
@@ -2966,6 +2971,17 @@ fn append_links_menu(menu: &Menu, links: &[Link]) {
     menu.append_submenu(submenu, &t("&Links"), &t("Open a link in your browser"));
 }
 
+/// A row became selected, by arrows or by type-ahead.
+fn item_selected(ui: &Ui, sel: u32) {
+    // Debounce the details pane: it rebuilds the text and the link
+    // list, which is real work per row and makes a screen reader
+    // process a flood of changes while arrowing. The resting row
+    // pays it once; rows passed over pay nothing.
+    ui.state.borrow_mut().pending_details = Some((sel as usize, Instant::now()));
+    refresh_controls(ui);
+    prepare_reels(ui);
+}
+
 fn prepare_reels(ui: &Ui) {
     let Some(index) = ui.items.get_selection() else {
         return;
@@ -3340,6 +3356,15 @@ fn apply_done(ui: &Ui, done: Done) {
                             view.clone(),
                             (records.clone(), Instant::now(), args.clone()),
                         );
+                    }
+                    // A full first page of groups: read the rest ahead, even when
+                    // it was a prefetch, so opening Groups shows the whole list.
+                    if view == View::Groups
+                        && args == groups_args(PAGE)
+                        && records.len() >= PAGE as usize
+                        && !ui.latest_list.lock().unwrap().pending.contains(&view)
+                    {
+                        send_ahead(ui, View::Groups, groups_args(GROUPS_AHEAD));
                     }
                     if !current {
                         return;

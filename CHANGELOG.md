@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.43 - 2026-11-12
+
+Group window: group posts have a context menu (Applications, Shift+F10
+or right-click) with the main list's post actions: open, share, comment,
+react, author profile, author's posts, message author, copy text, copy
+link and open on Facebook. Share, comment and react open the post over
+the group window and act once it loads. The posts and members lists end
+with a Load more row once a full batch has arrived (50 more posts or 500
+more members per press). Type-ahead in lists: typing "brando" within a
+second per letter moves to the first row starting with it, in the main
+list, the group window's posts and members, and the post reader's
+comments; Windows' own lists matched only the first letter. Groups load
+like the News feed: they are read in the background at startup, and a
+full first page reads ahead to 100 groups without Load more. Backend
+v0.1.5-blindfb.44: members of a large group no longer stop near
+476 (the scroll time grows with the number asked for).
+
 ## v0.7.42 - 2026-11-12
 
 Group posts open again. Enter on a post in a group window waited about
