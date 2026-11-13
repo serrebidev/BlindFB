@@ -702,7 +702,10 @@ pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
 
 /// Why both Chromium imports failed, keeping each cause so the user (and a
 /// bug report) can tell a locked or app-bound cookie store apart from a
-/// browser that never offered its debugging endpoint.
+/// browser that never offered its debugging endpoint. Only the Windows
+/// cookie-file fallback builds this message; the unit test uses it on
+/// every platform.
+#[cfg(any(windows, test))]
 fn combined_import_error(browser: &str, cookie_error: &str, debugging_error: &str) -> String {
     tf!(
         "Could not import {browser} from its cookie file: {cookie_error} \
