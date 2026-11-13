@@ -22,16 +22,16 @@
 //! official installer (Windows, macOS). That also covers the backend's own
 //! hard requirement — fb cannot run at all without a Chrome/Chromium.
 //!
-//! Windows now imports Chromium cookies with rookie-cookies, avoiding the
+//! Windows first imports Chromium cookies with rookie-cookies. Current
+//! Edge and Brave encrypt those cookies app-bound (v20), which only the
+//! browser itself can decrypt, so a failed file import falls back to the
 //! debugging-consent flow described above. When Chrome/Chromium is absent,
 //! BlindFB can run another installed Chromium browser in its own profile.
 //! Firefox cookies are now sent directly over CDP, never on a command line.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Duration;
-#[cfg(not(windows))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use patois::t;
 
@@ -63,7 +63,6 @@ impl BrowserKind {
     }
 
     /// The browser's own inspect page, for ticking "Allow remote debugging".
-    #[cfg(not(windows))]
     fn inspect_url(self) -> &'static str {
         match self {
             BrowserKind::Brave => "brave://inspect/#remote-debugging",
@@ -74,7 +73,6 @@ impl BrowserKind {
 
     /// Process image names (Windows) / `pgrep -x` names (Unix) for "is it
     /// running" checks.
-    #[cfg(not(windows))]
     fn process_names(self) -> &'static [&'static str] {
         match self {
             BrowserKind::Chrome => &["chrome.exe", "chrome"],
@@ -596,7 +594,6 @@ pub fn devtools_endpoint(data_dir: &Path) -> Option<(u16, String)> {
     parse_active_port(&text)
 }
 
-#[cfg(not(windows))]
 fn browser_running(kind: BrowserKind) -> bool {
     for name in kind.process_names() {
         #[cfg(windows)]
@@ -647,7 +644,6 @@ pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     })
 }
 
-#[cfg(not(windows))]
 fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
     let exe = browser
         .exe
@@ -663,7 +659,6 @@ fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
         .map_err(|e| tf!("cannot start {browser}: {error}", browser = browser.name(), error = e))
 }
 
-#[cfg(not(windows))]
 fn wait_endpoint(data_dir: &Path, secs: u64) -> Option<(u16, String)> {
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(secs) {
@@ -690,13 +685,34 @@ fn status(fb: &Fb) -> Result<String, String> {
 pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
     #[cfg(windows)]
     {
-        import_chromium_cookies(fb, browser)
+        // Windows first tries a cookie-file import, but current Edge and
+        // Brave encrypt their cookies app-bound (v20), which only the
+        // browser itself can decrypt. When the file import cannot produce
+        // a session, import through the browser's debugging endpoint
+        // instead, as on every other platform.
+        match import_chromium_cookies(fb, browser) {
+            Ok(status) => Ok(status),
+            Err(cookie_error) => import_chromium_debugging(fb, browser)
+                .map_err(|error| combined_import_error(browser.name(), &cookie_error, &error)),
+        }
     }
     #[cfg(not(windows))]
     import_chromium_debugging(fb, browser)
 }
 
-#[cfg(not(windows))]
+/// Why both Chromium imports failed, keeping each cause so the user (and a
+/// bug report) can tell a locked or app-bound cookie store apart from a
+/// browser that never offered its debugging endpoint.
+fn combined_import_error(browser: &str, cookie_error: &str, debugging_error: &str) -> String {
+    tf!(
+        "Could not import {browser} from its cookie file: {cookie_error} \
+         Importing through the browser also failed: {debugging_error}",
+        browser = browser,
+        cookie_error = cookie_error,
+        debugging_error = debugging_error
+    )
+}
+
 fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, String> {
     let kind = browser.kind;
     let data_dir = browser.data_dir.clone().ok_or_else(|| {
@@ -1441,6 +1457,31 @@ mod tests {
         assert!(!browser(BrowserKind::Chrome, "Google Chrome Beta").uses_fb_login());
         assert!(!browser(BrowserKind::Brave, "Brave Nightly").uses_fb_login());
         assert!(!browser(BrowserKind::Firefox, "").uses_fb_login());
+    }
+
+    #[test]
+    fn windows_chromium_debugging_import_is_available() {
+        // Edge and Brave encrypt their cookies app-bound (v20) on Windows,
+        // so the debugging-endpoint import must exist there too, not only
+        // on other platforms where it was the sole path.
+        assert_eq!(
+            BrowserKind::Edge.inspect_url(),
+            "edge://inspect/#remote-debugging"
+        );
+        assert_eq!(
+            BrowserKind::Brave.inspect_url(),
+            "brave://inspect/#remote-debugging"
+        );
+        assert!(BrowserKind::Edge.process_names().contains(&"msedge.exe"));
+        assert!(BrowserKind::Brave.process_names().contains(&"brave.exe"));
+        let combined = combined_import_error(
+            "Microsoft Edge",
+            "cookie extraction failed",
+            "no debugging endpoint",
+        );
+        assert!(combined.contains("Microsoft Edge"), "{combined}");
+        assert!(combined.contains("cookie extraction failed"), "{combined}");
+        assert!(combined.contains("no debugging endpoint"), "{combined}");
     }
 
     #[test]

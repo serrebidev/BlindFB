@@ -4,6 +4,18 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## Unreleased
+
+Signing in from Microsoft Edge or Brave works on Windows again.
+Current Edge and Brave encrypt their Facebook cookies app-bound
+(v20), which only the browser itself can decrypt, so the Windows
+cookie-file import could never read them — the same reason Chrome
+already used a different path. When the cookie-file import cannot
+produce a session, BlindFB now falls back to importing through the
+browser's own debugging endpoint (tick "Allow remote debugging" if
+the browser asks), and the sign-in dialog says so. If both imports
+fail, the error keeps both causes instead of only the last one.
+
 ## v0.7.48 - 2026-11-13
 
 Comments with replies now load in full (issue #30, Michal's report).
