@@ -2225,7 +2225,7 @@ fn choose_sign_in(ui: &Ui) -> Option<SignIn> {
         &ui.frame,
         &t("Sign in"),
         &if cfg!(windows) {
-            t("Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. Or choose a new browser window to sign in directly.")
+            t("Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks. Or choose a new browser window to sign in directly.")
         } else {
             t("Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks.")
         },

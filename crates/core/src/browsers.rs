@@ -22,16 +22,16 @@
 //! official installer (Windows, macOS). That also covers the backend's own
 //! hard requirement — fb cannot run at all without a Chrome/Chromium.
 //!
-//! Windows now imports Chromium cookies with rookie-cookies, avoiding the
+//! Windows first imports Chromium cookies with rookie-cookies. Current
+//! Edge and Brave encrypt those cookies app-bound (v20), which only the
+//! browser itself can decrypt, so a failed file import falls back to the
 //! debugging-consent flow described above. When Chrome/Chromium is absent,
 //! BlindFB can run another installed Chromium browser in its own profile.
 //! Firefox cookies are now sent directly over CDP, never on a command line.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Duration;
-#[cfg(not(windows))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use patois::t;
 
@@ -63,7 +63,6 @@ impl BrowserKind {
     }
 
     /// The browser's own inspect page, for ticking "Allow remote debugging".
-    #[cfg(not(windows))]
     fn inspect_url(self) -> &'static str {
         match self {
             BrowserKind::Brave => "brave://inspect/#remote-debugging",
@@ -74,7 +73,6 @@ impl BrowserKind {
 
     /// Process image names (Windows) / `pgrep -x` names (Unix) for "is it
     /// running" checks.
-    #[cfg(not(windows))]
     fn process_names(self) -> &'static [&'static str] {
         match self {
             BrowserKind::Chrome => &["chrome.exe", "chrome"],
@@ -596,7 +594,6 @@ pub fn devtools_endpoint(data_dir: &Path) -> Option<(u16, String)> {
     parse_active_port(&text)
 }
 
-#[cfg(not(windows))]
 fn browser_running(kind: BrowserKind) -> bool {
     for name in kind.process_names() {
         #[cfg(windows)]
@@ -647,7 +644,6 @@ pub fn enable_remote_debugging(data_dir: &Path) -> Result<(), String> {
     })
 }
 
-#[cfg(not(windows))]
 fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
     let exe = browser
         .exe
@@ -663,7 +659,6 @@ fn launch_url(browser: &Browser, url: &str) -> Result<(), String> {
         .map_err(|e| tf!("cannot start {browser}: {error}", browser = browser.name(), error = e))
 }
 
-#[cfg(not(windows))]
 fn wait_endpoint(data_dir: &Path, secs: u64) -> Option<(u16, String)> {
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(secs) {
@@ -690,13 +685,37 @@ fn status(fb: &Fb) -> Result<String, String> {
 pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
     #[cfg(windows)]
     {
-        import_chromium_cookies(fb, browser)
+        // Windows first tries a cookie-file import, but current Edge and
+        // Brave encrypt their cookies app-bound (v20), which only the
+        // browser itself can decrypt. When the file import cannot produce
+        // a session, import through the browser's debugging endpoint
+        // instead, as on every other platform.
+        match import_chromium_cookies(fb, browser) {
+            Ok(status) => Ok(status),
+            Err(cookie_error) => import_chromium_debugging(fb, browser)
+                .map_err(|error| combined_import_error(browser.name(), &cookie_error, &error)),
+        }
     }
     #[cfg(not(windows))]
     import_chromium_debugging(fb, browser)
 }
 
-#[cfg(not(windows))]
+/// Why both Chromium imports failed, keeping each cause so the user (and a
+/// bug report) can tell a locked or app-bound cookie store apart from a
+/// browser that never offered its debugging endpoint. Only the Windows
+/// cookie-file fallback builds this message; the unit test uses it on
+/// every platform.
+#[cfg(any(windows, test))]
+fn combined_import_error(browser: &str, cookie_error: &str, debugging_error: &str) -> String {
+    tf!(
+        "Could not import {browser} from its cookie file: {cookie_error} \
+         Importing through the browser also failed: {debugging_error}",
+        browser = browser,
+        cookie_error = cookie_error,
+        debugging_error = debugging_error
+    )
+}
+
 fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, String> {
     let kind = browser.kind;
     let data_dir = browser.data_dir.clone().ok_or_else(|| {
@@ -721,7 +740,7 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
         launch_url(browser, "about:blank")?;
         wait_endpoint(&data_dir, 40)
     };
-    let (port, _) = endpoint.ok_or_else(|| {
+    let endpoint = endpoint.ok_or_else(|| {
         tf!(
             // TRANSLATORS: {page} is the browser's inspect page address; "Allow remote debugging
             // for this browser instance" is the browser's own checkbox, in its own language.
@@ -730,17 +749,70 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
             page = kind.inspect_url()
         )
     })?;
-    let port = port.to_string();
-    fb.run(&["login", "--from", &port])?;
-    let status = status(fb)?;
-    if signed_in(&status) {
-        Ok(status)
-    } else {
-        Err(tf!(
-            "{browser} is not signed in to Facebook — sign in there first, then try again",
-            browser = browser.name()
-        ))
+    // Transfer the cookies over the websocket directly. Handing fb only
+    // the port (`fb login --from <port>`) makes it rediscover the socket
+    // through /json/version, which consent-mode browsers (the current
+    // Edge and Brave) answer with 404, so that path reports "no browser
+    // ws path" even while the socket itself works.
+    match import_cookies_from_endpoint(fb, &endpoint) {
+        Ok(status) => Ok(status),
+        Err(direct_error) => {
+            let port = endpoint.0.to_string();
+            fb.run(&["login", "--from", &port]).map_err(|fb_error| {
+                tf!(
+                    "Importing from {browser} through its browser connection failed: {direct_error} \
+                     The backend's guided import also failed: {fb_error}",
+                    browser = browser.name(),
+                    direct_error = direct_error,
+                    fb_error = fb_error
+                )
+            })?;
+            let status = status(fb)?;
+            if signed_in(&status) {
+                Ok(status)
+            } else {
+                Err(tf!(
+                    "{browser} is not signed in to Facebook — sign in there first, then try again",
+                    browser = browser.name()
+                ))
+            }
+        }
     }
+}
+
+/// The live Facebook cookies in a `Storage.getCookies` result, in the
+/// shape the cookie import consumes. A CDP session cookie (expires -1)
+/// becomes expiry 0, which the import treats as non-expiring.
+fn facebook_cookies(result: &serde_json::Value) -> Vec<FfCookie> {
+    result["cookies"]
+        .as_array()
+        .map(|cookies| {
+            cookies
+                .iter()
+                .map(|c| FfCookie {
+                    name: c["name"].as_str().unwrap_or_default().to_owned(),
+                    value: c["value"].as_str().unwrap_or_default().to_owned(),
+                    host: c["domain"].as_str().unwrap_or_default().to_owned(),
+                    path: c["path"].as_str().unwrap_or("/").to_owned(),
+                    expiry: c["expires"]
+                        .as_f64()
+                        .filter(|expires| *expires > 0.0)
+                        .map_or(0, |expires| expires as i64),
+                    secure: c["secure"].as_bool().unwrap_or(false),
+                    http_only: c["httpOnly"].as_bool().unwrap_or(false),
+                })
+                .filter(valid_facebook_cookie)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Read the source browser's cookies through its own debugging socket
+/// (the browser decrypts them itself) and set them in the backend's
+/// browser, exactly like the Firefox import.
+fn import_cookies_from_endpoint(fb: &Fb, endpoint: &(u16, String)) -> Result<String, String> {
+    let result = cdp_call(endpoint, "Storage.getCookies", &serde_json::json!({}))?;
+    import_cookies(fb, &facebook_cookies(&result))
 }
 
 #[cfg(windows)]
@@ -1441,6 +1513,54 @@ mod tests {
         assert!(!browser(BrowserKind::Chrome, "Google Chrome Beta").uses_fb_login());
         assert!(!browser(BrowserKind::Brave, "Brave Nightly").uses_fb_login());
         assert!(!browser(BrowserKind::Firefox, "").uses_fb_login());
+    }
+
+    #[test]
+    fn windows_chromium_debugging_import_is_available() {
+        // Edge and Brave encrypt their cookies app-bound (v20) on Windows,
+        // so the debugging-endpoint import must exist there too, not only
+        // on other platforms where it was the sole path.
+        assert_eq!(
+            BrowserKind::Edge.inspect_url(),
+            "edge://inspect/#remote-debugging"
+        );
+        assert_eq!(
+            BrowserKind::Brave.inspect_url(),
+            "brave://inspect/#remote-debugging"
+        );
+        assert!(BrowserKind::Edge.process_names().contains(&"msedge.exe"));
+        assert!(BrowserKind::Brave.process_names().contains(&"brave.exe"));
+        let combined = combined_import_error(
+            "Microsoft Edge",
+            "cookie extraction failed",
+            "no debugging endpoint",
+        );
+        assert!(combined.contains("Microsoft Edge"), "{combined}");
+        assert!(combined.contains("cookie extraction failed"), "{combined}");
+        assert!(combined.contains("no debugging endpoint"), "{combined}");
+    }
+
+    #[test]
+    fn cdp_cookies_keep_only_live_facebook_session() {
+        // Storage.getCookies on the source browser: the signed-in session
+        // (including a session cookie with expires -1), an expired cookie,
+        // and another site's cookie. Only live Facebook cookies transfer.
+        let result = serde_json::json!({"cookies": [
+            {"name": "c_user", "value": "acct", "domain": ".facebook.com",
+             "path": "/", "expires": 1999999999.0, "secure": true, "httpOnly": false},
+            {"name": "xs", "value": "secret", "domain": ".facebook.com",
+             "path": "/", "expires": -1.0, "secure": true, "httpOnly": true},
+            {"name": "fr", "value": "old", "domain": ".facebook.com",
+             "path": "/", "expires": 1.0, "secure": true, "httpOnly": false},
+            {"name": "id", "value": "x", "domain": ".example.com",
+             "path": "/", "expires": 1999999999.0, "secure": false, "httpOnly": false}
+        ]});
+        let cookies = facebook_cookies(&result);
+        assert_eq!(cookies.len(), 2, "{cookies:?}");
+        assert!(has_facebook_session(&cookies));
+        let xs = cookies.iter().find(|c| c.name == "xs").unwrap();
+        assert_eq!(xs.expiry, 0);
+        assert!(xs.http_only);
     }
 
     #[test]
