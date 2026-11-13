@@ -3967,6 +3967,18 @@ fn open_selected(ui: &Ui) {
             load_view(ui, View::Reels(source));
             return;
         }
+        // "Ann shared 9 posts" links one of them: show the whole list instead.
+        match blindfb_core::posts::notification_posts(record.field(2), record.field(3)) {
+            Some(blindfb_core::posts::NotificationPosts::Person(who)) => {
+                load_view(ui, View::PostsOf(who));
+                return;
+            }
+            Some(blindfb_core::posts::NotificationPosts::Group(group)) => {
+                load_view(ui, View::GroupPosts(group));
+                return;
+            }
+            None => {}
+        }
     }
     if matches!(view, View::SearchResults | View::Marketplace) {
         open_search_result(ui, &record);

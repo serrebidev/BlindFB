@@ -258,6 +258,47 @@ pub fn group_url(url: &str) -> Option<String> {
     Some(format!("https://www.facebook.com/groups/{group}"))
 }
 
+/// A notification about several posts at once ("Ann shared 9 posts", "Group has 5 new
+/// posts"): whose posts list shows them. Facebook links only one of them.
+#[derive(Debug, PartialEq, Eq)]
+pub enum NotificationPosts {
+    /// A profile path for the posts view (/vanity or /profile.php?id=).
+    Person(String),
+    /// A group URL for the group posts view.
+    Group(String),
+}
+
+/// Read from the link, not the words, so every language works: a group link names each
+/// post in `multi_permalinks`; a person's batch is `close_friend_activity` with a count of
+/// two or more in the text (a single shared post has no number).
+pub fn notification_posts(text: &str, target: &str) -> Option<NotificationPosts> {
+    let uri = target.trim().parse::<tungstenite::http::Uri>().ok()?;
+    let query: Vec<&str> = uri.query().unwrap_or("").split('&').collect();
+    let param = |key: &str| query.iter().find_map(|part| part.strip_prefix(key));
+    if let Some(ids) = param("multi_permalinks=") {
+        let ids = ids.replace("%2C", ",").replace("%2c", ",");
+        let many = ids.split(',').filter(|id| !id.is_empty()).count() > 1;
+        return many.then(|| group_url(target)).flatten().map(NotificationPosts::Group);
+    }
+    let count = text
+        .split(|c: char| !c.is_ascii_digit())
+        .filter_map(|digits| digits.parse::<u32>().ok())
+        .any(|n| n > 1);
+    if param("notif_t=") != Some("close_friend_activity") || !count {
+        return None;
+    }
+    let mut parts = uri.path().split('/').filter(|part| !part.is_empty());
+    match (parts.next()?, parts.next()) {
+        ("permalink.php" | "story.php", _) => param("id=")
+            .filter(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
+            .map(|id| NotificationPosts::Person(format!("/profile.php?id={id}"))),
+        (vanity, Some("posts" | "videos")) if vanity != "groups" => {
+            Some(NotificationPosts::Person(format!("/{vanity}")))
+        }
+        _ => None,
+    }
+}
+
 fn group_notification_post(url: &str) -> Option<String> {
     let uri = url.parse::<tungstenite::http::Uri>().ok()?;
     if !matches!(
@@ -759,6 +800,43 @@ mod tests {
             Some("https://www.facebook.com/groups/aisaas/posts/12")
         );
         assert!(reader_url("/groups/7/?post_id=invalid").is_none());
+    }
+
+    #[test]
+    fn several_posts_notifications_open_the_posts_list() {
+        // Live 2026-11-12: Facebook links only the first of the batch.
+        assert_eq!(
+            notification_posts(
+                "Maria Saieva shared 9 posts.",
+                "/maria.s.kovacs.3/posts/pfbid0sy?notif_id=1&notif_t=close_friend_activity&ref=notif"
+            ),
+            Some(NotificationPosts::Person("/maria.s.kovacs.3".to_owned()))
+        );
+        assert_eq!(
+            notification_posts(
+                "Ann shared 3 posts.",
+                "/permalink.php?story_fbid=pfbid02&id=61573851815718&notif_t=close_friend_activity"
+            ),
+            Some(NotificationPosts::Person("/profile.php?id=61573851815718".to_owned()))
+        );
+        assert_eq!(
+            notification_posts(
+                "Disabled People who want Equality has 5 new posts.",
+                "/groups/466408572614151/?multi_permalinks=11%2C12%2C13&notif_t=group_activity"
+            ),
+            Some(NotificationPosts::Group(
+                "https://www.facebook.com/groups/466408572614151".to_owned()
+            ))
+        );
+        // One post, or no count: the reader opens it as before.
+        for (text, target) in [
+            ("Group has a new post.", "/groups/7/?multi_permalinks=12&notif_t=group_activity"),
+            ("Maria shared a post.", "/m/posts/1?notif_t=close_friend_activity"),
+            ("Maria shared 1 post.", "/m/posts/1?notif_t=close_friend_activity"),
+            ("Bob commented 3 times.", "/b/posts/1?notif_t=feedback_reaction_generic"),
+        ] {
+            assert_eq!(notification_posts(text, target), None, "{text}");
+        }
     }
 
     #[test]

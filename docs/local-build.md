@@ -77,8 +77,10 @@ There is no CI runner: every step below is manual.
 2. `git fetch`, confirm `main` is where you think (other sessions push
    here too), commit, push `main` to the `forgejo` remote, tag `vX`,
    push the tag. Push main and tag as separate commands.
-3. Windows asset on this PC: `cargo xtask package` with `MINISIGN_KEY`
-   set, then `cargo xtask verify` it.
+3. Windows assets on this PC: `cargo xtask package` with `MINISIGN_KEY`
+   set writes `dist/BlindFB.zip` (the updater's asset) and the per-user
+   installer `dist/BlindFB-Setup.exe` (Inno Setup, `packaging/blindfb.iss`),
+   each with its `.minisig`. `cargo xtask verify` both and upload both.
 4. Linux asset in local WSL (`ssh wsl-build`): build inside an
    `ubuntu:22.04` container (image `blindfb-linux-build:ubuntu-22.04`,
    the apt list from `release.yml` plus build-essential, cmake, git,

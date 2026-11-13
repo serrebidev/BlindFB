@@ -89,8 +89,10 @@
       if (/^l\.facebook\.com$/.test(url.hostname) && url.searchParams.get('u')) {
         try { url = new URL(url.searchParams.get('u')); } catch { continue; }
       }
-      if (!/^https?:$/.test(url.protocol) || /\/hashtag\//.test(url.pathname)) continue;
+      if (!/^https?:$/.test(url.protocol)) continue;
       const external = !/(^|\.)facebook\.com$/.test(url.hostname);
+      // Facebook's hashtag pages are UI; another site's /hashtag/ page is a real link.
+      if (!external && /\/hashtag\//.test(url.pathname)) continue;
       const inMessage = (Array.isArray(message) ? message : [message]).some(element => element && element.contains(a));
       if (!external && !inMessage) continue;
       for (const key of [...url.searchParams.keys()]) if (/^(__cft__|__tn__|fbclid)/.test(key)) url.searchParams.delete(key);
@@ -115,8 +117,10 @@
       if (url.hostname === 'l.facebook.com' && url.searchParams.get('u')) {
         try { url = new URL(url.searchParams.get('u')); } catch { continue; }
       }
-      if (!/^https?:$/.test(url.protocol) || /\/hashtag\//.test(url.pathname)) continue;
-      if (url.searchParams.has('comment_id') || url.searchParams.has('reply_comment_id')) continue;
+      if (!/^https?:$/.test(url.protocol)) continue;
+      // Facebook's own UI links only: an external page may use the same words.
+      const facebook = /(^|\.)facebook\.com$/.test(url.hostname);
+      if (facebook && (/\/hashtag\//.test(url.pathname) || url.searchParams.has('comment_id') || url.searchParams.has('reply_comment_id'))) continue;
       if (/(^|\.)facebook\.com$/.test(url.hostname) && F.profilePath && F.profilePath(url.href)) continue;
       for (const key of [...url.searchParams.keys()]) if (/^(__cft__|__tn__|fbclid)/.test(key)) url.searchParams.delete(key);
       const text = F.clean(a.innerText || '') || url.hostname;

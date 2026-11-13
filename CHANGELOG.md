@@ -4,6 +4,29 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.45 - 2026-11-12
+
+Windows installer: `BlindFB-Setup.exe` installs BlindFB for your account
+only, with no administrator prompt, to
+`%LOCALAPPDATA%\Programs\BlindFB`, adds a Start menu shortcut and an
+entry in Installed apps, and offers to start BlindFB at the end.
+Uninstalling removes the program and keeps your sign-in and settings.
+`BlindFB.zip` stays as the portable copy. Notifications about several
+posts at once open the whole list: Enter on "Maria Saieva shared 9 posts"
+opens her posts, where each one opens with its comments like the News
+feed, and "A group has 5 new posts" opens that group's posts. Facebook
+links only one of the posts, so those notifications opened a single post
+before. Links in comments and posts to other sites whose address
+contains "hashtag" or "comment_id" are listed again. Backend
+v0.1.5-blindfb.46: groups, events, pages and places keep details that
+appear while scrolling, skip hidden links, keep names whole and no
+longer list "View group" as a detail; removing a reaction works in
+languages whose "Like is on" label starts with the Like word (German);
+error messages about the post composer never include your draft; French
+authors named like a weekday are no longer read as the time; a large
+group member list on a slow page no longer times out and loses every
+row.
+
 ## v0.7.44 - 2026-11-12
 
 Post reader: the links list now holds a profile entry for each name in

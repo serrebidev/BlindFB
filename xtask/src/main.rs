@@ -1,7 +1,8 @@
 //! Packaging for BlindFB releases, via shipfitter, and the updater's helpers.
 //!
 //! `cargo xtask package` builds the release binary and writes the one asset each
-//! platform's updater (ship-shape) looks for: `dist/BlindFB.zip` on Windows,
+//! platform's updater (ship-shape) looks for: `dist/BlindFB.zip` on Windows (plus the
+//! per-user installer `dist/BlindFB-Setup.exe` from `packaging/blindfb.iss`),
 //! `dist/BlindFB.tar.gz` on Linux, and `dist/BlindFB-<arch>.dmg` on macOS.
 //! Each asset is signed with minisign when `MINISIGN_KEY` is set.
 //!
@@ -104,7 +105,14 @@ fn package() -> Result<(), Box<dyn Error>> {
     };
 
     println!("wrote {}", asset.display());
-    sign_asset(&asset)
+    sign_asset(&asset)?;
+    // Windows also gets a per-user installer beside the zip the updater uses.
+    if cfg!(windows) && shipfitter::package::inno_setup(&root.join("packaging/blindfb.iss"))? {
+        let setup = dist.join(format!("{APP}-Setup.exe"));
+        println!("wrote {}", setup.display());
+        sign_asset(&setup)?;
+    }
+    Ok(())
 }
 
 /// Writes `<file>.minisig` beside the release asset; that signature is what ship-shape checks.

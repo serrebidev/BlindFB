@@ -152,12 +152,18 @@ function fixture(mode = false) {
     {closest: () => linkedComment, href: 'https://www.facebook.com/a/posts/1?comment_id=9', getAttribute: () => '/a/posts/1?comment_id=9', innerText: '1h'},
     {closest: () => linkedComment, href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fexample.com%2Fstory%3Fa%3D1&h=xyz', getAttribute: () => 'https://l.facebook.com/l.php?u=x', innerText: 'example.com/story'},
     {closest: () => linkedComment, href: 'https://othersite.org/page?fbclid=zz', getAttribute: () => 'https://othersite.org/page?fbclid=zz', innerText: 'Other Site'},
+    // Another site's pages may use Facebook's UI shapes: they are real links.
+    {closest: () => linkedComment, href: 'https://www.tiktok.com/hashtag/cats', getAttribute: () => 'https://www.tiktok.com/hashtag/cats', innerText: '#cats'},
+    {closest: () => linkedComment, href: 'https://example.org/story?comment_id=42', getAttribute: () => 'https://example.org/story?comment_id=42', innerText: 'story'},
+    {closest: () => linkedComment, href: 'https://www.facebook.com/hashtag/news', getAttribute: () => '/hashtag/news', innerText: '#news'},
   ] : [];
   linkedFixture.article('10');
   const linkedDetail = JSON.parse(await linkedFixture.api.initialize('https://www.facebook.com/a/posts/1'));
   assert.deepEqual(linkedDetail.comments.find(c => c.id === '9').links, [
     {label: 'example.com/story', url: 'https://example.com/story?a=1'},
     {label: 'Other Site', url: 'https://othersite.org/page'},
+    {label: '#cats', url: 'https://www.tiktok.com/hashtag/cats'},
+    {label: 'story', url: 'https://example.org/story?comment_id=42'},
   ]);
   assert.deepEqual(linkedDetail.comments.find(c => c.id === '10').links, []);
   const ambiguous = fixture('ambiguous');
