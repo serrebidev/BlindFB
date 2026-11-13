@@ -94,6 +94,16 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     .map_or(text.len(), |(i, _)| i);
                 text = text[..cut].trim_end().to_owned();
             }
+            // The backend marks a sponsored post's author " [ad]". The ad's
+            // time slot holds only Facebook's "Ad" label, not a time.
+            let sponsored = match record.fields[1].strip_suffix(" [ad]") {
+                Some(name) => {
+                    record.fields[1] = name.to_owned();
+                    record.fields[2].clear();
+                    true
+                }
+                None => false,
+            };
             let mut author = String::new();
             let mut joined = true;
             let mut parts: Vec<&str> = Vec::new();
@@ -135,6 +145,11 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
                     author.push_str(part);
                     joined = false;
                 }
+            }
+            if sponsored {
+                // After the name, so the poster stays the first " / " part.
+                author.push_str(" / ");
+                author.push_str(&t("Sponsored"));
             }
             record.fields.truncate(4);
             record.fields[1] = author;
@@ -1173,6 +1188,13 @@ mod tests {
         assert_eq!(rows[0].field(1), "Michal Suchy / Odyssey Group");
         assert_eq!(rows[0].field(4), "Hello group");
         assert_eq!(rows[1].author_ref, None);
+    }
+
+    #[test]
+    fn feed_marks_sponsored_posts_after_the_author() {
+        let rows = parse_feed("-\tXalaria [ad]\tAd\t0/0/0\tA text adventure\n");
+        assert_eq!(rows[0].field(1), "Xalaria / Sponsored");
+        assert_eq!(rows[0].field(2), "");
     }
 
     #[test]

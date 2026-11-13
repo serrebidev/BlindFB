@@ -4116,6 +4116,10 @@ msgstr ""
 msgid "Off (no hotkey)"
 msgstr "Väljas (ilma klahvita)"
 
+#: crates/core/src\fb.rs:154
+msgid "Sponsored"
+msgstr "Sponsitud"
+
 #, rust-format
 #~ msgid "first {cap} members (list capped)"
 #~ msgstr "esimesed {cap} liiget (loend on piiratud)"

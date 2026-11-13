@@ -289,6 +289,14 @@
     }
     // Group posts name the group, then the poster; comments carry their own names.
     const names = [...root.querySelectorAll('[data-ad-rendering-role=profile_name]')].filter(e => !e.closest(ARTICLE)).map(e => F.clean(e.innerText || '').replace(/\s+/g, ' ')).filter(Boolean);
+    // A shared post's original author heads an unmarked linked heading between the sharer and the reactions.
+    const like = root.querySelector('[data-ad-rendering-role=like_button]');
+    for (const h of profile ? root.querySelectorAll('h2,h3,h4') : []) {
+      const a = h.querySelector('a[href]');
+      if (!a || !F.visible(h) || h.closest(ARTICLE + ',[data-ad-rendering-role=profile_name]') || h.querySelector('[data-ad-rendering-role=profile_name]') || !(profile.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING) || (like && !(h.compareDocumentPosition(like) & Node.DOCUMENT_POSITION_FOLLOWING))) continue;
+      const name = F.clean(a.innerText || '').replace(/\s+/g, ' ');
+      if (name) names.push(name);
+    }
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : '';
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set(outerMessages.map(element => F.postText(element)).filter(Boolean))].join('\n');
