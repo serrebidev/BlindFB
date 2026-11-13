@@ -56,7 +56,7 @@ BlindFB is not code-signed yet, and one of its documented features is copying yo
 ## Requirements
 
 - A browser you are signed in to Facebook in: Google Chrome, Chromium, Brave or Microsoft Edge, including their Beta, Dev, Canary and Nightly channels, each with its own data folder. Firefox can supply a session, but one of the Chromium browsers is still needed as the engine. Backend, Install a browser installs a browser from its vendor.
-- On Windows, cookie import reads the chosen browser's cookie store locally. Close that browser first if its database is locked. Beta and Nightly encrypted cookies may not import on Windows; signing in directly in BlindFB's browser window always works.
+- On Windows, cookie import reads the chosen browser's cookie store locally. Close that browser first if its database is locked. Current Edge and Brave encrypt their cookies so only the browser itself can read them; when the cookie import cannot read a browser's store, BlindFB imports through that browser instead — tick "Allow remote debugging" if it asks. Signing in directly in BlindFB's browser window always works.
 - Linux builds need Ubuntu 24.04 or a compatible Debian-based system (glibc 2.39 or newer). On first launch the Linux launcher offers to install the GTK and GStreamer packages the app needs through your package manager. Keep `blindfb` and `blindfb-bin` together.
 - Facebook is read live, so a section's first load takes several seconds. After that, sections are cached and prefetched, and switching is instant.
 
