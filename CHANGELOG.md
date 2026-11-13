@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.44 - 2026-11-12
+
+Post reader: the links list now holds a profile entry for each name in
+the post's header, such as "Profile of The Sibling Groupchat" for the
+page a group post was shared from, and the person who posted it. Enter
+on one closes the reader and opens that profile in BlindFB, like View
+profile on a comment; other links still open in the browser. Faster
+reads with backend v0.1.5-blindfb.45: Facebook keeps a zero-size loading
+indicator on pages that finished loading, and the backend took it as a
+page still loading, so every list shorter than the number asked for
+waited out its full time limit. Notifications took 27 seconds on every
+read, including the background alert check every two minutes; they now
+take about 3.5 seconds. Short friend, group and chat lists end sooner
+too.
+
 ## v0.7.43 - 2026-11-12
 
 Group window: group posts have a context menu (Applications, Shift+F10

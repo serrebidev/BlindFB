@@ -49,6 +49,7 @@ function fixture(mode = false) {
   profile.parentElement.parentElement.parentElement.querySelectorAll = () => [headerLink('https://www.facebook.com/a/posts/1')];
   const profiles = [profile, {innerText: 'Big Feast Bistro + Retail', closest: () => null,
     parentElement: {parentElement: {parentElement: {querySelectorAll: () => [sourceLink,
+      headerLink('https://www.facebook.com/bistro'),
       headerLink('https://www.facebook.com.evil/bistro/posts/2'),
       headerLink('https://www.facebook.com/bistro/posts/2?comment_id=3'),
       headerLink('https://www.facebook.com/bistro/posts/3', true)]}}}},
@@ -139,7 +140,9 @@ function fixture(mode = false) {
   const shared = fixture('shared');
   assert.equal(JSON.parse(await shared.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Poster text\nShared original');
   const sourced = JSON.parse(await fixture('shared-source').api.initialize('https://www.facebook.com/a/posts/1'));
-  assert.deepEqual(sourced.links, [{label: 'Shared post by Big Feast Bistro + Retail', url: 'https://www.facebook.com/bistro/posts/2'}]);
+  // The source's name link also rides along, marked as a profile for the app to open.
+  assert.deepEqual(sourced.links, [{label: 'Shared post by Big Feast Bistro + Retail', url: 'https://www.facebook.com/bistro/posts/2'},
+    {label: 'Big Feast Bistro + Retail', url: 'https://www.facebook.com/bistro', profile: '/bistro'}]);
   // A comment's own links ride along with it: the redirect unwraps, the
   // author link and the comment permalink stay out.
   const linkedFixture = fixture();

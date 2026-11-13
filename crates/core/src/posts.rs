@@ -25,6 +25,9 @@ pub struct Comment {
 pub struct Link {
     pub label: String,
     pub url: String,
+    /// A post header name's profile path (/vanity or /profile.php?id=): the
+    /// reader opens it in BlindFB instead of the browser.
+    pub profile: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +51,7 @@ pub fn ordered_links(mut links: Vec<Link>, post: &str) -> Vec<Link> {
     links.push(Link {
         label: t("Full post on Facebook"),
         url: post.to_owned(),
+        profile: None,
     });
     links
 }
@@ -110,9 +114,15 @@ fn parse_links(value: &Value) -> Vec<Link> {
         .map(|rows| {
             rows.iter()
                 .filter_map(|row| {
+                    let label = string(row, "label").ok()?;
+                    let profile = optional_string(row, "profile").ok()?;
                     Some(Link {
-                        label: string(row, "label").ok()?,
+                        label: match profile {
+                            Some(_) => tf!("Profile of {who}", who = label),
+                            None => label,
+                        },
                         url: string(row, "url").ok()?,
+                        profile,
                     })
                 })
                 .filter(|link| {
@@ -545,9 +555,19 @@ mod tests {
             [Link {
                 label: "Example".to_owned(),
                 url: "https://example.com/story".to_owned(),
+                profile: None,
             }]
         );
         assert!(detail.comments[1].links.is_empty());
+    }
+
+    #[test]
+    fn header_profile_links_are_named_and_keep_their_path() {
+        // A group post sharing a page's post: the reader can open the page.
+        let detail = parse_detail(r#"{"url":"https://www.facebook.com/groups/1/posts/2","author":"A","time":"","text":"Post","comments":[],"links":[{"label":"The Sibling Groupchat","url":"https://www.facebook.com/profile.php?id=615","profile":"/profile.php?id=615"}]}"#).unwrap();
+        let link = &detail.links[0];
+        assert_eq!(link.label, "Profile of The Sibling Groupchat");
+        assert_eq!(link.profile.as_deref(), Some("/profile.php?id=615"));
     }
 
     use super::*;
@@ -591,6 +611,7 @@ mod tests {
             .map(|url| Link {
                 label: (*url).to_owned(),
                 url: (*url).to_owned(),
+                profile: None,
             })
             .collect();
         let ordered = ordered_links(links, post);
@@ -605,6 +626,7 @@ mod tests {
         let links = vec![Link {
             label: "Other post".into(),
             url: "https://www.facebook.com/permalink.php?story_fbid=3&id=2".into(),
+            profile: None,
         }];
         assert_eq!(ordered_links(links, post).len(), 2);
     }
@@ -619,7 +641,8 @@ mod tests {
             detail.links[0],
             Link {
                 label: "Article".to_owned(),
-                url: "https://example.org/story".to_owned()
+                url: "https://example.org/story".to_owned(),
+                profile: None,
             }
         );
         assert_eq!(

@@ -144,6 +144,13 @@
         let url;
         try { url = new URL(a.href, location.href); } catch { continue; }
         if (!/^https?:$/.test(url.protocol) || !/^(www\.|m\.|web\.)?facebook\.com$/.test(url.hostname) || url.searchParams.has('comment_id') || url.searchParams.has('reply_comment_id')) continue;
+        // The name links to its profile (a group's link is no profile); the app opens it itself.
+        const profile = F.profilePath && F.profilePath(url.href);
+        if (profile) {
+          const address = 'https://www.facebook.com' + profile;
+          if (!found.has(address)) found.set(address, {label: F.clean(a.innerText || '').replace(/\s+/g, ' ') || name, url: address, profile});
+          continue;
+        }
         const path = F.canon(url.href);
         if (!/(?:\/posts\/|\/permalink\/|^\/(?:permalink|story)\.php\?|\/reel\/|\/videos\/|^\/watch\/?\?v=)/.test(path) || path === F.canon(target)) continue;
         const address = 'https://www.facebook.com' + path;

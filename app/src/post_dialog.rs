@@ -173,15 +173,19 @@ impl PostReader {
         self.composer.set_editable(!state.busy);
     }
 
+    /// Open the selected link: a profile in BlindFB (the reader closes, as
+    /// for a commenter's profile), anything else in the browser.
     fn open_link(&self) {
-        if let Some(link) = self.links.get_selection().and_then(|index| {
-            self.state
-                .borrow()
-                .links
-                .get(index as usize)
-                .map(|link| link.url.clone())
-        }) {
-            open_url(&link);
+        let Some(link) = self
+            .links
+            .get_selection()
+            .and_then(|index| self.state.borrow().links.get(index as usize).cloned())
+        else {
+            return;
+        };
+        match link.profile {
+            Some(profile) => self.state.borrow_mut().pending_profile = Some(profile),
+            None => open_url(&link.url),
         }
     }
 

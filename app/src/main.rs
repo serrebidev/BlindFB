@@ -2837,6 +2837,7 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
         links.push(Link {
             label: t("Full post on Facebook"),
             url: url.to_owned(),
+            profile: None,
         });
     }
     for word in text.split(|c: char| c.is_whitespace() || c == '⏎') {
@@ -2873,6 +2874,7 @@ fn links_in_text(text: &str, post: Option<&str>) -> Vec<Link> {
             links.push(Link {
                 label: url.to_owned(),
                 url: url.to_owned(),
+                profile: None,
             });
         }
     }
@@ -3817,6 +3819,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                             comment.links.push(Link {
                                 label: parts.next().unwrap_or(url).to_owned(),
                                 url: url.to_owned(),
+                                profile: None,
                             });
                         }
                     }
@@ -6020,10 +6023,12 @@ mod tests {
                 Link {
                     label: "example.com/story".to_owned(),
                     url: "https://example.com/story?a=1".to_owned(),
+                    profile: None,
                 },
                 Link {
                     label: "Other Site".to_owned(),
                     url: "https://othersite.org/page".to_owned(),
+                    profile: None,
                 },
             ]
         );
