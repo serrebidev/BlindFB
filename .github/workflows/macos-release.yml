@@ -56,6 +56,7 @@ jobs:
         cargo clippy --locked --workspace --all-targets -- -D warnings
         cargo test --locked --workspace
         node crates/core/src/post_scripts/reader.test.js
+        node crates/core/src/post_scripts/questions.test.js
         node crates/core/src/reels.test.js
     - name: Package with shipfitter (cargo xtask package)
       env:

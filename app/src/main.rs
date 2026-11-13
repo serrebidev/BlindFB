@@ -23,6 +23,7 @@
 mod chat_dialog;
 mod group_dialog;
 mod player;
+mod participation_dialog;
 mod post_dialog;
 mod reel_cache;
 mod shortcuts_dialog;
@@ -327,6 +328,7 @@ enum Tag {
     PostVideo(u64, u64),
     PostReelReacted(u64),
     PostSent(u64),
+    PostParticipation(u64, bool),
     PostLiked(u64),
     PostShareReady(u64),
     PostShared(u64),
@@ -390,6 +392,11 @@ enum Task {
     PostLike {
         page: String,
         id: String,
+    },
+    PostParticipation {
+        page: String,
+        token: String,
+        answers: Option<serde_json::Value>,
     },
     PostShareOpen {
         page: String,
@@ -1328,6 +1335,10 @@ fn spawn_worker(
                 },
                 Task::PostLike { page, id } => match &fb {
                     Some(fb) => blindfb_core::posts::like_comment(fb, &page, &id),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::PostParticipation { page, token, answers } => match &fb {
+                    Some(fb) => blindfb_core::posts::participation(fb, &page, &token, answers.as_ref()),
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostShareOpen { page } => match &fb {
@@ -3481,6 +3492,9 @@ fn apply_done(ui: &Ui, done: Done) {
         }
         Tag::PostSent(session) => {
             post_dialog::apply(ui, session, done.result, &t("Comment sent."), true)
+        }
+        Tag::PostParticipation(session, submitted) => {
+            post_dialog::participation_done(ui, session, done.result, submitted)
         }
         Tag::PostLiked(session) => {
             post_dialog::apply(ui, session, done.result, &t("Like changed."), false)

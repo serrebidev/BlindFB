@@ -396,9 +396,52 @@ pub fn validate_target(target: &str) -> Result<(), String> {
     ))
 }
 
+/// The post each reader page holds, so a page the backend lost can be reopened.
+fn opened() -> &'static std::sync::Mutex<HashMap<String, String>> {
+    static OPENED: std::sync::OnceLock<std::sync::Mutex<HashMap<String, String>>> =
+        std::sync::OnceLock::new();
+    OPENED.get_or_init(Default::default)
+}
+
+/// The backend restarted or reconnected (its page is gone), or the tab left the post.
+fn page_lost(raw: &str) -> bool {
+    raw.contains("page expired") || raw.contains("Post changed or reader expired")
+}
+
+fn initialize_script(target: &str) -> String {
+    format!(
+        "{};window.__blindfbPost.initialize({})",
+        concat!(
+            include_str!("post_scripts/labels.js"),
+            include_str!("post_scripts/questions.js"),
+            include_str!("post_scripts/reader.js")
+        ),
+        json!(target)
+    )
+}
+
+/// One page script, without retrying actions that may already have changed Facebook.
 fn eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
     fb.run(&["page", page, "eval", script])
         .map_err(|e| crate::page_errors::page_error(&e))
+}
+
+/// Reopen a lost page only for reading or preparing an editor, before anything is typed.
+fn recover_eval(fb: &Fb, page: &str, script: &str) -> Result<String, String> {
+    match fb.run(&["page", page, "eval", script]) {
+        Err(raw) if page_lost(&raw) => {
+            let target = opened().lock().unwrap().get(page).cloned();
+            let Some(target) = target else {
+                return Err(crate::page_errors::page_error(&raw));
+            };
+            fb.run(&["page", page, "open", &target])?;
+            fb.run(&["page", page, "eval", &initialize_script(&target)])
+                .map_err(|e| crate::page_errors::page_error(&e))?;
+            fb.run(&["page", page, "eval", script])
+        }
+        result => result,
+    }
+    .map_err(|e| crate::page_errors::page_error(&e))
 }
 
 pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
@@ -423,15 +466,10 @@ pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
             }
         }
     }
-    let script = format!(
-        "{};window.__blindfbPost.initialize({})",
-        concat!(
-            include_str!("post_scripts/labels.js"),
-            include_str!("post_scripts/reader.js")
-        ),
-        json!(target)
-    );
-    let result = eval(fb, page, &script).and_then(|output| {
+    // Before the first script: a page lost during load reopens this post, not the last one.
+    opened().lock().unwrap().insert(page.to_owned(), target.clone());
+    let script = initialize_script(&target);
+    let result = recover_eval(fb, page, &script).and_then(|output| {
         let detail = parse_detail(&output)?;
         if detail.text.trim().is_empty()
             && detail
@@ -460,7 +498,7 @@ pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
 }
 
 pub fn refresh(fb: &Fb, page: &str) -> Result<String, String> {
-    let output = eval(fb, page, "window.__blindfbPost.read()")?;
+    let output = recover_eval(fb, page, "window.__blindfbPost.read()")?;
     parse_detail(&output)?;
     Ok(output)
 }
@@ -475,7 +513,7 @@ pub fn send_comment(
         return Err(t("Enter a comment before sending"));
     }
     // Every stage revalidates the same DOM editor and thread; no retry after Enter.
-    let prepared = eval(
+    let prepared = recover_eval(
         fb,
         page,
         &format!(
@@ -500,8 +538,66 @@ pub fn send_comment(
             error = error
         )
     })?;
-    parse_detail(&output)?;
+    if parse_participation(&output)?.is_none() {
+        parse_detail(&output)?;
+    }
     Ok(output)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParticipationField {
+    pub kind: String,
+    pub prompt: String,
+    pub choices: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Participation {
+    pub token: String,
+    pub text: String,
+    pub fields: Vec<ParticipationField>,
+    pub answers: Vec<Value>,
+    pub error: String,
+}
+
+pub fn parse_participation(output: &str) -> Result<Option<Participation>, String> {
+    let value: Value = serde_json::from_str(output)
+        .map_err(|_| t("The post reader returned invalid JSON"))?;
+    let Some(form) = value.get("participation") else { return Ok(None) };
+    let rows = form["fields"].as_array()
+        .filter(|rows| !rows.is_empty() && rows.len() <= 30)
+        .ok_or_else(|| t("Invalid participation questions"))?;
+    let mut fields = Vec::new();
+    for row in rows {
+        let kind = string(row, "kind")?;
+        let prompt = string(row, "prompt")?;
+        if prompt.trim().is_empty() || !matches!(kind.as_str(), "text" | "choice" | "check") {
+            return Err(t("Invalid participation question"));
+        }
+        let choices: Vec<String> = row["choices"].as_array()
+            .ok_or_else(|| t("Invalid participation choices"))?
+            .iter().map(|v| v.as_str().filter(|s| !s.trim().is_empty()).map(str::to_owned)
+                .ok_or_else(|| t("Invalid participation choice"))).collect::<Result<_, _>>()?;
+        if kind == "choice" && choices.is_empty() {
+            return Err(t("Invalid participation choices"));
+        }
+        fields.push(ParticipationField { kind, prompt, choices });
+    }
+    let token = string(form, "token")?;
+    if token.is_empty() { return Err(t("Invalid participation questions")); }
+    let answers = form["answers"].as_array().filter(|a| a.len() == fields.len())
+        .cloned().unwrap_or_default();
+    let error = form["error"].as_str().unwrap_or_default().to_owned();
+    Ok(Some(Participation { token, text: string(form, "text")?, fields, answers, error }))
+}
+
+/// Submit answers once, or close the review. Never resends the pending comment.
+pub fn participation(fb: &Fb, page: &str, token: &str, answers: Option<&Value>) -> Result<String, String> {
+    let script = match answers {
+        Some(answers) => format!("window.__blindfbQuestions.submit({},{answers})", json!(token)),
+        None => format!("window.__blindfbQuestions.cancel({})", json!(token)),
+    };
+    eval(fb, page, &script)
 }
 
 /// Like or unlike one exact comment; returns a fresh detail JSON.
@@ -576,11 +672,36 @@ pub fn share_cancel(fb: &Fb, page: &str) -> Result<String, String> {
 }
 
 pub fn close(fb: &Fb, page: &str) -> Result<String, String> {
+    opened().lock().unwrap().remove(page);
     fb.run(&["page", page, "close"])
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn participation_is_distinct_from_a_confirmed_comment() {
+        let form = parse_participation(r#"{"participation":{"token":"1","text":"Group rules","fields":[{"kind":"choice","prompt":"Live in Hope?","choices":["yes","no"]},{"kind":"text","prompt":"About Hope?","choices":[]},{"kind":"check","prompt":"Agree to rules","choices":[]}]}}"#).unwrap().unwrap();
+        assert_eq!(form.fields[0].choices, ["yes", "no"]);
+        assert_eq!(form.fields[1].kind, "text");
+        assert_eq!(form.fields[2].kind, "check");
+        assert!(parse_participation(r#"{"comments":[]}"#).unwrap().is_none());
+        for raw in [
+            r#"{"participation":{"token":"1","text":"","fields":[]}}"#,
+            r#"{"participation":{"token":"1","text":"","fields":[{"kind":"choice","prompt":"Q","choices":[]}]}}"#,
+            r#"{"participation":{"token":"1","text":"","fields":[{"kind":"unknown","prompt":"Q","choices":[]}]}}"#,
+        ] {
+            assert!(parse_participation(raw).is_err());
+        }
+    }
+
+    #[test]
+    fn only_lost_pages_allow_preparation_recovery() {
+        assert!(page_lost("page expired or unknown"));
+        assert!(page_lost("Post changed or reader expired. Refresh or reopen the post."));
+        assert!(!page_lost("Submission was not confirmed in the selected thread."));
+        assert!(!page_lost("The Facebook editor already contains a draft."));
+    }
+
     #[test]
     fn a_comment_link_to_a_profile_is_dropped_not_fatal() {
         let detail = parse_detail(r#"{"url":"https://www.facebook.com/reel/1/","author":"A","time":"","text":"Reel","comments":[{"id":"c1","author":"B","time":"7 h","text":"Hi","parent_id":null,"url":"https://www.facebook.com/someone?comment_id=Y29t&__tn__=R"}]}"#).unwrap();

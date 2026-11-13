@@ -96,6 +96,7 @@ struct ReaderState {
     loaded: bool,
     /// Audience Facebook's share dialog reported; the reader's timer asks next.
     share_audience: Option<String>,
+    participation: Option<blindfb_core::posts::Participation>,
     share_requested: bool,
     action_requested: Option<i32>,
     playback: Option<ReelPlayback>,
@@ -937,6 +938,7 @@ fn open_requested(
             busy: true,
             loaded: false,
             share_audience: None,
+            participation: None,
             share_requested,
             action_requested,
             playback,
@@ -1243,6 +1245,17 @@ fn open_requested(
         if let Some(audience) = audience {
             r.share_prompt(&u, &dialog, &audience);
         }
+        let questions = r.state.borrow_mut().participation.take();
+        if let Some(questions) = questions {
+            let answers = super::participation_dialog::show(&dialog, &questions);
+            let submitted = answers.is_some();
+            u.send(Job {
+                task: Task::PostParticipation {
+                    page: r.page.clone(), token: questions.token, answers,
+                },
+                tag: Tag::PostParticipation(r.session, submitted),
+            });
+        }
     });
     share_timer.start(150, false);
     ui.send(Job {
@@ -1406,6 +1419,15 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
     let Some(reader) = active(ui, session) else {
         return;
     };
+    if sent {
+        if let Ok(json) = &result {
+            if let Ok(Some(form)) = blindfb_core::posts::parse_participation(json) {
+                reader.state.borrow_mut().participation = Some(form);
+                reader.message(ui, &t("This group requires participation answers. Your comment draft has been kept."));
+                return;
+            }
+        }
+    }
     reader.state.borrow_mut().busy = false;
     match result.and_then(|json| parse_detail(&json)) {
         Err(error) => {
@@ -1489,6 +1511,22 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
     reader.controls();
 }
 
+pub(super) fn participation_done(ui: &Ui, session: u64, result: Result<String, String>, submitted: bool) {
+    let Some(reader) = active(ui, session) else { return };
+    if let Ok(json) = &result {
+        if let Ok(Some(form)) = blindfb_core::posts::parse_participation(json) {
+            reader.message(ui, &form.error);
+            reader.state.borrow_mut().participation = Some(form);
+            return;
+        }
+    }
+    note(ui, session, result.map(|_| if submitted {
+        t("Answers submitted. Refresh to check whether your comment posted. Your draft has been kept.")
+    } else {
+        t("Participation review cancelled. Your comment draft has been kept.")
+    }), true);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1525,6 +1563,7 @@ mod tests {
             busy: true,
             loaded: false,
             share_audience: None,
+            participation: None,
             share_requested: true,
             action_requested: Some(ID_POST_COMMENT),
             playback: None,

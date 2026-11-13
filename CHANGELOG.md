@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.46 - 2026-11-13
+
+Group membership questions now work from BlindFB. When a group's
+participation review opens instead of posting your comment, its questions
+appear in a native form: the group rules, exact answer choices, and text
+boxes, with only one Submit. Cancelling keeps your comment draft, and a
+failed submission reopens the form with your answers intact so you can fix
+them — nothing is ever resent on its own. A post page that the backend
+lost (restart or reconnect) now reopens the same post for reading instead
+of failing. No backend changes.
+
 ## v0.7.45 - 2026-11-12
 
 Windows installer: `BlindFB-Setup.exe` installs BlindFB for your account

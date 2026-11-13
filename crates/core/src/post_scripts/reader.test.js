@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 // labels.js is injected before reader.js, as the Rust side does.
-const source = fs.readFileSync(__dirname + '/labels.js', 'utf8') + fs.readFileSync(__dirname + '/reader.js', 'utf8');
+const source = ['labels.js', 'questions.js', 'reader.js'].map(file => fs.readFileSync(__dirname + '/' + file, 'utf8')).join('\n');
 const W = require('./labels.js');
 const ARTICLE = '[role=article][aria-label]';
 const EDITOR = '[role=textbox][contenteditable=true],textarea';

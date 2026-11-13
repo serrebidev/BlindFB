@@ -373,6 +373,10 @@
     pending = null;
     if (!sent) throw Error('There is no pending submission.');
     const confirmed = await F.waitFor(() => {
+      // A group that reviews newcomers ("Participation review") opens its questions instead of
+      // posting: a shown dialog outside the post, with answer controls and no comment editor.
+      const questions = window.__blindfbQuestions.dialog(root);
+      if (questions) return {questions};
       current();
       // A reply's own box can vanish once sent; one that stays must have been emptied.
       if (sent.editor.isConnected && contents(sent.editor)) return false;
@@ -381,6 +385,7 @@
       return collect().some(({value}) => value.url && !/^client:/.test(value.id) && !sent.before.has(value.id) && (value.parent_id === sent.parent || value.parent_id === sent.thread) && words(value.text).includes(sent.start));
     }, 12000);
     if (!confirmed) throw Error('Submission was not confirmed in the selected thread. Refresh before trying again; do not resend automatically.');
+    if (confirmed.questions) return window.__blindfbQuestions.read(confirmed.questions);
     return read();
   }
 

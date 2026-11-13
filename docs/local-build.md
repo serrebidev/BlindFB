@@ -9,7 +9,7 @@ How to build, test, package and release BlindFB from this PC.
   folder to PATH in the same shell first.
 - MSVC C++ build tools. wxWidgets compiles from source on the first build,
   which takes a while once; after that `target/` caches it.
-- Node 22, only for the full test gate (two JavaScript fixture tests).
+- Node 22, only for the JavaScript fixture tests in the full test gate.
 - GNU gettext (`xgettext`, `msgmerge`), only for `cargo xtask i18n`.
 
 ## Everyday loop
@@ -27,6 +27,7 @@ Tests and lint (the same gate the release workflow runs):
 cargo clippy --locked --workspace --all-targets -- -D warnings
 cargo test --locked --workspace
 node crates/core/src/post_scripts/reader.test.js
+node crates/core/src/post_scripts/questions.test.js
 node crates/core/src/reels.test.js
 ```
 

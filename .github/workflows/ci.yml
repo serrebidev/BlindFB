@@ -104,6 +104,7 @@ jobs:
       - name: Reader and reels fixtures
         run: |
           node crates/core/src/post_scripts/reader.test.js
+          node crates/core/src/post_scripts/questions.test.js
           node crates/core/src/reels.test.js
 
       - name: Build
