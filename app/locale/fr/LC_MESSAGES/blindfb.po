@@ -4234,6 +4234,156 @@ msgstr "Désactivé (aucun raccourci)"
 msgid "Sponsored"
 msgstr "Sponsorisé"
 
+#: app/src\main.rs:1749 app/src\main.rs:5241
+msgid "Facebook post &menu…"
+msgstr "&Menu Facebook de la publication…"
+
+#: app/src\main.rs:1749
+msgid ""
+"Facebook's own menu for the selected post: Not interested, Save, Snooze, "
+"Hide, Report and more"
+msgstr ""
+"Le menu propre à Facebook pour la publication sélectionnée : Pas intéressé, "
+"Enregistrer, Mettre en veille, Masquer, Signaler et plus"
+
+#: app/src\main.rs:3646
+msgid "No login request is waiting."
+msgstr "Aucune demande de connexion n'est en attente."
+
+#: app/src\main.rs:3648
+#, rust-format
+msgid ""
+"This login request is no longer waiting for an answer. It may have expired or been answered already.\n"
+"\n"
+"{page}"
+msgstr ""
+"Cette demande de connexion n'attend plus de réponse. Elle a peut-être expiré ou reçu une réponse.\n"
+"\n"
+"{page}"
+
+#: app/src\main.rs:3651 app/src\main.rs:3654 app/src\main.rs:3659
+#: app/src\main.rs:3693 app/src\main.rs:3715 app/src\main.rs:3721
+msgid "Login request"
+msgstr "Demande de connexion"
+
+#: app/src\main.rs:3671
+#, rust-format
+msgid "Answering: {answer}…"
+msgstr "Réponse : {answer}…"
+
+#: app/src\main.rs:3687
+msgid "Login request left unanswered."
+msgstr "Demande de connexion laissée sans réponse."
+
+#: app/src\main.rs:3701 app/src\main.rs:4460 app/src\main.rs:4478
+msgid "Facebook post menu"
+msgstr "Menu Facebook de la publication"
+
+#: app/src\main.rs:3708
+msgid "Facebook took your answer."
+msgstr "Facebook a pris votre réponse."
+
+#: app/src\main.rs:3710
+msgid ""
+"Your answer was pressed, but Facebook's login request is still showing. Open"
+" the notification again to check."
+msgstr ""
+"Votre réponse a été envoyée, mais la demande de connexion de Facebook est "
+"toujours affichée. Ouvrez à nouveau la notification pour vérifier."
+
+#: app/src\main.rs:4124
+msgid "Reading the login request…"
+msgstr "Lecture de la demande de connexion…"
+
+#: app/src\main.rs:4459
+msgid "This row has no link, so there is no post menu to open."
+msgstr ""
+"Cette ligne n'a pas de lien, il n'y a donc pas de menu de publication à "
+"ouvrir."
+
+#: app/src\main.rs:4468
+msgid "Opening Facebook's post menu…"
+msgstr "Ouverture du menu Facebook de la publication…"
+
+#: app/src\main.rs:4481
+#, rust-format
+msgid "Done: {choice}."
+msgstr "Terminé : {choice}."
+
+#: app/src\main.rs:4482
+msgid "Facebook showed no menu for this post."
+msgstr "Facebook n'a affiché aucun menu pour cette publication."
+
+#: app/src\main.rs:4496
+msgid ""
+"This is the post's own menu. Interested and Not interested exist only on the"
+" post's card in the News feed, and Facebook has already dropped this card "
+"from its feed page; reload the News feed to get them for newer posts."
+msgstr ""
+"Ceci est le menu propre à la publication. Intéressé et Pas intéressé "
+"n'existent que sur la carte de la publication dans le fil d'actualité, et "
+"Facebook a déjà retiré cette carte de sa page du fil ; rechargez le fil "
+"d'actualité pour les obtenir sur des publications plus récentes."
+
+#. TRANSLATORS: {choice} is a menu item Facebook shows as switched on.
+#: app/src\main.rs:4510
+#, rust-format
+msgid "{choice} (on)"
+msgstr "{choice} (activé)"
+
+#: app/src\main.rs:4519
+msgid "Choose an action"
+msgstr "Choisissez une action"
+
+#: app/src\main.rs:4529
+msgid "Facebook post menu closed."
+msgstr "Menu Facebook de la publication fermé."
+
+#: crates/core/src\login_approval.rs:55
+msgid "Facebook's login request page could not be read."
+msgstr "La page de demande de connexion de Facebook n'a pas pu être lue."
+
+#: crates/core/src\login_approval.rs:58
+msgid ""
+"The answer button is gone from Facebook's login request. Open the "
+"notification again."
+msgstr ""
+"Le bouton de réponse a disparu de la demande de connexion de Facebook. "
+"Ouvrez à nouveau la notification."
+
+#: app/src\main.rs:2253
+msgid ""
+"Copy your Facebook session from which browser? You must be signed in to "
+"Facebook in that browser. Close the browser first if its cookie database is "
+"locked. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the "
+"browser asks. Or choose a new browser window to sign in directly."
+msgstr ""
+"Copier votre session Facebook depuis quel navigateur ? Vous devez être "
+"connecté à Facebook dans ce navigateur. Fermez d'abord le navigateur si sa "
+"base de cookies est verrouillée. Dans Chrome, Brave et Edge, cochez « "
+"Autoriser le débogage à distance » si le navigateur le demande. Ou "
+"choisissez une nouvelle fenêtre de navigateur pour vous connecter "
+"directement."
+
+#: crates/core/src\browsers.rs:711
+#, rust-format
+msgid ""
+"Could not import {browser} from its cookie file: {cookie_error} Importing "
+"through the browser also failed: {debugging_error}"
+msgstr ""
+"Impossible d'importer {browser} depuis son fichier de cookies : "
+"{cookie_error} L'importation par le navigateur a aussi échoué : "
+"{debugging_error}"
+
+#: crates/core/src\browsers.rs:763
+#, rust-format
+msgid ""
+"Importing from {browser} through its browser connection failed: "
+"{direct_error} The backend's guided import also failed: {fb_error}"
+msgstr ""
+"L'importation depuis {browser} par sa connexion de navigateur a échoué : "
+"{direct_error} L'importation guidée du moteur a aussi échoué : {fb_error}"
+
 #, rust-format
 #~ msgid "first {cap} members (list capped)"
 #~ msgstr "{cap} premiers membres (liste limitée)"

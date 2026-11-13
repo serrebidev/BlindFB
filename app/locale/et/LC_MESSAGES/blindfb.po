@@ -4120,6 +4120,151 @@ msgstr "Väljas (ilma klahvita)"
 msgid "Sponsored"
 msgstr "Sponsitud"
 
+#: app/src\main.rs:1749 app/src\main.rs:5241
+msgid "Facebook post &menu…"
+msgstr "Facebooki postituse &menüü…"
+
+#: app/src\main.rs:1749
+msgid ""
+"Facebook's own menu for the selected post: Not interested, Save, Snooze, "
+"Hide, Report and more"
+msgstr ""
+"Facebooki enda menüü valitud postituse jaoks: Pole huvitatud, Salvesta, "
+"Peata ajutiselt, Peida, Teata ja muu"
+
+#: app/src\main.rs:3646
+msgid "No login request is waiting."
+msgstr "Ükski sisselogimistaotlus ei oota."
+
+#: app/src\main.rs:3648
+#, rust-format
+msgid ""
+"This login request is no longer waiting for an answer. It may have expired or been answered already.\n"
+"\n"
+"{page}"
+msgstr ""
+"See sisselogimistaotlus ei oota enam vastust. See võis aeguda või on sellele juba vastatud.\n"
+"\n"
+"{page}"
+
+#: app/src\main.rs:3651 app/src\main.rs:3654 app/src\main.rs:3659
+#: app/src\main.rs:3693 app/src\main.rs:3715 app/src\main.rs:3721
+msgid "Login request"
+msgstr "Sisselogimistaotlus"
+
+#: app/src\main.rs:3671
+#, rust-format
+msgid "Answering: {answer}…"
+msgstr "Vastan: {answer}…"
+
+#: app/src\main.rs:3687
+msgid "Login request left unanswered."
+msgstr "Sisselogimistaotlus jäi vastuseta."
+
+#: app/src\main.rs:3701 app/src\main.rs:4460 app/src\main.rs:4478
+msgid "Facebook post menu"
+msgstr "Facebooki postituse menüü"
+
+#: app/src\main.rs:3708
+msgid "Facebook took your answer."
+msgstr "Facebook võttis vastuse vastu."
+
+#: app/src\main.rs:3710
+msgid ""
+"Your answer was pressed, but Facebook's login request is still showing. Open"
+" the notification again to check."
+msgstr ""
+"Vastus vajutati, kuid Facebooki sisselogimistaotlus on endiselt näha. "
+"Kontrollimiseks ava teavitus uuesti."
+
+#: app/src\main.rs:4124
+msgid "Reading the login request…"
+msgstr "Sisselogimistaotluse lugemine…"
+
+#: app/src\main.rs:4459
+msgid "This row has no link, so there is no post menu to open."
+msgstr "Sellel real pole linki, seega pole postituse menüüd, mida avada."
+
+#: app/src\main.rs:4468
+msgid "Opening Facebook's post menu…"
+msgstr "Facebooki postituse menüü avamine…"
+
+#: app/src\main.rs:4481
+#, rust-format
+msgid "Done: {choice}."
+msgstr "Valmis: {choice}."
+
+#: app/src\main.rs:4482
+msgid "Facebook showed no menu for this post."
+msgstr "Facebook ei näidanud selle postituse jaoks menüüd."
+
+#: app/src\main.rs:4496
+msgid ""
+"This is the post's own menu. Interested and Not interested exist only on the"
+" post's card in the News feed, and Facebook has already dropped this card "
+"from its feed page; reload the News feed to get them for newer posts."
+msgstr ""
+"See on postituse enda menüü. Huvitatud ja Pole huvitatud on olemas ainult "
+"postituse kaardil uudistevoos ning Facebook on selle kaardi juba voo lehelt "
+"eemaldanud; laadi uudistevoog uuesti, et saada need uuemate postituste "
+"jaoks."
+
+#. TRANSLATORS: {choice} is a menu item Facebook shows as switched on.
+#: app/src\main.rs:4510
+#, rust-format
+msgid "{choice} (on)"
+msgstr "{choice} (sees)"
+
+#: app/src\main.rs:4519
+msgid "Choose an action"
+msgstr "Vali tegevus"
+
+#: app/src\main.rs:4529
+msgid "Facebook post menu closed."
+msgstr "Facebooki postituse menüü suleti."
+
+#: crates/core/src\login_approval.rs:55
+msgid "Facebook's login request page could not be read."
+msgstr "Facebooki sisselogimistaotluse lehte ei õnnestunud lugeda."
+
+#: crates/core/src\login_approval.rs:58
+msgid ""
+"The answer button is gone from Facebook's login request. Open the "
+"notification again."
+msgstr ""
+"Vastusenupp on Facebooki sisselogimistaotlusest kadunud. Ava teavitus "
+"uuesti."
+
+#: app/src\main.rs:2253
+msgid ""
+"Copy your Facebook session from which browser? You must be signed in to "
+"Facebook in that browser. Close the browser first if its cookie database is "
+"locked. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the "
+"browser asks. Or choose a new browser window to sign in directly."
+msgstr ""
+"Millisest brauserist Facebooki seanss kopeerida? Selles brauseris peab olema"
+" Facebooki sisse logitud. Kui brauseri küpsiste andmebaas on lukus, sulge "
+"esmalt brauser. Chrome'is, Brave'is ja Edge'is märgi „Luba kaugsilumine”, "
+"kui brauser küsib. Või vali otse sisselogimiseks uus brauseriaken."
+
+#: crates/core/src\browsers.rs:711
+#, rust-format
+msgid ""
+"Could not import {browser} from its cookie file: {cookie_error} Importing "
+"through the browser also failed: {debugging_error}"
+msgstr ""
+"{browser} importimine küpsisefailist ebaõnnestus: {cookie_error} Ka brauseri"
+" kaudu importimine ebaõnnestus: {debugging_error}"
+
+#: crates/core/src\browsers.rs:763
+#, rust-format
+msgid ""
+"Importing from {browser} through its browser connection failed: "
+"{direct_error} The backend's guided import also failed: {fb_error}"
+msgstr ""
+"{browser} importimine brauseriühenduse kaudu ebaõnnestus: {direct_error} Ka "
+"taustaprogrammi juhendatud import ebaõnnestus: {fb_error}"
+
 #, rust-format
 #~ msgid "first {cap} members (list capped)"
 #~ msgstr "esimesed {cap} liiget (loend on piiratud)"

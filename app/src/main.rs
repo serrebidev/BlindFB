@@ -107,6 +107,7 @@ const ID_DELETE: i32 = 10044;
 const ID_COPY_TEXT: i32 = 10045;
 const ID_COPY_LINK: i32 = 10046;
 const ID_SHARE: i32 = 10047;
+const ID_POST_MENU: i32 = 10130;
 const ID_UNSEND: i32 = 10050;
 const ID_MSG_REPLY: i32 = 10090;
 const ID_MSG_REACT_BASE: i32 = 10100; // + index into REACTIONS
@@ -203,9 +204,13 @@ fn reaction_label(reaction: &str) -> String {
 const PAGE: u32 = 10;
 /// The News feed opens with this many posts, then reads ahead while the user reads.
 const FEED_FIRST: u32 = 10;
-/// The read-ahead batch. A feed request re-scrolls from the top, so 30 more
-/// posts is nearly the same reading as 100 for the first screenful.
-const FEED_AHEAD: u32 = 30;
+/// The News feed's read-ahead batch, asked for only near the end of the list.
+/// Facebook keeps just the last ~25 posts of its feed page mounted, and a
+/// post's Facebook menu (Interested / Not interested) needs its card still
+/// there, so the backend must not scroll far past the post being read.
+const FEED_AHEAD: u32 = 10;
+/// Rows from the end of the News feed list that start the next read-ahead.
+const FEED_NEAR_END: usize = 3;
 /// Most Recent reads ahead by the same batch: without it every Load more
 /// re-scrolls from the top in the foreground and gets slower as the list
 /// grows, which is why it felt far slower than the News feed.
@@ -338,6 +343,13 @@ enum Tag {
     PostShared(u64),
     PostNote(u64),
     PostShareClosed(u64),
+    LoginRequest,
+    LoginAnswered,
+    /// A step of Facebook's own post menu: the labels pressed so far.
+    PostMenu {
+        post: String,
+        path: Vec<String>,
+    },
     Silent,
     SetupStatus,
     SetupInstall,
@@ -415,6 +427,10 @@ enum Task {
     PostClose {
         page: String,
     },
+    /// Open a "Someone's trying to log in" request and read it.
+    LoginRead(String),
+    /// Press this Facebook answer on the open login request.
+    LoginAnswer(String),
 }
 
 struct Job {
@@ -1361,6 +1377,14 @@ fn spawn_worker(
                     Some(fb) => blindfb_core::posts::close(fb, &page),
                     None => Ok(String::new()),
                 },
+                Task::LoginRead(target) => match &fb {
+                    Some(fb) => blindfb_core::login_approval::read(fb, &target),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::LoginAnswer(choice) => match &fb {
+                    Some(fb) => blindfb_core::login_approval::answer(fb, &choice),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
             };
             if done
                 .send(Done {
@@ -1722,6 +1746,7 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_OPEN, &shortcuts_dialog::menu_label(ID_OPEN, t("&Open post / comments")), &t("Open the selected item; Enter in the items list"))
         .append_item(ID_SHARE, &shortcuts_dialog::menu_label(ID_SHARE, t("S&hare…")), &t("Share the selected post"))
         .append_item(ID_COMMENT, &shortcuts_dialog::menu_label(ID_COMMENT, t("&Comment…")), &t("Comment on the selected post"))
+        .append_item(ID_POST_MENU, &shortcuts_dialog::menu_label(ID_POST_MENU, t("Facebook post &menu…")), &t("Facebook's own menu for the selected post: Not interested, Save, Snooze, Hide, Report and more"))
         .append_item(ID_PROFILE, &shortcuts_dialog::menu_label(ID_PROFILE, t("Author &profile")), &t("Show the profile of the selected item's author or owner"))
         .append_item(ID_AUTHOR_POSTS, &shortcuts_dialog::menu_label(ID_AUTHOR_POSTS, t("Author's p&osts")), &t("Posts by the selected item's author"))
         .append_item(ID_MESSAGE, &shortcuts_dialog::menu_label(ID_MESSAGE, t("&Message author / friend")), &t("Open a Messenger chat with this person"))
@@ -3009,6 +3034,16 @@ fn item_selected(ui: &Ui, sel: u32) {
     ui.state.borrow_mut().pending_details = Some((sel as usize, Instant::now()));
     refresh_controls(ui);
     prepare_reels(ui);
+    let near_end = {
+        let state = ui.state.borrow();
+        state.view == View::Feed
+            && state.records_view == View::Feed
+            && !state.records.is_empty()
+            && sel as usize + FEED_NEAR_END >= state.records.len()
+    };
+    if near_end {
+        load_feed_ahead(ui);
+    }
 }
 
 fn prepare_reels(ui: &Ui) {
@@ -3425,9 +3460,6 @@ fn apply_done(ui: &Ui, done: Done) {
                             ui.state.borrow_mut().prefetched = true;
                             prefetch(ui);
                         }
-                        if ui.items.get_count() > 0 {
-                            load_feed_ahead(ui);
-                        }
                     }
                     if view == View::RecentFeed && !append && ui.items.get_count() > 0 {
                         load_recent_ahead(ui);
@@ -3597,6 +3629,98 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::AlertChats => {
             let items = done.result.map(|output| alerts::chats(&output));
             alert_on_new(ui, items, |state| &mut state.alert_chats);
+        }
+        Tag::LoginRequest => {
+            let request = done.result.and_then(|raw| blindfb_core::login_approval::parse(&raw));
+            match request {
+                Ok(request) if request.choices.is_empty() => {
+                    ui.send(Job {
+                        task: Task::Fb(
+                            ["page", blindfb_core::login_approval::PAGE, "close"]
+                                .map(str::to_owned)
+                                .to_vec(),
+                            None,
+                        ),
+                        tag: Tag::Silent,
+                    });
+                    ui.status(&t("No login request is waiting."));
+                    let text = tf!(
+                        "This login request is no longer waiting for an answer. It may have expired or been answered already.\n\n{page}",
+                        page = request.text
+                    );
+                    show_warning(&ui.frame, text.trim(), &t("Login request"));
+                }
+                Ok(request) => {
+                    ui.status(&t("Login request"));
+                    let labels: Vec<&str> = request.choices.iter().map(String::as_str).collect();
+                    let dialog = SingleChoiceDialog::builder(
+                        &ui.frame,
+                        &request.text,
+                        &t("Login request"),
+                        &labels,
+                    )
+                    .build();
+                    // Facebook's own advice: when unsure, the last answer ("No, it's not me").
+                    dialog.set_selection(labels.len() as i32 - 1);
+                    let choice = (dialog.show_modal() == ID_OK)
+                        .then(|| dialog.get_string_selection())
+                        .flatten();
+                    dialog.destroy();
+                    match choice {
+                        Some(choice) => {
+                            ui.status(&tf!("Answering: {answer}…", answer = choice));
+                            ui.send(Job {
+                                task: Task::LoginAnswer(choice),
+                                tag: Tag::LoginAnswered,
+                            });
+                        }
+                        None => {
+                            ui.send(Job {
+                                task: Task::Fb(
+                                    ["page", blindfb_core::login_approval::PAGE, "close"]
+                                        .map(str::to_owned)
+                                        .to_vec(),
+                                    None,
+                                ),
+                                tag: Tag::Silent,
+                            });
+                            ui.status(&t("Login request left unanswered."));
+                        }
+                    }
+                }
+                Err(e) => {
+                    ui.status(&t("Error"));
+                    show_error(&ui.frame, &e, &t("Login request"));
+                }
+            }
+        }
+        Tag::PostMenu { post, path } => match done.result {
+            Ok(output) => post_menu_step(ui, post, path, &output),
+            Err(e) => {
+                ui.status(&t("Error"));
+                show_error(&ui.frame, &e, &t("Facebook post menu"));
+            }
+        },
+        Tag::LoginAnswered => {
+            match done.result.and_then(|raw| blindfb_core::login_approval::parse(&raw)) {
+                Ok(result) => {
+                    let message = if result.answered {
+                        t("Facebook took your answer.")
+                    } else {
+                        t("Your answer was pressed, but Facebook's login request is still showing. Open the notification again to check.")
+                    };
+                    ui.status(&message);
+                    let text = format!("{message}\n\n{}", result.text);
+                    let dialog =
+                        MessageDialog::builder(&ui.frame, text.trim(), &t("Login request")).build();
+                    dialog.show_modal();
+                    dialog.destroy();
+                }
+                Err(e) => {
+                    ui.status(&t("Error"));
+                    show_error(&ui.frame, &e, &t("Login request"));
+                }
+            }
         }
         Tag::DebugReport => match done.result {
             Ok(text) => {
@@ -3996,6 +4120,14 @@ fn open_selected(ui: &Ui) {
     };
     let view = ui.state.borrow().view.clone();
     if view == View::Notifications {
+        if blindfb_core::login_approval::is_request(record.field(3)) {
+            ui.status(&t("Reading the login request…"));
+            ui.send(Job {
+                task: Task::LoginRead(record.field(3).to_owned()),
+                tag: Tag::LoginRequest,
+            });
+            return;
+        }
         if let Some(source) = reels::notification_source(&record) {
             load_view(ui, View::Reels(source));
             return;
@@ -4316,6 +4448,88 @@ fn message_selected(ui: &Ui) {
 
 /// Link out to the selected post on the web. Feed and post views load with
 /// --urls, so a post record's first field is its web address.
+fn post_menu_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let view = ui.state.borrow().view.clone();
+    let Some(post) = post_target(&view, &record).map(str::to_owned) else {
+        show_warning(
+            &ui.frame,
+            t("This row has no link, so there is no post menu to open."),
+            &t("Facebook post menu"),
+        );
+        return;
+    };
+    send_post_menu(ui, post, Vec::new());
+}
+
+fn send_post_menu(ui: &Ui, post: String, path: Vec<String>) {
+    ui.status(&t("Opening Facebook's post menu…"));
+    ui.send(Job {
+        task: Task::Fb(blindfb_core::post_menu::args(&post, &path), None),
+        tag: Tag::PostMenu { post, path },
+    });
+}
+
+/// Show what Facebook's post menu shows now, and press the user's pick on the next step.
+fn post_menu_step(ui: &Ui, post: String, path: Vec<String>, output: &str) {
+    let step = blindfb_core::post_menu::parse(output);
+    let caption = t("Facebook post menu");
+    if step.done || step.choices.is_empty() {
+        let mut message = match path.last() {
+            Some(last) => tf!("Done: {choice}.", choice = last),
+            None => t("Facebook showed no menu for this post."),
+        };
+        for note in &step.notes {
+            message.push('\n');
+            message.push_str(note);
+        }
+        ui.status(&message);
+        let dialog = MessageDialog::builder(&ui.frame, &message, &caption).build();
+        dialog.show_modal();
+        dialog.destroy();
+        return;
+    }
+    let mut message: Vec<String> = Vec::new();
+    if path.is_empty() && !step.feed_card {
+        message.push(t("This is the post's own menu. Interested and Not interested exist only on the post's card in the News feed, and Facebook has already dropped this card from its feed page; reload the News feed to get them for newer posts."));
+    }
+    if !step.title.is_empty() {
+        message.push(step.title.clone());
+    }
+    message.extend(step.text.iter().cloned());
+    message.extend(step.notes.iter().cloned());
+    let labels: Vec<String> = step
+        .choices
+        .iter()
+        .map(|choice| {
+            let mut label = choice.label.clone();
+            if choice.on {
+                // TRANSLATORS: {choice} is a menu item Facebook shows as switched on.
+                label = tf!("{choice} (on)", choice = label);
+            }
+            if !choice.detail.is_empty() {
+                label = format!("{label}: {}", choice.detail);
+            }
+            label
+        })
+        .collect();
+    let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let text = if message.is_empty() { t("Choose an action") } else { message.join("\n") };
+    let dialog = SingleChoiceDialog::builder(&ui.frame, &text, &caption, &label_refs).build();
+    let picked = (dialog.show_modal() == ID_OK).then(|| dialog.get_selection());
+    dialog.destroy();
+    match picked.and_then(|index| usize::try_from(index).ok()).and_then(|i| step.choices.get(i)) {
+        Some(choice) => {
+            let mut path = path;
+            path.push(choice.label.clone());
+            send_post_menu(ui, post, path);
+        }
+        None => ui.status(&t("Facebook post menu closed.")),
+    }
+}
+
 fn open_post_web(ui: &Ui) {
     let Some((_, record)) = selected(ui) else {
         return;
@@ -4694,6 +4908,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_TRAY_HOTKEY => prompt_tray_hotkey(ui),
         ID_GROUP_POSTS => group_posts_selected(ui),
         ID_WEB_POST => open_post_web(ui),
+        ID_POST_MENU => post_menu_selected(ui),
         ID_WEB_PERSON => open_person_web(ui),
         ID_WEB_CHAT => open_chat_web(ui),
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
@@ -5023,6 +5238,7 @@ fn show_item_menu(ui: &Ui) {
                     (ID_OPEN, t("&Open post and comments")),
                     (ID_SHARE, t("S&hare…")),
                     (ID_COMMENT, t("&Comment…")),
+                    (ID_POST_MENU, t("Facebook post &menu…")),
                 ],
             );
             // A group post's author line names the group but resolves no
@@ -6083,7 +6299,7 @@ mod tests {
     #[test]
     fn a_page_is_small_enough_that_opening_a_section_is_not_a_long_scroll() {
         const { assert!(PAGE == 10) };
-        const { assert!(FEED_FIRST == PAGE && FEED_AHEAD > PAGE) };
+        const { assert!(FEED_FIRST == PAGE && FEED_AHEAD == PAGE && FEED_NEAR_END < PAGE as usize) };
         const { assert!(MY_POSTS_FIRST < PAGE) };
         let args = default_args(&View::Feed).unwrap();
         assert!(args.windows(2).any(|w| w == ["-n", "10"]));

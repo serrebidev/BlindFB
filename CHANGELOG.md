@@ -4,6 +4,29 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.51 - 2026-11-13
+
+Facebook's own post menu is in BlindFB. Post, Facebook post menu (also in
+the context menu of feed and profile posts) shows what Facebook offers for
+that post, in its own wording: Interested and Not interested, Save, turn on
+notifications, Snooze, Hide all, Report and more. Whatever an item opens next
+— More options, or each screen of a report — shows as the next list, until
+Facebook is done. Interested and Not interested only exist on a post's card in
+the live News feed, and Facebook keeps only the last 10 to 25 posts of that
+page. So the News feed now reads the next 10 posts when you are within three
+of the end, instead of 30 at once, and the posts you are reading keep those
+two items. Other posts, and Feeds (most recent), get the post's own menu.
+
+Login verification requests work. Enter on a "Someone's trying to log in"
+notification reads the request — the device, place and time — and shows
+Facebook's two answers. "No, it's not me" is selected first, as Facebook
+advises when you are unsure. BlindFB presses the one you choose and tells you
+what Facebook said.
+
+Shared posts read in full in the feed and in posts lists: your words first,
+then the original post. Facebook puts the two in separate blocks, and lists
+read only the first. Backend v0.1.5-blindfb.53.
+
 ## v0.7.50 - 2026-11-13
 
 Signing in from Microsoft Edge or Brave works on Windows again.
