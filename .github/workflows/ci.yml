@@ -38,6 +38,12 @@ jobs:
             libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav gstreamer1.0-x
+          # The job image ships libgstreamer-plugins-bad1.0-dev. With it wxWidgets
+          # builds its gst_player media backend, which wxdragon-sys never links
+          # (undefined gst_player_* at link time), and the app would then need
+          # libgstplayer on every user's machine. Released builds use the plain
+          # GStreamer backend, so remove it in this job's container only.
+          sudo apt-get remove -y libgstreamer-plugins-bad1.0-dev
 
       - name: Test Linux launcher
         if: runner.os == 'Linux'
