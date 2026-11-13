@@ -206,6 +206,10 @@ const FEED_FIRST: u32 = 10;
 /// The read-ahead batch. A feed request re-scrolls from the top, so 30 more
 /// posts is nearly the same reading as 100 for the first screenful.
 const FEED_AHEAD: u32 = 30;
+/// Most Recent reads ahead by the same batch: without it every Load more
+/// re-scrolls from the top in the foreground and gets slower as the list
+/// grows, which is why it felt far slower than the News feed.
+const RECENT_AHEAD: u32 = 30;
 /// Groups read ahead like the feed: the first page paints, then the rest of
 /// the list (40 groups read in about 4 s) fills in without Load more.
 const GROUPS_AHEAD: u32 = 100;
@@ -2468,6 +2472,18 @@ fn load_feed_ahead(ui: &Ui) {
     send_ahead(ui, view, feed_args(FEED_AHEAD, false, true, true));
 }
 
+/// Most Recent's read-ahead, after its first page: the next posts arrive
+/// while the reader is still near the top, so Load more does not stall
+/// behind a re-scroll from the top.
+fn load_recent_ahead(ui: &Ui) {
+    let view = View::RecentFeed;
+    if ui.latest_list.lock().unwrap().pending.contains(&view) {
+        return;
+    }
+    activate_view(ui, &view);
+    send_ahead(ui, view, recent_feed_args(RECENT_AHEAD));
+}
+
 /// Queue a read-ahead as background work that appends to `view`'s rows: on
 /// screen when the section is showing, else into its cache.
 fn send_ahead(ui: &Ui, view: View, args: Vec<String>) {
@@ -3412,6 +3428,9 @@ fn apply_done(ui: &Ui, done: Done) {
                         if ui.items.get_count() > 0 {
                             load_feed_ahead(ui);
                         }
+                    }
+                    if view == View::RecentFeed && !append && ui.items.get_count() > 0 {
+                        load_recent_ahead(ui);
                     }
                 }
                 Err(e) => {
@@ -6084,6 +6103,20 @@ mod tests {
         assert_eq!(default_args(&View::Notifications), Some(notifs_args(10)));
         let args = default_args(&View::MyPosts).unwrap();
         assert!(args.windows(2).any(|w| w == ["-n", "5"]));
+    }
+
+    #[test]
+    fn recent_feed_reads_ahead_like_the_news_feed() {
+        // Most Recent re-scrolls from the top per request, so like the News
+        // feed it reads ahead in the background and Load more grows from
+        // the read-ahead page instead of waiting behind the user's tap.
+        const { assert!(RECENT_AHEAD > PAGE) };
+        let ahead = recent_feed_args(RECENT_AHEAD);
+        assert!(ahead.windows(2).any(|w| w == ["-n", "30"]));
+        assert_eq!(
+            more_args(&View::RecentFeed, &ahead, RECENT_AHEAD as usize, false),
+            Some(recent_feed_args(RECENT_AHEAD + PAGE))
+        );
     }
 
     #[test]

@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.47 - 2026-11-13
+
+Feeds (most recent) loads new posts as fast as the News feed now. It
+now reads ahead in the background after its first page, like the News
+feed's read-ahead, instead of making every Load more re-scroll from the
+top in the foreground — which got slower the further down the list you
+went. No backend changes.
+
 ## v0.7.46 - 2026-11-13
 
 Group membership questions now work from BlindFB. When a group's
