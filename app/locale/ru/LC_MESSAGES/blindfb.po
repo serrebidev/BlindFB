@@ -4148,6 +4148,10 @@ msgstr "Facebook не показал точный набор. Показаны R
 msgid "Off (no hotkey)"
 msgstr "Выкл (без сочетания)"
 
+#: crates/core/src\fb.rs:154
+msgid "Sponsored"
+msgstr "Реклама"
+
 #, rust-format
 #~ msgid "first {cap} members (list capped)"
 #~ msgstr "первые {cap} участников (список ограничен)"

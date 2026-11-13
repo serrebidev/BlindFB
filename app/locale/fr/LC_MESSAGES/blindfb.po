@@ -4230,6 +4230,10 @@ msgstr ""
 msgid "Off (no hotkey)"
 msgstr "Désactivé (aucun raccourci)"
 
+#: crates/core/src\fb.rs:154
+msgid "Sponsored"
+msgstr "Sponsorisé"
+
 #, rust-format
 #~ msgid "first {cap} members (list capped)"
 #~ msgstr "{cap} premiers membres (liste limitée)"

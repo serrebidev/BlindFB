@@ -22,6 +22,19 @@ on a machine signed in to Facebook in both browsers: Brave and Edge
 imports, authenticated profile and feed reads, and the sessions
 surviving a restart of BlindFB's dedicated browser.
 
+## v0.7.49 - 2026-11-13
+
+A shared post no longer reads as if you wrote it. In the News feed, Feeds,
+your profile and other people's posts, a shared post now names the sharer and
+then the original author, for example "Brandon Bracey / Tanya Warner". The
+post reader names both as well. Facebook marks the original author's name
+differently from the sharer's, so BlindFB had been reading only the sharer.
+
+Sponsored posts are labelled again: the row says "Sponsored" right after the
+advertiser's name. Facebook now draws the "Ad" label, and many post times, as
+pictures of text, so BlindFB had stopped spotting ads, and those posts had no
+time. Both are read again. Backend v0.1.5-blindfb.47.
+
 ## v0.7.48 - 2026-11-13
 
 Comments with replies now load in full (issue #30, Michal's report).

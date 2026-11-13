@@ -70,7 +70,12 @@ fetch it.
 ## Release (Forgejo, while GitHub is suspended)
 
 Releases live at `https://git.serrebiradio.com/serrebi/BlindFB/releases`.
-There is no CI runner: every step below is manual.
+A tag push runs `release.yml` on the Forgejo runners (Windows, WSL Ubuntu 22.04,
+Mac). It signs with the `MINISIGN_KEY` repository secret, uploads to a draft
+release and publishes once every asset is there. The current signing key
+(F806D88DE00499EF) is not under `~/.minisign` on this PC: the keys there are
+older ones, and assets signed with them fail `cargo xtask verify`. The manual steps
+below are for a leg that fails, and need the current key.
 
 1. Bump the workspace version in `Cargo.toml` and write the
    `## vX` section in `CHANGELOG.md`. The section is required; the publish
@@ -103,8 +108,8 @@ There is no CI runner: every step below is manual.
    `BlindFB-arm64.dmg` and its `.minisig`; it does not touch
    `SHA256SUMS`, so write that file after the dmg lands.
 
-Put `[skip ci]` in the release commit message: a tag push otherwise
-starts the GitHub-only `release.yml` on Forgejo. Create the release as a
+Do not put `[skip ci]` in the commit the tag points at: Forgejo then skips
+`release.yml` and nothing is built. Create a manual release as a
 prerelease until every asset is attached (`/releases/latest` skips
 prereleases, so installed copies are not offered a half-built release),
 then clear the prerelease flag.
