@@ -4,7 +4,7 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## Unreleased
+## v0.7.50 - 2026-11-13
 
 Signing in from Microsoft Edge or Brave works on Windows again.
 Current Edge and Brave encrypt their Facebook cookies app-bound
