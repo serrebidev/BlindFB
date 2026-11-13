@@ -180,12 +180,5 @@ jobs:
 
       - name: Verify every asset and signature arrived, then publish
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="${{ github.ref_name }}"
-          present="$(gh release view "$tag" -R "${{ github.repository }}" --json assets --jq '.assets[].name')"
-          echo "$present"
-          for wanted in BlindFB.zip BlindFB.zip.minisig BlindFB.tar.gz BlindFB.tar.gz.minisig BlindFB-arm64.dmg BlindFB-arm64.dmg.minisig; do
-            grep -qx "$wanted" <<<"$present" || { echo "missing: $wanted"; exit 1; }
-          done
-          gh release edit "$tag" -R "${{ github.repository }}" --notes-file release-notes.md --draft=false --latest
+          TOKEN: ${{ github.token }}
+        run: python3 .github/publish_release.py "${{ github.ref_name }}" release-notes.md
