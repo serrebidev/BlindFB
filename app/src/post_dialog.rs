@@ -711,10 +711,26 @@ pub(super) fn open(ui: &Ui, target: &str, share_requested: bool) {
     open_requested(ui, target, share_requested, None, None);
 }
 
+/// What the reader does first when opened over another dialog.
+pub(super) enum Over<'a> {
+    Read,
+    Share,
+    React(&'a str),
+    Comment,
+}
+
 /// Open the reader over another dialog (the group window). False when it did
 /// not open or left for another view (a profile), so that dialog closes too.
-pub(super) fn open_over(ui: &Ui, target: &str) -> bool {
-    open_requested(ui, target, false, None, None)
+pub(super) fn open_over(ui: &Ui, target: &str, what: Over) -> bool {
+    let action = match what {
+        Over::React(reaction) => REACTIONS
+            .iter()
+            .position(|kind| *kind == reaction)
+            .map(|index| ID_REACT + index as i32),
+        Over::Comment => Some(ID_POST_COMMENT),
+        Over::Read | Over::Share => None,
+    };
+    open_requested(ui, target, matches!(what, Over::Share), action, None)
 }
 
 pub(super) fn open_reel(ui: &Ui, target: &str, stream: Option<String>, preparing: bool) {

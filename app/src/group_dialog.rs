@@ -1,12 +1,15 @@
 //! The group window: a group's posts and its full member list in one
 //! dialog. Opened by activating a group in the Groups list. Enter on a
 //! post opens it in the post reader over this window, so closing the
-//! reader lands back on the same post; members carry the usual people
-//! actions (profile, message, friend request, web) on their context menu.
-use super::{load_view, open_url, Job, Tag, Task, Ui, View};
-use blindfb_core::fb::web_url;
+//! reader lands back on the same post. Posts carry the main list's post
+//! actions (react, comment, share, author, copy, web) on their context menu;
+//! members carry the usual people actions (profile, message, friend
+//! request, web).
+use super::post_dialog::Over;
+use super::{load_view, open_url, Job, Tag, Task, Ui, View, REACTIONS};
 use blindfb_core::fb::{
-    friend_add_args, members_args, parse_feed, parse_records, posts_args, Record,
+    friend_add_args, link_url, members_args, parse_feed, parse_records, posts_args, web_url,
+    Record,
 };
 use blindfb_core::{ntf, tf};
 use patois::t;
@@ -20,6 +23,16 @@ const ID_MEMBER_PROFILE: i32 = 12201;
 const ID_MEMBER_MESSAGE: i32 = 12202;
 const ID_MEMBER_FRIEND: i32 = 12203;
 const ID_MEMBER_WEB: i32 = 12204;
+const ID_POST_OPEN: i32 = 12210;
+const ID_POST_COMMENT: i32 = 12211;
+const ID_POST_SHARE: i32 = 12212;
+const ID_POST_PROFILE: i32 = 12213;
+const ID_POST_AUTHOR_POSTS: i32 = 12214;
+const ID_POST_MESSAGE: i32 = 12215;
+const ID_POST_COPY: i32 = 12216;
+const ID_POST_COPY_LINK: i32 = 12217;
+const ID_POST_WEB: i32 = 12218;
+const ID_POST_REACT: i32 = 12220; // + index into REACTIONS
 const MEMBER_CAP: u32 = 500;
 /// The window loads like the news feed: a small first page paints at
 /// once, then one background top-up fills the rest in.
@@ -218,7 +231,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
 
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
-    posts.on_item_double_clicked(move |_| w.open_selected_post(&u, &d));
+    posts.on_item_double_clicked(move |_| w.open_selected_post(&u, &d, Over::Read));
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
     dialog.on_char_hook(move |event| {
@@ -226,7 +239,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             if matches!(key.get_key_code(), Some(WXK_RETURN | WXK_NUMPAD_ENTER)) {
                 if w.posts.has_focus() {
                     event.skip(false);
-                    w.open_selected_post(&u, &d);
+                    w.open_selected_post(&u, &d, Over::Read);
                     return;
                 }
                 if w.members.has_focus() {
@@ -276,6 +289,39 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             .build();
         w.members.popup_menu(&mut menu, None);
     });
+    // The main list's post menu, same labels, acting on this window's row.
+    let w = window.clone();
+    posts.bind_internal(EventType::CONTEXT_MENU, move |event| {
+        event.skip(false);
+        let Some(record) = w.selected_post() else {
+            return;
+        };
+        let has_author = record.author_ref.as_deref().is_some_and(|r| !r.is_empty())
+            || !record.field(1).is_empty();
+        let mut menu = Menu::builder()
+            .append_item(ID_POST_OPEN, &t("&Open post and comments"), "")
+            .append_item(ID_POST_SHARE, &t("S&hare…"), "")
+            .append_item(ID_POST_COMMENT, &t("&Comment…"), "")
+            .build();
+        let react = Menu::builder().build();
+        for (i, reaction) in REACTIONS.iter().enumerate() {
+            let label = super::reaction_label(reaction);
+            react.append(ID_POST_REACT + i as i32, &label, "", ItemKind::Normal);
+        }
+        menu.append_submenu(react, &t("&React"), "");
+        menu.append_separator();
+        menu.append(ID_POST_PROFILE, &t("Author &profile"), "", ItemKind::Normal);
+        menu.append(ID_POST_AUTHOR_POSTS, &t("Author's p&osts"), "", ItemKind::Normal);
+        menu.append(ID_POST_MESSAGE, &t("&Message author"), "", ItemKind::Normal);
+        menu.append_separator();
+        menu.append(ID_POST_COPY, &t("Cop&y text"), "", ItemKind::Normal);
+        menu.append(ID_POST_COPY_LINK, &t("Copy &link"), "", ItemKind::Normal);
+        menu.append(ID_POST_WEB, &t("Open post on &Facebook (web)"), "", ItemKind::Normal);
+        for id in [ID_POST_PROFILE, ID_POST_AUTHOR_POSTS, ID_POST_MESSAGE] {
+            menu.enable_item(id, has_author);
+        }
+        w.posts.popup_menu(&mut menu, None);
+    });
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
     dialog.bind_internal(EventType::MENU, move |event| {
@@ -286,6 +332,9 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             if w.state.lock().unwrap().close_requested {
                 d.end_modal(ID_OK);
             }
+        } else if (ID_POST_OPEN..ID_POST_REACT + REACTIONS.len() as i32).contains(&id) {
+            event.skip(false);
+            w.post_action(&u, &d, id);
         } else {
             event.skip(true);
         }
@@ -310,26 +359,32 @@ pub(super) fn open(ui: &Ui, record: &Record) {
 }
 
 impl GroupWindow {
-    /// Opens the reader on top of this window. Rows carry relative links
-    /// (`/groups/<id>/posts/<post>/`), so they go through `reader_url` like
-    /// the main list's rows; the reader rejects anything else.
-    fn open_selected_post(&self, ui: &Ui, dialog: &Dialog) {
-        let Some(index) = self.posts.get_selection() else {
+    fn selected_post(&self) -> Option<Record> {
+        let index = self.posts.get_selection()? as usize;
+        self.state.lock().unwrap().posts.get(index).cloned()
+    }
+
+    /// The selected row's post link (relative, `/groups/<id>/posts/<post>/`).
+    fn selected_target(&self) -> Option<String> {
+        let record = self.selected_post()?;
+        let url = self.state.lock().unwrap().url.clone();
+        super::post_target(&View::PostsOf(url), &record).map(str::to_owned)
+    }
+
+    /// Opens the reader on top of this window, doing `what` first. Rows carry
+    /// relative links, so they go through `reader_url` like the main list's
+    /// rows; the reader rejects anything else.
+    fn open_selected_post(&self, ui: &Ui, dialog: &Dialog, what: Over) {
+        if self.selected_post().is_none() {
             return;
-        };
-        let target = {
-            let state = self.state.lock().unwrap();
-            state.posts.get(index as usize).and_then(|record| {
-                super::post_target(&View::PostsOf(state.url.clone()), record).map(str::to_owned)
-            })
-        };
-        let Some(target) = target else {
+        }
+        let Some(target) = self.selected_target() else {
             self.note(&t("This post row has no link, so it cannot be opened."));
             return;
         };
         match blindfb_core::posts::reader_url(&target) {
             Some(url) => {
-                if super::post_dialog::open_over(ui, &url) {
+                if super::post_dialog::open_over(ui, &url, what) {
                     self.posts.set_focus();
                 } else {
                     // The reader left for a profile; that view is loading behind us.
@@ -345,6 +400,69 @@ impl GroupWindow {
                     open_url(&web_url(&target));
                 }
             }
+        }
+    }
+
+    /// A post context-menu command. Reader actions open the reader over this
+    /// window; author views close it and open in the main window.
+    fn post_action(&self, ui: &Ui, dialog: &Dialog, id: i32) {
+        let Some(record) = self.selected_post() else {
+            return;
+        };
+        // The author line can carry badges ("Name / Admin"): the ref is the
+        // identity, the first name the fallback (see main.rs person_of).
+        let name = super::poster_name(record.field(1)).to_owned();
+        let who = record.author_ref.clone().filter(|r| !r.is_empty());
+        let view = match id {
+            ID_POST_OPEN => return self.open_selected_post(ui, dialog, Over::Read),
+            ID_POST_SHARE => return self.open_selected_post(ui, dialog, Over::Share),
+            ID_POST_COMMENT => return self.open_selected_post(ui, dialog, Over::Comment),
+            ID_POST_PROFILE | ID_POST_AUTHOR_POSTS => {
+                who.or_else(|| (!name.is_empty()).then(|| name.clone())).map(|who| {
+                    if id == ID_POST_PROFILE {
+                        View::ProfileOf(who)
+                    } else {
+                        View::PostsOf(who)
+                    }
+                })
+            }
+            ID_POST_MESSAGE => {
+                (!name.is_empty()).then(|| View::ChatWith(who.unwrap_or(name.clone()), name))
+            }
+            ID_POST_COPY => {
+                let text = super::display_for(&View::Feed, &record);
+                if Clipboard::get().set_text(&text) {
+                    self.note(&t("Text copied."));
+                }
+                return;
+            }
+            ID_POST_COPY_LINK => {
+                match self.selected_target().as_deref().and_then(link_url) {
+                    Some(link) if Clipboard::get().set_text(&link) => self.note(&t("Link copied.")),
+                    Some(_) => {}
+                    None => self.note(&t("This item has no link to copy.")),
+                }
+                return;
+            }
+            ID_POST_WEB => {
+                match self.selected_target() {
+                    Some(target) => open_url(&web_url(&target)),
+                    None => self.note(&t("This post row has no link, so it cannot be opened.")),
+                }
+                return;
+            }
+            _ => {
+                let index = (id - ID_POST_REACT) as usize;
+                if let Some(reaction) = REACTIONS.get(index) {
+                    self.open_selected_post(ui, dialog, Over::React(reaction));
+                }
+                return;
+            }
+        };
+        // No author: the menu disables these items, so nothing to say here.
+        if let Some(view) = view {
+            self.state.lock().unwrap().pending = Some(Pending::View(view));
+            dialog.end_modal(ID_OK);
         }
     }
 }
