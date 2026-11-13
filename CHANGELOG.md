@@ -13,8 +13,14 @@ cookie-file import could never read them — the same reason Chrome
 already used a different path. When the cookie-file import cannot
 produce a session, BlindFB now falls back to importing through the
 browser's own debugging endpoint (tick "Allow remote debugging" if
-the browser asks), and the sign-in dialog says so. If both imports
-fail, the error keeps both causes instead of only the last one.
+the browser asks), and the sign-in dialog says so. That import now
+moves the cookies over the browser's websocket itself: handing the
+backend only a port made it rediscover the socket through an address
+current Edge and Brave answer with 404. If both imports fail, the
+error keeps both causes instead of only the last one. Verified live
+on a machine signed in to Facebook in both browsers: Brave and Edge
+imports, authenticated profile and feed reads, and the sessions
+surviving a restart of BlindFB's dedicated browser.
 
 ## v0.7.48 - 2026-11-13
 
