@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.48 - 2026-11-13
+
+Comments with replies now load in full (issue #30, Michal's report).
+The post reader pressed Facebook's "View replies" buttons only in
+English, French and Vietnamese — the languages it knew — so on a Czech
+or Slovak Facebook (Michal's) the buttons never matched and replies
+stayed hidden, exactly like the audience picker before issue #20 taught
+it those languages. The reader now knows the Czech and Slovak reply
+buttons in every count form, and it also presses "View more comments"
+(in every language it knows) so later top-level comments load too
+instead of the list stopping at Facebook's first batch while the
+post's comment count kept counting replies and later comments. No
+backend changes.
+
 ## v0.7.47 - 2026-11-13
 
 Feeds (most recent) loads new posts as fast as the News feed now. It

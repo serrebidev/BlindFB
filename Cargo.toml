@@ -3,7 +3,7 @@ resolver = "2"
 members = ["app", "crates/core", "xtask"]
 
 [workspace.package]
-version = "0.7.47"
+version = "0.7.48"
 edition = "2021"
 license = "MIT"
 repository = "https://git.serrebiradio.com/serrebi/BlindFB"

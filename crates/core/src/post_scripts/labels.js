@@ -38,7 +38,16 @@
     replyStart: /^(?:Reply|Trả lời|Répondre)\b/i,
     // Buttons that load a comment's hidden replies: "View replies", "View 3 replies",
     // "View more replies". Never "Hide replies" — that would collapse them again.
-    viewReplies: exact(`View(?: more| previous)?(?: ${COUNT})? replies|View 1 reply|Afficher(?: les| plus de)?(?: ${COUNT})? réponses|Voir(?: les| plus de)?(?: ${COUNT})? réponses|Xem(?: thêm)?(?: ${COUNT})?(?: câu)? trả lời`),
+    // Czech and Slovak (issue #30, Michal's languages, already taught to the audience
+    // picker in issue #20 but never to this pattern, so his replies never loaded):
+    // "Zobrazit odpovědi / 1 odpověď / další odpovědi", "Zobraziť odpovede / ďalšie
+    // odpovede"; the noun stems cover every count declension (odpověď/odpovědi/odpovědí).
+    viewReplies: exact(`View(?: more| previous)?(?: ${COUNT})? replies|View 1 reply|Afficher(?: les| plus de)?(?: ${COUNT})? réponses|Voir(?: les| plus de)?(?: ${COUNT})? réponses|Xem(?: thêm)?(?: ${COUNT})?(?: câu)? trả lời|Zobrazit(?: další| více| předchozí| všechny)?(?: ${COUNT})? odpově(?:ď|di|dí)|Zobraziť(?: ďalšie| viac| predchádzajúce| všetky)?(?: ${COUNT})? odpove(?:ď|de|dí)`),
+    // Buttons that load more top-level comments: "View more comments", "View previous
+    // comments". read() never pressed these, so a post's list stopped at Facebook's
+    // first batch while its count (which includes replies) kept counting (issue #30).
+    // Never a sort label ("Most relevant") and never "Hide comments".
+    viewMoreComments: exact(`View(?: more| previous)?(?: ${COUNT})? comments|View ${COUNT} more comments|Voir(?: plus de| les)?(?: ${COUNT})? commentaires|Afficher(?: plus de| les)?(?: ${COUNT})? commentaires|Xem(?: thêm)?(?: ${COUNT})? bình luận|Xem các bình luận trước(?: đó)?|Zobrazit(?: další| více| předchozí)?(?: ${COUNT})? komentář(?:e|ů)?|Zobraziť(?: ďalšie| viac| predchádzajúce)?(?: ${COUNT})? komentár(?:e|ov)?`),
     // "Share", "Share X's post, 18 shares", "Partager la publication de X", "Partager, 4 partages".
     share: /^(?:Share|Partager)\b/i,
     shareNow: exact('Share now|Partager maintenant|Partager'),

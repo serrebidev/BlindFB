@@ -38,8 +38,12 @@ function fixture(mode = false) {
   const viewReplies = {innerText: '', isConnected: true, closest: () => null,
     getAttribute: () => repliesShown ? 'Hide replies' : 'View 1 reply',
     click() { if (!repliesShown) { repliesShown = true; const reply = article('2', comments[0]); reply.lines[2] = 'A hidden reply'; } }};
+  let moreShown = false;
+  const viewMore = {innerText: '', isConnected: true, closest: () => null,
+    getAttribute: () => moreShown ? '' : 'Zobrazit další komentáře',
+    click() { if (!moreShown) { moreShown = true; const extra = article('2'); extra.lines[2] = 'A later comment'; } }};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -391,6 +395,20 @@ function fixture(mode = false) {
   assert.equal(collapsedDetail.comments.find(c => c.id === '2').text, 'A hidden reply');
   for (const text of ['View replies', 'View 1 reply', 'View 12 replies', 'View more replies', 'Afficher les réponses', 'Voir 2 réponses']) assert.ok(W.viewReplies.test(text), text);
   for (const text of ['Hide replies', 'View comment', 'See more']) assert.ok(!W.viewReplies.test(text), text);
+  // Issue #30: Michal's Czech/Slovak Facebook never matched viewReplies, so replies
+  // stayed hidden for him even after issue #22. Every count declension must match,
+  // and the Hide forms must not (they would collapse replies again).
+  for (const text of ['Zobrazit odpovědi', 'Zobrazit 1 odpověď', 'Zobrazit 3 odpovědi', 'Zobrazit 12 odpovědí', 'Zobrazit další odpovědi', 'Zobrazit více odpovědí', 'Zobrazit předchozí odpovědi', 'Zobraziť odpovede', 'Zobraziť 1 odpoveď', 'Zobraziť 4 odpovede', 'Zobraziť 12 odpovedí', 'Zobraziť ďalšie odpovede', 'Zobraziť viac odpovedí', 'Zobraziť predchádzajúce odpovede']) assert.ok(W.viewReplies.test(text), text);
+  for (const text of ['Skrýt odpovědi', 'Skryť odpovede', 'Zobrazit komentáře', 'Odpovědět', 'Odpovedať']) assert.ok(!W.viewReplies.test(text), text);
+  for (const text of ['View more comments', 'View previous comments', 'View 10 comments', 'View 5 more comments', 'Voir plus de commentaires', 'Afficher plus de commentaires', 'Xem thêm bình luận', 'Zobrazit další komentáře', 'Zobrazit 7 komentářů', 'Zobrazit 1 komentář', 'Zobraziť ďalšie komentáre', 'Zobraziť 7 komentárov']) assert.ok(W.viewMoreComments.test(text), text);
+  for (const text of ['Hide comments', 'Most relevant', 'Newest comments', 'View replies', 'Zobrazit odpovědi']) assert.ok(!W.viewMoreComments.test(text), text);
+  // Issue #30: later top-level comments load on read too, in Michal's language.
+  const more = fixture('more');
+  more.article('1');
+  const moreDetail = JSON.parse(await more.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(moreDetail.comments.length, 2);
+  assert.equal(moreDetail.comments.find(c => c.id === '2').text, 'A later comment');
+  assert.equal(moreDetail.comments.find(c => c.id === '2').parent_id, null);
   console.log('French Facebook fixtures passed: reel and video comments, reactions, counts, times, badges.');
   console.log('Reader safety fixtures passed: missing, stale, changed, ambiguous, no root fallback, exact-thread confirmation, reply boxes beside comments, prefilled names.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -237,18 +237,25 @@
     return result;
   }
 
-  // Facebook hides replies behind "View replies" buttons; they are not in the page
-  // until pressed. Press them in bounded rounds (a reply can hide replies of its own)
-  // so read() returns the whole thread, not just the top level (issue #22).
+  // Facebook hides replies behind "View replies" buttons and later top-level
+  // comments behind "View more comments"; neither is in the page until pressed.
+  // Press both in bounded rounds (loaded comments can hide replies of their own,
+  // and a reply can hide further replies) so read() returns the whole thread,
+  // not just the first batch (issues #22 and #30).
   async function expandReplies() {
-    for (let round = 0; round < 5; round++) {
-      const buttons = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.viewReplies.test(F.clean(element.innerText || '') || label(element)));
+    const loadsMore = element => {
+      const text = F.clean(element.innerText || '') || label(element);
+      return W.viewReplies.test(text) || W.viewMoreComments.test(text);
+    };
+    for (let round = 0; round < 10; round++) {
+      const buttons = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && loadsMore(element));
       if (!buttons.length) return;
       const before = root.querySelectorAll(ARTICLE).length;
       for (const button of buttons) {
         if (button.isConnected) button.click();
       }
-      await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || buttons.every(button => !button.isConnected || !F.visible(button) || !W.viewReplies.test(F.clean(button.innerText || '') || label(button))), 5000);
+      const grew = await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || buttons.every(button => !button.isConnected || !F.visible(button) || !loadsMore(button)), 5000);
+      if (!grew) return;
     }
   }
 
