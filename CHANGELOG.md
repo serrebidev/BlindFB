@@ -15,7 +15,7 @@ Unknown states keep the neutral React label rather than guessing.
 Creating a Public post works with Facebook's replacement audience dialog.
 BlindFB ignores retained hidden audience panes and confirms the choice with
 Done, never with the last button in the old composer.
-Backend v0.1.5-blindfb.62.
+Backend v0.1.5-blindfb.63.
 
 ## v0.7.58 - 2026-11-14
 
