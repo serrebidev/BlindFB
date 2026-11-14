@@ -27,7 +27,7 @@ Settings, Privacy & Security, and press Open Anyway (or run
 The Facebook post menu is stricter about which post it works on: on a
 post's own page it goes only by that post's own date link, re-checks it
 during the press, and reports an error when Facebook opens no menu.
-Backend v0.1.5-blindfb.58.
+Backend v0.1.5-blindfb.59.
 
 ## v0.7.57 - 2026-11-14
 
