@@ -2,7 +2,6 @@
   const F = window.__fb;
   const ARTICLE = '[role=article][aria-label]';
   const EDITOR = '[role=textbox][contenteditable=true],textarea';
-  const EMOJI = /^[\p{Extended_Pictographic}\p{Emoji_Component}]+$/u;
   const own = (element, article) => element.closest(ARTICLE) === article;
   const label = element => F.clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '');
   const rawContents = element => element.value === undefined ? element.innerText || '' : element.value;
@@ -22,6 +21,8 @@
     return root;
   }
 
+  // Facebook's "See more", by its words or, in other languages, by the "…" it follows.
+  const seeMore = element => { const text = F.clean(element.innerText || '') || label(element); return W.seeMore.test(text) || W.cutShort(element, text); };
   const buttonLabeled = (scope, pattern) => [...scope.querySelectorAll('[role=button][aria-label]')].filter(element => F.visible(element) && pattern.test(label(element)));
 
   // The reel playing at the top of the viewer, as the card that owns its Comment button.
@@ -164,6 +165,34 @@
     return [...found.values()];
   }
 
+  // The card under a post's photos: a sale's price, place and title, or a shared link's
+  // site, title and summary. Facebook can mark only a hidden copy of the card (a sale's);
+  // the shown copy, unmarked, is its sibling: the card is the title's nearest ancestor
+  // with text on screen.
+  function attachments(scope, messages) {
+    const shown = element => !element.closest('script,style,button,[role=button],[aria-hidden=true]') && F.visible(element);
+    // "+3" counts the photos not shown.
+    const lines = card => W.textLines(card, shown).map(F.clean).filter(text => text && !/^\+\d+$/.test(text));
+    const found = [];
+    for (const title of scope.querySelectorAll('[data-ad-rendering-role=title]')) {
+      if (title.closest(ARTICLE) || messages.some(message => message.contains(title))) continue;
+      let card = title;
+      while (card && card !== scope && !lines(card).length) card = card.parentElement;
+      if (!card || card === scope || messages.some(message => card.contains(message)) || card.querySelector('[data-ad-rendering-role=like_button]') || found.some(other => other.contains(card))) continue;
+      found.push(card);
+    }
+    return found.map(card => {
+      const text = lines(card);
+      // "€300", "· Tallinn": a line that starts with the separator continues the one before.
+      const joined = [];
+      for (const line of text) {
+        if (/^·/.test(line) && joined.length) joined[joined.length - 1] += ' ' + line;
+        else if (!/^·?$/.test(line) && !joined.includes(line)) joined.push(line);
+      }
+      return joined.join('\n');
+    });
+  }
+
   // Profile links carry base64 "comment:<post>_<id>"; reduce it to the numeric comment id.
   function plain(value) {
     if (/^\d+$/.test(value)) return value;
@@ -196,33 +225,22 @@
   function comment(article) {
     const id = identity(article);
     // Read only this article's text, excluding nested replies and editable drafts.
-    // Facebook draws emoji as pictures; they stay on the line of the words around them.
-    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
-    const rows = [];
-    let node;
-    while ((node = walker.nextNode())) {
-      const picture = node.nodeType === 1;
-      if (picture && !(node.tagName === 'IMG' && EMOJI.test(node.alt))) continue;
-      const element = picture ? node : node.parentElement;
-      // aria-hidden skips Facebook's 1x1 screen-reader tooltip with the full date
-      // ("Thursday, November 12, 2026 at 3:48 PM"), which led every comment's text.
-      if (!own(element, article) || element.closest(EDITOR + ',script,style,[aria-hidden=true]') || !F.visible(element)) continue;
-      const block = element.closest('[dir=auto]'), last = rows[rows.length - 1];
-      const text = picture ? node.alt : node.nodeValue || '';
-      if (last && block && last.block === block && (picture || last.picture)) last.text += text;
-      else rows.push({block, text});
-      rows[rows.length - 1].picture = picture;
-    }
-    const lines = rows.map(row => F.clean(row.text)).filter(Boolean);
+    // aria-hidden skips Facebook's 1x1 screen-reader tooltip with the full date
+    // ("Thursday, November 12, 2026 at 3:48 PM"), which led every comment's text.
+    const lines = W.textLines(article, element => own(element, article) && !element.closest(EDITOR + ',script,style,[aria-hidden=true]') && F.visible(element)).map(F.clean).filter(Boolean);
     const author = lines[0] || article.getAttribute('aria-label') || '';
     const authorRef = F.profilePath ? [...article.querySelectorAll('a[href]')].filter(a => a.closest(ARTICLE) === article).map(a => F.profilePath(a.href !== undefined ? a.href : a.getAttribute('href'))).find(Boolean) || null : null;
     const ti = lines.findIndex((text, index) => index < 7 && time.test(text));
-    const body = lines.slice(1).filter((text, index) => index + 1 !== ti && !action.test(text) && !W.commentBadge.test(text));
+    // A link preview repeats its title (once as text, once as the heading of its link).
+    const body = lines.slice(1).filter((text, index) => index + 1 !== ti && !action.test(text) && !W.commentBadge.test(text)).filter((text, index, all) => text !== all[index - 1]);
     // A bare number after the text is the reaction count.
     if (body.length > 1 && /^\d+$/.test(body[body.length - 1])) body.pop();
     const ancestor = article.parentElement.closest(ARTICLE);
     const parent = ancestor && root.contains(ancestor) ? identity(ancestor).id : id.parent;
-    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, url: id.url, links: commentLinks(article)};
+    // Facebook starts a reply with a link to the person it answers, who need not be the
+    // author of the thread's first comment: a reply to a reply joins the same thread.
+    const replyTo = parent ? [...article.querySelectorAll('a[href]')].filter(a => own(a, article) && (!F.profilePath || F.profilePath(a.href))).map(a => F.clean(a.innerText || '')).find(name => name && name !== author && body[0] && body[0].startsWith(name) && /^(?:\s|$)/.test(body[0].slice(name.length))) || null : null;
+    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, reply_to: replyTo, url: id.url, links: commentLinks(article)};
   }
 
   const fingerprint = value => JSON.stringify([value.id, value.author, value.author_ref, value.text, value.parent_id, value.url]);
@@ -266,11 +284,11 @@
     const photo = root.getAttribute('role') === 'complementary';
     // Comments and replies loaded by expandReplies() arrive collapsed too: expand again after it.
     const expandText = async () => {
-      const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)) && (watch || photo || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
+      const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && seeMore(element) && (watch || photo || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
       for (const button of expand) {
         if (button.isConnected) button.click();
       }
-      if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
+      if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !seeMore(button)), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
     };
     await expandText();
     await expandReplies();
@@ -301,7 +319,8 @@
       if (owners.length !== 1) throw Error('More than one post is visible. Open the individual post permalink.');
     }
     // Group posts name the group, then the poster; comments carry their own names.
-    const names = [...root.querySelectorAll('[data-ad-rendering-role=profile_name]')].filter(e => !e.closest(ARTICLE)).map(e => F.clean(e.innerText || '').replace(/\s+/g, ' ')).filter(Boolean);
+    // profileName drops the name's own buttons: a group you are not in says "· Join".
+    const names = [...root.querySelectorAll('[data-ad-rendering-role=profile_name]')].filter(e => !e.closest(ARTICLE)).map(e => F.clean(F.profileName ? F.profileName(e) : e.innerText || '').replace(/\s+/g, ' ')).filter(Boolean);
     // A shared post's original author heads an unmarked linked heading between the sharer and the reactions.
     const like = root.querySelector('[data-ad-rendering-role=like_button]');
     for (const h of profile ? root.querySelectorAll('h2,h3,h4') : []) {
@@ -314,7 +333,7 @@
     const photoAuthor = photo && !profile ? F.clean([...root.querySelectorAll('h2 a[href],h3 a[href]')].find(a => F.visible(a) && !a.closest(ARTICLE))?.innerText || '').replace(/\s+/g, ' ') : '';
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
-    const text = [...new Set(outerMessages.map(element => F.postText(element)).filter(Boolean))].join('\n');
+    const text = [...new Set([...outerMessages.map(element => F.postText(element)), ...attachments(root, messages)].filter(Boolean))].join('\n');
     return JSON.stringify({url: target, author, time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
@@ -561,8 +580,33 @@
     return read();
   }
 
+  // Facebook's own translation: press See translation on the post and every comment that
+  // offers it, or, when none does, See original on what is translated; then read again.
+  // A reel's caption was read before its comments opened, so only its comments change.
+  async function translate() {
+    current();
+    const pressable = pattern => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && pattern.test(F.clean(element.innerText || '') || label(element)));
+    // Never the panel's "Translate all comments": pressed again once done, it hangs the page.
+    let buttons = pressable(W.seeTranslation);
+    if (!buttons.length) buttons = pressable(W.hideTranslation);
+    if (!buttons.length) throw Error('Facebook offers no translation for this post or its comments.');
+    const text = () => root.innerText || '';
+    const before = text();
+    for (const button of buttons) if (button.isConnected) button.click();
+    // The buttons change first and the texts follow one by one: wait until the text holds still.
+    await F.waitFor(() => text() !== before, 8000);
+    for (let last = '', still = 0, start = Date.now(); still < 3 && Date.now() - start < 6000;) {
+      await F.sleep(300);
+      const now = text();
+      still = now === last ? still + 1 : 0;
+      last = now;
+    }
+    return read();
+  }
+
   window.__blindfbPost = {
     setTitle(title) { current(); if (card && !reel.text) reel.text = title; return read(); },
+    translate,
     like, shareTarget, shareOpen, shareFill, shareNow, shareClose, reelReact,
     async initialize(url) {
       target = url;
@@ -571,20 +615,16 @@
         if (!card) throw Error('The reel could not be read.');
         // BlindFB plays the reel itself; a playing page would move on to the next reel.
         for (const video of document.querySelectorAll('video')) { video.muted = true; video.pause(); }
-        const expand = [...card.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)));
+        const expandable = () => [...card.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && seeMore(element));
+        // A caption cut with "…" can get its See more a moment after the card shows.
+        if (!expandable().length && /…/.test(card.innerText || '')) await F.waitFor(() => expandable().length, 3000);
+        const expand = expandable();
         for (const button of expand) if (button.isConnected) button.click();
-        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh the reader to retry.');
+        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !seeMore(button)), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh the reader to retry.');
         const author = [...card.querySelectorAll('a[href]')].map(a => F.clean(a.innerText || '')).find(Boolean) || '';
         // Caption lines, without the author, badges, Follow and the reaction, comment and share counts.
-        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT), lines = [];
-        let node;
-        while ((node = walker.nextNode())) {
-          const element = node.parentElement;
-          if (element.closest('script,style,button,[role=button],[aria-hidden=true]') || !F.visible(element)) continue;
-          const text = F.clean(node.nodeValue || '');
-          if (text) lines.push(text);
-        }
-        const caption = lines.filter(text => text !== author && !W.captionNoise.test(text));
+        const lines = W.textLines(card, element => !element.closest('script,style,button,[role=button],[aria-hidden=true]') && F.visible(element)).map(text => F.clean(text).replace(/^[\s·]+|[\s·]+$/g, ''));
+        const caption = lines.filter(text => text && text !== author && !W.captionNoise.test(text));
         await reveal(card);
         reel = {author, text: caption.join('\n'), links: links(card, card)};
         const comment = buttonLabeled(card, W.comment);

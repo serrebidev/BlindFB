@@ -384,6 +384,20 @@ function fixture(mode = false) {
   for (const text of ['J’aime', "J'aime", 'Répondre', 'Modifié', 'Voir la traduction']) assert.ok(W.commentAction.test(text), text);
   assert.ok(W.nextReel.test('Carte suivante'));
   assert.ok(W.seeMore.test('En voir plus'));
+  // "See more" in a language labels.js does not know: the button after text cut with "…".
+  assert.ok(W.cutShort({parentElement: {innerText: 'Я проверил информацию… Ещё'}}, 'Ещё'));
+  assert.ok(!W.cutShort({parentElement: {innerText: 'Done. Ещё'}}, 'Ещё'));
+  {
+    // One line split over inline spans (a translated phrase, a mention) reads as one line;
+    // a new block or a <br> starts the next. Emoji pictures stay with their words.
+    const el = (display, parent = null) => ({display, parentElement: parent, closest: () => null});
+    const scope = el('block'), p1 = el('block', scope), span = el('inline', p1), p2 = el('block', scope);
+    const nodes = [{nodeValue: 'dates (with', parentElement: p1}, {nodeValue: 'out the wat', parentElement: span}, {nodeValue: 'erfall):', parentElement: p1},
+      {nodeType: 1, tagName: 'IMG', alt: '😀', ...el('inline', p1)}, {nodeType: 1, tagName: 'BR'}, {nodeValue: 'next line', parentElement: p1}, {nodeValue: 'Second', parentElement: p2}];
+    const context = {document: {createTreeWalker: () => ({nextNode: () => nodes.shift() || null})}, NodeFilter: {SHOW_TEXT: 4, SHOW_ELEMENT: 1}, getComputedStyle: e => ({display: e.display}), window: {}};
+    vm.runInNewContext(fs.readFileSync(__dirname + '/labels.js', 'utf8'), context);
+    assert.deepEqual([...context.window.__blindfbLabels.textLines(scope, () => true)], ['dates (without the waterfall):😀', 'next line', 'Second']);
+  }
   assert.ok(W.manyReels.test('JECK a publié 3 nouveaux reels.'));
   assert.equal(('Partagé avec : Public'.match(W.sharingWith) || [])[1], 'Public');
   // Issue #22: replies hidden behind "View replies" load automatically on read.

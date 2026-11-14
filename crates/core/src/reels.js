@@ -120,18 +120,15 @@
       if (!card) break;
       const url = reelUrl(location.href);
       if (url && !seen.has(url)) {
-        const expand = [...card.querySelectorAll('[role=button],button')].filter(b => F.visible(b) && W.seeMore.test(label(b)));
+        // "See more" by its words or, in other languages, by the "…" it follows.
+        const seeMore = b => W.seeMore.test(label(b)) || W.cutShort(b, label(b));
+        const expand = [...card.querySelectorAll('[role=button],button')].filter(b => F.visible(b) && seeMore(b));
         for (const button of expand) button.click();
-        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(label(button))), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh to retry.');
+        if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !seeMore(button)), 5000)) throw Error('Facebook has not expanded the reel caption. Refresh to retry.');
         const author = [...card.querySelectorAll('a[href]')].map(a => F.clean(a.innerText || '')).find(Boolean) || '';
-        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT), lines = [];
-        let node;
-        while ((node = walker.nextNode())) {
-          const element = node.parentElement;
-          if (element.closest('script,style,button,[role=button],[aria-hidden=true]') || !F.visible(element)) continue;
-          const line = F.clean(node.nodeValue || '');
-          if (line && line !== author && !W.captionNoise.test(line)) lines.push(line);
-        }
+        // One caption line can span several inline spans (a mention, a translated phrase).
+        const lines = W.textLines(card, element => !element.closest('script,style,button,[role=button],[aria-hidden=true]') && F.visible(element))
+          .map(line => F.clean(line).replace(/^[\s·]+|[\s·]+$/g, '')).filter(line => line && line !== author && !W.captionNoise.test(line));
         const text = lines.join('\n');
         rows.push({url, author, text});
         seen.add(url);

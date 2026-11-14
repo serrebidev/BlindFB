@@ -26,6 +26,7 @@ const ID_REACT: i32 = 12120; // + index into REACTIONS
 const ID_COMMENT_PROFILE: i32 = 12110;
 const ID_COMMENT_FRIEND: i32 = 12111;
 const ID_COPY_ALL: i32 = 12112;
+const ID_TRANSLATE: i32 = 12113;
 fn composer_label() -> String {
     t("&Write a comment (Ctrl+Enter to send)")
 }
@@ -71,6 +72,7 @@ pub(super) struct PostReader {
     send: Button,
     share: Button,
     refresh: Button,
+    translate: Button,
     cancel: Button,
     state: Rc<RefCell<ReaderState>>,
 }
@@ -180,6 +182,7 @@ impl PostReader {
         self.send.enable(state.loaded && !state.busy);
         self.share.enable(state.loaded && !state.busy);
         self.refresh.enable(!state.busy);
+        self.translate.enable(state.loaded && !state.busy);
         self.cancel.enable(state.parent.is_some() && !state.busy);
         self.composer.set_editable(!state.busy);
     }
@@ -563,6 +566,14 @@ impl PostReader {
                 self.composer.set_focus();
             }
             ID_SHARE => self.share_start(ui),
+            ID_TRANSLATE => self.start(
+                ui,
+                Task::PostTranslate {
+                    page: self.page.clone(),
+                },
+                Tag::PostTranslated(self.session),
+                &t("Asking Facebook to translate…"),
+            ),
             ID_COPY_POST => {
                 // Before the post arrives the field holds the loading placeholder;
                 // copying it and reporting success leaves junk on the clipboard.
@@ -882,12 +893,13 @@ fn open_requested(
         .build();
     let share = Button::builder(&dialog).with_label(&t("S&hare…")).build();
     let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
+    let translate = Button::builder(&dialog).with_label(&t("Tr&anslate")).build();
     let cancel = Button::builder(&dialog).with_label(&t("Ca&ncel reply")).build();
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
         .with_label(&t("C&lose"))
         .build();
-    for button in [&send, &share, &refresh, &cancel, &close] {
+    for button in [&send, &share, &refresh, &translate, &cancel, &close] {
         // Same as above: strip the mnemonic marker before it becomes the
         // accessible name a screen reader announces.
         button.set_name(&button.get_label().replace('&', ""));
@@ -933,6 +945,7 @@ fn open_requested(
         send,
         share,
         refresh,
+        translate,
         cancel,
         state: Rc::new(RefCell::new(ReaderState {
             target: target.to_owned(),
@@ -1174,6 +1187,12 @@ fn open_requested(
         menu.append_submenu(react, &t("&React"), "");
         append_links_menu(&menu, &r.state.borrow().post_links);
         menu.append_separator();
+        menu.append(
+            ID_TRANSLATE,
+            &t("&Translate post and comments (Facebook)"),
+            "",
+            ItemKind::Normal,
+        );
         menu.append(ID_COPY_POST, &t("Cop&y post text"), "", ItemKind::Normal);
         menu.append(ID_COPY_ALL, &t("Copy &all comments"), "", ItemKind::Normal);
         menu.append(ID_COPY_POST_LINK, &t("Copy &link"), "", ItemKind::Normal);
@@ -1185,10 +1204,13 @@ fn open_requested(
         );
         menu.enable_item(ID_COPY_POST, loaded);
         menu.enable_item(ID_SHARE, ready);
+        menu.enable_item(ID_TRANSLATE, ready);
         r.post.popup_menu(&mut menu, None);
     });
     let (r, u) = (reader.clone(), ui.clone());
     share.on_click(move |_| r.share_start(&u));
+    let (r, u) = (reader.clone(), ui.clone());
+    translate.on_click(move |_| r.post_action(&u, ID_TRANSLATE));
     let (r, u) = (reader.clone(), ui.clone());
     dialog.bind_internal(EventType::MENU, move |event| match event.get_id() {
         ID_REPLY | ID_COPY | ID_WEB | ID_LIKE | ID_COMMENT_PROFILE | ID_COMMENT_FRIEND => {
@@ -1200,6 +1222,7 @@ fn open_requested(
             r.copy_all(&u);
         }
         id if (ID_POST_COMMENT..=ID_WEB_POST).contains(&id)
+            || id == ID_TRANSLATE
             || (ID_REACT..ID_REACT + REACTIONS.len() as i32).contains(&id) =>
         {
             event.skip(false);
@@ -1367,17 +1390,19 @@ fn comment_row(comment: &Comment, comments: &[Comment]) -> String {
     {
         Some(parent) => {
             // Facebook starts a reply with a mention of the person answered; the
-            // row already names them.
+            // row already names them. A reply to a reply answers that person,
+            // not the author of the thread's first comment.
+            let to = comment.reply_to.as_deref().unwrap_or(&parent.author);
             let text = comment
                 .text
-                .strip_prefix(parent.author.as_str())
-                .filter(|rest| rest.starts_with('\n'))
+                .strip_prefix(to)
+                .filter(|rest| rest.starts_with(char::is_whitespace))
                 .map_or(comment.text.as_str(), str::trim_start);
             format!(
                 "{}: {} — {}",
                 // TRANSLATORS: a reply in the comments list: who wrote it, then
                 // whose comment it answers ("Bob to Ann: text — 2h")
-                tf!("{author} to {parent}", author = comment.author, parent = parent.author),
+                tf!("{author} to {parent}", author = comment.author, parent = to),
                 text,
                 comment.time
             )
@@ -1632,6 +1657,11 @@ mod tests {
         let mut mention = comments[1].clone();
         mention.text = "Ann\nexactly.".into();
         assert_eq!(comment_row(&mention, &comments), "Bob to Ann: exactly. — 2h");
+        // A reply to a reply in Ann's thread names the person it answers.
+        let mut nested = comments[1].clone();
+        nested.text = "Cleo Day thanks, you too?".into();
+        nested.reply_to = Some("Cleo Day".into());
+        assert_eq!(comment_row(&nested, &comments), "Bob to Cleo Day: thanks, you too? — 2h");
     }
 
     #[test]

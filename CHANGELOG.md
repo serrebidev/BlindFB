@@ -4,6 +4,39 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.55 - 2026-11-14
+
+Comments and reel captions no longer break lines in the middle of a word
+or sentence. Facebook splits one line of text over several pieces — a
+mention, a hashtag, a phrase it translated — and the reader started a new
+line at each piece, so "without the waterfall" could read as "with",
+"out the wat", "er", "fall". Lines now end where Facebook's own lines end.
+
+Replies name the person they answer. A reply to a reply joins the thread
+of the first comment, so the reader said it answered that comment's
+author; it now uses the name the reply starts with. A link preview inside
+a comment no longer repeats its title.
+
+Sale posts show their price. The price, place and item title of a post
+offering something for sale sit in a card under the photos, which the
+reader skipped; they now follow the post text, like a shared link's title
+does. A group you have not joined no longer adds "· Join" to its name.
+
+"See more" is pressed in any Facebook language. It was only known in
+English, French and Vietnamese, so posts, comments and reel captions in
+other languages stayed cut short. A reel caption whose "See more" comes a
+moment late is also waited for.
+
+Translate, in the post reader (button, or the post's context menu), uses
+Facebook's own translation for the post and every comment that offers it.
+Press it again for the originals.
+
+New posts, comments and Marketplace descriptions are written in a
+multiline box. The old one-line box read a long post as one line and kept
+only the first line of pasted text. Enter now starts a new line; Tab moves
+to OK. OCR an image says what it is for when it asks for the picture, and
+lists picture files first. Backend v0.1.5-blindfb.55.
+
 ## v0.7.54 - 2026-11-13
 
 Group's posts has a keyboard shortcut entry. It was only in a post's

@@ -15,6 +15,10 @@ pub struct Comment {
     pub time: String,
     pub text: String,
     pub parent_id: Option<String>,
+    /// For a reply: the person it answers, from the mention Facebook starts it with.
+    /// A reply to a reply joins the thread of the first comment, so the parent's
+    /// author is not always who it answers.
+    pub reply_to: Option<String>,
     pub url: Option<String>,
     /// Browsable links inside the comment's own text (real targets, unwrapped
     /// from Facebook's redirect), for the reader's links list.
@@ -162,6 +166,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
             time: string(row, "time")?,
             text: string(row, "text")?,
             parent_id: optional_string(row, "parent_id")?,
+            reply_to: optional_string(row, "reply_to")?,
             url,
             links: parse_links(row),
         });
@@ -495,6 +500,14 @@ pub fn load(fb: &Fb, page: &str, target: &str) -> Result<String, String> {
         let _ = close(fb, page);
     }
     result
+}
+
+/// Press Facebook's own translation on the post and its comments, or back to the
+/// originals when nothing is left to translate; read-only for Facebook.
+pub fn translate(fb: &Fb, page: &str) -> Result<String, String> {
+    let output = recover_eval(fb, page, "window.__blindfbPost.translate()")?;
+    parse_detail(&output)?;
+    Ok(output)
 }
 
 pub fn refresh(fb: &Fb, page: &str) -> Result<String, String> {

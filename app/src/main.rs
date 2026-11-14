@@ -345,6 +345,7 @@ enum Tag {
     PostSent(u64),
     PostParticipation(u64, bool),
     PostLiked(u64),
+    PostTranslated(u64),
     PostShareReady(u64),
     PostShared(u64),
     PostNote(u64),
@@ -404,6 +405,9 @@ enum Task {
         reaction: String,
     },
     PostRefresh {
+        page: String,
+    },
+    PostTranslate {
         page: String,
     },
     PostSend {
@@ -1353,6 +1357,10 @@ fn spawn_worker(
                 },
                 Task::PostRefresh { page } => match &fb {
                     Some(fb) => blindfb_core::posts::refresh(fb, &page),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::PostTranslate { page } => match &fb {
+                    Some(fb) => blindfb_core::posts::translate(fb, &page),
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostSend { page, parent, text } => match &fb {
@@ -3628,6 +3636,13 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::PostLiked(session) => {
             post_dialog::apply(ui, session, done.result, &t("Like changed."), false)
         }
+        Tag::PostTranslated(session) => post_dialog::apply(
+            ui,
+            session,
+            done.result,
+            &t("Facebook's translation switched. Press Translate again for the original."),
+            false,
+        ),
         Tag::PostShareReady(session) => post_dialog::share_ready(ui, session, done.result),
         Tag::PostShared(session) => post_dialog::note(
             ui,
@@ -4394,7 +4409,7 @@ fn comment_selected(ui: &Ui) {
         post_dialog::comment(ui, &post);
         return;
     }
-    if let Some(text) = prompt_text(&ui.frame, t("Your comment:"), &t("Comment")) {
+    if let Some(text) = prompt_long_text(&ui.frame, t("Your comment:"), &t("Comment")) {
         if !text.trim().is_empty() {
             ui.send(Job {
                 task: Task::Fb(comment_args(&post, &text), None),
@@ -5482,7 +5497,7 @@ fn is_video_path(path: &str) -> bool {
 }
 
 fn new_post(ui: &Ui, with_media: bool) {
-    let Some(text) = prompt_text(&ui.frame, t("Post text:"), &t("New post")) else {
+    let Some(text) = prompt_long_text(&ui.frame, t("Post text:"), &t("New post")) else {
         return;
     };
     if text.trim().is_empty() {
@@ -5725,7 +5740,7 @@ fn sell_dialog(ui: &Ui) {
         &t("Sell on Marketplace"),
     );
     let category = category.filter(|c| !c.trim().is_empty());
-    let description = prompt_text(
+    let description = prompt_long_text(
         &ui.frame,
         t("Description (leave empty to skip):"),
         &t("Sell on Marketplace"),
@@ -5858,6 +5873,25 @@ fn search_dialog(ui: &Ui) {
     load_args(ui, View::SearchResults, search_args(&text, kind, PAGE));
 }
 
+/// Ask for text that can run over several lines: a post, a comment, a description.
+/// A one-line box keeps only the first line of pasted text and reads long text as
+/// one line; in this one Enter starts a new line, Tab reaches OK.
+pub(crate) fn prompt_long_text(
+    parent: &dyn WxWidget,
+    message: String,
+    title: &str,
+) -> Option<String> {
+    let hint = t("Enter starts a new line. Tab to OK when done.");
+    let dialog = TextEntryDialog::builder(parent, &format!("{message}\n{hint}"), title)
+        .with_style(TextEntryDialogStyle::Default | TextEntryDialogStyle::MultiLine)
+        .build();
+    let value = (dialog.show_modal() == ID_OK).then(|| dialog.get_value().unwrap_or_default());
+    dialog.destroy();
+    value
+        .map(|text| text.trim().to_owned())
+        .filter(|text| !text.is_empty())
+}
+
 fn ocr_dialog(ui: &Ui) {
     if !native_ocr::is_available() {
         show_warning(
@@ -5867,7 +5901,16 @@ fn ocr_dialog(ui: &Ui) {
         );
         return;
     }
-    let dialog = FileDialog::builder(&ui.frame).build();
+    let dialog = FileDialog::builder(&ui.frame)
+        .with_message(&t(
+            "Choose a picture file (a screenshot or a saved photo) to read the text written in it"
+        ))
+        .with_wildcard(&format!(
+            "{}|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.tif;*.tiff|{}|*.*",
+            t("Pictures"),
+            t("All files")
+        ))
+        .build();
     if dialog.show_modal() != ID_OK {
         return;
     }

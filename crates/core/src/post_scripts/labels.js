@@ -29,7 +29,11 @@
     leaveComment: exact('Leave a comment|Laissez un commentaire|Laisser un commentaire', ''),
     seeMore: exact('See more|Xem thêm|Voir plus|En voir plus|Afficher la suite'),
     // Words in a comment that are its actions, not its text.
-    commentAction: exact(`Like|Reply|Edited|See translation|Thích|Trả lời|J${A}aime|Répondre|Modifié|Voir la traduction`),
+    // "See original (Russian)": the language in brackets is optional.
+    commentAction: exact(`Like|Reply|Edited|See translation|See original(?: [(][^)]+[)])?|Hide translation|Rate this translation|Translation unavailable|Thích|Trả lời|Xem bản dịch|Xem bản gốc|J${A}aime|Répondre|Modifié|Voir la traduction|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction`),
+    // Facebook's own translation toggle on a post, a caption or a comment.
+    seeTranslation: exact('See translation|Voir la traduction|Xem bản dịch'),
+    hideTranslation: exact(`See originals?(?: [(][^)]+[)])?|Hide translation|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Xem bản gốc|Ẩn bản dịch`),
     // Badges on a comment's author line.
     commentBadge: exact('(?:by )?author|Top fan|Follow|Auteur|Fan assidu|Super fan|Suivre|·'),
     // A comment's own Like button, liked or not.
@@ -70,6 +74,42 @@
     time: /^(?:\d+\s*(?:s|m|h|d|w|y|min|hr|day|week)s?|Just now|il y a .+|\d+\s*(?:j|sem\.?|ans?)|À l’instant|À l'instant|Hier.*|Aujourd’hui.*|Aujourd'hui.*)$/i,
     // The account named by a reels page title: "X Reels | Facebook", French supposed "Reels de X".
     reelsTitleAuthor: title => String(title || '').replace(/ \| Facebook$/, '').replace(/ Reels.*$/, '').replace(/^Reels (?:de |d’|d')/i, ''),
+    // "See more" in any language: a short button right after text that Facebook cut
+    // with "…" (its words are known only for the languages above).
+    cutShort(element, text) {
+      const parent = element && element.parentElement;
+      if (!text || text.length > 40 || !parent || typeof parent.innerText !== 'string') return false;
+      const whole = parent.innerText.trim();
+      return whole.endsWith(text) && /(?:…|\.\.\.)$/.test(whole.slice(0, -text.length).trim());
+    },
+    // Text as the lines a reader sees, for the elements keep() accepts. Facebook splits one
+    // line over inline spans and links (a mention, a hashtag, a translated phrase), so a line
+    // ends only where the nearest non-inline box changes or at a <br>; read one text node per
+    // line and a word could break in two. Emoji pictures (img alt) join the words around them.
+    textLines(scope, keep) {
+      const EMOJI = /^[\p{Extended_Pictographic}\p{Emoji_Component}]+$/u;
+      const box = element => {
+        if (typeof getComputedStyle !== 'function') return null;
+        for (let e = element; e && e !== scope; e = e.parentElement) if (!/^(?:inline|contents)$/.test(getComputedStyle(e).display)) return e;
+        return scope;
+      };
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+      const rows = [];
+      let node, last = null;
+      while ((node = walker.nextNode())) {
+        const picture = node.nodeType === 1;
+        if (picture && node.tagName === 'BR') { last = null; continue; }
+        if (picture && !(node.tagName === 'IMG' && EMOJI.test(node.alt))) continue;
+        const element = picture ? node : node.parentElement;
+        if (!element || !keep(element)) continue;
+        const block = element.closest('[dir=auto]'), line = box(element);
+        const text = picture ? node.alt : node.nodeValue || '';
+        if (last && ((block && last.block === block && (picture || last.picture)) || (line && last.line === line))) last.text += text;
+        else rows.push(last = {block, line, text});
+        last.picture = picture;
+      }
+      return rows.map(row => row.text);
+    },
     // The picker button for one reaction keyword.
     reactionName: kind => exact((REACTIONS[kind] || []).join('|')),
     // What a reel's Like button says about the current reaction: 'none', a keyword, or
