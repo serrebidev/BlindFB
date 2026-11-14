@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.56 - 2026-11-14
+
+The Facebook post menu can no longer open another post's menu. While
+BlindFB pressed a feed post's "Actions for this post" button, Facebook
+could reuse that card for a different post, and the rest of the press
+went to the new one — so Save, Hide or Report could land on the wrong
+post. Every step of the press now checks the card still shows the post
+you chose, and stops if it does not. Backend v0.1.5-blindfb.56.
+
 ## v0.7.55 - 2026-11-14
 
 Comments and reel captions no longer break lines in the middle of a word
