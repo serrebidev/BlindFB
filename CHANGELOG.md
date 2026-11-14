@@ -4,6 +4,31 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.57 - 2026-11-14
+
+The Facebook post menu, on a post's own page, works only on that post.
+A post that moved or was removed can send its address to the author's
+profile, and the menu then opened the first post there; now BlindFB
+checks the page shows the post you chose and presses nothing otherwise.
+
+Fixes from a code review of the backend:
+
+- Selling on Marketplace no longer says "listed" when Facebook did not
+  confirm the listing. If Publish was pressed but nothing confirmed it,
+  BlindFB asks you to check Your listings before trying again.
+- A message to a seller counts as sent only when a new copy appears and
+  the message box empties, not because the same words are already in
+  the chat.
+- Joining a group whose questions are all choices now finds and answers
+  them, and answers go to the questions in the order the form shows.
+- People search with the friends filter waits for the filter to apply,
+  and a post found by search is no longer labelled a photo.
+- Unlocking encrypted chats has time for Facebook's full PIN check, and
+  a restore still running in the background is not interrupted by the
+  next thing BlindFB reads.
+
+Backend v0.1.5-blindfb.57.
+
 ## v0.7.56 - 2026-11-14
 
 The Facebook post menu can no longer open another post's menu. While
