@@ -605,6 +605,15 @@ pub fn friend_add_args(who: &str) -> Vec<String> {
     vec!["friend-add".to_owned(), who.to_owned()]
 }
 
+/// Follow a profile's public posts without a friend request; `undo` unfollows.
+pub fn follow_args(who: &str, undo: bool) -> Vec<String> {
+    let mut args = vec!["follow".to_owned(), who.to_owned()];
+    if undo {
+        args.push("--undo".to_owned());
+    }
+    args
+}
+
 pub fn profile_args(who: &str) -> Vec<String> {
     vec!["profile".to_owned(), who.to_owned()]
 }
@@ -1318,6 +1327,13 @@ mod tests {
             assert!(post_unconfirmed_message(error).unwrap().contains("Check My posts"));
         }
         assert_eq!(post_unconfirmed_message("Post button not found; nothing was posted"), None);
+    }
+
+    #[test]
+    fn follow_args_preserve_profile_and_direction() {
+        let profile = "https://www.facebook.com/profile.php?id=123";
+        assert_eq!(follow_args(profile, false), ["follow", profile]);
+        assert_eq!(follow_args(profile, true), ["follow", profile, "--undo"]);
     }
 
     #[test]

@@ -83,7 +83,28 @@ fn package() -> Result<(), Box<dyn Error>> {
         let bundle = app.bundle(&dist, &binary, &[], &[])?;
         // Ad-hoc: BlindFB is distributed unsigned, so the updater offers the image
         // to drag into Applications instead of replacing the bundle itself.
-        shipfitter::macos::sign(&bundle, &[])?;
+        if !shipfitter::macos::sign(&bundle, &[])? {
+            // Without a Developer ID only the executable carries the linker's ad-hoc
+            // signature, and the bundle's own signature is broken ("code has no
+            // resources but signature indicates they must be present"): a downloaded
+            // copy then says it "is damaged and can't be opened" (issue #10). An ad-hoc
+            // signature over the whole bundle is valid, so macOS offers Open Anyway
+            // (System Settings, Privacy & Security) instead.
+            let status = Command::new("codesign")
+                .args(["--force", "--deep", "--sign", "-"])
+                .arg(&bundle)
+                .status()?;
+            if !status.success() {
+                return Err(format!("ad-hoc signing {} failed", bundle.display()).into());
+            }
+            let status = Command::new("codesign")
+                .args(["--verify", "--deep", "--strict"])
+                .arg(&bundle)
+                .status()?;
+            if !status.success() {
+                return Err(format!("{} has no valid signature", bundle.display()).into());
+            }
+        }
         let out = dist.join(format!("{APP}-{}.dmg", shipfitter::host_arch_suffix()));
         shipfitter::macos::dmg(&bundle, &out)?;
         out

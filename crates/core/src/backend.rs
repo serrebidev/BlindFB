@@ -18,11 +18,11 @@ use crate::tf;
 /// The backend build BlindFB ships: upstream facebook-cli plus fixes still in review upstream
 /// (feed links/text, empty editors and the Messenger restore prompt). Back to upstream
 /// once those merge.
-pub const BACKEND_VERSION: &str = "0.1.5-blindfb.57";
+pub const BACKEND_VERSION: &str = "0.1.5-blindfb.58";
 /// Forgejo first; the GitHub mirror (synced from Forgejo) when Forgejo is down or errors.
 const RELEASE_URLS: [&str; 2] = [
-    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.57",
-    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.57",
+    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.58",
+    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.58",
 ];
 
 /// The managed backend exists but is not the build this BlindFB ships.

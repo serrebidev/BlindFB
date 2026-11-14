@@ -4,6 +4,31 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.58 - 2026-11-14
+
+Follow people without a friend request. A profile's context menu (and a
+commenter's) has Follow and Unfollow, like Facebook: their public posts
+reach your feed, and no friend request is sent. It works whether Facebook
+shows Follow as a button (public figures), in the profile's "…" menu, or
+— for a friend — in the Friends button's menu. Already following, or not
+following, is reported instead of pressing anything.
+
+New posts are announced. With voice or sound alerts on, BlindFB says or
+chimes that your post was published, instead of only writing it in the
+status bar.
+
+The Mac app opens. A downloaded copy said it "is damaged and can't be
+opened": only its program was signed, not the app around it, so macOS
+saw a broken signature. The whole app is now signed. BlindFB is still
+not notarized by Apple, so the first time macOS asks: open System
+Settings, Privacy & Security, and press Open Anyway (or run
+`xattr -dr com.apple.quarantine /Applications/BlindFB.app` once).
+
+The Facebook post menu is stricter about which post it works on: on a
+post's own page it goes only by that post's own date link, re-checks it
+during the press, and reports an error when Facebook opens no menu.
+Backend v0.1.5-blindfb.58.
+
 ## v0.7.57 - 2026-11-14
 
 The Facebook post menu, on a post's own page, works only on that post.

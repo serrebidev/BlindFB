@@ -43,7 +43,7 @@ use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
     chats_args, comment_args, delete_args, events_args, facebook_share_url, feed_args,
-    friend_add_args, friends_args, group_apply_args, group_join_args, group_leave_args,
+    follow_args, friend_add_args, friends_args, group_apply_args, group_join_args, group_leave_args,
     groups_args, link_url, listing_message_args, marketplace_args, msg_react_args, notifs_args,
     pages_args, parse_feed, parse_notifications, parse_records, places_args, post_args,
     post_done_message, post_unconfirmed_message,
@@ -83,6 +83,8 @@ const ID_EVENTS_VIEW: i32 = 10097;
 const ID_PAGES_VIEW: i32 = 10098;
 const ID_PLACES_VIEW: i32 = 10099;
 const ID_SAVED_VIEW: i32 = 10131;
+const ID_FOLLOW: i32 = 10132;
+const ID_UNFOLLOW: i32 = 10133;
 const ID_TRAY_TOGGLE: i32 = 10110;
 const ID_TRAY_HOTKEY: i32 = 10111;
 const ID_GROUP_POSTS: i32 = 10112;
@@ -1740,12 +1742,12 @@ fn build_menus(frame: &Frame) {
         .append_check_item(
             ID_VOICE_ALERTS,
             &shortcuts_dialog::menu_label(ID_VOICE_ALERTS, t("&Voice alerts")),
-            &t("Say new notifications and unread chats aloud"),
+            &t("Say new notifications, unread chats and published posts aloud"),
         )
         .append_check_item(
             ID_SOUND_ALERTS,
             &shortcuts_dialog::menu_label(ID_SOUND_ALERTS, t("&Sound alerts")),
-            &t("Play a sound for new notifications and unread chats"),
+            &t("Play a sound for new notifications, unread chats and published posts"),
         )
         .append_check_item(
             ID_LIST_VOICE_ALERTS,
@@ -1938,6 +1940,15 @@ fn alert_on_new(
     let words = alerts::spoken(&new);
     ui.status(&words);
     alerts::play(sound, voice.then_some(words));
+}
+
+/// A post the user wrote finished publishing in the background: with voice or
+/// sound alerts on, say or chime it, so nobody has to watch the status bar.
+fn alert_done(words: &str) {
+    let (voice, sound) = (alerts::enabled(alerts::Kind::Voice), alerts::enabled(alerts::Kind::Sound));
+    if voice || sound {
+        alerts::play(sound, voice.then(|| words.to_owned()));
+    }
 }
 
 /// A list the user asked for just finished loading: say or chime it, when
@@ -3832,6 +3843,7 @@ fn apply_done(ui: &Ui, done: Done) {
                 let message = post_done_message(&text);
                 set_details(ui, &message, None);
                 ui.status(&message);
+                alert_done(&message);
             }
             Err(e) => {
                 ui.status(&t("Error"));
@@ -4493,6 +4505,31 @@ fn friend_selected(ui: &Ui) {
     });
 }
 
+/// Follow (or unfollow) the person the selected record is about, without a
+/// friend request: their public posts reach the feed. The backend reports when
+/// nothing needs to change.
+fn follow_selected(ui: &Ui, undo: bool) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let Some(who) = person_of(ui, &record).filter(|who| !who.is_empty()) else {
+        return;
+    };
+    let name = match ui.state.borrow().view {
+        View::CommentsOf(_) => record.field(2).to_owned(),
+        _ => who.clone(),
+    };
+    ui.status(&if undo {
+        tf!("Unfollowing {name}…", name = name)
+    } else {
+        tf!("Following {name}…", name = name)
+    });
+    ui.send(Job {
+        task: Task::Fb(follow_args(&who, undo), None),
+        tag: Tag::Text,
+    });
+}
+
 fn group_posts_selected(ui: &Ui) {
     let Some((_, record)) = selected(ui) else {
         return;
@@ -5033,6 +5070,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         }
         ID_PROFILE => profile_selected(ui),
         ID_COMMENT_FRIEND => friend_selected(ui),
+        ID_FOLLOW => follow_selected(ui, false),
+        ID_UNFOLLOW => follow_selected(ui, true),
         ID_AUTHOR_POSTS => posts_selected(ui),
         ID_MESSAGE => message_selected(ui),
         ID_DELETE => delete_selected(ui),
@@ -5435,6 +5474,8 @@ fn show_item_menu(ui: &Ui) {
             &[
                 (ID_PROFILE, t("Commenter &profile")),
                 (ID_COMMENT_FRIEND, t("Add &friend")),
+                (ID_FOLLOW, t("Follo&w")),
+                (ID_UNFOLLOW, t("U&nfollow")),
                 (ID_MESSAGE, t("&Message commenter")),
                 (ID_COPY_TEXT, t("Cop&y text")),
             ],
@@ -5455,6 +5496,8 @@ fn show_item_menu(ui: &Ui) {
                 (ID_AUTHOR_POSTS, t("P&osts")),
                 (ID_MESSAGE, t("&Message")),
                 (ID_COMMENT_FRIEND, t("Add &friend")),
+                (ID_FOLLOW, t("Follo&w")),
+                (ID_UNFOLLOW, t("U&nfollow")),
                 (ID_WEB_PERSON, t("Open on &Facebook (web)")),
                 (ID_COPY_TEXT, t("Cop&y text")),
             ],
