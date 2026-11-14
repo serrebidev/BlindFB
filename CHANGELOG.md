@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.52 - 2026-11-14
+
+Long comments read in full. Facebook cuts long comments short behind
+"See more", and the post reader pressed those buttons only before it
+loaded more comments and replies, so comments that arrived with "View
+more comments" or "View replies" stayed cut off. The reader now presses
+"See more" again after loading them.
+
+Photo posts open in the reader with their whole caption. A photo shared
+on its own (a /photo/ link) has no post markers, so the reader said "The
+post could not be read". It now reads the photo's side panel: the poster,
+the full caption and the comments.
+
+Facebook post menu is safer: it only works on posts, stops pressing as
+soon as BlindFB stops waiting, and never opens the menu of a different
+post when Facebook reuses a card. Backend v0.1.5-blindfb.54.
+
 ## v0.7.51 - 2026-11-13
 
 Facebook's own post menu is in BlindFB. Post, Facebook post menu (also in

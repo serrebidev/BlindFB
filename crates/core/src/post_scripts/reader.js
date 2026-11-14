@@ -262,12 +262,19 @@
   async function read() {
     current();
     const watch = /\/videos\/|^\/watch\/?/.test(new URL(target).pathname);
-    const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)) && (watch || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
-    for (const button of expand) {
-      if (button.isConnected) button.click();
-    }
-    if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
+    // A photo page's side panel holds only this photo's caption and comments.
+    const photo = root.getAttribute('role') === 'complementary';
+    // Comments and replies loaded by expandReplies() arrive collapsed too: expand again after it.
+    const expandText = async () => {
+      const expand = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && W.seeMore.test(F.clean(element.innerText || '') || label(element)) && (watch || photo || element.closest(ARTICLE + ',[data-ad-rendering-role=story_message]')));
+      for (const button of expand) {
+        if (button.isConnected) button.click();
+      }
+      if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !W.seeMore.test(F.clean(button.innerText || '') || label(button))), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
+    };
+    await expandText();
     await expandReplies();
+    await expandText();
     const rows = collect();
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {
@@ -277,6 +284,12 @@
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
     const head = profile ? F.vtext(profile.parentElement.parentElement.parentElement) : [];
     const messages = [...root.querySelectorAll('[data-ad-rendering-role=story_message]')].filter(element => F.visible(element) && !element.closest(ARTICLE));
+    // Photo captions carry no story_message marker: the longest plain text block before the reactions.
+    if (photo && !messages.length) {
+      const like = root.querySelector('[data-ad-rendering-role=like_button]');
+      const caption = [...root.querySelectorAll('[dir=auto]')].filter(element => F.visible(element) && !element.closest('a,h2,h3,' + ARTICLE + ',' + EDITOR) && (!like || element.compareDocumentPosition(like) & Node.DOCUMENT_POSITION_FOLLOWING)).sort((a, b) => (b.innerText || '').length - (a.innerText || '').length)[0];
+      if (caption) messages.push(caption);
+    }
     const watchCaption = !messages.length && watch;
     // Watch captions lack the story_message marker used by ordinary posts.
     if (watchCaption) messages.push(...[...root.querySelectorAll('[dir=auto][style*="text-align"]')].filter(element => F.visible(element) && !element.closest(ARTICLE + ',' + EDITOR)));
@@ -297,7 +310,9 @@
       const name = F.clean(a.innerText || '').replace(/\s+/g, ' ');
       if (name) names.push(name);
     }
-    const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : '';
+    // A photo page names its poster in the panel's first linked heading.
+    const photoAuthor = photo && !profile ? F.clean([...root.querySelectorAll('h2 a[href],h3 a[href]')].find(a => F.visible(a) && !a.closest(ARTICLE))?.innerText || '').replace(/\s+/g, ' ') : '';
+    const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set(outerMessages.map(element => F.postText(element)).filter(Boolean))].join('\n');
     return JSON.stringify({url: target, author, time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
@@ -598,7 +613,9 @@
         // Facebook nests one post dialog inside another wrapper dialog; keep the innermost.
         const candidates = visible.filter(element => !visible.some(other => other !== element && element.contains(other)));
         if (candidates.length > 1) throw Error('More than one post dialog is open.');
-        return candidates[0] || document.querySelector('[role=main] [data-ad-rendering-role=profile_name]')?.closest('[role=main]');
+        // A photo page (/photo/?fbid=) shows the caption and comments in a side panel, unmarked.
+        const photo = /^\/photo(\.php)?\/?$/.test(new URL(url).pathname) ? [...document.querySelectorAll('[role=complementary]')].find(element => F.visible(element) && element.querySelector('[data-ad-rendering-role=like_button]')) : null;
+        return candidates[0] || document.querySelector('[role=main] [data-ad-rendering-role=profile_name]')?.closest('[role=main]') || photo;
       }, 15000);
       address = location.href;
       if (!root) throw Error('The post could not be read.');
