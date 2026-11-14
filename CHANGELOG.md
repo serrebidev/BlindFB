@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.61 - 2026-11-14
+
+Posting again works for slow connections. After pressing Post, BlindFB
+waited 15 seconds for Facebook to answer, then gave up: "Facebook may
+have published your post, but BlindFB could not confirm it." That
+aborted the post before Facebook finished: it never appeared in
+My posts. BlindFB now waits a minute for the answer, and follows
+Facebook's own resubmitted post instead of failing on it.
+Backend v0.1.5-blindfb.66.
+
 ## v0.7.60 - 2026-11-14
 
 Posting with an audience works on slow connections and in more
