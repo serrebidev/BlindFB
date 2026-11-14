@@ -16,6 +16,15 @@
   let card = null, reel = null;
   const identities = new WeakMap();
 
+  function ownReaction(scope, isReel = false) {
+    const buttons = isReel
+      ? [...scope.querySelectorAll('[role=button][aria-label]')].filter(b => F.visible(b) && !b.closest(ARTICLE) && W.reelReaction(label(b), b.getAttribute('aria-pressed')) !== null)
+      : [...scope.querySelectorAll('[data-ad-rendering-role=like_button]')].filter(b => F.visible(b) && !b.closest(ARTICLE)).map(b => b.closest('[role=button]') || b);
+    const button = buttons.length === 1 ? buttons[0] : null;
+    const pressed = button?.getAttribute('aria-pressed');
+    return {reaction_label: button ? label(button) : '', reaction_pressed: pressed === 'true' ? true : pressed === 'false' ? false : null};
+  }
+
   function current() {
     if (!root || !root.isConnected || location.href !== address || (card && !card.isConnected)) throw Error('Post changed or reader expired. Refresh or reopen the post.');
     return root;
@@ -296,7 +305,7 @@
     const rows = collect();
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {
-      return JSON.stringify({url: target, ...reel, time: '', comments: rows.map(row => row.value), video: target});
+      return JSON.stringify({url: target, ...reel, ...ownReaction(card, true), time: '', comments: rows.map(row => row.value), video: target});
     }
     await reveal(root);
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
@@ -334,7 +343,7 @@
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set([...outerMessages.map(element => F.postText(element)), ...attachments(root, messages)].filter(Boolean))].join('\n');
-    return JSON.stringify({url: target, author, time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
+    return JSON.stringify({url: target, author, ...ownReaction(root), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
   function selected(id) {

@@ -71,6 +71,7 @@ pub(super) struct PostReader {
     status: TextCtrl,
     send: Button,
     share: Button,
+    react: Button,
     refresh: Button,
     translate: Button,
     cancel: Button,
@@ -84,6 +85,7 @@ struct ReelPlayback {
 
 struct ReaderState {
     target: String,
+    reaction: Option<String>,
     comments: Vec<Comment>,
     /// The links list's current contents: the post's links, or the selected
     /// comment's while `links_for` names it.
@@ -181,6 +183,12 @@ impl PostReader {
         self.open_link.enable(self.links.get_selection().is_some());
         self.send.enable(state.loaded && !state.busy);
         self.share.enable(state.loaded && !state.busy);
+        self.react.enable(state.loaded && !state.busy);
+        let label = blindfb_core::fb::reaction_button_label(state.reaction.as_deref());
+        if self.react.get_label() != label {
+            self.react.set_label(&label);
+            self.react.set_name(&label);
+        }
         self.refresh.enable(!state.busy);
         self.translate.enable(state.loaded && !state.busy);
         self.cancel.enable(state.parent.is_some() && !state.busy);
@@ -620,8 +628,10 @@ impl PostReader {
                 }
                 ui.send(Job {
                     task: Task::Fb(react_args(&target, reaction), None),
-                    tag: Tag::PostNote(self.session),
+                    tag: Tag::Reacted { post: target, reaction: reaction.to_owned(), account: ui.state.borrow().account, reader: Some(self.session) },
                 });
+                self.state.borrow_mut().busy = true;
+                self.controls();
                 self.message(ui, &t("Reacting…"));
             }
             _ => {}
@@ -892,6 +902,7 @@ fn open_requested(
         .with_label(&t("&Send (Ctrl+Enter)"))
         .build();
     let share = Button::builder(&dialog).with_label(&t("S&hare…")).build();
+    let react = Button::builder(&dialog).with_label(&t("React")).build();
     let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
     let translate = Button::builder(&dialog).with_label(&t("Tr&anslate")).build();
     let cancel = Button::builder(&dialog).with_label(&t("Ca&ncel reply")).build();
@@ -899,7 +910,7 @@ fn open_requested(
         .with_id(ID_CANCEL)
         .with_label(&t("C&lose"))
         .build();
-    for button in [&send, &share, &refresh, &translate, &cancel, &close] {
+    for button in [&send, &share, &react, &refresh, &translate, &cancel, &close] {
         // Same as above: strip the mnemonic marker before it becomes the
         // accessible name a screen reader announces.
         button.set_name(&button.get_label().replace('&', ""));
@@ -944,11 +955,13 @@ fn open_requested(
         status,
         send,
         share,
+        react,
         refresh,
         translate,
         cancel,
         state: Rc::new(RefCell::new(ReaderState {
             target: target.to_owned(),
+            reaction: None,
             comments: Vec::new(),
             links: initial_links.clone(),
             post_links: initial_links,
@@ -1044,6 +1057,15 @@ fn open_requested(
     });
     let (r, u) = (reader.clone(), ui.clone());
     send.on_click(move |_| r.send(&u));
+    let r = reader.clone();
+    react.on_click(move |_| {
+        let mut menu = Menu::builder().build();
+        for (i, reaction) in REACTIONS.iter().enumerate() {
+            menu.append(ID_REACT + i as i32, &reaction_label(reaction), "", ItemKind::Check);
+            menu.check_item(ID_REACT + i as i32, r.state.borrow().reaction.as_deref() == Some(*reaction));
+        }
+        r.react.popup_menu(&mut menu, None);
+    });
     let (r, u) = (reader.clone(), ui.clone());
     composer.bind_internal(EventType::KEY_DOWN, move |event| {
         if event.control_down()
@@ -1184,7 +1206,7 @@ fn open_requested(
             let label = reaction_label(reaction);
             react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
         }
-        menu.append_submenu(react, &t("&React"), "");
+        menu.append_submenu(react, &blindfb_core::fb::reaction_button_label(r.state.borrow().reaction.as_deref()), "");
         append_links_menu(&menu, &r.state.borrow().post_links);
         menu.append_separator();
         menu.append(
@@ -1436,6 +1458,14 @@ pub(super) fn share_ready(ui: &Ui, session: u64, result: Result<String, String>)
     }
 }
 
+/// Update the reader only after Facebook confirmed the requested reaction.
+pub(super) fn reaction_changed(ui: &Ui, session: u64, reaction: &str) {
+    if let Some(reader) = active(ui, session) {
+        reader.state.borrow_mut().reaction = Some(reaction.to_owned());
+        note(ui, session, Ok(t("Reaction set.")), true);
+    }
+}
+
 /// Show an action's outcome; `release` ends the reader's busy state.
 pub(super) fn note(ui: &Ui, session: u64, result: Result<String, String>, release: bool) {
     let Some(reader) = active(ui, session) else {
@@ -1470,6 +1500,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             reader.message(ui, &tf!("{error} Your draft has been kept.", error = error));
         }
         Ok(detail) => {
+            super::remember_reaction(ui, &detail.url, detail.reaction.as_deref());
             // Before this refresh, so a sent comment can be recognised as new.
             let previous_ids: std::collections::HashSet<String> = reader
                 .state
@@ -1531,6 +1562,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 state.target = detail.url;
                 state.post_links = detail.links;
                 state.video = detail.video;
+                state.reaction = detail.reaction;
                 state.loaded = true;
             }
             reader.follow_comment_links();
@@ -1586,6 +1618,7 @@ mod tests {
     fn requested_share_waits_for_load_and_starts_once() {
         let mut state = ReaderState {
             target: "https://www.facebook.com/a/posts/123".to_owned(),
+            reaction: None,
             comments: Vec::new(),
             links: Vec::new(),
             post_links: Vec::new(),

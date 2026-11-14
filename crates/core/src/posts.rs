@@ -45,6 +45,7 @@ pub struct PostDetail {
     pub links: Vec<Link>,
     /// The Facebook URL of the post's video or reel, for the player.
     pub video: Option<String>,
+    pub reaction: Option<String>,
 }
 
 /// Keep article links first and the current Facebook post available at the end.
@@ -205,6 +206,10 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         comments,
         links,
         video,
+        reaction: crate::fb::own_reaction(
+            value["reaction_label"].as_str().unwrap_or(""),
+            value["reaction_pressed"].as_bool(),
+        ).map(str::to_owned),
     })
 }
 
@@ -691,6 +696,15 @@ pub fn close(fb: &Fb, page: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn post_detail_keeps_the_accounts_reaction_when_exposed() {
+        let mut value = serde_json::json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"1h","text":"Body","comments":[]});
+        assert_eq!(parse_detail(&value.to_string()).unwrap().reaction, None);
+        value["reaction_label"] = "Remove Wow from A's post".into();
+        value["reaction_pressed"] = true.into();
+        assert_eq!(parse_detail(&value.to_string()).unwrap().reaction.as_deref(), Some("wow"));
+    }
+
     #[test]
     fn participation_is_distinct_from_a_confirmed_comment() {
         let form = parse_participation(r#"{"participation":{"token":"1","text":"Group rules","fields":[{"kind":"choice","prompt":"Live in Hope?","choices":["yes","no"]},{"kind":"text","prompt":"About Hope?","choices":[]},{"kind":"check","prompt":"Agree to rules","choices":[]}]}}"#).unwrap().unwrap();

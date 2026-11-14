@@ -23,9 +23,56 @@ pub struct Record {
     /// The author name alone cannot resolve a group post's author: the
     /// group name is merged into it.
     pub author_ref: Option<String>,
+    /// The account's own reaction, when Facebook exposed it; never a reaction count.
+    pub reaction: Option<String>,
     /// Browsable links carried on `cl` lines after a comment row (the real
     /// targets inside the comment's text), for the details pane's link list.
     pub links: Vec<crate::posts::Link>,
+}
+
+/// Read only the action part of Facebook's label, never reaction words in an author's name.
+pub fn own_reaction(label: &str, pressed: Option<bool>) -> Option<&'static str> {
+    let label = label.replace('’', "'").to_lowercase();
+    if label.starts_with("react with like to ") || label.starts_with("réagir avec j'aime à ") {
+        return Some("none");
+    }
+    let mut name = label.split(',').next()?.trim();
+    let mut selected = pressed == Some(true);
+    for prefix in ["remove ", "retirer ", "supprimer ", "annuler "] {
+        if let Some(rest) = name.strip_prefix(prefix) {
+            selected = true;
+            name = rest;
+            break;
+        }
+    }
+    for separator in [" from ", " de la publication de ", " de la publication d'"] {
+        if let Some((action, _)) = name.split_once(separator) { name = action; }
+    }
+    let kind = match name {
+        "like" | "liked" | "j'aime" | "thích" => "like",
+        "love" | "j'adore" | "yêu thích" => "love",
+        "care" | "solidaire" | "thương thương" => "care",
+        "haha" => "haha",
+        "wow" | "wouah" => "wow",
+        "sad" | "triste" | "buồn" => "sad",
+        "angry" | "en colère" | "grrr" | "phẫn nộ" => "angry",
+        _ => return None,
+    };
+    Some(if pressed == Some(false) || (kind == "like" && !selected && name != "liked") { "none" } else { kind })
+}
+
+pub fn reaction_button_label(reaction: Option<&str>) -> String {
+    let name = match reaction {
+        Some("like") => return t("Liked"),
+        Some("love") => t("Love"),
+        Some("care") => t("Care"),
+        Some("haha") => t("Haha"),
+        Some("wow") => t("Wow"),
+        Some("sad") => t("Sad"),
+        Some("angry") => t("Angry"),
+        _ => return t("React"),
+    };
+    tf!("React: {reaction}", reaction = name)
 }
 
 impl Record {
@@ -55,6 +102,7 @@ pub fn parse_records(output: &str) -> Vec<Record> {
             fields: line.split('\t').map(str::to_owned).collect(),
             raw: line.to_owned(),
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
         })
         .collect()
@@ -70,12 +118,19 @@ pub fn parse_feed(output: &str) -> Vec<Record> {
     // An `au` line directly before a post line carries that post author's
     // profile path; it is not a row of its own.
     let mut pending_ref: Option<String> = None;
+    let mut pending_reaction = None;
     for mut record in parse_records(output) {
         if record.field(0) == "au" {
             pending_ref = Some(record.field(1).to_owned()).filter(|r| !r.is_empty());
             continue;
         }
+        if record.field(0) == "ru" {
+            let pressed = record.field(2).parse::<bool>().ok();
+            pending_reaction = own_reaction(record.field(1), pressed).map(str::to_owned);
+            continue;
+        }
         record.author_ref = pending_ref.take();
+        record.reaction = pending_reaction.take();
         if record.fields.len() >= 5 {
             let mut text = record.fields[4..].join(" ");
             // Text repeated back to back: keep the first half.
@@ -214,6 +269,7 @@ pub fn parse_notifications(output: &str) -> Result<Vec<Record>, String> {
                 raw: fields.join("\t"),
                 fields,
                 author_ref: None,
+                reaction: None,
                 links: Vec::new(),
             })
         })
@@ -231,6 +287,7 @@ pub fn recent_feed_args(count: u32) -> Vec<String> {
         "-n".into(),
         count.to_string(),
         "--full".into(),
+        "--reaction-state".into(),
         "--urls".into(),
     ]
 }
@@ -543,7 +600,7 @@ fn which(name: &str) -> Result<PathBuf, ()> {
 // --- Command builders: one per `fb` subcommand BlindFB exposes. ---
 
 pub fn feed_args(count: u32, refresh: bool, full: bool, urls: bool) -> Vec<String> {
-    let mut args = vec!["feed".to_owned(), "-n".to_owned(), count.to_string()];
+    let mut args = vec!["feed".to_owned(), "-n".to_owned(), count.to_string(), "--reaction-state".to_owned()];
     if refresh {
         args.push("--refresh".to_owned());
     }
@@ -563,6 +620,7 @@ pub fn posts_args(who: &str, count: u32, urls: bool) -> Vec<String> {
         "-n".to_owned(),
         count.to_string(),
         "--full".to_owned(),
+        "--reaction-state".to_owned(),
     ];
     if urls {
         args.push("--urls".to_owned());
@@ -576,6 +634,7 @@ pub fn saved_args(count: u32) -> Vec<String> {
         "-n".to_owned(),
         count.to_string(),
         "--full".to_owned(),
+        "--reaction-state".to_owned(),
     ]
 }
 
@@ -1130,6 +1189,7 @@ mod tests {
                 "-n",
                 "20",
                 "--full",
+                "--reaction-state",
                 "--urls"
             ]
         );
@@ -1237,7 +1297,7 @@ mod tests {
     #[test]
     fn builds_feed_refresh_full() {
         let args = feed_args(30, true, true, true);
-        assert_eq!(args, ["feed", "-n", "30", "--refresh", "--full", "--urls"]);
+        assert_eq!(args, ["feed", "-n", "30", "--reaction-state", "--refresh", "--full", "--urls"]);
     }
 
     #[test]
@@ -1334,6 +1394,28 @@ mod tests {
         let profile = "https://www.facebook.com/profile.php?id=123";
         assert_eq!(follow_args(profile, false), ["follow", profile]);
         assert_eq!(follow_args(profile, true), ["follow", profile, "--undo"]);
+    }
+
+    #[test]
+    fn own_reaction_labels_ignore_authors_and_keep_selected_state() {
+        assert_eq!(own_reaction("React with Like to Love's post", None), Some("none"));
+        assert_eq!(own_reaction("Remove Like from Love's post", None), Some("like"));
+        assert_eq!(own_reaction("Remove Love from Author's post", None), Some("love"));
+        assert_eq!(own_reaction("J’aime, 28 réactions", Some(true)), Some("like"));
+        assert_eq!(own_reaction("J’aime, 28 réactions", Some(false)), Some("none"));
+        for kind in ["care", "haha", "wow", "sad", "angry"] {
+            assert_eq!(own_reaction(&format!("Remove {kind}"), None), Some(kind));
+        }
+        assert_eq!(own_reaction("Unrecognized label", None), None);
+        assert_eq!(reaction_button_label(Some("like")), "Liked");
+        assert_eq!(reaction_button_label(Some("love")), "React: Love");
+        assert_eq!(reaction_button_label(Some("none")), "React");
+        assert_eq!(reaction_button_label(None), "React");
+        let rows = parse_feed("au\t/author\nru\tRemove Love\ttrue\n/p/posts/1\tAuthor\t1h\t1/0/0\tBody\n/p/posts/2\tOther\t2h\t0/0/0\tText");
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].reaction.as_deref(), Some("love"));
+        assert_eq!(rows[0].author_ref.as_deref(), Some("/author"));
+        assert_eq!(rows[1].reaction, None);
     }
 
     #[test]

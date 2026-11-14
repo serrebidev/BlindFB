@@ -309,6 +309,7 @@ enum Tag {
         append: bool,
     },
     Text,
+    Reacted { post: String, reaction: String, account: u64, reader: Option<u64> },
     /// A comment sent from the list views: success must say so, not "Done",
     /// and a comments view showing that post refreshes to show it (issue #22).
     Commented {
@@ -350,7 +351,6 @@ enum Tag {
     PostTranslated(u64),
     PostShareReady(u64),
     PostShared(u64),
-    PostNote(u64),
     PostShareClosed(u64),
     LoginRequest,
     LoginAnswered,
@@ -3400,6 +3400,12 @@ fn refresh_controls(ui: &Ui) {
         );
     ui.open_btn.enable(has && openable);
     ui.react_btn.enable(has && post_list);
+    let reaction = selected(ui).and_then(|(_, record)| record.reaction);
+    let label = blindfb_core::fb::reaction_button_label(reaction.as_deref());
+    if ui.react_btn.get_label() != label {
+        ui.react_btn.set_label(&label);
+        ui.react_btn.set_name(&label);
+    }
     ui.comment_btn.enable(has && post_list);
     ui.profile_btn.enable(has && (people || comments));
     ui.posts_btn.enable(has && people);
@@ -3668,12 +3674,6 @@ fn apply_done(ui: &Ui, done: Done) {
                 .map(|_| t("Share cancelled. Nothing was shared.")),
             true,
         ),
-        Tag::PostNote(session) => post_dialog::note(
-            ui,
-            session,
-            done.result.map(|_| t("Reaction set.")),
-            false,
-        ),
         Tag::Silent => {}
         Tag::UnlockRetry {
             view,
@@ -3853,6 +3853,26 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
         },
+        Tag::Reacted { post, reaction, account, reader } => {
+            if ui.state.borrow().account != account { return; }
+            match done.result {
+                Ok(_) => {
+                    remember_reaction(ui, &post, Some(&reaction));
+                    if let Some(session) = reader {
+                        post_dialog::reaction_changed(ui, session, &reaction);
+                    } else {
+                        ui.status(&t("Reaction set."));
+                    }
+                }
+                Err(error) => {
+                    if let Some(session) = reader {
+                        post_dialog::note(ui, session, Err(error), true);
+                    } else {
+                        show_error(parent, &error, &t("React"));
+                    }
+                }
+            }
+        }
         Tag::Text => match done.result {
             Ok(text) => {
                 set_details(ui, text.trim(), None);
@@ -4058,6 +4078,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| Record {
                     author_ref: None,
+                    reaction: None,
                     links: Vec::new(),
                     fields: vec![l.to_owned()],
                     raw: l.to_owned(),
@@ -4093,6 +4114,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                     fields.insert(1, std::mem::take(&mut pending_ref));
                     comments.push(Record {
                         author_ref: None,
+                        reaction: None,
                         links: Vec::new(),
                         fields,
                         raw: line.to_owned(),
@@ -4119,6 +4141,7 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
                     let value = parts.next().unwrap_or("").to_owned();
                     Record {
                         author_ref: None,
+                        reaction: None,
                         links: Vec::new(),
                         fields: vec![key, value],
                         raw: l.to_owned(),
@@ -4390,6 +4413,11 @@ fn react_popup(ui: &Ui) {
     let labels: Vec<&str> = names.iter().map(String::as_str).collect();
     let dialog =
         SingleChoiceDialog::builder(&ui.frame, &t("Reaction"), &t("React"), &labels).build();
+    if let Some((_, record)) = selected(ui) {
+        if let Some(index) = REACTIONS.iter().position(|kind| Some(*kind) == record.reaction.as_deref()) {
+            dialog.set_selection(index as i32);
+        }
+    }
     let reaction = if dialog.show_modal() == ID_OK {
         let index = dialog.get_selection();
         (index >= 0).then(|| REACTIONS[index as usize])
@@ -4408,8 +4436,27 @@ fn react_to(ui: &Ui, post: &str, reaction: &str) {
     } else {
         ui.send(Job {
             task: Task::Fb(react_args(post, reaction), None),
-            tag: Tag::Text,
+            tag: Tag::Reacted { post: post.to_owned(), reaction: reaction.to_owned(), account: ui.state.borrow().account, reader: None },
         });
+    }
+}
+
+fn remember_reaction(ui: &Ui, post: &str, reaction: Option<&str>) {
+    let mut state = ui.state.borrow_mut();
+    let view = state.records_view.clone();
+    update_reaction(&view, &mut state.records, post, reaction);
+    for (view, (rows, _, _)) in &mut state.cache {
+        update_reaction(view, rows, post, reaction);
+    }
+    drop(state);
+    refresh_controls(ui);
+}
+
+fn update_reaction(view: &View, rows: &mut [Record], post: &str, reaction: Option<&str>) {
+    for record in rows {
+        if post_target(view, record).is_some_and(|target| target == post || web_url(target) == web_url(post)) {
+            record.reaction = reaction.map(str::to_owned);
+        }
     }
 }
 
@@ -6006,6 +6053,16 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn reaction_updates_only_the_matching_post() {
+        let mut rows = parse_feed("/a/posts/1\tA\t1h\t0/0/0\tBody\n/a/posts/2\tB\t2h\t0/0/0\tOther");
+        update_reaction(&View::Feed, &mut rows, "https://www.facebook.com/a/posts/1", Some("love"));
+        assert_eq!(rows[0].reaction.as_deref(), Some("love"));
+        assert_eq!(rows[1].reaction, None);
+        update_reaction(&View::Feed, &mut rows, "/a/posts/1", Some("none"));
+        assert_eq!(rows[0].reaction.as_deref(), Some("none"));
+    }
+
+    #[test]
     fn modal_priority_is_reader_then_group_then_chat() {
         // The reader opens over the group and chat windows, so it owns
         // input while it lasts; popups must parent to the topmost modal.
@@ -6098,12 +6155,14 @@ mod tests {
         let rows = vec![
             Record {
                 author_ref: None,
+                reaction: None,
                 links: Vec::new(),
                 fields: vec!["p12345".into(), "Alice".into()],
                 raw: String::new(),
             },
             Record {
                 author_ref: None,
+                reaction: None,
                 links: Vec::new(),
                 fields: vec!["p67890".into(), "Bob".into()],
                 raw: String::new(),
@@ -6117,6 +6176,7 @@ mod tests {
         assert_eq!(selection_key(&View::Feed, &rows, Some(9)), None);
         let dash = vec![Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec!["-".into()],
             raw: "-".into(),
@@ -6155,6 +6215,7 @@ mod tests {
         );
         let post = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "p1".into(),
@@ -6174,6 +6235,7 @@ mod tests {
         // A chats line with fewer than five fields must not panic the reader.
         let short = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec!["c1".into()],
             raw: "c1".into(),
@@ -6181,6 +6243,7 @@ mod tests {
         assert_eq!(details_for(&View::Chats, &short), "c1");
         let full = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "c1".into(),
@@ -6201,6 +6264,7 @@ mod tests {
         // friends: name, ref, mutual friends. The ref, not the name, is the chat spec.
         let friend = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "Alice Smith".into(),
@@ -6216,6 +6280,7 @@ mod tests {
         // chats: ref, flags, time, name, preview.
         let chat = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "c8x2f".into(),
@@ -6397,6 +6462,7 @@ mod tests {
     fn item_links_use_each_views_target_instead_of_its_label() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|s| (*s).to_owned()).collect(),
             raw: String::new(),
@@ -6717,6 +6783,7 @@ mod tests {
     fn more_keeps_distinct_refless_chat_and_friend_rows() {
         let rec = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|s| s.to_string()).collect(),
             raw: fields.join("\t"),
@@ -6764,6 +6831,7 @@ mod tests {
     fn linkless_rows_say_so_without_touching_copied_text() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
@@ -6798,6 +6866,7 @@ mod tests {
     fn routes_only_post_targets_and_detects_messenger_lock() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
@@ -6858,6 +6927,7 @@ mod tests {
     fn marketplace_rows_read_like_search_listings() {
         let listing = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "Wooden chair".to_owned(),
@@ -6899,6 +6969,7 @@ mod tests {
     fn search_rows_route_by_kind() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),
@@ -6952,6 +7023,7 @@ mod tests {
     fn search_rows_read_openable_and_carry_a_web_address() {
         let row = |fields: &[&str]| Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: fields.iter().map(|f| f.to_string()).collect(),
             raw: String::new(),

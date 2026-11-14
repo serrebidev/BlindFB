@@ -23,7 +23,7 @@ function fixture(mode = false) {
   const author = {innerText: 'Reel author', href: 'https://www.facebook.com/author', closest: () => null, getAttribute: () => ''};
   const reelCard = {isConnected: true, closest: () => null, contains: () => true, querySelectorAll: selector => selector === 'a[href]' ? [author] : selector === '[role=button][aria-label]' ? [openComments] : selector === '[role=button],button' ? [expand] : []};
   video.parentElement = isReel ? reelCard : null;
-  const openComments = {getAttribute: () => mode === 'reel-fr' ? 'Commenter, 1,9 K commentaires' : mode === 'watch-fr' ? 'Laissez un commentaire' : mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
+  const openComments = {closest: () => null, getAttribute: () => mode === 'reel-fr' ? 'Commenter, 1,9 K commentaires' : mode === 'watch-fr' ? 'Laissez un commentaire' : mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
   // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
   const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
@@ -42,8 +42,9 @@ function fixture(mode = false) {
   const viewMore = {innerText: '', isConnected: true, closest: () => null,
     getAttribute: () => moreShown ? '' : 'Zobrazit další komentáře',
     click() { if (!moreShown) { moreShown = true; const extra = article('2'); extra.lines[2] = 'A later comment'; } }};
+  const reactionButton = {closest: () => null, getAttribute: name => name === 'aria-label' ? "Remove Love from Post author's post" : name === 'aria-pressed' ? 'true' : ''};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -139,6 +140,9 @@ function fixture(mode = false) {
 }
 
 (async () => {
+  const ownState = JSON.parse(await fixture().api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(ownState.reaction_label, "Remove Love from Post author's post");
+  assert.equal(ownState.reaction_pressed, true);
   const slow = fixture('slow');
   assert.equal(JSON.parse(await slow.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Entire post text');
   const shared = fixture('shared');

@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.59 - 2026-11-14
+
+Hear your current reaction without opening the reaction picker. The feed's
+React button says Liked or React: Love, Care, Haha, Wow, Sad or Angry when
+Facebook exposes that state. The full-post reader has the same button,
+with your current reaction checked in its menu. Successful changes and
+removals update the label immediately, including cached post lists.
+Unknown states keep the neutral React label rather than guessing.
+Creating a Public post works with Facebook's replacement audience dialog.
+BlindFB ignores retained hidden audience panes and confirms the choice with
+Done, never with the last button in the old composer.
+Backend v0.1.5-blindfb.62.
+
 ## v0.7.58 - 2026-11-14
 
 Follow people without a friend request. A profile's context menu (and a

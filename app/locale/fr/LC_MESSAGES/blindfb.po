@@ -4570,3 +4570,11 @@ msgstr "Désactivé (aucun raccourci)"
 #~ "Les flèches sur Volume de la vidéo changent son pourcentage.\n"
 #~ "Applications ou Maj+F10 sur le texte de la publication : commenter, réagir ou partager. Sur un commentaire : répondre ou aimer.\n"
 #~ "Ctrl+Entrée dans la zone de commentaire envoie. Échap ferme le lecteur et arrête la lecture."
+
+#: crates/core/src\fb.rs:66
+msgid "Liked"
+msgstr "Aimé"
+
+#: crates/core/src\fb.rs:75
+msgid "React: {reaction}"
+msgstr "Réaction : {reaction}"

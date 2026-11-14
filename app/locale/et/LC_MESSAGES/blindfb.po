@@ -4352,3 +4352,11 @@ msgstr "Väljas (ilma klahvita)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Vasta kasutajale {author}"
+
+#: crates/core/src\fb.rs:66
+msgid "Liked"
+msgstr "Märgitud meeldivaks"
+
+#: crates/core/src\fb.rs:75
+msgid "React: {reaction}"
+msgstr "Reaktsioon: {reaction}"

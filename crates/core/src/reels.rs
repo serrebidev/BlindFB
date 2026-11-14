@@ -87,6 +87,7 @@ pub fn parse(output: &str) -> Result<(Vec<Record>, Option<String>), String> {
         ];
         records.push(Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             raw: fields.join("\t"),
             fields,
@@ -351,6 +352,7 @@ mod tests {
     fn grouped_reel_notification_keeps_its_identity() {
         let record = Record {
             author_ref: None,
+            reaction: None,
             links: Vec::new(),
             fields: vec![
                 "3h".into(),

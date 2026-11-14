@@ -4389,3 +4389,11 @@ msgstr "Выкл (без сочетания)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Ответ {author}"
+
+#: crates/core/src\fb.rs:66
+msgid "Liked"
+msgstr "Вам нравится"
+
+#: crates/core/src\fb.rs:75
+msgid "React: {reaction}"
+msgstr "Реакция: {reaction}"
