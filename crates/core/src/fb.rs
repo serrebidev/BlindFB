@@ -33,29 +33,32 @@ pub struct Record {
 /// Read only the action part of Facebook's label, never reaction words in an author's name.
 pub fn own_reaction(label: &str, pressed: Option<bool>) -> Option<&'static str> {
     let label = label.replace('’', "'").to_lowercase();
-    if label.starts_with("react with like to ") || label.starts_with("réagir avec j'aime à ") {
+    if label.starts_with("react with like to ")
+        || label.starts_with("réagir avec j'aime à ")
+        || label.starts_with("поставить нравится ")
+    {
         return Some("none");
     }
     let mut name = label.split(',').next()?.trim();
     let mut selected = pressed == Some(true);
-    for prefix in ["remove ", "retirer ", "supprimer ", "annuler "] {
+    for prefix in ["remove ", "retirer ", "supprimer ", "annuler ", "удалить "] {
         if let Some(rest) = name.strip_prefix(prefix) {
             selected = true;
             name = rest;
             break;
         }
     }
-    for separator in [" from ", " de la publication de ", " de la publication d'"] {
+    for separator in [" from ", " de la publication de ", " de la publication d'", " из публикации"] {
         if let Some((action, _)) = name.split_once(separator) { name = action; }
     }
     let kind = match name {
-        "like" | "liked" | "j'aime" | "thích" => "like",
-        "love" | "j'adore" | "yêu thích" => "love",
-        "care" | "solidaire" | "thương thương" => "care",
-        "haha" => "haha",
-        "wow" | "wouah" => "wow",
-        "sad" | "triste" | "buồn" => "sad",
-        "angry" | "en colère" | "grrr" | "phẫn nộ" => "angry",
+        "like" | "liked" | "j'aime" | "thích" | "нравится" => "like",
+        "love" | "j'adore" | "yêu thích" | "супер" => "love",
+        "care" | "solidaire" | "thương thương" | "мы вместе" => "care",
+        "haha" | "ха-ха" => "haha",
+        "wow" | "wouah" | "ух ты!" => "wow",
+        "sad" | "triste" | "buồn" | "сочувствую" => "sad",
+        "angry" | "en colère" | "grrr" | "phẫn nộ" | "возмутительно" => "angry",
         _ => return None,
     };
     Some(if pressed == Some(false) || (kind == "like" && !selected && name != "liked") { "none" } else { kind })
@@ -1407,6 +1410,11 @@ mod tests {
             assert_eq!(own_reaction(&format!("Remove {kind}"), None), Some(kind));
         }
         assert_eq!(own_reaction("Unrecognized label", None), None);
+        // Russian labels seen live 2026-11-14.
+        assert_eq!(own_reaction("Поставить Нравится публикации Иван Иванов", None), Some("none"));
+        assert_eq!(own_reaction("Удалить Нравится из публикации Иван Иванов", None), Some("like"));
+        assert_eq!(own_reaction("Удалить Ух ты! из публикации Иван Иванов", None), Some("wow"));
+        assert_eq!(own_reaction("Удалить Мы вместе из публикации Иван Иванов", None), Some("care"));
         assert_eq!(reaction_button_label(Some("like")), "Liked");
         assert_eq!(reaction_button_label(Some("love")), "React: Love");
         assert_eq!(reaction_button_label(Some("none")), "React");

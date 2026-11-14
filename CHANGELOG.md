@@ -4,6 +4,22 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.60 - 2026-11-14
+
+Posting with an audience works on slow connections and in more
+languages. Facebook loads the post window and the audience list the first
+time you use them, and on a slow connection BlindFB stopped waiting too
+soon: "composer did not open" or "audience option not found". It now waits
+longer and clicks again once. Facebook's new audience list, where each
+choice is wrapped twice, no longer counts one choice as two. If the list is
+in a language BlindFB doesn't know, it picks Public, Friends or Only me by
+position, then checks that Facebook shows that choice before posting.
+Reactions work on a Russian Facebook account. The React button says
+Liked or React: Love (and so on) when you have already reacted. Before,
+BlindFB said "the reaction did not land" even though the reaction was set,
+and removing a Like failed.
+Backend v0.1.5-blindfb.65.
+
 ## v0.7.59 - 2026-11-14
 
 Hear your current reaction without opening the reaction picker. The feed's
@@ -15,7 +31,7 @@ Unknown states keep the neutral React label rather than guessing.
 Creating a Public post works with Facebook's replacement audience dialog.
 BlindFB ignores retained hidden audience panes and confirms the choice with
 Done, never with the last button in the old composer.
-Backend v0.1.5-blindfb.63.
+Backend v0.1.5-blindfb.62.
 
 ## v0.7.58 - 2026-11-14
 
