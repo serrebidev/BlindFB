@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.54 - 2026-11-13
+
+Group's posts has a keyboard shortcut entry. It was only in a post's
+context menu before, so File, Keyboard shortcuts could not assign it a
+key. It is now in the Post menu and in the shortcut settings, with no
+shortcut by default — set your own there and it works right away.
+Backend v0.1.5-blindfb.55.
+
 ## v0.7.53 - 2026-11-14
 
 Saved posts are in the Views list, right after Places. The view reads

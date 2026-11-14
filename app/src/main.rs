@@ -1758,6 +1758,7 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_POST_MENU, &shortcuts_dialog::menu_label(ID_POST_MENU, t("Facebook post &menu…")), &t("Facebook's own menu for the selected post: Not interested, Save, Snooze, Hide, Report and more"))
         .append_item(ID_PROFILE, &shortcuts_dialog::menu_label(ID_PROFILE, t("Author &profile")), &t("Show the profile of the selected item's author or owner"))
         .append_item(ID_AUTHOR_POSTS, &shortcuts_dialog::menu_label(ID_AUTHOR_POSTS, t("Author's p&osts")), &t("Posts by the selected item's author"))
+        .append_item(ID_GROUP_POSTS, &shortcuts_dialog::menu_label(ID_GROUP_POSTS, t("Group's p&osts")), &t("Posts in the group the selected post belongs to"))
         .append_item(ID_MESSAGE, &shortcuts_dialog::menu_label(ID_MESSAGE, t("&Message author / friend")), &t("Open a Messenger chat with this person"))
         .append_item(ID_WEB_POST, &shortcuts_dialog::menu_label(ID_WEB_POST, t("Open post on &Facebook (web)")), &t("Open the selected post in your browser"))
         .append_item(ID_WEB_PERSON, &shortcuts_dialog::menu_label(ID_WEB_PERSON, t("Open person or group on Fa&cebook (web)")), &t("Open the selected person's profile (or the group) in your browser, where friend management lives"))

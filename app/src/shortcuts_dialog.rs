@@ -70,6 +70,7 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("post", ID_POST_MENU, "post_menu", ""),
         ("post", ID_PROFILE, "author_profile", ""),
         ("post", ID_AUTHOR_POSTS, "author_posts", ""),
+        ("post", ID_GROUP_POSTS, "group_posts", ""),
         ("post", ID_MESSAGE, "message", ""),
         ("post", ID_WEB_POST, "web_post", ""),
         ("post", ID_WEB_PERSON, "web_person", ""),
