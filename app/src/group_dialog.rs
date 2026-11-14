@@ -56,6 +56,9 @@ static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 #[derive(Clone)]
 pub(super) struct GroupWindow {
     session: u64,
+    /// The dialog itself, so popups from the results timer can be parented
+    /// to it while it is up.
+    dialog: Dialog,
     posts: ListBox,
     members: ListBox,
     status: TextCtrl,
@@ -100,6 +103,12 @@ fn member_view_action(id: i32, name: &str, url: &str) -> Option<Pending> {
 }
 
 impl GroupWindow {
+    /// The dialog, so the frame's results timer can parent popups to it
+    /// while it is up.
+    pub(super) fn dialog(&self) -> Dialog {
+        self.dialog
+    }
+
     fn note(&self, text: &str) {
         self.status.change_value(text);
     }
@@ -211,6 +220,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
 
     let window = GroupWindow {
         session,
+        dialog,
         posts,
         members,
         status,

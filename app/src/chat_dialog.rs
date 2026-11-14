@@ -21,6 +21,9 @@ static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 #[derive(Clone)]
 pub(super) struct ChatWindow {
     session: u64,
+    /// The dialog itself, so popups from the results timer can be parented
+    /// to it while it is up.
+    dialog: Dialog,
     messages: ListBox,
     compose: TextCtrl,
     status: TextCtrl,
@@ -127,6 +130,12 @@ fn chat_target(record: &Record) -> Option<(String, String, bool)> {
 }
 
 impl ChatWindow {
+    /// The dialog, so the frame's results timer can parent popups to it
+    /// while it is up.
+    pub(super) fn dialog(&self) -> Dialog {
+        self.dialog
+    }
+
     fn note(&self, text: &str) {
         self.status.change_value(text);
     }
@@ -300,6 +309,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
 
     let window = ChatWindow {
         session,
+        dialog,
         messages,
         compose,
         status,

@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.53 - 2026-11-14
+
+Saved posts are in the Views list, right after Places. The view reads
+your saved posts like the feed's posts, so Enter opens the reader and
+react, comment, share and the Facebook post menu work on them. Saving
+and unsaving a post happens in the post's own Facebook menu, as before.
+
+"Post not found" no longer freezes BlindFB. The reader, group and chat
+windows are modal, and the results timer could pop an error box behind
+the modal, parented to the main window, where nobody could reach it.
+Those popups now open on the window that is already up, and the app stays
+responsive while they are handled. Backend v0.1.5-blindfb.55.
+
 ## v0.7.52 - 2026-11-14
 
 Long comments read in full. Facebook cuts long comments short behind

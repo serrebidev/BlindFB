@@ -600,6 +600,9 @@ msgstr "Lehed"
 msgid "Places"
 msgstr "Kohad"
 
+#: app/src\main.rs:289 app/src\main.rs:672
+msgid "Saved posts"
+msgstr "Salvestatud postitused"
 #: app/src\main.rs:275
 msgid "Search results"
 msgstr "Otsingutulemused"
@@ -976,6 +979,14 @@ msgstr "K&ohad"
 #: app/src\main.rs:1681
 msgid "Places from the places page"
 msgstr "Kohad kohtade lehelt"
+
+#: app/src\main.rs:1718
+msgid "Posts you saved on Facebook"
+msgstr "Facebookis salvestatud postitused"
+
+#: app/src\main.rs:1718
+msgid "Sa&ved posts"
+msgstr "Sa&lvestatud postitused"
 
 #: app/src\main.rs:1684
 msgid "&Unread chats only"

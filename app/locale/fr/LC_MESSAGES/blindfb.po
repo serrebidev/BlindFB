@@ -610,6 +610,9 @@ msgstr "Pages"
 msgid "Places"
 msgstr "Lieux"
 
+#: app/src\main.rs:289 app/src\main.rs:672
+msgid "Saved posts"
+msgstr "Publications enregistrées"
 #: app/src\main.rs:275
 msgid "Search results"
 msgstr "Résultats de recherche"
@@ -994,6 +997,14 @@ msgstr "P&laces"
 #: app/src\main.rs:1681
 msgid "Places from the places page"
 msgstr "Les lieux de votre page de lieux"
+
+#: app/src\main.rs:1718
+msgid "Posts you saved on Facebook"
+msgstr "Publications que vous avez enregistrées sur Facebook"
+
+#: app/src\main.rs:1718
+msgid "Sa&ved posts"
+msgstr "Publications &enregistrées"
 
 #: app/src\main.rs:1684
 msgid "&Unread chats only"

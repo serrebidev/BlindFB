@@ -570,6 +570,15 @@ pub fn posts_args(who: &str, count: u32, urls: bool) -> Vec<String> {
     args
 }
 
+pub fn saved_args(count: u32) -> Vec<String> {
+    vec![
+        "saved".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--full".to_owned(),
+    ]
+}
+
 pub fn view_args(post: &str, comments: u32) -> Vec<String> {
     vec![
         "view".to_owned(),

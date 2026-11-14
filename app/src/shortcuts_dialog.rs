@@ -56,6 +56,7 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("view", ID_EVENTS_VIEW, "events", ""),
         ("view", ID_PAGES_VIEW, "pages", ""),
         ("view", ID_PLACES_VIEW, "places", ""),
+        ("view", ID_SAVED_VIEW, "saved_posts", ""),
         ("view", ID_UNREAD_CHATS, "unread_chats", ""),
         ("view", ID_REFRESH, "refresh", "F5"),
         ("view", ID_MORE, "load_more", "Ctrl+L"),

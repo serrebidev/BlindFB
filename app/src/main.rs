@@ -49,7 +49,8 @@ use blindfb_core::fb::{
     post_done_message, post_unconfirmed_message,
     posts_args, profile_args,
     profile_url_from_post_url, react_args, read_args, recent_feed_args, reply_args, search_args,
-    sell_args, send_args, thread_url_from_profile_url, unsend_args, view_args, web_url, Fb, Record,
+    saved_args, sell_args, send_args, thread_url_from_profile_url, unsend_args, view_args,
+    web_url, Fb, Record,
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
@@ -81,6 +82,7 @@ const ID_MARKETPLACE: i32 = 10018;
 const ID_EVENTS_VIEW: i32 = 10097;
 const ID_PAGES_VIEW: i32 = 10098;
 const ID_PLACES_VIEW: i32 = 10099;
+const ID_SAVED_VIEW: i32 = 10131;
 const ID_TRAY_TOGGLE: i32 = 10110;
 const ID_TRAY_HOTKEY: i32 = 10111;
 const ID_GROUP_POSTS: i32 = 10112;
@@ -254,6 +256,9 @@ enum View {
     Events,
     Pages,
     Places,
+    /// Your saved posts, read like the feed's posts: Enter opens the
+    /// reader, and react, comment, share and the post menu all work.
+    Saved,
     SearchResults,
     PostsOf(String),
     /// A group's posts, by group home URL (`https://www.facebook.com/groups/<id>`).
@@ -281,6 +286,7 @@ impl View {
             View::Events => t("Events"),
             View::Pages => t("Pages"),
             View::Places => t("Places"),
+            View::Saved => t("Saved posts"),
             View::SearchResults => t("Search results"),
             View::PostsOf(who) => tf!("Posts by {who}", who = who),
             View::GroupPosts(group) => tf!("Posts in group {group}", group = group),
@@ -663,6 +669,7 @@ fn run() {
         t("Events"),
         t("Pages"),
         t("Places"),
+        t("Saved posts"),
     ] {
         views.append(&name);
     }
@@ -896,6 +903,7 @@ fn run() {
                 9 => View::Events,
                 10 => View::Pages,
                 11 => View::Places,
+                12 => View::Saved,
                 _ => View::Chats,
             };
             ui_views.state.borrow_mut().pending_view = Some((view, Instant::now()));
@@ -1707,6 +1715,7 @@ fn build_menus(frame: &Frame) {
         .append_item(ID_EVENTS_VIEW, &shortcuts_dialog::menu_label(ID_EVENTS_VIEW, t("&Events")), &t("Events from your events page"))
         .append_item(ID_PAGES_VIEW, &shortcuts_dialog::menu_label(ID_PAGES_VIEW, t("Pa&ges")), &t("Pages from your pages page"))
         .append_item(ID_PLACES_VIEW, &shortcuts_dialog::menu_label(ID_PLACES_VIEW, t("P&laces")), &t("Places from the places page"))
+        .append_item(ID_SAVED_VIEW, &shortcuts_dialog::menu_label(ID_SAVED_VIEW, t("Sa&ved posts")), &t("Posts you saved on Facebook"))
         .append_item(
             ID_UNREAD_CHATS,
             &shortcuts_dialog::menu_label(ID_UNREAD_CHATS, t("&Unread chats only")),
@@ -2169,6 +2178,7 @@ fn cacheable(view: &View, args: &[String]) -> bool {
             | View::Events
             | View::Pages
             | View::Places
+            | View::Saved
             // Search has no default_args (the query is the user's), so the
             // cache is the only way Back can restore the results; without
             // it Back landed on an empty list (issue #24).
@@ -2189,6 +2199,7 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::Events => events_args(PAGE),
         View::Pages => pages_args(PAGE),
         View::Places => places_args(PAGE),
+        View::Saved => saved_args(PAGE),
         View::SearchResults | View::Reels(_) => return None,
         View::PostsOf(who) | View::GroupPosts(who) => posts_args(who, PAGE, true),
         View::CommentsOf(post) => view_args(post, 50),
@@ -2421,6 +2432,7 @@ fn more_args(
         | View::Events
         | View::Pages
         | View::Places
+        | View::Saved
         | View::Groups => {
             let mut args = previous.to_vec();
             let index = args.iter().position(|arg| arg == "-n")? + 1;
@@ -2553,6 +2565,7 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
             | View::MyPosts
             | View::PostsOf(_)
             | View::GroupPosts(_)
+            | View::Saved
     );
     let mut seen_posts: HashSet<String> = existing
         .iter()
@@ -2577,6 +2590,7 @@ fn list_label(view: &View, record: &Record) -> String {
             | View::MyPosts
             | View::PostsOf(_)
             | View::GroupPosts(_)
+            | View::Saved
             | View::SearchResults
     );
     // A search row opens by kind, not by post target: profiles, groups and
@@ -2650,6 +2664,7 @@ fn display_for(view: &View, record: &Record) -> String {
         | View::MyPosts
         | View::PostsOf(_)
         | View::GroupPosts(_)
+        | View::Saved
         | View::SearchResults => {
             if record.fields.len() >= 5 {
                 // A post without text or time must not read as ". ." to a screen reader.
@@ -2750,6 +2765,7 @@ fn details_for(view: &View, record: &Record) -> String {
         | View::MyPosts
         | View::PostsOf(_)
         | View::GroupPosts(_)
+        | View::Saved
         | View::SearchResults => {
             if record.fields.len() >= 5 {
                 tf!(
@@ -2840,7 +2856,8 @@ fn post_target<'a>(view: &View, record: &'a Record) -> Option<&'a str> {
         | View::Reels(_)
         | View::MyPosts
         | View::PostsOf(_)
-        | View::GroupPosts(_) => record.field(0),
+        | View::GroupPosts(_)
+        | View::Saved => record.field(0),
         _ => return None,
     }
     .trim();
@@ -2867,6 +2884,7 @@ fn record_key(view: &View, record: &Record) -> String {
             | View::MyPosts
             | View::PostsOf(_)
             | View::GroupPosts(_)
+            | View::Saved
             | View::SearchResults => &record.raw,
             _ => record.field(0),
         })
@@ -3373,10 +3391,69 @@ fn refresh_controls(ui: &Ui) {
     ui.send_btn.enable(in_chat);
 }
 
+/// Which modal window is currently up, most specific first: the reader
+/// opens over the group and chat windows, so it owns input while it lasts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ModalKind {
+    Reader,
+    Group,
+    Chat,
+}
+
+fn modal_kind(reader: bool, group: bool, chat: bool) -> Option<ModalKind> {
+    if reader {
+        Some(ModalKind::Reader)
+    } else if group {
+        Some(ModalKind::Group)
+    } else if chat {
+        Some(ModalKind::Chat)
+    } else {
+        None
+    }
+}
+
+/// The dialog a popup must be parented to right now. The results timer
+/// fires while a modal dialog is up; a popup parented to the main frame
+/// then opens behind the modal and the app looks frozen (a "post not
+/// found" error while the reader is open did exactly that). The dialog
+/// widget is a Copy handle, so this copies it out and holds no borrow
+/// while the caller blocks on the popup.
+fn modal_dialog(ui: &Ui) -> Option<Dialog> {
+    let reader = ui
+        .post_reader
+        .borrow()
+        .as_ref()
+        .map(|reader| reader.dialog());
+    let group = ui
+        .group_window
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|window| window.dialog());
+    let chat = ui
+        .chat_window
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|window| window.dialog());
+    match modal_kind(reader.is_some(), group.is_some(), chat.is_some()) {
+        Some(ModalKind::Reader) => reader,
+        Some(ModalKind::Group) => group,
+        Some(ModalKind::Chat) => chat,
+        None => None,
+    }
+}
+
 fn apply_done(ui: &Ui, done: Done) {
     if let Err(error) = &done.result {
         blindfb_core::debug::note_failure(error);
     }
+    let modal = modal_dialog(ui);
+    let parent: &dyn WxWidget = if let Some(dialog) = &modal {
+        dialog
+    } else {
+        &ui.frame
+    };
     match done.tag {
         Tag::List {
             view,
@@ -3488,7 +3565,7 @@ fn apply_done(ui: &Ui, done: Done) {
                             ui.status(&t("Messenger history is still locked. Use Chat → Unlock encrypted chats to retry."));
                             if unlock_attempted {
                                 show_error(
-                                    &ui.frame,
+                                    parent,
                                     t("Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry."),
                                     &t("Messenger history"),
                                 );
@@ -3505,7 +3582,7 @@ fn apply_done(ui: &Ui, done: Done) {
                         return;
                     }
                     ui.status(&t("Error"));
-                    show_error(&ui.frame, &e, "BlindFB");
+                    show_error(parent, &e, "BlindFB");
                 }
             }
         }
@@ -3612,7 +3689,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.latest_list.lock().unwrap().finish(&view, request);
                     ui.status(&t("Messenger could not be unlocked."));
                     show_error(
-                        &ui.frame,
+                        parent,
                         tf!(
                             "Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n\n{error}",
                             error = e
@@ -3648,13 +3725,13 @@ fn apply_done(ui: &Ui, done: Done) {
                         "This login request is no longer waiting for an answer. It may have expired or been answered already.\n\n{page}",
                         page = request.text
                     );
-                    show_warning(&ui.frame, text.trim(), &t("Login request"));
+                    show_warning(parent, text.trim(), &t("Login request"));
                 }
                 Ok(request) => {
                     ui.status(&t("Login request"));
                     let labels: Vec<&str> = request.choices.iter().map(String::as_str).collect();
                     let dialog = SingleChoiceDialog::builder(
-                        &ui.frame,
+                        parent,
                         &request.text,
                         &t("Login request"),
                         &labels,
@@ -3690,7 +3767,7 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
                 Err(e) => {
                     ui.status(&t("Error"));
-                    show_error(&ui.frame, &e, &t("Login request"));
+                    show_error(parent, &e, &t("Login request"));
                 }
             }
         }
@@ -3698,7 +3775,7 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(output) => post_menu_step(ui, post, path, &output),
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, &t("Facebook post menu"));
+                show_error(parent, &e, &t("Facebook post menu"));
             }
         },
         Tag::LoginAnswered => {
@@ -3712,26 +3789,26 @@ fn apply_done(ui: &Ui, done: Done) {
                     ui.status(&message);
                     let text = format!("{message}\n\n{}", result.text);
                     let dialog =
-                        MessageDialog::builder(&ui.frame, text.trim(), &t("Login request")).build();
+                        MessageDialog::builder(parent, text.trim(), &t("Login request")).build();
                     dialog.show_modal();
                     dialog.destroy();
                 }
                 Err(e) => {
                     ui.status(&t("Error"));
-                    show_error(&ui.frame, &e, &t("Login request"));
+                    show_error(parent, &e, &t("Login request"));
                 }
             }
         }
         Tag::DebugReport => match done.result {
             Ok(text) => {
                 ui.status(&t("Debug report saved."));
-                let dialog = MessageDialog::builder(&ui.frame, &text, &t("Debug report")).build();
+                let dialog = MessageDialog::builder(parent, &text, &t("Debug report")).build();
                 dialog.show_modal();
                 dialog.destroy();
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, &t("Debug report"));
+                show_error(parent, &e, &t("Debug report"));
             }
         },
         Tag::Post => match done.result {
@@ -3743,8 +3820,8 @@ fn apply_done(ui: &Ui, done: Done) {
             Err(e) => {
                 ui.status(&t("Error"));
                 match post_unconfirmed_message(&e) {
-                    Some(message) => show_warning(&ui.frame, message, &t("New post")),
-                    None => show_error(&ui.frame, &e, "BlindFB"),
+                    Some(message) => show_warning(parent, message, &t("New post")),
+                    None => show_error(parent, &e, "BlindFB"),
                 }
             }
         },
@@ -3755,7 +3832,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, "BlindFB");
+                show_error(parent, &e, "BlindFB");
             }
         },
         Tag::Commented { post } => match done.result {
@@ -3769,7 +3846,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, "BlindFB");
+                show_error(parent, &e, "BlindFB");
             }
         },
         Tag::GroupJoin { group } => match done.result {
@@ -3784,7 +3861,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, &t("Join group"));
+                show_error(parent, &e, &t("Join group"));
             }
         },
         Tag::GroupLeave => match done.result {
@@ -3797,7 +3874,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                show_error(&ui.frame, &e, &t("Leave group"));
+                show_error(parent, &e, &t("Leave group"));
             }
         },
         Tag::ChatSent(account) => {
@@ -3838,7 +3915,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     } else {
                         t("Message could not be sent. Your draft has been kept.")
                     });
-                    show_error(&ui.frame, &e, &t("Send message"));
+                    show_error(parent, &e, &t("Send message"));
                 }
             }
         }
@@ -3855,7 +3932,7 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
                 Err(e) => {
                     ui.status(&t("Error"));
-                    show_error(&ui.frame, &e, "BlindFB");
+                    show_error(parent, &e, "BlindFB");
                 }
             }
         }
@@ -3882,7 +3959,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(error) => {
                 ui.status(&t("The Facebook backend could not start."));
-                show_error(&ui.frame, error, &t("Backend startup"));
+                show_error(parent, error, &t("Backend startup"));
                 offer_sign_in(ui, Tag::SetupLogin);
             }
         },
@@ -3895,7 +3972,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
             Err(error) => {
                 show_error(
-                    &ui.frame,
+                    parent,
                     tf!(
                         "The backend could not be installed automatically: {error}\nYou can retry from Backend → Install or update backend.",
                         error = error
@@ -3912,10 +3989,10 @@ fn apply_done(ui: &Ui, done: Done) {
             Ok(out) => {
                 set_details(ui, out.trim(), None);
                 ui.status(&t("Sign-in did not finish — see the details, or try Backend → Sign in."));
-                show_warning(&ui.frame, out.trim(), &t("Sign-in did not finish"));
+                show_warning(parent, out.trim(), &t("Sign-in did not finish"));
             }
             Err(error) => {
-                show_error(&ui.frame, error, &t("Sign in"));
+                show_error(parent, error, &t("Sign in"));
                 ui.status(&t("Sign-in failed. Use Backend → Sign in to retry."));
             }
         },
@@ -3927,13 +4004,13 @@ fn apply_done(ui: &Ui, done: Done) {
                 }
             }
             Err(error) => {
-                show_error(&ui.frame, error, &t("Browser install"));
+                show_error(parent, error, &t("Browser install"));
                 ui.status(&t("Browser installation failed."));
             }
         },
         Tag::BrowserInstalledMenu => match done.result {
             Ok(summary) => ui.status(&summary),
-            Err(error) => show_error(&ui.frame, error, &t("Browser install")),
+            Err(error) => show_error(parent, error, &t("Browser install")),
         },
     }
 }
@@ -3946,7 +4023,8 @@ fn parse_for(view: &View, raw: &str) -> Result<(Vec<Record>, Option<String>), St
         | View::RecentFeed
         | View::MyPosts
         | View::PostsOf(_)
-        | View::GroupPosts(_) => (parse_feed(raw), None),
+        | View::GroupPosts(_)
+        | View::Saved => (parse_feed(raw), None),
         View::ChatWith(..) => (
             raw.lines()
                 .filter(|l| !l.trim().is_empty())
@@ -4038,7 +4116,13 @@ fn needs_messenger_unlock(error: &str) -> bool {
 /// Ask for the Messenger PIN (stdin only, never stored). With `retry`, the
 /// failed list request runs once more after a successful unlock.
 fn unlock_messenger(ui: &Ui, retry: Option<RetryList>) {
-    let dialog = TextEntryDialog::builder(&ui.frame, &t("Messenger PIN:"), &t("Unlock encrypted chats"))
+    let modal = modal_dialog(ui);
+    let parent: &dyn WxWidget = if let Some(dialog) = &modal {
+        dialog
+    } else {
+        &ui.frame
+    };
+    let dialog = TextEntryDialog::builder(parent, &t("Messenger PIN:"), &t("Unlock encrypted chats"))
         .password()
         .build();
     let pin = (dialog.show_modal() == ID_OK)
@@ -4156,6 +4240,7 @@ fn open_selected(ui: &Ui) {
         | View::MyPosts
         | View::PostsOf(_)
         | View::GroupPosts(_)
+        | View::Saved
         | View::Notifications => {
             let Some(target) = post_target(&view, &record) else {
                 show_warning(
@@ -4904,6 +4989,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_EVENTS_VIEW => load_view(ui, View::Events),
         ID_PAGES_VIEW => load_view(ui, View::Pages),
         ID_PLACES_VIEW => load_view(ui, View::Places),
+        ID_SAVED_VIEW => load_view(ui, View::Saved),
         ID_TRAY_TOGGLE => toggle_tray_window(&ui.frame),
         ID_TRAY_HOTKEY => prompt_tray_hotkey(ui),
         ID_GROUP_POSTS => group_posts_selected(ui),
@@ -5833,6 +5919,17 @@ fn open_url(url: &str) {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn modal_priority_is_reader_then_group_then_chat() {
+        // The reader opens over the group and chat windows, so it owns
+        // input while it lasts; popups must parent to the topmost modal.
+        assert_eq!(modal_kind(true, true, true), Some(ModalKind::Reader));
+        assert_eq!(modal_kind(true, false, false), Some(ModalKind::Reader));
+        assert_eq!(modal_kind(false, true, true), Some(ModalKind::Group));
+        assert_eq!(modal_kind(false, false, true), Some(ModalKind::Chat));
+        assert_eq!(modal_kind(false, false, false), None);
+    }
+
+    #[test]
     fn the_french_catalog_is_embedded() {
         assert!(patois::available_locales(i18n::DOMAIN).contains(&"fr"));
     }
@@ -6308,6 +6405,7 @@ mod tests {
             View::Friends,
             View::Groups,
             View::RecentFeed,
+            View::Saved,
             View::PostsOf("someone".into()),
             View::Marketplace,
         ] {

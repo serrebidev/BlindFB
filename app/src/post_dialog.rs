@@ -51,6 +51,10 @@ pub(super) struct PostReader {
     session: u64,
     page: String,
     url: String,
+    /// The reader dialog itself, so popups from the results timer can be
+    /// parented to it while it is up (an otherwise parentless modal can
+    /// freeze the app behind this one).
+    dialog: Dialog,
     post: TextCtrl,
     comments: ListBox,
     links: ListBox,
@@ -144,6 +148,12 @@ impl ReaderState {
 }
 
 impl PostReader {
+    /// The reader dialog, so the frame's results timer can parent popups
+    /// to it while it is up.
+    pub(super) fn dialog(&self) -> Dialog {
+        self.dialog
+    }
+
     fn message(&self, ui: &Ui, text: &str) {
         self.status.change_value(text);
         ui.status(text);
@@ -906,6 +916,7 @@ fn open_requested(
         session,
         page: format!("blindfb-post-{}-{session}", std::process::id()),
         url: target.to_owned(),
+        dialog,
         post,
         comments,
         links,
