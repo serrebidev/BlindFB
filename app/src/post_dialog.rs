@@ -101,6 +101,10 @@ struct ReelPlayback {
 struct ReaderState {
     target: String,
     reaction: Option<String>,
+    /// The post reaction Facebook confirmed in this reader. `react` runs in a
+    /// tab of its own, so this reader's page still shows the old state, and
+    /// every later read of it (a comment Like, Refresh) would undo it.
+    confirmed_reaction: Option<String>,
     comments: Vec<Comment>,
     /// The links list's current contents: the post's links, or the selected
     /// comment's while `links_for` names it.
@@ -978,6 +982,7 @@ fn open_requested(
         state: Rc::new(RefCell::new(ReaderState {
             target: target.to_owned(),
             reaction: None,
+            confirmed_reaction: None,
             comments: Vec::new(),
             links: initial_links.clone(),
             post_links: initial_links,
@@ -1487,7 +1492,11 @@ pub(super) fn share_ready(ui: &Ui, session: u64, result: Result<String, String>)
 /// Update the reader only after Facebook confirmed the requested reaction.
 pub(super) fn reaction_changed(ui: &Ui, session: u64, reaction: &str) {
     if let Some(reader) = active(ui, session) {
-        reader.state.borrow_mut().reaction = Some(reaction.to_owned());
+        {
+            let mut state = reader.state.borrow_mut();
+            state.reaction = Some(reaction.to_owned());
+            state.confirmed_reaction = Some(reaction.to_owned());
+        }
         note(ui, session, Ok(t("Reaction set.")), true);
     }
 }
@@ -1525,7 +1534,10 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
         Err(error) => {
             reader.message(ui, &tf!("{error} Your draft has been kept.", error = error));
         }
-        Ok(detail) => {
+        Ok(mut detail) => {
+            if let Some(confirmed) = reader.state.borrow().confirmed_reaction.clone() {
+                detail.reaction = Some(confirmed);
+            }
             super::remember_reaction(ui, &detail.url, detail.reaction.as_deref());
             // Before this refresh, so a sent comment can be recognised as new.
             let previous_ids: std::collections::HashSet<String> = reader
@@ -1645,6 +1657,7 @@ mod tests {
         let mut state = ReaderState {
             target: "https://www.facebook.com/a/posts/123".to_owned(),
             reaction: None,
+            confirmed_reaction: None,
             comments: Vec::new(),
             links: Vec::new(),
             post_links: Vec::new(),

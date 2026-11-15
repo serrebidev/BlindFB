@@ -4,6 +4,27 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.64 - 2026-11-15
+
+Messages send again to people whose chat Facebook moved to end-to-end
+encryption. Facebook keeps the old conversation read-only and puts a
+Continue button where the message box was, so sending said "error: no
+composer". BlindFB now presses Continue, which opens the secure chat with
+the same person, and sends there.
+
+Error dialogs no longer start with "error:", and BlindFB stops updating
+its window behind an open error dialog until you close it.
+
+Your reaction to a post stays shown after you like a comment in the
+reader. Liking the comment re-read Facebook's page, which still showed the
+post before your reaction, and that older state replaced it.
+
+Posting works on Estonian Facebook accounts, and deleting a post there
+too. A post with blank lines between paragraphs is no longer reported as
+failed after it was published. If Facebook's post dialog stays open after
+Post, the message now names what the dialog shows.
+Backend v0.1.5-blindfb.68.
+
 ## v0.7.63 - 2026-11-15
 
 Backend downloads now follow the version pinned by the app. Version 0.7.62

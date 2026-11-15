@@ -54,7 +54,14 @@ use blindfb_core::fb::{
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
-use wx_utils::{confirm, prompt_text, show_error, show_warning, AboutBoxBuilder};
+use wx_utils::{confirm, prompt_text, show_warning, AboutBoxBuilder};
+
+/// An error dialog. Backend errors arrive as "error: <message>"; the
+/// prefix is the command line's, not something to read out in a dialog.
+fn show_error(parent: &dyn WxWidget, message: impl std::fmt::Display, title: &str) {
+    let message = blindfb_core::page_errors::page_error(&message.to_string());
+    wx_utils::show_error(parent, message, title);
+}
 use wxdragon::prelude::*;
 
 use blindfb_core::i18n::{self, Language};
@@ -1022,7 +1029,15 @@ fn run() {
     let timer = Box::leak(Box::new(Timer::new(&ui.frame)));
     let ui_tick = ui.clone();
     let ticked = std::cell::Cell::new(false);
+    // A result can open a modal dialog (an error), whose loop keeps this timer
+    // firing: run nested, the tick went on applying later results under the
+    // dialog the screen reader was reading. They wait until it closes.
+    let in_tick = std::rc::Rc::new(std::cell::Cell::new(false));
     timer.on_tick(move |_| {
+        if in_tick.replace(true) {
+            return;
+        }
+        let _done = TickDone(in_tick.clone());
         if !ticked.get() {
             ticked.set(true);
             startup_log("tick: event loop alive, results flowing");
@@ -1136,6 +1151,15 @@ impl Ui {
     fn send(&self, job: Job) {
         self.status(&t("Working…"));
         let _ = self.jobs.send(job);
+    }
+}
+
+/// Clears the results timer's re-entry flag when a tick ends, even by panic.
+struct TickDone(std::rc::Rc<std::cell::Cell<bool>>);
+
+impl Drop for TickDone {
+    fn drop(&mut self) {
+        self.0.set(false);
     }
 }
 
