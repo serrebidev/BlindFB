@@ -36,19 +36,20 @@ pub fn own_reaction(label: &str, pressed: Option<bool>) -> Option<&'static str> 
     if label.starts_with("react with like to ")
         || label.starts_with("réagir avec j'aime à ")
         || label.starts_with("поставить нравится ")
+        || (label.starts_with("reageeri kasutaja ") && label.ends_with(" postitusele reaktsiooniga meeldib"))
     {
         return Some("none");
     }
     let mut name = label.split(',').next()?.trim();
     let mut selected = pressed == Some(true);
-    for prefix in ["remove ", "retirer ", "supprimer ", "annuler ", "удалить "] {
+    for prefix in ["remove ", "retirer ", "supprimer ", "annuler ", "удалить ", "eemalda "] {
         if let Some(rest) = name.strip_prefix(prefix) {
             selected = true;
             name = rest;
             break;
         }
     }
-    for separator in [" from ", " de la publication de ", " de la publication d'", " из публикации"] {
+    for separator in [" from ", " de la publication de ", " de la publication d'", " из публикации", " kasutaja "] {
         if let Some((action, _)) = name.split_once(separator) { name = action; }
     }
     // A liked Russian comment: Удалить реакцию "Нравится".
@@ -56,13 +57,13 @@ pub fn own_reaction(label: &str, pressed: Option<bool>) -> Option<&'static str> 
         name = name.strip_prefix("реакцию ").unwrap_or(name).trim_matches(['"', '«', '»']);
     }
     let kind = match name {
-        "like" | "liked" | "j'aime" | "thích" | "нравится" => "like",
-        "love" | "j'adore" | "yêu thích" | "супер" => "love",
-        "care" | "solidaire" | "thương thương" | "мы вместе" => "care",
-        "haha" | "ха-ха" => "haha",
-        "wow" | "wouah" | "ух ты!" => "wow",
-        "sad" | "triste" | "buồn" | "сочувствую" => "sad",
-        "angry" | "en colère" | "grrr" | "phẫn nộ" | "возмутительно" => "angry",
+        "like" | "liked" | "j'aime" | "thích" | "нравится" | "meeldib" => "like",
+        "love" | "j'adore" | "yêu thích" | "супер" | "armastan" => "love",
+        "care" | "solidaire" | "thương thương" | "мы вместе" | "hoolin" => "care",
+        "haha" | "ха-ха" | "hahaa!" => "haha",
+        "wow" | "wouah" | "ух ты!" | "ohhoo!" => "wow",
+        "sad" | "triste" | "buồn" | "сочувствую" | "kurb" => "sad",
+        "angry" | "en colère" | "grrr" | "phẫn nộ" | "возмутительно" | "vihane" => "angry",
         _ => return None,
     };
     Some(if pressed == Some(false) || (kind == "like" && !selected && name != "liked") { "none" } else { kind })
@@ -1401,6 +1402,18 @@ mod tests {
         let profile = "https://www.facebook.com/profile.php?id=123";
         assert_eq!(follow_args(profile, false), ["follow", profile]);
         assert_eq!(follow_args(profile, true), ["follow", profile, "--undo"]);
+    }
+
+    #[test]
+    fn estonian_reactions_ignore_author_names() {
+        assert_eq!(own_reaction("Meeldib", None), Some("none"));
+        assert_eq!(own_reaction("Meeldib", Some(true)), Some("like"));
+        assert_eq!(own_reaction("Eemalda Meeldib", None), Some("like"));
+        assert_eq!(own_reaction("Reageeri kasutaja Eemalda Armastan postitusele reaktsiooniga Meeldib", None), Some("none"));
+        assert_eq!(own_reaction("Eemalda Meeldib kasutaja Armastan postitusest", None), Some("like"));
+        for (name, kind) in [("Armastan", "love"), ("Hoolin", "care"), ("Hahaa!", "haha"), ("Ohhoo!", "wow"), ("Kurb", "sad"), ("Vihane", "angry")] {
+            assert_eq!(own_reaction(&format!("Eemalda {name}"), None), Some(kind));
+        }
     }
 
     #[test]

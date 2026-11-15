@@ -1,5 +1,5 @@
 // Facebook's own words for every button, badge and time BlindFB looks for, in each
-// language seen so far (English, French, Vietnamese). Facebook mixes languages on one
+// language seen so far (English, French, Vietnamese, Russian, Estonian). Facebook mixes languages on one
 // page — a French page can keep an English Share button — so every pattern accepts
 // all of them. French values come from docs/fr-labels.md. Facebook writes the
 // apostrophe as ’ (U+2019); patterns accept ' as well.
@@ -10,16 +10,16 @@
   const COUNT = '[\\d.,]+(?:[\\s\\u00a0\\u202f]\\d{3})*(?:[\\s\\u00a0\\u202f]?[KMBkmb])?';
   // Reaction names on the picker and on a reacted Like button, per BlindFB keyword.
   const REACTIONS = {
-    like: ['Like', `J${A}aime`, 'Thích', 'Нравится'],
-    love: ['Love', `J${A}adore`, 'Yêu thích', 'Супер'],
-    care: ['Care', 'Solidaire', 'Thương thương', 'Мы вместе'],
-    haha: ['Haha', 'Ха-ха'],
-    wow: ['Wow', 'Wouah', 'Ух ты!'],
-    sad: ['Sad', 'Triste', 'Buồn', 'Сочувствую'],
-    angry: ['Angry', 'En colère', 'Grrr', 'Phẫn nộ', 'Возмутительно'],
+    like: ['Like', `J${A}aime`, 'Thích', 'Нравится', 'Meeldib'],
+    love: ['Love', `J${A}adore`, 'Yêu thích', 'Супер', 'Armastan'],
+    care: ['Care', 'Solidaire', 'Thương thương', 'Мы вместе', 'Hoolin'],
+    haha: ['Haha', 'Ха-ха', 'Hahaa!'],
+    wow: ['Wow', 'Wouah', 'Ух ты!', 'Ohhoo!'],
+    sad: ['Sad', 'Triste', 'Buồn', 'Сочувствую', 'Kurb'],
+    angry: ['Angry', 'En colère', 'Grrr', 'Phẫn nộ', 'Возмутительно', 'Vihane'],
   };
   const ANY_REACTION = Object.values(REACTIONS).flat().join('|');
-  const REMOVE = '(?:Remove|Retirer|Supprimer|Annuler)\\s+';
+  const REMOVE = '(?:Remove|Retirer|Supprimer|Annuler|Eemalda)\\s+';
 
   const L = {
     COUNT,
@@ -40,9 +40,9 @@
     // A comment's own Like button, liked or not. Facebook labels it with the Like name
     // until you react, then "Remove <your reaction>" (Russian: Удалить реакцию "<name>"),
     // as its own CometUFIReactionLink source shows.
-    commentLike: exact(`Like|Thích|J${A}aime|Нравится|Unlike|Je n${A}aime plus|${REMOVE}(?:${ANY_REACTION})|Удалить реакцию ["«]?(?:${ANY_REACTION})["»]?`),
+    commentLike: exact(`Like|Thích|J${A}aime|Нравится|Meeldib|Unlike|Je n${A}aime plus|${REMOVE}(?:${ANY_REACTION})|Удалить реакцию ["«]?(?:${ANY_REACTION})["»]?`),
     // The same button before any reaction.
-    commentUnliked: exact(`Like|Thích|J${A}aime|Нравится`),
+    commentUnliked: exact(`Like|Thích|J${A}aime|Нравится|Meeldib`),
     reply: exact('Reply|Trả lời|Répondre|Ответить'),
     replyStart: /^(?:Reply|Trả lời|Répondre|Ответить)(?!\p{L})/iu,
     // Buttons that load a comment's hidden replies: "View replies", "View 3 replies",

@@ -20,10 +20,12 @@ use crate::tf;
 /// once those merge.
 pub const BACKEND_VERSION: &str = "0.1.5-blindfb.67";
 /// Forgejo first; the GitHub mirror (synced from Forgejo) when Forgejo is down or errors.
-const RELEASE_URLS: [&str; 2] = [
-    "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases/tags/v0.1.5-blindfb.66",
-    "https://api.github.com/repos/serrebidev/facebook-cli/releases/tags/v0.1.5-blindfb.66",
-];
+fn release_urls() -> [String; 2] {
+    [
+        "https://git.serrebiradio.com/api/v1/repos/serrebi/facebook-cli/releases",
+        "https://api.github.com/repos/serrebidev/facebook-cli/releases",
+    ].map(|base| format!("{base}/tags/v{BACKEND_VERSION}"))
+}
 
 /// The managed backend exists but is not the build this BlindFB ships.
 pub fn managed_outdated() -> bool {
@@ -186,9 +188,10 @@ pub fn install_or_update() -> Result<String, String> {
     let target = managed_bin().ok_or_else(|| t("could not find a place to install the backend"))?;
 
     // The first source's error explains the failure best; the mirror is only a backup.
-    let (tag, binary) = match download_backend(RELEASE_URLS[0], asset) {
+    let urls = release_urls();
+    let (tag, binary) = match download_backend(&urls[0], asset) {
         Ok(found) => found,
-        Err(error) => download_backend(RELEASE_URLS[1], asset).map_err(|_| error)?,
+        Err(error) => download_backend(&urls[1], asset).map_err(|_| error)?,
     };
     finish_install(tag, binary, target)
 }
@@ -336,6 +339,13 @@ mod tests {
         .unwrap();
         let bytes = tar.into_inner().unwrap().finish().unwrap();
         assert_eq!(extract("backend.tar.gz", &bytes).unwrap(), contents);
+    }
+
+    #[test]
+    fn release_urls_download_the_shipped_version() {
+        for url in release_urls() {
+            assert!(url.ends_with(&format!("/tags/v{BACKEND_VERSION}")), "{url}");
+        }
     }
 
     #[test]

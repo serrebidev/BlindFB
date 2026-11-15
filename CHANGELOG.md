@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.63 - 2026-11-15
+
+Backend downloads now follow the version pinned by the app. Version 0.7.62
+advertised backend .67 but downloaded .66, leaving its posting fixes uninstalled.
+
+Estonian Facebook reaction labels are recognized independently of BlindFB's
+interface language. Comment Like actions and selected post reactions now
+recognize Meeldib and the other Estonian reaction names.
+
 ## v0.7.62 - 2026-11-15
 
 Liking comments works on a Russian Facebook account, and on comments you

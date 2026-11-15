@@ -143,6 +143,25 @@ function fixture(mode = false) {
   const ownState = JSON.parse(await fixture().api.initialize('https://www.facebook.com/a/posts/1'));
   assert.equal(ownState.reaction_label, "Remove Love from Post author's post");
   assert.equal(ownState.reaction_pressed, true);
+  const estonian = fixture();
+  const estonianComment = estonian.article('81');
+  let estonianLike = 'Meeldib', likeClicks = 0;
+  const likeButton = {closest: () => estonianComment, isConnected: true, className: '',
+    getAttribute: name => name === 'aria-label' ? estonianLike : null,
+    click() { likeClicks++; estonianLike = estonianLike === 'Meeldib' ? 'Eemalda Meeldib' : 'Meeldib'; }};
+  estonianComment.actions = [likeButton,
+    {closest: () => estonianComment, getAttribute: () => 'Reageeri'}];
+  const unliked = JSON.parse(await estonian.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(unliked.comments[0].reaction_label, 'Meeldib');
+  const liked = JSON.parse(await estonian.api.like('81', 'like'));
+  assert.equal(liked.comments[0].reaction_label, 'Eemalda Meeldib');
+  await estonian.api.like('81', 'like');
+  assert.equal(likeClicks, 1, 'retry must preserve the selected reaction');
+  await estonian.api.like('81', 'none');
+  assert.equal(likeClicks, 2);
+  estonianComment.actions.push({...likeButton});
+  await assert.rejects(estonian.api.like('81', 'like'), /no unique Like button/);
+  assert.equal(likeClicks, 2, 'ambiguous buttons must not change a reaction');
   const slow = fixture('slow');
   assert.equal(JSON.parse(await slow.api.initialize('https://www.facebook.com/a/posts/1')).text, 'Entire post text');
   const shared = fixture('shared');
