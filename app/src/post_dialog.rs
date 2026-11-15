@@ -31,6 +31,21 @@ fn composer_label() -> String {
     t("&Write a comment (Ctrl+Enter to send)")
 }
 
+/// You reacted to this comment (any reaction); unknown counts as not.
+fn comment_reacted(reaction: Option<&str>) -> bool {
+    reaction.is_some_and(|r| r != "none")
+}
+
+/// The comment menu's Like item, saying what pressing it does.
+fn like_menu_label(reaction: Option<&str>) -> String {
+    match reaction {
+        None => t("&Like / unlike"),
+        Some("none") => t("&Like"),
+        Some("like") => t("&Unlike"),
+        Some(kind) => tf!("&Remove your reaction ({reaction})", reaction = reaction_label(kind)),
+    }
+}
+
 /// The display label of a reaction keyword; the keyword itself stays English.
 fn reaction_label(reaction: &str) -> String {
     match reaction {
@@ -678,10 +693,11 @@ impl PostReader {
                         comment.text.clone(),
                         comment.url.clone(),
                         comment.author_ref.clone(),
+                        comment.reaction.clone(),
                     )
                 })
         });
-        let Some((id, author, text, url, author_ref)) = selected else {
+        let Some((id, author, text, url, author_ref, reaction)) = selected else {
             return;
         };
         match action {
@@ -716,7 +732,7 @@ impl PostReader {
                 let page = self.page.clone();
                 self.start(
                     ui,
-                    Task::PostLike { page, id },
+                    Task::PostLike { page, id, liked: !comment_reacted(reaction.as_deref()) },
                     Tag::PostLiked(self.session),
                     &tf!("Changing your Like on {author}'s comment…", author = author),
                 );
@@ -1123,17 +1139,18 @@ fn open_requested(
                     !state.busy && !c.id.is_empty(),
                     c.url.is_some(),
                     !state.busy && (c.author_ref.is_some() || !c.author.is_empty()),
+                    c.reaction.clone(),
                 )
             })
         });
-        let Some((reply, web, person)) = available else {
+        let Some((reply, web, person, reaction)) = available else {
             return;
         };
         let mut menu = Menu::builder()
             .append_item(ID_REPLY, &t("&Reply"), &t("Reply to this exact comment"))
             .append_item(
                 ID_LIKE,
-                &t("&Like / unlike"),
+                &like_menu_label(reaction.as_deref()),
                 &t("Like this comment, or remove your Like"),
             )
             .append_item(ID_COPY, &t("&Copy comment"), &t("Copy the full comment"))
@@ -1202,9 +1219,11 @@ fn open_requested(
             )
             .build();
         let react = Menu::builder().build();
+        let current = r.state.borrow().reaction.clone();
         for (i, reaction) in REACTIONS.iter().enumerate() {
             let label = reaction_label(reaction);
-            react.append(ID_REACT + i as i32, &label, "", ItemKind::Normal);
+            react.append(ID_REACT + i as i32, &label, "", ItemKind::Check);
+            react.check_item(ID_REACT + i as i32, *reaction != "none" && current.as_deref() == Some(*reaction));
         }
         menu.append_submenu(react, &blindfb_core::fb::reaction_button_label(r.state.borrow().reaction.as_deref()), "");
         append_links_menu(&menu, &r.state.borrow().post_links);
@@ -1405,7 +1424,7 @@ pub(super) fn prepared(ui: &Ui, target: &str, result: Result<String, String>) {
 /// One comments-list row, speaker first. A reply names the comment it answers,
 /// so it cannot be mistaken for a top-level comment (issue #22).
 fn comment_row(comment: &Comment, comments: &[Comment]) -> String {
-    match comment
+    let row = match comment
         .parent_id
         .as_ref()
         .and_then(|parent| comments.iter().find(|other| &other.id == parent))
@@ -1430,6 +1449,13 @@ fn comment_row(comment: &Comment, comments: &[Comment]) -> String {
             )
         }
         None => format!("{}: {} — {}", comment.author, comment.text, comment.time),
+    };
+    // Your own reaction, read from the comment's Like button ("Liked", "React: Love").
+    match comment.reaction.as_deref() {
+        reaction if comment_reacted(reaction) => {
+            format!("{row} — {}", blindfb_core::fb::reaction_button_label(reaction))
+        }
+        _ => row,
     }
 }
 

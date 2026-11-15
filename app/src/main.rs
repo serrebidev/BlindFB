@@ -187,6 +187,14 @@ fn reaction_name(reaction: &str) -> String {
     }
 }
 
+/// The context menu's React submenu, naming your current reaction: "React (Love)".
+fn react_submenu_title(current: Option<&str>) -> String {
+    match current {
+        Some(kind) if kind != "none" => format!("{} ({})", t("&React"), reaction_label(kind)),
+        _ => t("&React"),
+    }
+}
+
 /// A `REACTIONS` keyword as a context-menu item.
 fn reaction_label(reaction: &str) -> String {
     match reaction {
@@ -420,6 +428,8 @@ enum Task {
     PostLike {
         page: String,
         id: String,
+        /// Like it (true) or remove your reaction (false).
+        liked: bool,
     },
     PostParticipation {
         page: String,
@@ -1371,8 +1381,8 @@ fn spawn_worker(
                     }
                     None => Err(t("The Facebook backend is not installed")),
                 },
-                Task::PostLike { page, id } => match &fb {
-                    Some(fb) => blindfb_core::posts::like_comment(fb, &page, &id),
+                Task::PostLike { page, id, liked } => match &fb {
+                    Some(fb) => blindfb_core::posts::like_comment(fb, &page, &id, liked),
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostParticipation { page, token, answers } => match &fb {
@@ -5438,12 +5448,14 @@ fn show_item_menu(ui: &Ui) {
                     add(&menu, &[(ID_GROUP_POSTS, t("Group's p&osts"))]);
                 }
             }
+            let current = record.reaction.as_deref();
             let react = Menu::builder().build();
             for (i, reaction) in REACTIONS.iter().enumerate() {
                 let label = reaction_label(reaction);
-                react.append(ID_REACT_BASE + i as i32, &label, "", ItemKind::Normal);
+                react.append(ID_REACT_BASE + i as i32, &label, "", ItemKind::Check);
+                react.check_item(ID_REACT_BASE + i as i32, *reaction != "none" && current == Some(*reaction));
             }
-            menu.append_submenu(react, &t("&React"), "");
+            menu.append_submenu(react, &react_submenu_title(current), "");
             append_links_menu(&menu, &ui.link_targets.borrow());
             add(
                 &menu,

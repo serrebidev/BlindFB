@@ -347,12 +347,14 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             .append_item(ID_POST_SHARE, &t("S&hare…"), "")
             .append_item(ID_POST_COMMENT, &t("&Comment…"), "")
             .build();
+        let current = record.reaction.as_deref();
         let react = Menu::builder().build();
         for (i, reaction) in REACTIONS.iter().enumerate() {
             let label = super::reaction_label(reaction);
-            react.append(ID_POST_REACT + i as i32, &label, "", ItemKind::Normal);
+            react.append(ID_POST_REACT + i as i32, &label, "", ItemKind::Check);
+            react.check_item(ID_POST_REACT + i as i32, *reaction != "none" && current == Some(*reaction));
         }
-        menu.append_submenu(react, &t("&React"), "");
+        menu.append_submenu(react, &super::react_submenu_title(current), "");
         menu.append_separator();
         menu.append(ID_POST_PROFILE, &t("Author &profile"), "", ItemKind::Normal);
         menu.append(ID_POST_AUTHOR_POSTS, &t("Author's p&osts"), "", ItemKind::Normal);

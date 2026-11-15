@@ -381,6 +381,14 @@ function fixture(mode = false) {
   assert.equal(W.reelReaction('Remove Haha', null), 'haha');
   assert.equal(W.reelReaction('Réagir', null), null);
   assert.equal(W.reelReaction('Commenter, 2 commentaires', null), null);
+  // A comment's Like button, read live 2026-11-15 and from Facebook's CometUFIReactionLink.
+  for (const text of ['Like', 'Remove Like', 'Remove Love', 'Нравится', 'Удалить реакцию "Нравится"', 'Удалить реакцию "Ух ты!"', 'Retirer J’adore']) assert.ok(W.commentLike.test(text), text);
+  for (const text of ['React', 'Отреагировать', 'Change Love reaction', 'Hide or report this']) assert.ok(!W.commentLike.test(text), text);
+  assert.ok(W.commentUnliked.test('Нравится') && !W.commentUnliked.test('Remove Like'));
+  for (const text of ['Ответить', 'Отредактировано']) assert.ok(W.commentAction.test(text), text);
+  for (const text of ['8 ч.', '1 мин.', '3 дн.', 'Только что']) assert.ok(W.time.test(text), text);
+  for (const text of ['Посмотреть 2 ответа', 'Посмотреть 1 ответ', 'Посмотреть все ответы']) assert.ok(W.viewReplies.test(text), text);
+  assert.ok(W.reply.test('Ответить') && W.replyStart.test('Ответить') && !W.replyStart.test('Ответитьx'));
   for (const text of ['Commenter', 'Commenter, 2 commentaires', 'Commenter, 1,9 K commentaires', 'Comment, 1.2K comments']) assert.ok(W.comment.test(text), text);
   for (const text of ['Partager la publication de X', 'Partager, 4 partages', "Share X's post, 18 shares"]) assert.ok(W.share.test(text), text);
   for (const text of ['1,9 K', '40,1 K', '4 890', '4\u202f890', 'Compte vérifié', 'Vous suivez JECK', 'Suivre', '·']) assert.ok(W.captionNoise.test(text), text);

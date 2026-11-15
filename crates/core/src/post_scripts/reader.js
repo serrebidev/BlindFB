@@ -9,7 +9,8 @@
   // Facebook's words per language: labels.js, injected before this script.
   const W = window.__blindfbLabels;
   const action = W.commentAction;
-  const time = F.TIME || W.time;
+  // The backend's times, plus the languages only labels.js knows (Russian "8 ч.").
+  const time = {test: text => !!(F.TIME && F.TIME.test(text)) || W.time.test(text)};
   let root, address, target, serial = 0, records = new Map(), pending;
   // A reel has no post dialog: its card holds the caption and actions, a side panel the comments.
   // Opening its comments hides the card's author and caption, so they are read before that.
@@ -249,8 +250,12 @@
     // Facebook starts a reply with a link to the person it answers, who need not be the
     // author of the thread's first comment: a reply to a reply joins the same thread.
     const replyTo = parent ? [...article.querySelectorAll('a[href]')].filter(a => own(a, article) && (!F.profilePath || F.profilePath(a.href))).map(a => F.clean(a.innerText || '')).find(name => name && name !== author && body[0] && body[0].startsWith(name) && /^(?:\s|$)/.test(body[0].slice(name.length))) || null : null;
-    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, reply_to: replyTo, url: id.url, links: commentLinks(article)};
+    const likes = likeButtons(article);
+    return {id: id.id, author, author_ref: authorRef, time: ti >= 0 ? lines[ti] : '', text: body.join('\n'), parent_id: parent, reply_to: replyTo, url: id.url, links: commentLinks(article), reaction_label: likes.length === 1 ? label(likes[0]) || F.clean(likes[0].innerText || '') : ''};
   }
+
+  // A comment's own Like button: "Like" until you react, then "Remove <your reaction>".
+  const likeButtons = article => [...article.querySelectorAll('[role=button],button')].filter(element => own(element, article) && F.visible(element) && W.commentLike.test(label(element) || F.clean(element.innerText || '')));
 
   const fingerprint = value => JSON.stringify([value.id, value.author, value.author_ref, value.text, value.parent_id, value.url]);
   function collect() {
@@ -447,12 +452,16 @@
     return read();
   }
 
-  // Like or unlike one exact comment; confirmed by its Like button changing state.
-  async function like(id) {
+  // Like ('like') or remove your reaction ('none') on one exact comment; confirmed by its
+  // Like button changing state. Already in that state: nothing is pressed, so a retry after
+  // a lost page cannot undo the first press.
+  async function like(id, want) {
     const article = selected(id);
-    const buttons = [...article.querySelectorAll('[role=button],button')].filter(element => own(element, article) && F.visible(element) && W.commentLike.test(label(element) || F.clean(element.innerText || '')));
+    const buttons = likeButtons(article);
     if (buttons.length !== 1) throw Error('The selected comment has no unique Like button. Nothing was changed.');
     const button = buttons[0];
+    const reacted = () => !W.commentUnliked.test(label(button) || F.clean(button.innerText || '')) || button.getAttribute('aria-pressed') === 'true';
+    if (want !== undefined && reacted() === (want !== 'none')) return read();
     const state = () => [label(button), button.getAttribute('aria-pressed'), F.clean(button.innerText || ''), button.className].join('|');
     const before = state();
     button.click();

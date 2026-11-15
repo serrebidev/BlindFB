@@ -23,6 +23,8 @@ pub struct Comment {
     /// Browsable links inside the comment's own text (real targets, unwrapped
     /// from Facebook's redirect), for the reader's links list.
     pub links: Vec<Link>,
+    /// Your reaction to this comment ("like", "love", ..., "none"); None when unknown.
+    pub reaction: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,6 +172,8 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
             reply_to: optional_string(row, "reply_to")?,
             url,
             links: parse_links(row),
+            reaction: crate::fb::own_reaction(row["reaction_label"].as_str().unwrap_or(""), None)
+                .map(str::to_owned),
         });
     }
     let by_id: HashMap<_, _> = comments
@@ -618,12 +622,15 @@ pub fn participation(fb: &Fb, page: &str, token: &str, answers: Option<&Value>) 
     eval(fb, page, &script)
 }
 
-/// Like or unlike one exact comment; returns a fresh detail JSON.
-pub fn like_comment(fb: &Fb, page: &str, id: &str) -> Result<String, String> {
-    let output = eval(
+/// Like (`liked`) or remove your reaction on one exact comment; returns a fresh detail JSON.
+/// The script presses nothing when the comment is already in that state, so a page the
+/// backend lost (after any failed script) is reopened instead of failing.
+pub fn like_comment(fb: &Fb, page: &str, id: &str, liked: bool) -> Result<String, String> {
+    let want = if liked { "like" } else { "none" };
+    let output = recover_eval(
         fb,
         page,
-        &format!("window.__blindfbPost.like({})", json!(id)),
+        &format!("window.__blindfbPost.like({},{})", json!(id), json!(want)),
     )?;
     parse_detail(&output)?;
     Ok(output)

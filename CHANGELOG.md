@@ -4,6 +4,33 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.62 - 2026-11-15
+
+Liking comments works on a Russian Facebook account, and on comments you
+already reacted to. BlindFB knew only the English, French and Vietnamese
+names of a comment's Like button, and none for a comment you had given
+Love or another reaction ("Remove Love"), so it said "The selected comment
+has no unique Like button". Any failed attempt also lost the post's page,
+so the next one said "page expired; reopen explicitly". BlindFB now
+reopens the page and never presses Like twice by mistake.
+
+Hear your reaction to a comment. A comment you reacted to ends with
+"Liked" (or "React: Love" and so on) in the comments list, and its
+context menu says Like, Unlike or Remove your reaction. The React submenu
+in the feed's, a group's and the reader's context menu names your current
+reaction and checks it, like the React button already did.
+
+Russian comments read cleanly: their time ("8 ч.") is recognised, and
+Reply and Edited are no longer read as part of the comment's text. Replies
+load on Russian pages too ("Посмотреть 2 ответа").
+
+Posting holds on longer when Facebook is slow to answer. BlindFB now
+listens for Facebook's answer from the moment it presses Post, waits up
+to two and a half minutes for it, and if it still cannot confirm the
+post it leaves Facebook's page open so the post can finish. Deleting a
+post works on a Russian Facebook account.
+Backend v0.1.5-blindfb.67.
+
 ## v0.7.61 - 2026-11-14
 
 Posting again works for slow connections. After pressing Post, BlindFB

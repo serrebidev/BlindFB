@@ -51,6 +51,10 @@ pub fn own_reaction(label: &str, pressed: Option<bool>) -> Option<&'static str> 
     for separator in [" from ", " de la publication de ", " de la publication d'", " из публикации"] {
         if let Some((action, _)) = name.split_once(separator) { name = action; }
     }
+    // A liked Russian comment: Удалить реакцию "Нравится".
+    if selected {
+        name = name.strip_prefix("реакцию ").unwrap_or(name).trim_matches(['"', '«', '»']);
+    }
     let kind = match name {
         "like" | "liked" | "j'aime" | "thích" | "нравится" => "like",
         "love" | "j'adore" | "yêu thích" | "супер" => "love",
@@ -1415,6 +1419,12 @@ mod tests {
         assert_eq!(own_reaction("Удалить Нравится из публикации Иван Иванов", None), Some("like"));
         assert_eq!(own_reaction("Удалить Ух ты! из публикации Иван Иванов", None), Some("wow"));
         assert_eq!(own_reaction("Удалить Мы вместе из публикации Иван Иванов", None), Some("care"));
+        // A comment's Like button (live 2026-11-15, Facebook's CometUFIReactionLink).
+        assert_eq!(own_reaction("Like", None), Some("none"));
+        assert_eq!(own_reaction("Нравится", None), Some("none"));
+        assert_eq!(own_reaction("Remove Like", None), Some("like"));
+        assert_eq!(own_reaction("Удалить реакцию \"Нравится\"", None), Some("like"));
+        assert_eq!(own_reaction("Удалить реакцию «Супер»", None), Some("love"));
         assert_eq!(reaction_button_label(Some("like")), "Liked");
         assert_eq!(reaction_button_label(Some("love")), "React: Love");
         assert_eq!(reaction_button_label(Some("none")), "React");
