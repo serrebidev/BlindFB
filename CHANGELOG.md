@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.68 - 2026-11-15
+
+The group window gains a Photos list: every photo in the group's Media
+tab, newest first, with Enter opening it in the reader. Photos load in
+the background behind posts and members, like the rest of the window,
+and Load more fetches further ones. French, Russian, and Estonian
+include the new controls.
+
 ## v0.7.67 - 2026-11-15
 
 Choose Groups in the new-post Audience dialog to publish to one of your joined

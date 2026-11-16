@@ -326,6 +326,7 @@ enum Tag {
     GroupPost(String),
     GroupCreated(String),
     GroupInvited { group: String },
+    GroupPhotos(u64),
     List {
         view: View,
         request: u64,
@@ -1306,6 +1307,7 @@ fn spawn_worker(
                     | Tag::AlertChats
                     | Tag::GroupPosts(_)
                     | Tag::GroupMembers(_)
+                    | Tag::GroupPhotos(_)
             ) && matches!(job.task, Task::Fb(_, None));
             if read && fb.is_none() {
                 fb = Fb::discover();
@@ -3723,6 +3725,7 @@ fn apply_done(ui: &Ui, done: Done) {
         }
         Tag::GroupPosts(session) => group_dialog::deliver_posts(ui, session, done.result),
         Tag::GroupMembers(session) => group_dialog::deliver_members(ui, session, done.result),
+        Tag::GroupPhotos(session) => group_dialog::deliver_photos(ui, session, done.result),
         Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
         Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {

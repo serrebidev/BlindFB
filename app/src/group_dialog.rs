@@ -8,8 +8,8 @@
 use super::post_dialog::Over;
 use super::{load_view, open_url, Job, Tag, Task, Ui, View, REACTIONS};
 use blindfb_core::fb::{
-    friend_add_args, link_url, members_args, parse_feed, parse_records, posts_args, web_url,
-    Record,
+    friend_add_args, group_photos_args, link_url, members_args, parse_feed, parse_records,
+    posts_args, web_url, Record,
 };
 use blindfb_core::{ntf, tf};
 use patois::t;
@@ -48,8 +48,11 @@ const MEMBERS_STEP: u32 = 500;
 enum List {
     Posts,
     Members,
+    Photos,
 }
 const MEMBERS_FIRST: u32 = 50;
+const PHOTOS_FIRST: u32 = 50;
+const PHOTOS_CAP: u32 = 200;
 
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 
@@ -61,6 +64,7 @@ pub(super) struct GroupWindow {
     dialog: Dialog,
     posts: ListBox,
     members: ListBox,
+    photos: ListBox,
     status: TextCtrl,
     state: Arc<Mutex<GroupState>>,
 }
@@ -70,14 +74,18 @@ struct GroupState {
     url: String,
     posts: Vec<Record>,
     members: Vec<Record>,
+    photos: Vec<Record>,
     posts_count: Option<usize>,
     members_count: Option<usize>,
-    /// How many rows the latest posts/members fetch asked for; a full
+    photos_count: Option<usize>,
+    /// How many rows the latest posts/members/photos fetch asked for; a full
     /// page back means a background top-up to the cap is worthwhile.
     posts_want: u32,
     members_want: u32,
+    photos_want: u32,
     posts_loading: bool,
     members_loading: bool,
+    photos_loading: bool,
     /// What to do in the main window once this dialog has closed.
     pending: Option<Pending>,
     close_requested: bool,
@@ -196,6 +204,9 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     members.set_name(&t(
         "Members of this group. Applications or Shift+F10 for profile, message and friend actions"
     ));
+    let photos_label = StaticText::builder(&dialog).with_label(&t("&Photos")).build();
+    let photos = ListBox::builder(&dialog).build();
+    photos.set_name(&t("Photos in this group. Enter opens the selected photo"));
     let status_label = StaticText::builder(&dialog)
         .with_label(&t("Group status"))
         .build();
@@ -213,6 +224,8 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     root.add(&posts, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&members_label, 0, SizerFlag::All, 4);
     root.add(&members, 2, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&photos_label, 0, SizerFlag::All, 4);
+    root.add(&photos, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&status_label, 0, SizerFlag::All, 4);
     root.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&close, 0, SizerFlag::All, 4);
@@ -223,18 +236,23 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         dialog,
         posts,
         members,
+        photos,
         status,
         state: Arc::new(Mutex::new(GroupState {
             name: name.clone(),
             url: url.clone(),
             posts: Vec::new(),
             members: Vec::new(),
+            photos: Vec::new(),
             posts_count: None,
             members_count: None,
+            photos_count: None,
             posts_want: POSTS_FIRST,
             members_want: MEMBERS_FIRST,
+            photos_want: PHOTOS_FIRST,
             posts_loading: true,
             members_loading: true,
+            photos_loading: true,
             pending: None,
             close_requested: false,
         })),
@@ -249,9 +267,14 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         task: Task::Fb(members_args(&url, MEMBERS_FIRST, true), None),
         tag: Tag::GroupMembers(session),
     });
+    ui.send(Job {
+        task: Task::Fb(group_photos_args(&url, PHOTOS_FIRST), None),
+        tag: Tag::GroupPhotos(session),
+    });
 
     super::type_ahead::attach(&posts, |_| {});
     super::type_ahead::attach(&members, |_| {});
+    super::type_ahead::attach(&photos, |_| {});
     let (w, u) = (window.clone(), ui.clone());
     let d = dialog;
     posts.on_item_double_clicked(move |_| {
@@ -265,6 +288,15 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     members.on_item_double_clicked(move |_| {
         if w.on_more_row(List::Members) {
             w.load_more(&u, List::Members);
+        }
+    });
+    let (w, u) = (window.clone(), ui.clone());
+    let d = dialog;
+    photos.on_item_double_clicked(move |_| {
+        if w.on_more_row(List::Photos) {
+            w.load_more(&u, List::Photos);
+        } else {
+            w.open_selected_photo(&u, &d);
         }
     });
     let (w, u) = (window.clone(), ui.clone());
@@ -284,6 +316,15 @@ pub(super) fn open(ui: &Ui, record: &Record) {
                 if w.members.has_focus() && w.on_more_row(List::Members) {
                     event.skip(false);
                     w.load_more(&u, List::Members);
+                    return;
+                }
+                if w.photos.has_focus() {
+                    event.skip(false);
+                    if w.on_more_row(List::Photos) {
+                        w.load_more(&u, List::Photos);
+                    } else {
+                        w.open_selected_photo(&u, &d);
+                    }
                     return;
                 }
                 if w.members.has_focus() {
@@ -409,6 +450,7 @@ impl GroupWindow {
         match which {
             List::Posts => self.posts,
             List::Members => self.members,
+            List::Photos => self.photos,
         }
     }
 
@@ -418,6 +460,7 @@ impl GroupWindow {
         match which {
             List::Posts => state.posts.len(),
             List::Members => state.members.len(),
+            List::Photos => state.photos.len(),
         }
     }
 
@@ -442,6 +485,7 @@ impl GroupWindow {
             list.append(&match which {
                 List::Posts => t("Load more posts"),
                 List::Members => t("Load more members"),
+                List::Photos => t("Load more photos"),
             });
         }
     }
@@ -465,6 +509,14 @@ impl GroupWindow {
                         Tag::GroupMembers(self.session),
                     ))
                 }
+                List::Photos if !state.photos_loading => {
+                    state.photos_loading = true;
+                    state.photos_want = state.photos_want.saturating_mul(2).min(PHOTOS_CAP);
+                    Some((
+                        group_photos_args(&url, state.photos_want),
+                        Tag::GroupPhotos(self.session),
+                    ))
+                }
                 _ => None,
             }
         };
@@ -483,6 +535,29 @@ impl GroupWindow {
     fn selected_post(&self) -> Option<Record> {
         let index = self.posts.get_selection()? as usize;
         self.state.lock().unwrap().posts.get(index).cloned()
+    }
+
+    fn selected_photo(&self) -> Option<Record> {
+        let index = self.photos.get_selection()? as usize;
+        self.state.lock().unwrap().photos.get(index).cloned()
+    }
+
+    /// Opens the reader on the selected group's photo. Photo rows carry a
+    /// full URL, unlike posts' relative links.
+    fn open_selected_photo(&self, ui: &Ui, dialog: &Dialog) {
+        let Some(record) = self.selected_photo() else {
+            return;
+        };
+        let url = record.field(1).trim().to_owned();
+        if url.is_empty() {
+            self.note(&t("This photo row has no link, so it cannot be opened."));
+            return;
+        }
+        if super::post_dialog::open_over(ui, &url, Over::Read) {
+            self.photos.set_focus();
+        } else {
+            dialog.end_modal(ID_OK);
+        }
     }
 
     /// The selected row's post link (relative, `/groups/<id>/posts/<post>/`).
@@ -610,14 +685,105 @@ fn refresh_note(window: &GroupWindow) {
             }
         })
         .unwrap_or_else(|| t("members loading"));
+    let photos = state
+        .photos_count
+        .map(|n| {
+            if state.photos_loading {
+                ntf!("{n} photo so far", "{n} photos so far", n)
+            } else {
+                ntf!("{n} photo", "{n} photos", n)
+            }
+        })
+        .unwrap_or_else(|| t("photos loading"));
     // TRANSLATORS: the group window status: group name, then the posts part
-    // ("12 posts", "posts loading"…), then the members part
+    // ("12 posts", "posts loading"…), then the members part, then the photos part
     window.note(&tf!(
-        "{group}: {posts} · {members}.",
+        "{group}: {posts} · {members} · {photos}.",
         group = state.name,
         posts = posts,
-        members = members
+        members = members,
+        photos = photos
     ));
+}
+
+fn photo_label(record: &Record) -> String {
+    let info = record.field(2);
+    if info.is_empty() {
+        record.field(0).to_owned()
+    } else {
+        format!("{} — {}", record.field(0), info)
+    }
+}
+
+fn fill_photos(window: &GroupWindow, raw: &str) {
+    let records = parse_records(raw);
+    let first = window.state.lock().unwrap().photos.is_empty();
+    if first {
+        window.photos.clear();
+        for record in &records {
+            window.photos.append(&photo_label(record));
+        }
+        if !records.is_empty() {
+            window.photos.set_selection(0, true);
+        }
+        let mut state = window.state.lock().unwrap();
+        state.photos_count = Some(records.len());
+        state.photos = records;
+    } else {
+        let known: std::collections::HashSet<String> = window
+            .state
+            .lock()
+            .unwrap()
+            .photos
+            .iter()
+            .map(|r| r.raw.clone())
+            .collect();
+        let mut fresh = Vec::new();
+        for record in records {
+            if !known.contains(&record.raw) {
+                window.photos.append(&photo_label(&record));
+                fresh.push(record);
+            }
+        }
+        let mut state = window.state.lock().unwrap();
+        state.photos.extend(fresh);
+        state.photos_count = Some(state.photos.len());
+    }
+    refresh_note(window);
+}
+
+pub(super) fn deliver_photos(ui: &Ui, session: u64, result: Result<String, String>) {
+    let window = ui.group_window.lock().unwrap().clone();
+    let Some(window) = window.filter(|w| w.session == session) else {
+        return;
+    };
+    match result {
+        Ok(raw) => {
+            let returned = parse_records(&raw).len();
+            fill_photos(&window, &raw);
+            let (want, url) = {
+                let state = window.state.lock().unwrap();
+                (state.photos_want, state.url.clone())
+            };
+            if returned >= want as usize && want < PHOTOS_CAP {
+                window.state.lock().unwrap().photos_want = PHOTOS_CAP;
+                ui.send(Job {
+                    task: Task::Fb(group_photos_args(&url, PHOTOS_CAP), None),
+                    tag: Tag::GroupPhotos(session),
+                });
+            } else {
+                window.state.lock().unwrap().photos_loading = false;
+                window.show_more(List::Photos, returned >= want as usize);
+                refresh_note(&window);
+            }
+        }
+        Err(e) => {
+            window.state.lock().unwrap().photos_loading = false;
+            let shown = !window.state.lock().unwrap().photos.is_empty();
+            window.show_more(List::Photos, shown);
+            window.note(&tf!("Photos could not load: {error}", error = e));
+        }
+    }
 }
 
 fn member_label(record: &Record) -> String {
