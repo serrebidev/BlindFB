@@ -3,18 +3,27 @@
 Usage: publish_release.py <tag> <notes file>. Env: GITHUB_API_URL (Forgejo's
 /api/v1), GITHUB_REPOSITORY (owner/name), TOKEN. The runners have no `gh`, and
 `gh` speaks GitHub's API anyway, so this talks to Forgejo's own release API.
+It also writes SHA256SUMS over the four archives before publishing: no
+package leg can make it (each sees only its own platform's files), and the
+releases shipped without it had to be finished by hand.
 """
 
+import hashlib
 import json
 import os
 import sys
 import urllib.request
+import uuid
 
 WANTED = [
     "BlindFB.zip", "BlindFB.zip.minisig",
+    "BlindFB-Setup.exe", "BlindFB-Setup.exe.minisig",
     "BlindFB.tar.gz", "BlindFB.tar.gz.minisig",
     "BlindFB-arm64.dmg", "BlindFB-arm64.dmg.minisig",
 ]
+
+# The order SHA256SUMS has listed the archives in since v0.7.48.
+ARCHIVES = ["BlindFB.zip", "BlindFB-Setup.exe", "BlindFB.tar.gz", "BlindFB-arm64.dmg"]
 
 
 def call(method, path, body=None):
@@ -25,7 +34,43 @@ def call(method, path, body=None):
         headers={"Authorization": "token " + os.environ["TOKEN"], "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(request) as response:
+        raw = response.read()
+        return json.loads(raw) if raw else {}
+
+
+def download(url):
+    request = urllib.request.Request(url, headers={"Authorization": "token " + os.environ["TOKEN"]})
+    with urllib.request.urlopen(request) as response:
+        return response.read()
+
+
+def upload_asset(repo, release_id, data, name):
+    boundary = "----blindfb" + uuid.uuid4().hex
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="attachment"; filename="{name}"\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+    ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+    request = urllib.request.Request(
+        os.environ["GITHUB_API_URL"].rstrip("/") + f"/repos/{repo}/releases/{release_id}/assets?name={name}",
+        method="POST",
+        data=body,
+        headers={"Authorization": "token " + os.environ["TOKEN"], "Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    with urllib.request.urlopen(request) as response:
         return json.load(response)
+
+
+def add_checksums(repo, release):
+    by_name = {a["name"]: a for a in release["assets"]}
+    lines = []
+    for name in ARCHIVES:
+        digest = hashlib.sha256(download(by_name[name]["browser_download_url"])).hexdigest()
+        lines.append(f"{digest}  {name}")
+    if "SHA256SUMS" in by_name:
+        call("DELETE", f"/repos/{repo}/releases/{release['id']}/assets/{by_name['SHA256SUMS']['id']}")
+    upload_asset(repo, release["id"], ("\n".join(lines) + "\n").encode(), "SHA256SUMS")
+    print("SHA256SUMS uploaded")
 
 
 def main():
@@ -40,6 +85,7 @@ def main():
     missing = [name for name in WANTED if name not in present]
     if missing:
         sys.exit("missing: " + ", ".join(missing))
+    add_checksums(repo, release)
     call("PATCH", f"/repos/{repo}/releases/{release['id']}", {"body": notes, "draft": False, "prerelease": False})
     print(f"published {tag}")
 

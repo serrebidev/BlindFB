@@ -124,12 +124,22 @@ jobs:
           MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
         run: cargo xtask package
 
-      - name: Upload to the GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          files: dist/*
-          fail_on_unmatched_files: true
+      # Forgejo's own release API, not the GitHub-only softprops action:
+      # the script finds or creates the tag's draft (the three legs race,
+      # creation retries) and uploads this leg's dist/ files to it.
+      - name: Upload to the Forgejo release draft
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TOKEN: ${{ github.token }}
+        run: python .github/upload_release_assets.py "${{ github.ref_name }}" dist
+
+      - name: Upload to the Forgejo release draft
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+        run: python3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
 
       # Drop only the link, never the shared folder behind it,
       # before the runner deletes the work folder.
