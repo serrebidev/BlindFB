@@ -44,8 +44,13 @@ fn root() -> PathBuf {
 fn package() -> Result<(), Box<dyn Error>> {
     let root = root();
     let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    // The build runs in its own target directory. With the workspace target
+    // shared (the runners' persistent folder), the inner cargo deletes the
+    // debug xtask.exe this very process is running from, and Windows refuses.
+    let inner = root.join("package-target");
     if !Command::new(&cargo)
         .current_dir(&root)
+        .env("CARGO_TARGET_DIR", &inner)
         .args(["build", "--release", "--locked", "-p", "blindfb"])
         .status()?
         .success()
@@ -60,7 +65,7 @@ fn package() -> Result<(), Box<dyn Error>> {
     } else {
         "blindfb"
     };
-    let binary = root.join("target").join("release").join(exe_name);
+    let binary = inner.join("release").join(exe_name);
     let readme = root.join("README.md");
 
     let asset = if cfg!(windows) {
@@ -109,7 +114,7 @@ fn package() -> Result<(), Box<dyn Error>> {
         shipfitter::macos::dmg(&bundle, &out)?;
         out
     } else {
-        let launcher = root.join("target").join("release").join("blindfb-launcher");
+        let launcher = inner.join("release").join("blindfb-launcher");
         fs::write(&launcher, include_str!("../../packaging/linux-launcher.sh"))?;
         #[cfg(unix)]
         {
