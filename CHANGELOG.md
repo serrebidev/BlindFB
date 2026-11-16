@@ -4,7 +4,7 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## Unreleased
+## v0.7.65 - 2026-11-15
 
 Group post readers show the current comment identity and Facebook's restrictions.
 Change comment identity opens accessible choices and nickname setup when Facebook
