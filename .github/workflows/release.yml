@@ -133,6 +133,10 @@ jobs:
 
       # Drop only the link, never the shared folder behind it,
       # before the runner deletes the work folder.
+      - name: Cargo clean (free disk)
+        if: always()
+        continue-on-error: true
+        run: cargo clean
       - name: Unlink persistent target folder (Windows)
         if: always() && runner.os == 'Windows'
         shell: pwsh

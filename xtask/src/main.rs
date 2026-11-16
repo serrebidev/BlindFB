@@ -44,7 +44,7 @@ fn root() -> PathBuf {
 fn package() -> Result<(), Box<dyn Error>> {
     let root = root();
     let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    if !Command::new(cargo)
+    if !Command::new(&cargo)
         .current_dir(&root)
         .args(["build", "--release", "--locked", "-p", "blindfb"])
         .status()?
@@ -133,6 +133,11 @@ fn package() -> Result<(), Box<dyn Error>> {
         println!("wrote {}", setup.display());
         sign_asset(&setup)?;
     }
+    // Free disk: delete the workspace target now the assets are written.
+    let _ = Command::new(cargo)
+        .current_dir(&root)
+        .arg("clean")
+        .status();
     Ok(())
 }
 
