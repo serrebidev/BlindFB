@@ -16,6 +16,7 @@
   // Opening its comments hides the card's author and caption, so they are read before that.
   let card = null, reel = null;
   const identities = new WeakMap();
+  const commentIdentities = window.__blindfbIdentities.create({current, editorFor, target: () => target, read});
 
   function ownReaction(scope, isReel = false) {
     const buttons = isReel
@@ -348,7 +349,7 @@
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set([...outerMessages.map(element => F.postText(element)), ...attachments(root, messages)].filter(Boolean))].join('\n');
-    return JSON.stringify({url: target, author, ...ownReaction(root), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
+    return JSON.stringify({url: target, author, ...ownReaction(root), comment_identity: commentIdentities.state(), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
   function selected(id) {
@@ -393,7 +394,7 @@
   const words = text => F.clean(text).replace(/https?:\/\/(www\.)?/g, '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
   // Returns the exact text to type at the caret, which is left after any prefilled name.
-  async function prepare(parent, text) {
+  async function prepare(parent, text, expectedIdentity = null) {
     current();
     pending = null;
     let thread = null;
@@ -409,6 +410,7 @@
     }
     const editor = await F.waitFor(() => editorFor(parent), 5000);
     if (!editor) throw Error(parent === null ? 'No unique comment box on this post. Nothing was sent.' : 'No unique editor inside the selected comment thread. Nothing was sent.');
+    const identity = commentIdentities.capture(editor, expectedIdentity);
     // Replying inside an open thread prefills the person's name; the box's name says who it is.
     const draft = contents(editor);
     if (draft && (parent === null || !label(editor).includes(draft))) throw Error('The Facebook editor already contains a draft. Nothing was overwritten.');
@@ -421,13 +423,14 @@
     if (!found) throw Error('The comment editor is ambiguous. Nothing was sent.');
     if (draft) { const selection = getSelection(); selection.selectAllChildren(editor); selection.collapseToEnd(); }
     const typed = draft && !/[  ]$/.test(rawContents(editor)) ? ' ' + text : text;
-    pending = {parent, thread, start: words(text).slice(0, 40), text: flat(rawContents(editor) + typed), editor, before: new Set(collect().map(row => row.value.id))};
+    pending = {parent, thread, start: words(text).slice(0, 40), text: flat(rawContents(editor) + typed), editor, identity, before: new Set(collect().map(row => row.value.id))};
     return JSON.stringify(typed);
   }
 
   function check() {
     current();
     if (!pending || !pending.editor.isConnected || document.activeElement !== pending.editor || flat(contents(pending.editor)) !== pending.text || editorFor(pending.parent) !== pending.editor) throw Error('The selected comment editor changed. Nothing was sent.');
+    commentIdentities.check(pending.editor, pending.identity);
     return true;
   }
 
@@ -679,6 +682,9 @@
       if (!root) throw Error('The post could not be read.');
       for (const video of document.querySelectorAll('video')) { video.muted = true; video.pause(); }
       return read();
-    }, read, prepare, check, confirm
+    }, read, prepare, check, confirm,
+    identityOpen: parent => commentIdentities.open(parent),
+    identityAct: (token, choice, answers) => commentIdentities.act(token, choice, answers),
+    identityCancel: token => commentIdentities.cancel(token)
   };
 })();
