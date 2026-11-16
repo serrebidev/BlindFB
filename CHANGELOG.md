@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.70 - 2026-11-16
+
+The Search dialog gains a Clear field button next to Search and Cancel.
+Pressing it empties the query box and returns focus to it.
+
+A group audit found and fixed several group issues. Posting to a group
+now reports its published receipt instead of "may have been published"
+(the backend fix shipped as backend 73). Load more in a group window
+continues the existing group scan instead of reloading from the start,
+like My Posts.
+
 ## v0.7.69 - 2026-11-16
 
 Reactions on Reels and video posts now find Facebook's reaction controls after

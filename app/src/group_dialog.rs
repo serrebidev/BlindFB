@@ -499,7 +499,9 @@ impl GroupWindow {
                 List::Posts if !state.posts_loading => {
                     state.posts_loading = true;
                     state.posts_want += POSTS_STEP;
-                    Some((posts_args(&url, state.posts_want, true), Tag::GroupPosts(self.session)))
+                    let mut args = posts_args(&url, state.posts_want, true);
+                    args.push("--continue".to_owned());
+                    Some((args, Tag::GroupPosts(self.session)))
                 }
                 List::Members if !state.members_loading => {
                     state.members_loading = true;

@@ -2545,7 +2545,9 @@ fn more_args(
             let index = args.iter().position(|arg| arg == "-n")? + 1;
             let count: u32 = args.get(index)?.parse().ok()?;
             args[index] = count.checked_add(PAGE)?.to_string();
-            if *view == View::MyPosts && !args.iter().any(|arg| arg == "--continue") {
+            if matches!(view, View::MyPosts | View::GroupPosts(_))
+                && !args.iter().any(|arg| arg == "--continue")
+            {
                 args.push("--continue".to_owned());
             }
             Some(args)
@@ -6165,14 +6167,23 @@ fn search_dialog(ui: &Ui) {
         .with_label(&t("Cancel"))
         .build();
     cancel.set_name(&t("Cancel"));
+    let clear = Button::builder(&dialog)
+        .with_label(&t("C&lear field"))
+        .build();
+    clear.set_name(&t("Clear field"));
     buttons.add(&search, 0, SizerFlag::All, 4);
     buttons.add(&cancel, 0, SizerFlag::All, 4);
+    buttons.add(&clear, 0, SizerFlag::All, 4);
     root.add(&query_label, 0, SizerFlag::All, 4);
     root.add(&query, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&filter_label, 0, SizerFlag::All, 4);
     root.add(&filter, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add_sizer(&buttons, 0, SizerFlag::Expand, 4);
     dialog.set_sizer(root, true);
+    clear.on_click(move |_| {
+        query.change_value("");
+        query.set_focus();
+    });
     query.set_focus();
     if dialog.show_modal() != ID_OK {
         dialog.destroy();
@@ -6954,6 +6965,18 @@ mod tests {
         assert_eq!(third[third.iter().position(|arg| arg == "-n").unwrap() + 1], (MY_POSTS_FIRST + PAGE * 2).to_string());
         assert_eq!(refresh_args(&View::MyPosts, &third), Some(initial.clone()));
         assert_eq!(more_args(&View::MyPosts, &initial, 5, true), None);
+    }
+
+    #[test]
+    fn group_posts_more_continues_the_group_scan() {
+        let initial = posts_args("https://www.facebook.com/groups/9", 10, true);
+        let mut expected = posts_args("https://www.facebook.com/groups/9", 10 + PAGE, true);
+        expected.push("--continue".to_owned());
+        let view = View::GroupPosts("https://www.facebook.com/groups/9".to_owned());
+        let next = more_args(&view, &initial, 10, false).unwrap();
+        assert_eq!(next, expected);
+        let third = more_args(&view, &next, (10 + PAGE) as usize, false).unwrap();
+        assert_eq!(third.iter().filter(|arg| *arg == "--continue").count(), 1);
     }
 
     #[test]
