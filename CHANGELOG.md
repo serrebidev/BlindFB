@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## Unreleased
+
+Group post readers show the current comment identity and Facebook's restrictions.
+Change comment identity opens accessible choices and nickname setup when Facebook
+offers them. Changing identity keeps the comment draft and reply target. Sending
+checks the displayed identity again and stops if Facebook changed it.
+
 ## v0.7.64 - 2026-11-15
 
 Messages send again to people whose chat Facebook moved to end-to-end

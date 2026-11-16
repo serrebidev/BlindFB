@@ -1352,6 +1352,8 @@ mod tests {
             "{};window.__blindfbPost.initialize({})",
             concat!(
                 include_str!("post_scripts/labels.js"),
+                include_str!("post_scripts/questions.js"),
+                include_str!("post_scripts/identities.js"),
                 include_str!("post_scripts/reader.js")
             ),
             serde_json::json!("https://www.facebook.com/a/posts/1")

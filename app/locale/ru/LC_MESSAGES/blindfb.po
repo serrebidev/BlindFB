@@ -2018,7 +2018,7 @@ msgstr "Отменить отправку"
 msgid "Open a chat first."
 msgstr "Сначала откройте чат."
 
-#: app/src\main.rs:5227
+#: app/src\main.rs:5283
 msgid ""
 "Ctrl+O: open a Facebook post, video or reel link.\n"
 "Enter on an item: open it. Applications or Shift+F10: item actions.\n"
@@ -2032,6 +2032,7 @@ msgid ""
 "Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n"
 "Arrow keys on Video volume change its percentage.\n"
 "Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n"
+"Tab to Comment identity to read your current group identity and restrictions. Change comment identity opens Facebook's available choices and nickname setup. Continue applies the choice; Cancel keeps your draft and reply target.\n"
 "Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."
 msgstr ""
 "Ctrl+O: открыть ссылку на публикацию, видео или Reels в Facebook.\n"
@@ -2046,6 +2047,7 @@ msgstr ""
 "Tab к Воспроизвести/Пауза, Стоп, Назад на 10 секунд или Вперёд на 10 секунд, затем Пробел.\n"
 "Стрелки на Громкости видео меняют её в процентах.\n"
 "Applications или Shift+F10 на тексте публикации: комментировать, отреагировать или поделиться. На комментарии: ответить или отметить «Нравится».\n"
+"Перейдите клавишей Tab к личности для комментариев, чтобы узнать текущую личность в группе и ограничения. Изменение личности открывает доступные варианты Facebook и настройку псевдонима. Продолжить применяет выбор; Отмена сохраняет черновик и адресата ответа.\n"
 "Ctrl+Enter в поле комментария отправляет. Escape закрывает чтение и останавливает воспроизведение."
 
 #: app/src\main.rs:5240
@@ -4059,3 +4061,85 @@ msgstr "Выкл (без сочетания)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Ответ {author}"
+
+#: app/src\comment_identity_dialog.rs:26 app/src\comment_identity_dialog.rs:126 app/src\post_dialog.rs:935 app/src\post_dialog.rs:937
+msgid "Comment identity"
+msgstr "Личность для комментариев"
+
+#: app/src\comment_identity_dialog.rs:32
+msgid "Identity &details"
+msgstr "&Сведения о личности"
+
+#: app/src\comment_identity_dialog.rs:35
+msgid "Identity details"
+msgstr "Сведения о личности"
+
+#: app/src\comment_identity_dialog.rs:47
+msgid "Identity or &action"
+msgstr "Личность или &действие"
+
+#: app/src\comment_identity_dialog.rs:50
+msgid "Identity or action"
+msgstr "Личность или действие"
+
+#: app/src\comment_identity_dialog.rs:60
+#, rust-format
+msgid "{identity} (current, unavailable)"
+msgstr "{identity} (текущая, недоступна)"
+
+#: app/src\comment_identity_dialog.rs:61
+#, rust-format
+msgid "{identity} (unavailable)"
+msgstr "{identity} (недоступна)"
+
+#: app/src\comment_identity_dialog.rs:105
+msgid "Continue changes your Facebook identity or completes its setup. Your comment draft is kept."
+msgstr "Продолжение изменяет вашу личность Facebook или завершает её настройку. Черновик комментария сохраняется."
+
+#: app/src\comment_identity_dialog.rs:108
+msgid "&Continue"
+msgstr "&Продолжить"
+
+#: app/src\comment_identity_dialog.rs:126
+msgid "Choose an action before continuing."
+msgstr "Выберите действие перед продолжением."
+
+#: app/src\post_dialog.rs:707
+msgid "Loading comment identities…"
+msgstr "Загрузка личностей для комментариев…"
+
+#: app/src\post_dialog.rs:939
+msgid "Change comment &identity…"
+msgstr "Изменить &личность для комментариев…"
+
+#: app/src\post_dialog.rs:940
+msgid "Change comment identity"
+msgstr "Изменить личность для комментариев"
+
+#: app/src\post_dialog.rs:1388
+msgid "Cancelling identity selection…"
+msgstr "Отмена выбора личности…"
+
+#: app/src\post_dialog.rs:1389
+msgid "Updating comment identity…"
+msgstr "Обновление личности для комментариев…"
+
+#: app/src\post_dialog.rs:1659
+msgid "Facebook did not expose a comment identity for this post."
+msgstr "Facebook не предоставил личность для комментариев к этой публикации."
+
+#: app/src\post_dialog.rs:1700
+msgid "Choose your comment identity. Your draft has been kept."
+msgstr "Выберите личность для комментариев. Черновик сохранён."
+
+#: app/src\post_dialog.rs:1712
+msgid "Identity selection cancelled. Your draft has been kept."
+msgstr "Выбор личности отменён. Черновик сохранён."
+
+#: app/src\post_dialog.rs:1713
+msgid "Comment identity refreshed. Your draft has been kept."
+msgstr "Личность для комментариев обновлена. Черновик сохранён."
+
+#: crates/core/src\posts.rs:226 crates/core/src\posts.rs:627 crates/core/src\posts.rs:634
+msgid "Invalid comment identity"
+msgstr "Некорректная личность для комментариев"

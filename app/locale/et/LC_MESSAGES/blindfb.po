@@ -2008,7 +2008,7 @@ msgstr "Võta tagasi"
 msgid "Open a chat first."
 msgstr "Ava esmalt vestlus."
 
-#: app/src\main.rs:5227
+#: app/src\main.rs:5283
 msgid ""
 "Ctrl+O: open a Facebook post, video or reel link.\n"
 "Enter on an item: open it. Applications or Shift+F10: item actions.\n"
@@ -2022,6 +2022,7 @@ msgid ""
 "Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n"
 "Arrow keys on Video volume change its percentage.\n"
 "Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n"
+"Tab to Comment identity to read your current group identity and restrictions. Change comment identity opens Facebook's available choices and nickname setup. Continue applies the choice; Cancel keeps your draft and reply target.\n"
 "Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."
 msgstr ""
 "Ctrl+O: ava Facebooki postituse, video või reeli link.\n"
@@ -2036,6 +2037,7 @@ msgstr ""
 "Tab nuppudele Esita/Paus, Stopp, 10 sekundit tagasi või 10 sekundit edasi, seejärel vajuta tühikut.\n"
 "Nooled video helitugevusel muudavad selle protsenti.\n"
 "Applications või Shift+F10 postituse tekstil: kommenteeri, reageeri või jaga. Kommentaaril: vasta või meeldib.\n"
+"Liigu Tab-klahviga kommenteerimise identiteedile, et lugeda praegust grupiidentiteeti ja piiranguid. Identiteedi muutmine avab Facebooki pakutavad valikud ja hüüdnime seadistuse. Jätka rakendab valiku; Tühista säilitab mustandi ja vastuse sihtmärgi.\n"
 "Ctrl+Enter kommentaarikastis saadab. Escape sulgeb lugeja ja peatab esituse."
 
 #: app/src\main.rs:5240
@@ -4043,3 +4045,85 @@ msgstr "Väljas (ilma klahvita)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Vasta kasutajale {author}"
+
+#: app/src\comment_identity_dialog.rs:26 app/src\comment_identity_dialog.rs:126 app/src\post_dialog.rs:935 app/src\post_dialog.rs:937
+msgid "Comment identity"
+msgstr "Kommenteerimise identiteet"
+
+#: app/src\comment_identity_dialog.rs:32
+msgid "Identity &details"
+msgstr "Identiteedi ü&ksikasjad"
+
+#: app/src\comment_identity_dialog.rs:35
+msgid "Identity details"
+msgstr "Identiteedi üksikasjad"
+
+#: app/src\comment_identity_dialog.rs:47
+msgid "Identity or &action"
+msgstr "Identiteet või &toiming"
+
+#: app/src\comment_identity_dialog.rs:50
+msgid "Identity or action"
+msgstr "Identiteet või toiming"
+
+#: app/src\comment_identity_dialog.rs:60
+#, rust-format
+msgid "{identity} (current, unavailable)"
+msgstr "{identity} (praegune, pole saadaval)"
+
+#: app/src\comment_identity_dialog.rs:61
+#, rust-format
+msgid "{identity} (unavailable)"
+msgstr "{identity} (pole saadaval)"
+
+#: app/src\comment_identity_dialog.rs:105
+msgid "Continue changes your Facebook identity or completes its setup. Your comment draft is kept."
+msgstr "Jätkamine muudab sinu Facebooki identiteeti või lõpetab selle seadistamise. Kommentaari mustand säilitatakse."
+
+#: app/src\comment_identity_dialog.rs:108
+msgid "&Continue"
+msgstr "&Jätka"
+
+#: app/src\comment_identity_dialog.rs:126
+msgid "Choose an action before continuing."
+msgstr "Enne jätkamist vali toiming."
+
+#: app/src\post_dialog.rs:707
+msgid "Loading comment identities…"
+msgstr "Kommenteerimise identiteetide laadimine…"
+
+#: app/src\post_dialog.rs:939
+msgid "Change comment &identity…"
+msgstr "Muuda kommenteerimise &identiteeti…"
+
+#: app/src\post_dialog.rs:940
+msgid "Change comment identity"
+msgstr "Muuda kommenteerimise identiteeti"
+
+#: app/src\post_dialog.rs:1388
+msgid "Cancelling identity selection…"
+msgstr "Identiteedi valiku tühistamine…"
+
+#: app/src\post_dialog.rs:1389
+msgid "Updating comment identity…"
+msgstr "Kommenteerimise identiteedi uuendamine…"
+
+#: app/src\post_dialog.rs:1659
+msgid "Facebook did not expose a comment identity for this post."
+msgstr "Facebook ei näidanud selle postituse kommenteerimise identiteeti."
+
+#: app/src\post_dialog.rs:1700
+msgid "Choose your comment identity. Your draft has been kept."
+msgstr "Vali kommenteerimise identiteet. Mustand on säilitatud."
+
+#: app/src\post_dialog.rs:1712
+msgid "Identity selection cancelled. Your draft has been kept."
+msgstr "Identiteedi valik tühistati. Mustand on säilitatud."
+
+#: app/src\post_dialog.rs:1713
+msgid "Comment identity refreshed. Your draft has been kept."
+msgstr "Kommenteerimise identiteet uuendati. Mustand on säilitatud."
+
+#: crates/core/src\posts.rs:226 crates/core/src\posts.rs:627 crates/core/src\posts.rs:634
+msgid "Invalid comment identity"
+msgstr "Vigane kommenteerimise identiteet"

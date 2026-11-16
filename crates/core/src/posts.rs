@@ -48,6 +48,14 @@ pub struct PostDetail {
     /// The Facebook URL of the post's video or reel, for the player.
     pub video: Option<String>,
     pub reaction: Option<String>,
+    pub comment_identity: Option<CommentIdentity>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommentIdentity {
+    pub label: String,
+    pub can_change: bool,
+    pub reason: String,
 }
 
 /// Keep article links first and the current Facebook post available at the end.
@@ -210,6 +218,15 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         comments,
         links,
         video,
+        comment_identity: match value.get("comment_identity") {
+            None | Some(Value::Null) => None,
+            Some(identity) => Some(CommentIdentity {
+                label: identity_text(&identity["label"], 4096, true)?,
+                can_change: identity["can_change"].as_bool()
+                    .ok_or_else(|| t("Invalid comment identity"))?,
+                reason: identity_text(&identity["reason"], 4096, false)?,
+            }),
+        },
         reaction: crate::fb::own_reaction(
             value["reaction_label"].as_str().unwrap_or(""),
             value["reaction_pressed"].as_bool(),
@@ -428,6 +445,7 @@ fn initialize_script(target: &str) -> String {
         concat!(
             include_str!("post_scripts/labels.js"),
             include_str!("post_scripts/questions.js"),
+            include_str!("post_scripts/identities.js"),
             include_str!("post_scripts/reader.js")
         ),
         json!(target)
@@ -530,6 +548,7 @@ pub fn send_comment(
     page: &str,
     parent: Option<&str>,
     text: &str,
+    expected_identity: Option<&str>,
 ) -> Result<String, String> {
     if text.trim().is_empty() {
         return Err(t("Enter a comment before sending"));
@@ -539,9 +558,10 @@ pub fn send_comment(
         fb,
         page,
         &format!(
-            "window.__blindfbPost.prepare({},{})",
+            "window.__blindfbPost.prepare({},{},{})",
             json!(parent),
-            json!(text)
+            json!(text),
+            json!(expected_identity)
         ),
     )?;
     let typed: String = serde_json::from_str(&prepared)
@@ -580,6 +600,112 @@ pub struct Participation {
     pub fields: Vec<ParticipationField>,
     pub answers: Vec<Value>,
     pub error: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityOption {
+    pub key: String,
+    pub label: String,
+    pub selected: bool,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IdentityPanel {
+    pub token: String,
+    pub text: String,
+    pub options: Vec<IdentityOption>,
+    pub fields: Vec<ParticipationField>,
+    pub answers: Vec<Value>,
+    pub error: String,
+}
+
+fn identity_text(value: &Value, max: usize, required: bool) -> Result<String, String> {
+    value.as_str()
+        .filter(|s| s.chars().count() <= max && (!required || !s.trim().is_empty())
+            && !s.chars().any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t')))
+        .map(str::to_owned).ok_or_else(|| t("Invalid comment identity"))
+}
+
+pub fn parse_identity(output: &str) -> Result<Option<IdentityPanel>, String> {
+    let value: Value = serde_json::from_str(output)
+        .map_err(|_| t("The post reader returned invalid JSON"))?;
+    let Some(panel) = value.get("identity") else { return Ok(None) };
+    let invalid = || t("Invalid comment identity");
+    let rows = |field: &str, max| panel[field].as_array()
+        .filter(|rows| rows.len() <= max).ok_or_else(invalid);
+    let mut options = Vec::new();
+    let mut keys = HashSet::new();
+    let mut labels = HashSet::new();
+    let mut selected = false;
+    for row in rows("options", 30)? {
+        let key = identity_text(&row["key"], 256, true)?;
+        let label = identity_text(&row["label"], 4096, true)?;
+        let enabled = row["enabled"].as_bool().ok_or_else(invalid)?;
+        let active = row["selected"].as_bool().ok_or_else(invalid)?;
+        if !keys.insert(key.clone()) || !labels.insert(label.clone()) || (selected && active) {
+            return Err(invalid());
+        }
+        selected |= active;
+        options.push(IdentityOption { key, label, enabled, selected: active });
+    }
+    let mut fields = Vec::new();
+    for row in rows("fields", 30)? {
+        let kind = string(row, "kind")?;
+        if !matches!(kind.as_str(), "text" | "choice" | "check") { return Err(invalid()); }
+        let prompt = identity_text(&row["prompt"], 4096, true)?;
+        let choices = row["choices"].as_array().filter(|c| c.len() <= 100)
+            .ok_or_else(invalid)?.iter().map(|v| {
+                identity_text(v, 4096, true)
+            }).collect::<Result<Vec<_>, _>>()?;
+        let unique: HashSet<_> = choices.iter().collect();
+        if unique.len() != choices.len() || (kind == "choice") == choices.is_empty() {
+            return Err(invalid());
+        }
+        fields.push(ParticipationField { kind, prompt, choices });
+    }
+    let answers = match panel.get("answers") {
+        None => Vec::new(),
+        Some(Value::Array(values)) if values.is_empty() || values.len() == fields.len() => values.clone(),
+        _ => return Err(invalid()),
+    };
+    for (answer, field) in answers.iter().zip(&fields) {
+        let valid = answer.is_null() || match field.kind.as_str() {
+            "text" => answer.as_str().is_some_and(|s| s.chars().count() <= 10_000
+                && !s.chars().any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))),
+            "choice" => answer.as_u64().is_some_and(|i| i < field.choices.len() as u64),
+            "check" => answer.is_boolean(),
+            _ => false,
+        };
+        if !valid { return Err(invalid()); }
+    }
+    let error = match panel.get("error") {
+        None => String::new(),
+        Some(_) => identity_text(&panel["error"], 100_000, false)?,
+    };
+    Ok(Some(IdentityPanel { token: identity_text(&panel["token"], 256, true)?,
+        text: identity_text(&panel["text"], 100_000, false)?, options, fields, answers, error }))
+}
+
+fn validate_identity_result(output: String) -> Result<String, String> {
+    if parse_identity(&output)?.is_none() { parse_detail(&output)?; }
+    Ok(output)
+}
+
+/// Identity mutations are evaluated once, never retried on a lost page.
+pub fn identity_open(fb: &Fb, page: &str, parent: Option<&str>) -> Result<String, String> {
+    validate_identity_result(eval(fb, page,
+        &format!("window.__blindfbPost.identityOpen({})", json!(parent)))?)
+}
+
+pub fn identity_act(fb: &Fb, page: &str, token: &str, choice: Option<&str>, answers: Option<&Value>) -> Result<String, String> {
+    validate_identity_result(eval(fb, page, &format!("window.__blindfbPost.identityAct({},{},{})",
+        json!(token), json!(choice), json!(answers)))?)
+}
+
+pub fn identity_cancel(fb: &Fb, page: &str, token: &str) -> Result<String, String> {
+    validate_identity_result(eval(fb, page,
+        &format!("window.__blindfbPost.identityCancel({})", json!(token)))?)
 }
 
 pub fn parse_participation(output: &str) -> Result<Option<Participation>, String> {
@@ -703,6 +829,73 @@ pub fn close(fb: &Fb, page: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn identity_panels_validate_options_fields_and_answers() {
+        let panel = json!({"identity":{"token":"panel-1","text":"Comment identity","options":[
+            {"key":"main","label":"Main profile","selected":true,"enabled":true},
+            {"key":"save","label":"Save nickname","selected":false,"enabled":true}],
+            "fields":[{"kind":"text","prompt":"Nickname","choices":[]},
+                {"kind":"choice","prompt":"Badge","choices":["Blue","Green"]},
+                {"kind":"check","prompt":"Agree","choices":[]}],
+            "answers":["Bird",1,false],"error":""}});
+        let parsed = parse_identity(&panel.to_string()).unwrap().unwrap();
+        assert_eq!(parsed.options[0].key, "main");
+        assert_eq!(parsed.fields[0].prompt, "Nickname");
+        assert_eq!(parsed.answers, vec![json!("Bird"), json!(1), json!(false)]);
+        assert!(parse_identity(r#"{"comments":[]}"#).unwrap().is_none());
+        for (pointer, bad) in [
+            ("/identity/token", json!("")),
+            ("/identity/options/1/key", json!("main")),
+            ("/identity/options/1/label", json!("Main profile")),
+            ("/identity/options/1/selected", json!(true)),
+            ("/identity/options/0/enabled", json!("yes")),
+            ("/identity/fields/0/kind", json!("password")),
+            ("/identity/fields/1/choices", json!(["Blue", "Blue"])),
+            ("/identity/answers", json!(["Bird",2,false])),
+            ("/identity/answers", json!(["Bird",-1,false])),
+            ("/identity/answers", json!(["Bird",0.5,false])),
+            ("/identity/answers", json!(["Bird",1,"yes"])),
+            ("/identity/answers", json!(["Bird"])),
+            ("/identity/answers", json!(["x".repeat(10_001),1,false])),
+            ("/identity/error", json!(false)),
+            ("/identity/token", json!("x".repeat(257))),
+            ("/identity/options/0/label", json!("Main\u{0}profile")),
+            ("/identity/options", json!(vec![json!({}); 31])),
+            ("/identity/fields", json!(vec![json!({}); 31])),
+            ("/identity/fields/1/choices", json!(vec!["Blue"; 101])),
+        ] {
+            let mut invalid = panel.clone();
+            *invalid.pointer_mut(pointer).unwrap() = bad;
+            assert!(parse_identity(&invalid.to_string()).is_err(), "{pointer}");
+        }
+        let mut unanswered = panel.clone();
+        unanswered["identity"]["answers"] = json!([null, null, null]);
+        assert!(parse_identity(&unanswered.to_string()).is_ok());
+        let mut locked = panel;
+        locked["identity"]["options"] = json!([]);
+        locked["identity"]["fields"] = json!([]);
+        locked["identity"]["answers"] = json!([]);
+        assert!(parse_identity(&locked.to_string()).is_ok());
+    }
+
+    #[test]
+    fn comment_identity_metadata_is_optional_and_strict() {
+        let mut value = json!({"url":"https://www.facebook.com/groups/1/posts/2",
+            "author":"A","time":"","text":"Body","comments":[]});
+        assert!(parse_detail(&value.to_string()).unwrap().comment_identity.is_none());
+        value["comment_identity"] = json!({"label":"Anonymous member","can_change":false,"reason":"Locked for this post"});
+        let identity = parse_detail(&value.to_string()).unwrap().comment_identity.unwrap();
+        assert_eq!(identity.label, "Anonymous member");
+        assert!(!identity.can_change);
+        assert_eq!(identity.reason, "Locked for this post");
+        for bad in [json!({"label":"","can_change":true,"reason":""}),
+            json!({"label":"Main","can_change":"yes","reason":""}),
+            json!({"label":"Main","can_change":true,"reason":false})] {
+            value["comment_identity"] = bad;
+            assert!(parse_detail(&value.to_string()).is_err());
+        }
+    }
+
     #[test]
     fn post_detail_keeps_the_accounts_reaction_when_exposed() {
         let mut value = serde_json::json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"1h","text":"Body","comments":[]});

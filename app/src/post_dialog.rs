@@ -83,6 +83,8 @@ pub(super) struct PostReader {
     volume: Slider,
     composer_label: StaticText,
     composer: TextCtrl,
+    identity_text: TextCtrl,
+    identity: Button,
     status: TextCtrl,
     send: Button,
     share: Button,
@@ -124,6 +126,8 @@ struct ReaderState {
     /// Audience Facebook's share dialog reported; the reader's timer asks next.
     share_audience: Option<String>,
     participation: Option<blindfb_core::posts::Participation>,
+    comment_identity: Option<blindfb_core::posts::CommentIdentity>,
+    identity_panel: Option<blindfb_core::posts::IdentityPanel>,
     share_requested: bool,
     action_requested: Option<i32>,
     playback: Option<ReelPlayback>,
@@ -201,6 +205,8 @@ impl PostReader {
         self.volume.enable(state.video.is_some());
         self.open_link.enable(self.links.get_selection().is_some());
         self.send.enable(state.loaded && !state.busy);
+        self.identity.enable(state.loaded && !state.busy
+            && state.comment_identity.as_ref().is_some_and(|identity| identity.can_change));
         self.share.enable(state.loaded && !state.busy);
         self.react.enable(state.loaded && !state.busy);
         let label = blindfb_core::fb::reaction_button_label(state.reaction.as_deref());
@@ -678,10 +684,27 @@ impl PostReader {
                 page: self.page.clone(),
                 parent,
                 text,
+                expected_identity: self.state.borrow().comment_identity.as_ref().map(|identity| identity.label.clone()),
             },
             tag: Tag::PostSent(self.session),
         });
         self.message(ui, &t("Sending comment…"));
+    }
+
+    fn identity_open(&self, ui: &Ui) {
+        let parent = {
+            let mut state = self.state.borrow_mut();
+            if state.busy || !state.loaded
+                || !state.comment_identity.as_ref().is_some_and(|identity| identity.can_change) {
+                return;
+            }
+            state.busy = true;
+            state.parent.clone()
+        };
+        self.controls();
+        ui.send(Job { task: Task::PostIdentityOpen { page: self.page.clone(), parent },
+            tag: Tag::PostIdentity(self.session, false) });
+        self.message(ui, &t("Loading comment identities…"));
     }
 
     fn menu_action(&self, ui: &Ui, action: i32) {
@@ -909,6 +932,12 @@ fn open_requested(
         .with_style(TextCtrlStyle::MultiLine)
         .build();
     composer.set_name(&composer_text.replace('&', ""));
+    let identity_label = StaticText::builder(&dialog).with_label(&t("Comment identity")).build();
+    let identity_text = TextCtrl::builder(&dialog).with_style(TextCtrlStyle::ReadOnly).build();
+    identity_text.set_name(&t("Comment identity"));
+    identity_text.enable_focus_from_keyboard();
+    let identity = Button::builder(&dialog).with_label(&t("Change comment &identity…")).build();
+    identity.set_name(&t("Change comment identity"));
     let status_label = StaticText::builder(&dialog)
         .with_label(&t("Reader status"))
         .build();
@@ -950,6 +979,9 @@ fn open_requested(
     root.add(&comments, 3, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&composer_label, 0, SizerFlag::All, 4);
     root.add(&composer, 1, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&identity_label, 0, SizerFlag::All, 4);
+    root.add(&identity_text, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&identity, 0, SizerFlag::All, 4);
     root.add(&status_label, 0, SizerFlag::All, 4);
     root.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add_sizer(&buttons, 0, SizerFlag::Expand, 0);
@@ -972,6 +1004,8 @@ fn open_requested(
         volume,
         composer_label,
         composer,
+        identity_text,
+        identity,
         status,
         send,
         share,
@@ -997,6 +1031,8 @@ fn open_requested(
             loaded: false,
             share_audience: None,
             participation: None,
+            comment_identity: None,
+            identity_panel: None,
             share_requested,
             action_requested,
             playback,
@@ -1006,6 +1042,8 @@ fn open_requested(
     };
     reader.controls();
     *ui.post_reader.borrow_mut() = Some(reader.clone());
+    let (r, u) = (reader.clone(), ui.clone());
+    identity.on_click(move |_| r.identity_open(&u));
     let r = reader.clone();
     open_link.on_click(move |_| r.open_link());
     let r = reader.clone();
@@ -1336,6 +1374,20 @@ fn open_requested(
                 tag: Tag::PostParticipation(r.session, submitted),
             });
         }
+        let panel = r.state.borrow_mut().identity_panel.take();
+        if let Some(panel) = panel {
+            let action = super::comment_identity_dialog::show(&dialog, &panel);
+            let cancelled = action.is_none();
+            let task = match action {
+                Some((choice, answers)) => Task::PostIdentityAct {
+                    page: r.page.clone(), token: panel.token, choice, answers,
+                },
+                None => Task::PostIdentityCancel { page: r.page.clone(), token: panel.token },
+            };
+            u.send(Job { task, tag: Tag::PostIdentity(r.session, cancelled) });
+            r.message(&u, &if cancelled { t("Cancelling identity selection…") }
+                else { t("Updating comment identity…") });
+        }
     });
     share_timer.start(150, false);
     ui.send(Job {
@@ -1601,6 +1653,14 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 state.post_links = detail.links;
                 state.video = detail.video;
                 state.reaction = detail.reaction;
+                let identity = detail.comment_identity.as_ref().map(|identity| {
+                    if identity.reason.is_empty() { identity.label.clone() }
+                    else { format!("{} — {}", identity.label, identity.reason) }
+                }).unwrap_or_else(|| t("Facebook did not expose a comment identity for this post."));
+                if reader.identity_text.get_value() != identity {
+                    reader.identity_text.change_value(&identity);
+                }
+                state.comment_identity = detail.comment_identity;
                 state.loaded = true;
             }
             reader.follow_comment_links();
@@ -1631,6 +1691,35 @@ pub(super) fn participation_done(ui: &Ui, session: u64, result: Result<String, S
     } else {
         t("Participation review cancelled. Your comment draft has been kept.")
     }), true);
+}
+
+pub(super) fn identity_done(ui: &Ui, session: u64, result: Result<String, String>, cancelled: bool) {
+    let Some(reader) = active(ui, session) else { return };
+    let result = result.and_then(|json| {
+        if let Some(panel) = blindfb_core::posts::parse_identity(&json)? {
+            let message = if panel.error.is_empty() { t("Choose your comment identity. Your draft has been kept.") }
+                else { panel.error.clone() };
+            reader.state.borrow_mut().identity_panel = Some(panel);
+            reader.message(ui, &message);
+            Ok(None)
+        } else { Ok(Some(json)) }
+    });
+    match result {
+        Ok(None) => (),
+        Ok(Some(json)) => {
+            // Reactions belong to the chosen Facebook identity, including a setup that changed it before Cancel.
+            reader.state.borrow_mut().confirmed_reaction = None;
+            let done = if cancelled { t("Identity selection cancelled. Your draft has been kept.") }
+                else { t("Comment identity refreshed. Your draft has been kept.") };
+            apply(ui, session, Ok(json), &done, false);
+            if reader.identity.is_enabled() { reader.identity.set_focus(); }
+            else { reader.composer.set_focus(); }
+        }
+        Err(error) => {
+            note(ui, session, Err(tf!("{error} Your draft has been kept.", error = error)), true);
+            reader.composer.set_focus();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1672,6 +1761,8 @@ mod tests {
             loaded: false,
             share_audience: None,
             participation: None,
+            comment_identity: None,
+            identity_panel: None,
             share_requested: true,
             action_requested: Some(ID_POST_COMMENT),
             playback: None,

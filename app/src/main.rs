@@ -24,6 +24,7 @@ mod chat_dialog;
 mod group_dialog;
 mod player;
 mod participation_dialog;
+mod comment_identity_dialog;
 mod post_dialog;
 mod reel_cache;
 mod shortcuts_dialog;
@@ -362,6 +363,7 @@ enum Tag {
     PostReelReacted(u64),
     PostSent(u64),
     PostParticipation(u64, bool),
+    PostIdentity(u64, bool),
     PostLiked(u64),
     PostTranslated(u64),
     PostShareReady(u64),
@@ -431,6 +433,7 @@ enum Task {
         page: String,
         parent: Option<String>,
         text: String,
+        expected_identity: Option<String>,
     },
     PostLike {
         page: String,
@@ -442,6 +445,20 @@ enum Task {
         page: String,
         token: String,
         answers: Option<serde_json::Value>,
+    },
+    PostIdentityOpen {
+        page: String,
+        parent: Option<String>,
+    },
+    PostIdentityAct {
+        page: String,
+        token: String,
+        choice: Option<String>,
+        answers: serde_json::Value,
+    },
+    PostIdentityCancel {
+        page: String,
+        token: String,
     },
     PostShareOpen {
         page: String,
@@ -1399,9 +1416,9 @@ fn spawn_worker(
                     Some(fb) => blindfb_core::posts::translate(fb, &page),
                     None => Err(t("The Facebook backend is not installed")),
                 },
-                Task::PostSend { page, parent, text } => match &fb {
+                Task::PostSend { page, parent, text, expected_identity } => match &fb {
                     Some(fb) => {
-                        blindfb_core::posts::send_comment(fb, &page, parent.as_deref(), &text)
+                        blindfb_core::posts::send_comment(fb, &page, parent.as_deref(), &text, expected_identity.as_deref())
                     }
                     None => Err(t("The Facebook backend is not installed")),
                 },
@@ -1411,6 +1428,18 @@ fn spawn_worker(
                 },
                 Task::PostParticipation { page, token, answers } => match &fb {
                     Some(fb) => blindfb_core::posts::participation(fb, &page, &token, answers.as_ref()),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::PostIdentityOpen { page, parent } => match &fb {
+                    Some(fb) => blindfb_core::posts::identity_open(fb, &page, parent.as_deref()),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::PostIdentityAct { page, token, choice, answers } => match &fb {
+                    Some(fb) => blindfb_core::posts::identity_act(fb, &page, &token, choice.as_deref(), Some(&answers)),
+                    None => Err(t("The Facebook backend is not installed")),
+                },
+                Task::PostIdentityCancel { page, token } => match &fb {
+                    Some(fb) => blindfb_core::posts::identity_cancel(fb, &page, &token),
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostShareOpen { page } => match &fb {
@@ -3684,6 +3713,9 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::PostParticipation(session, submitted) => {
             post_dialog::participation_done(ui, session, done.result, submitted)
         }
+        Tag::PostIdentity(session, cancelled) => {
+            post_dialog::identity_done(ui, session, done.result, cancelled)
+        }
         Tag::PostLiked(session) => {
             post_dialog::apply(ui, session, done.result, &t("Like changed."), false)
         }
@@ -5260,6 +5292,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
                  Arrow keys on Video volume change its percentage.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
+                 Tab to Comment identity to read your current group identity and restrictions. Change comment identity opens Facebook's available choices and nickname setup. Continue applies the choice; Cancel keeps your draft and reply target.\n\
                  Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."),
                     t("File, Keyboard shortcuts: change any of these shortcuts, or give any menu command one.")
                 ),
