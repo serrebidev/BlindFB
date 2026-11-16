@@ -5403,7 +5403,11 @@ fn handle_menu(ui: &Ui, id: i32) {
                 .version(env!("CARGO_PKG_VERSION"))
                 .description(t(
                     "An accessible Facebook and Messenger client for screen reader users.\n\
-                     Built with wxDragon on the facebook-cli (fb) backend."
+                     Built with wxDragon on the facebook-cli (fb) backend.\n\
+                     Author: serrebidev. GitHub: https://github.com/serrebidev/BlindFB. \
+                     Forgejo: https://git.serrebiradio.com/serrebi/BlindFB. \
+                     Projects: https://projects.serrebiradio.com. \
+                     Telegram: https://t.me/SerrebiProjects. Full credits: CREDITS.md."
                 ))
                 .copyright("Copyright (c) 2026 Brandon Bracey")
                 .website("https://git.serrebiradio.com/serrebi/BlindFB")
