@@ -133,11 +133,6 @@ fn package() -> Result<(), Box<dyn Error>> {
         println!("wrote {}", setup.display());
         sign_asset(&setup)?;
     }
-    // Free disk: delete the workspace target now the assets are written.
-    let _ = Command::new(cargo)
-        .current_dir(&root)
-        .arg("clean")
-        .status();
     Ok(())
 }
 
