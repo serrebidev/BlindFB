@@ -19,7 +19,7 @@
     angry: ['Angry', 'En colère', 'Grrr', 'Phẫn nộ', 'Возмутительно', 'Vihane'],
   };
   const ANY_REACTION = Object.values(REACTIONS).flat().join('|');
-  const REMOVE = '(?:Remove|Retirer|Supprimer|Annuler|Eemalda)\\s+';
+  const REMOVE = '(?:Remove|Retirer|Supprimer|Annuler|Eemalda|Удалить)\\s+';
 
   const L = {
     COUNT,
@@ -68,7 +68,7 @@
     editPrivacy: /^(?:Edit privacy|Modifier la confidentialité)/i,
     sharingWith: /(?:Sharing with|Partag[ée] avec\s*:?)\s*(.+?)\.?$/i,
     close: exact(`Close|Fermer|Fermer la boîte de dialogue de l${A}éditeur`),
-    react: exact('React|Réagir', ''),
+    react: exact(`React(?: to .+['’]s post)?|Change (?:${ANY_REACTION}) reaction|Réagir(?: à la publication de .+)?|Отреагировать|Reageeri`),
     reactionsDialog: exact('Reactions|Réactions'),
     // A notification about several reels at once: "X posted 3 new reels" (French form supposed).
     manyReels: /\s(?:new reels|nouveaux reels|nouvelles vidéos reels)\b/i,
@@ -123,8 +123,9 @@
     // "Remove <reaction>", so a bare non-Like name counts as that reaction.
     reelReaction(text, pressed) {
       const bare = String(text || '').replace(/,\s.*$/, '').trim();
+      if (/^(?:React with Like to |Réagir avec J['’]aime à |Поставить Нравится )/i.test(bare) || /^Reageeri kasutaja .+ postitusele reaktsiooniga Meeldib$/i.test(bare)) return 'none';
       const removal = new RegExp('^' + REMOVE + '(.+)$', 'i').exec(bare);
-      const name = removal ? removal[1] : bare;
+      const name = (removal ? removal[1] : bare).split(/ from | de la publication de | de la publication d['’]| из публикации| kasutaja /i)[0].replace(/^реакцию\s+/i, '').replace(/^["«]|["»]$/g, '');
       const kind = Object.keys(REACTIONS).find(key => L.reactionName(key).test(name));
       if (!kind) return null;
       if (removal) return kind;

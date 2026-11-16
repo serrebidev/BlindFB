@@ -762,9 +762,9 @@ pub fn like_comment(fb: &Fb, page: &str, id: &str, liked: bool) -> Result<String
     Ok(output)
 }
 
-/// React to the reel open in the reader; returns a fresh detail JSON.
+/// Set the open reel's reaction idempotently, reopening a lost reader page if needed.
 pub fn reel_react(fb: &Fb, page: &str, reaction: &str) -> Result<String, String> {
-    let output = eval(
+    let output = recover_eval(
         fb,
         page,
         &format!("window.__blindfbPost.reelReact({})", json!(reaction)),
