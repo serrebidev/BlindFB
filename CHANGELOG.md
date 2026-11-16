@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.66 - 2026-11-15
+
+Copied text no longer vanishes when BlindFB closes. Every copy in
+the app — a post, a comment, a link, a chat message — was written
+to the clipboard in a way that left the text owned by BlindFB
+itself, and Windows throws that away the moment the app exits, so
+a copy was gone before it could be pasted anywhere. Copies now go
+through one helper that hands the text to the system for good
+before the copy is reported, the same fix already shipped in
+BlindRSS and BlindRadio.
+
 ## v0.7.65 - 2026-11-15
 
 Group post readers show the current comment identity and Facebook's restrictions.
