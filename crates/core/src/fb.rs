@@ -815,6 +815,30 @@ pub fn post_args(
     args
 }
 
+pub fn group_post_args(
+    text: &str,
+    group: &str,
+    images: &[String],
+    videos: &[String],
+) -> Vec<String> {
+    let mut args = post_args(text, None, images, videos);
+    args.extend(["--group".to_owned(), group.to_owned()]);
+    args
+}
+
+pub fn group_post_done_message(output: &str, group: &str) -> String {
+    if output.trim_start().starts_with("pending") {
+        tf!("Facebook accepted your post for {group}. It may still be publishing or waiting for admin approval. Check the group before posting it again.", group = group)
+    } else {
+        tf!("Your post is published in {group}.", group = group)
+    }
+}
+
+pub fn group_post_unconfirmed_message(error: &str, group: &str) -> Option<String> {
+    post_unconfirmed_message(error).map(|_| tf!(
+        "Facebook may have published your post, but BlindFB could not confirm it. Check {group} before posting it again.", group = group))
+}
+
 /// What to tell the user after `post` printed `output`.
 pub fn post_done_message(output: &str) -> String {
     if output.trim_start().starts_with("pending") {
@@ -849,6 +873,39 @@ pub fn group_apply_args(group: &str, answers: &[String]) -> Vec<String> {
 
 pub fn group_leave_args(group: &str) -> Vec<String> {
     vec!["group-leave".to_owned(), group.to_owned()]
+}
+
+pub fn group_create_args(name: &str, privacy: &str, hidden: bool) -> Vec<String> {
+    let mut args = vec!["group-create".to_owned(), "--privacy".to_owned(), privacy.to_owned()];
+    if hidden { args.push("--hidden".to_owned()); }
+    args.extend(["--".to_owned(), name.to_owned()]);
+    args
+}
+
+pub fn parse_created_group(output: &str) -> Result<String, String> {
+    let group = output.trim().strip_prefix("created\t").and_then(|url| {
+        let group = crate::posts::group_url(url)?;
+        (url.trim_end_matches('/') == group).then_some(group)
+    });
+    group.ok_or_else(|| t("Facebook did not confirm that the group was created. Check your groups before trying again."))
+}
+
+pub fn group_invite_args(group: &str, names: &[String]) -> Vec<String> {
+    let mut args = vec!["group-invite".to_owned(), group.to_owned()];
+    args.extend(names.iter().cloned());
+    args
+}
+
+/// The invite receipt: `invited<TAB>n`. Anything else is an error from the
+/// backend, kept verbatim so the caller can explain what did not happen.
+pub fn parse_invited(output: &str) -> Result<usize, String> {
+    let text = output.trim();
+    if let Some(n) = text.strip_prefix("invited\t") {
+        if let Ok(count) = n.parse::<usize>() {
+            return Ok(count);
+        }
+    }
+    Err(t("Facebook did not confirm that the invitations were sent."))
 }
 
 /// One Marketplace listing. `files` are the photo/video paths (the backend
@@ -1463,6 +1520,65 @@ mod tests {
             args,
             ["post", "hello", "--img", "a.jpg", "--video", "b.mp4", "--to", "friends"]
         );
+    }
+
+    #[test]
+    fn group_post_args_keep_destination_separate_from_profile_audience() {
+        assert_eq!(group_post_args("hello", "https://www.facebook.com/groups/123",
+            &["a.jpg".into()], &["b.mp4".into()]),
+            ["post", "hello", "--img", "a.jpg", "--video", "b.mp4",
+                "--group", "https://www.facebook.com/groups/123"]);
+    }
+
+    #[test]
+    fn group_post_outcomes_name_the_group_and_warn_against_duplicate_posts() {
+        assert_eq!(group_post_done_message("posted\tp1\t/groups/123/posts/4", "My group"),
+            "Your post is published in My group.");
+        let pending = group_post_done_message("pending", "My group");
+        assert!(pending.contains("My group"));
+        assert!(pending.contains("approval"));
+        assert!(!pending.contains("My posts"));
+        for error in ["post may have been published", "timed out after 150s"] {
+            let warning = group_post_unconfirmed_message(error, "My group").unwrap();
+            assert!(warning.contains("Check My group"));
+            assert!(!warning.contains("My posts"));
+        }
+        assert_eq!(group_post_unconfirmed_message("no composer; nothing was posted", "My group"), None);
+    }
+
+    #[test]
+    fn group_creation_args_keep_privacy_and_visibility_explicit() {
+        assert_eq!(group_create_args("New group", "private", true),
+            ["group-create", "--privacy", "private", "--hidden", "--", "New group"]);
+        assert_eq!(group_create_args("Public group", "public", false),
+            ["group-create", "--privacy", "public", "--", "Public group"]);
+        assert_eq!(group_create_args("--My group", "private", false).last().unwrap(), "--My group");
+    }
+
+    #[test]
+    fn group_creation_requires_a_single_confirmed_group_home_url() {
+        assert_eq!(parse_created_group("created\thttps://www.facebook.com/groups/123/\n").unwrap(),
+            "https://www.facebook.com/groups/123");
+        for output in ["", "pending", "created\thttps://example.com/groups/123",
+            "created\thttps://www.facebook.com/groups/123/posts/4",
+            "created\thttps://www.facebook.com/groups/123?extra=1",
+            "created\thttps://www.facebook.com/groups/123\ncreated\thttps://www.facebook.com/groups/456"] {
+            let error = parse_created_group(output).unwrap_err();
+            assert!(error.contains("Check your groups"));
+        }
+    }
+
+    #[test]
+    fn invite_args_and_receipt_stay_exact() {
+        let names = ["Alice Friend".to_owned(), "Bob Friend".to_owned()];
+        assert_eq!(group_invite_args("https://www.facebook.com/groups/123", &names),
+            ["group-invite", "https://www.facebook.com/groups/123", "Alice Friend", "Bob Friend"]);
+        assert_eq!(parse_invited("invited\t2\n").unwrap(), 2);
+        assert_eq!(parse_invited("invited\t1").unwrap(), 1);
+        for output in ["", "invited", "invited\t", "invited\ttwo", "invited\t-1",
+            "selected\t2", "dry: friends selected, not invited\t2"] {
+            assert!(parse_invited(output).is_err(), "{output:?}");
+        }
     }
 
     #[test]

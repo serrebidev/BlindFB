@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: BlindFB\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 07:10-0700\n"
+"POT-Creation-Date: 2026-11-15 20:32-0700\n"
 "PO-Revision-Date: 2026-11-15 00:00-0800\n"
 "Last-Translator: BlindFB\n"
 "Language-Team: French\n"
@@ -14,37 +14,37 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: app/src\chat_dialog.rs:88 app/src\main.rs:201 app/src\post_dialog.rs:52
+#: app/src\chat_dialog.rs:88 app/src\main.rs:215 app/src\post_dialog.rs:52
 msgid "Like"
 msgstr "J’aime"
 
-#: app/src\chat_dialog.rs:89 app/src\main.rs:202 app/src\post_dialog.rs:53
-#: crates/core/src\fb.rs:74
+#: app/src\chat_dialog.rs:89 app/src\main.rs:216 app/src\post_dialog.rs:53
+#: crates/core/src\fb.rs:75
 msgid "Love"
 msgstr "J’adore"
 
-#: app/src\chat_dialog.rs:90 app/src\main.rs:203 app/src\post_dialog.rs:54
-#: crates/core/src\fb.rs:75
+#: app/src\chat_dialog.rs:90 app/src\main.rs:217 app/src\post_dialog.rs:54
+#: crates/core/src\fb.rs:76
 msgid "Care"
 msgstr "Solidaire"
 
-#: app/src\chat_dialog.rs:91 app/src\main.rs:204 app/src\post_dialog.rs:55
-#: crates/core/src\fb.rs:76
+#: app/src\chat_dialog.rs:91 app/src\main.rs:218 app/src\post_dialog.rs:55
+#: crates/core/src\fb.rs:77
 msgid "Haha"
 msgstr "Haha"
 
-#: app/src\chat_dialog.rs:92 app/src\main.rs:205 app/src\post_dialog.rs:56
-#: crates/core/src\fb.rs:77
+#: app/src\chat_dialog.rs:92 app/src\main.rs:219 app/src\post_dialog.rs:56
+#: crates/core/src\fb.rs:78
 msgid "Wow"
 msgstr "Wouah"
 
-#: app/src\chat_dialog.rs:93 app/src\main.rs:206 app/src\post_dialog.rs:57
-#: crates/core/src\fb.rs:78
+#: app/src\chat_dialog.rs:93 app/src\main.rs:220 app/src\post_dialog.rs:57
+#: crates/core/src\fb.rs:79
 msgid "Sad"
 msgstr "Triste"
 
-#: app/src\chat_dialog.rs:94 app/src\main.rs:207 app/src\post_dialog.rs:58
-#: crates/core/src\fb.rs:79
+#: app/src\chat_dialog.rs:94 app/src\main.rs:221 app/src\post_dialog.rs:58
+#: crates/core/src\fb.rs:80
 msgid "Angry"
 msgstr "En colère"
 
@@ -56,16 +56,16 @@ msgstr "Envoi en cours…"
 msgid "Message copied."
 msgstr "Message copié."
 
-#: app/src\chat_dialog.rs:198 app/src\post_dialog.rs:273
-#: app/src\post_dialog.rs:304
+#: app/src\chat_dialog.rs:198 app/src\post_dialog.rs:283
+#: app/src\post_dialog.rs:314
 msgid "Could not copy."
 msgstr "Copie impossible."
 
-#: app/src\chat_dialog.rs:206 app/src\main.rs:5015
+#: app/src\chat_dialog.rs:206 app/src\main.rs:5149
 msgid "Reply cancelled. Your next message sends normally."
 msgstr "Réponse annulée. Votre prochain message partira normalement."
 
-#: app/src\chat_dialog.rs:210 app/src\main.rs:5019
+#: app/src\chat_dialog.rs:210 app/src\main.rs:5153
 msgid "That message has no text to reply to."
 msgstr "Ce message n’a pas de texte auquel répondre."
 
@@ -74,11 +74,11 @@ msgstr "Ce message n’a pas de texte auquel répondre."
 msgid "Replying to: {text}. Write your reply and send as usual."
 msgstr "Réponse à : {text}. Écrivez votre réponse et envoyez-la comme d’habitude."
 
-#: app/src\chat_dialog.rs:226 app/src\main.rs:5035
+#: app/src\chat_dialog.rs:226 app/src\main.rs:5169
 msgid "That message has no text to react to."
 msgstr "Ce message n’a pas de texte auquel réagir."
 
-#: app/src\chat_dialog.rs:236 app/src\main.rs:5043
+#: app/src\chat_dialog.rs:236 app/src\main.rs:5177
 #, rust-format
 msgid "Reacting {reaction} to: {text}"
 msgstr "Réaction {reaction} au message : {text}"
@@ -113,7 +113,7 @@ msgstr "Messages de cette discussion, du plus ancien au plus récent"
 msgid "Load &more"
 msgstr "Charger &plus"
 
-#: app/src\chat_dialog.rs:271 app/src\main.rs:1745 app/src\post_dialog.rs:922
+#: app/src\chat_dialog.rs:271 app/src\main.rs:1814 app/src\post_dialog.rs:955
 msgid "&Refresh"
 msgstr "&Actualiser"
 
@@ -150,16 +150,16 @@ msgstr "État de la discussion"
 msgid "Loading messages…"
 msgstr "Chargement des messages…"
 
-#: app/src\chat_dialog.rs:292 app/src\group_dialog.rs:210 app/src\main.rs:4910
-#: app/src\post_dialog.rs:927 app/src\shortcuts_dialog.rs:215
+#: app/src\chat_dialog.rs:292 app/src\group_dialog.rs:210 app/src\main.rs:5044
+#: app/src\post_dialog.rs:960 app/src\shortcuts_dialog.rs:216
 msgid "C&lose"
 msgstr "&Fermer"
 
-#: app/src\chat_dialog.rs:339 app/src\main.rs:5510
+#: app/src\chat_dialog.rs:339 app/src\main.rs:5668
 msgid "Cancel &reply"
 msgstr "Annuler la &réponse"
 
-#: app/src\chat_dialog.rs:341 app/src\main.rs:5510 app/src\post_dialog.rs:1150
+#: app/src\chat_dialog.rs:341 app/src\main.rs:5668 app/src\post_dialog.rs:1193
 msgid "&Reply"
 msgstr "&Répondre"
 
@@ -167,7 +167,7 @@ msgstr "&Répondre"
 msgid "Quote this message in your next send"
 msgstr "Citer ce message dans votre prochain envoi"
 
-#: app/src\chat_dialog.rs:347 app/src\main.rs:5525
+#: app/src\chat_dialog.rs:347 app/src\main.rs:5683
 msgid "Cop&y message"
 msgstr "&Copier le message"
 
@@ -175,11 +175,11 @@ msgstr "&Copier le message"
 msgid "Copy the message text"
 msgstr "Copier le texte du message"
 
-#: app/src\chat_dialog.rs:359 app/src\main.rs:5521
+#: app/src\chat_dialog.rs:359 app/src\main.rs:5679
 msgid "Re&act"
 msgstr "Réa&gir"
 
-#: app/src\chat_dialog.rs:359 app/src\main.rs:5521
+#: app/src\chat_dialog.rs:359 app/src\main.rs:5679
 msgid "React to this message"
 msgstr "Réagir à ce message"
 
@@ -191,12 +191,12 @@ msgstr "Actualisation…"
 msgid "Loading more…"
 msgstr "Chargement de la suite…"
 
-#: app/src\chat_dialog.rs:398 app/src\main.rs:4951
+#: app/src\chat_dialog.rs:398 app/src\main.rs:5085
 msgid "No files are attached."
 msgstr "Aucun fichier joint."
 
-#: app/src\chat_dialog.rs:404 app/src\chat_dialog.rs:415 app/src\main.rs:4865
-#: app/src\main.rs:4958
+#: app/src\chat_dialog.rs:404 app/src\chat_dialog.rs:415 app/src\main.rs:4999
+#: app/src\main.rs:5092
 #, rust-format
 msgid "{n} file attached"
 msgid_plural "{n} files attached"
@@ -233,6 +233,121 @@ msgstr "Envoi impossible : {error} Vos pièces jointes sont conservées. Utilise
 msgid "Could not send: {error}"
 msgstr "Envoi impossible : {error}"
 
+#: app/src\comment_identity_dialog.rs:26 app/src\comment_identity_dialog.rs:126
+#: app/src\post_dialog.rs:935 app/src\post_dialog.rs:937
+msgid "Comment identity"
+msgstr "Identité des commentaires"
+
+#: app/src\comment_identity_dialog.rs:32
+msgid "Identity &details"
+msgstr "&Détails de l’identité"
+
+#: app/src\comment_identity_dialog.rs:35
+msgid "Identity details"
+msgstr "Détails de l’identité"
+
+#: app/src\comment_identity_dialog.rs:47
+msgid "Identity or &action"
+msgstr "Identité ou &action"
+
+#: app/src\comment_identity_dialog.rs:50
+msgid "Identity or action"
+msgstr "Identité ou action"
+
+#: app/src\comment_identity_dialog.rs:51 app/src\main.rs:4848
+msgid "Choose an action"
+msgstr "Choisissez une action"
+
+#: app/src\comment_identity_dialog.rs:60
+#, rust-format
+msgid "{identity} (current, unavailable)"
+msgstr "{identity} (actuelle, indisponible)"
+
+#: app/src\comment_identity_dialog.rs:61
+#, rust-format
+msgid "{identity} (unavailable)"
+msgstr "{identity} (indisponible)"
+
+#: app/src\comment_identity_dialog.rs:76 app/src\participation_dialog.rs:49
+msgid "Choose an answer"
+msgstr "Choisir une réponse"
+
+#: app/src\comment_identity_dialog.rs:105
+msgid "Continue changes your Facebook identity or completes its setup. Your comment draft is kept."
+msgstr "Continuer change votre identité Facebook ou termine sa configuration. Le brouillon de votre commentaire est conservé."
+
+#: app/src\comment_identity_dialog.rs:108
+msgid "&Continue"
+msgstr "&Continuer"
+
+#: app/src\comment_identity_dialog.rs:110 app/src\create_group_dialog.rs:50
+#: app/src\group_picker.rs:185 app/src\invite_dialog.rs:48 app/src\main.rs:6153
+#: app/src\main.rs:6155 app/src\participation_dialog.rs:88
+#: app/src\shortcuts_dialog.rs:370 app/src\update.rs:50
+msgid "Cancel"
+msgstr "Annuler"
+
+#: app/src\comment_identity_dialog.rs:126
+msgid "Choose an action before continuing."
+msgstr "Choisissez une action avant de continuer."
+
+#: app/src\create_group_dialog.rs:22 app/src\create_group_dialog.rs:76
+#: app/src\main.rs:4023 app/src\main.rs:4031 app/src\main.rs:4033
+msgid "New group"
+msgstr "Nouveau groupe"
+
+#: app/src\create_group_dialog.rs:28
+msgid "Group &name"
+msgstr "&Nom du groupe"
+
+#: app/src\create_group_dialog.rs:30
+msgid "Group name"
+msgstr "Nom du groupe"
+
+#: app/src\create_group_dialog.rs:32
+msgid "Group &privacy"
+msgstr "&Confidentialité du groupe"
+
+#: app/src\create_group_dialog.rs:34
+msgid "Group privacy"
+msgstr "Confidentialité du groupe"
+
+#: app/src\create_group_dialog.rs:35 app/src\main.rs:5805
+msgid "Public"
+msgstr "Public"
+
+#: app/src\create_group_dialog.rs:36
+msgid "Private"
+msgstr "Privé"
+
+#: app/src\create_group_dialog.rs:39
+msgid "Private group &visibility"
+msgstr "&Visibilité du groupe privé"
+
+#: app/src\create_group_dialog.rs:41
+msgid "Private group visibility"
+msgstr "Visibilité du groupe privé"
+
+#: app/src\create_group_dialog.rs:42
+msgid "Visible"
+msgstr "Visible"
+
+#: app/src\create_group_dialog.rs:43
+msgid "Hidden"
+msgstr "Masqué"
+
+#: app/src\create_group_dialog.rs:46
+msgid "Visible groups can be found in search. Hidden groups can only be found by members and invited people."
+msgstr "Les groupes visibles apparaissent dans la recherche. Les groupes masqués ne sont trouvés que par les membres et les personnes invitées."
+
+#: app/src\create_group_dialog.rs:49
+msgid "&Create group"
+msgstr "&Créer le groupe"
+
+#: app/src\create_group_dialog.rs:75
+msgid "Enter a group name of up to 75 characters and choose its privacy."
+msgstr "Entrez un nom de groupe de 75 caractères maximum et choisissez sa confidentialité."
+
 #: app/src\group_dialog.rs:133 app/src\group_dialog.rs:298
 msgid "This member row has no profile link."
 msgstr "Cette ligne de membre n’a pas de lien de profil."
@@ -245,7 +360,7 @@ msgstr "Cette ligne de membre n’a pas de nom : la discussion ne peut pas s’o
 msgid "This member row has no profile link, so a friend request cannot be sent."
 msgstr "Cette ligne de membre n’a pas de lien de profil : impossible d’envoyer une invitation."
 
-#: app/src\group_dialog.rs:143 app/src\main.rs:4558
+#: app/src\group_dialog.rs:143 app/src\main.rs:4692
 #, rust-format
 msgid "Sending a friend request to {name}…"
 msgstr "Envoi d’une invitation à {name}…"
@@ -291,7 +406,7 @@ msgstr "État du groupe"
 msgid "Loading posts and members…"
 msgstr "Chargement des publications et des membres…"
 
-#: app/src\group_dialog.rs:315 app/src\post_dialog.rs:1170
+#: app/src\group_dialog.rs:315 app/src\post_dialog.rs:1213
 msgid "View &profile"
 msgstr "Voir le &profil"
 
@@ -299,8 +414,8 @@ msgstr "Voir le &profil"
 msgid "Open this member's profile"
 msgstr "Ouvrir le profil de ce membre"
 
-#: app/src\group_dialog.rs:320 app/src\main.rs:5398 app/src\main.rs:5493
-#: app/src\main.rs:5556
+#: app/src\group_dialog.rs:320 app/src\main.rs:5556 app/src\main.rs:5651
+#: app/src\main.rs:5715
 msgid "&Message"
 msgstr "Envoyer un &message"
 
@@ -308,8 +423,8 @@ msgstr "Envoyer un &message"
 msgid "Chat with this member"
 msgstr "Discuter avec ce membre"
 
-#: app/src\group_dialog.rs:325 app/src\main.rs:5399 app/src\main.rs:5535
-#: app/src\main.rs:5557 app/src\post_dialog.rs:1175
+#: app/src\group_dialog.rs:325 app/src\main.rs:5557 app/src\main.rs:5693
+#: app/src\main.rs:5716 app/src\post_dialog.rs:1218
 msgid "Add &friend"
 msgstr "&Ajouter en ami"
 
@@ -325,51 +440,51 @@ msgstr "Ouvrir sur &Facebook"
 msgid "Open this member's profile on the web"
 msgstr "Ouvrir le profil de ce membre sur le web"
 
-#: app/src\group_dialog.rs:346 app/src\main.rs:5436
+#: app/src\group_dialog.rs:346 app/src\main.rs:5594
 msgid "&Open post and comments"
 msgstr "&Ouvrir la publication et les commentaires"
 
-#: app/src\group_dialog.rs:347 app/src\main.rs:1776 app/src\main.rs:5418
-#: app/src\main.rs:5437 app/src\main.rs:5482 app/src\post_dialog.rs:920
-#: app/src\post_dialog.rs:1217
+#: app/src\group_dialog.rs:347 app/src\main.rs:1845 app/src\main.rs:5576
+#: app/src\main.rs:5595 app/src\main.rs:5640 app/src\post_dialog.rs:953
+#: app/src\post_dialog.rs:1260
 msgid "S&hare…"
 msgstr "&Partager…"
 
-#: app/src\group_dialog.rs:348 app/src\main.rs:1777 app/src\main.rs:5419
-#: app/src\main.rs:5438 app/src\post_dialog.rs:1212
+#: app/src\group_dialog.rs:348 app/src\main.rs:1846 app/src\main.rs:5577
+#: app/src\main.rs:5596 app/src\post_dialog.rs:1255
 msgid "&Comment…"
 msgstr "&Commenter…"
 
-#: app/src\group_dialog.rs:359 app/src\main.rs:1779 app/src\main.rs:5464
+#: app/src\group_dialog.rs:359 app/src\main.rs:1848 app/src\main.rs:5622
 msgid "Author &profile"
 msgstr "Profil de l’&auteur"
 
-#: app/src\group_dialog.rs:360 app/src\main.rs:1780 app/src\main.rs:5465
+#: app/src\group_dialog.rs:360 app/src\main.rs:1849 app/src\main.rs:5623
 msgid "Author's p&osts"
 msgstr "Publications de l’a&uteur"
 
-#: app/src\group_dialog.rs:361 app/src\main.rs:5466
+#: app/src\group_dialog.rs:361 app/src\main.rs:5624
 msgid "&Message author"
 msgstr "Envoyer un &message à l’auteur"
 
-#: app/src\group_dialog.rs:363 app/src\main.rs:5390 app/src\main.rs:5401
-#: app/src\main.rs:5411 app/src\main.rs:5420 app/src\main.rs:5468
-#: app/src\main.rs:5483 app/src\main.rs:5539 app/src\main.rs:5561
-#: app/src\main.rs:5564
+#: app/src\group_dialog.rs:363 app/src\main.rs:5548 app/src\main.rs:5559
+#: app/src\main.rs:5569 app/src\main.rs:5578 app/src\main.rs:5626
+#: app/src\main.rs:5641 app/src\main.rs:5697 app/src\main.rs:5720
+#: app/src\main.rs:5723
 msgid "Cop&y text"
 msgstr "Copier le &texte"
 
-#: app/src\group_dialog.rs:364 app/src\main.rs:5409 app/src\main.rs:5421
-#: app/src\main.rs:5469 app/src\main.rs:5484 app/src\main.rs:5546
-#: app/src\post_dialog.rs:1239
+#: app/src\group_dialog.rs:364 app/src\main.rs:5567 app/src\main.rs:5579
+#: app/src\main.rs:5627 app/src\main.rs:5642 app/src\main.rs:5705
+#: app/src\post_dialog.rs:1282
 msgid "Copy &link"
 msgstr "Copier le &lien"
 
-#: app/src\group_dialog.rs:365 app/src\main.rs:1783 app/src\main.rs:5470
+#: app/src\group_dialog.rs:365 app/src\main.rs:1852 app/src\main.rs:5628
 msgid "Open post on &Facebook (web)"
 msgstr "Ouvrir la publication sur &Facebook (web)"
 
-#: app/src\group_dialog.rs:443 app/src\main.rs:3222
+#: app/src\group_dialog.rs:443 app/src\main.rs:3291
 msgid "Load more posts"
 msgstr "Charger plus de publications"
 
@@ -377,7 +492,7 @@ msgstr "Charger plus de publications"
 msgid "Load more members"
 msgstr "Charger plus de membres"
 
-#: app/src\group_dialog.rs:472 app/src\main.rs:2508
+#: app/src\group_dialog.rs:472 app/src\main.rs:2577
 msgid "Items are already loading…"
 msgstr "Éléments déjà en cours de chargement…"
 
@@ -385,24 +500,24 @@ msgstr "Éléments déjà en cours de chargement…"
 msgid "This post row has no link, so it cannot be opened."
 msgstr "Cette ligne de publication n’a pas de lien : impossible de l’ouvrir."
 
-#: app/src\group_dialog.rs:518 app/src\main.rs:4342
+#: app/src\group_dialog.rs:518 app/src\main.rs:4476
 msgid "BlindFB cannot read this kind of item yet (for example a photo album). Open it in your web browser?"
 msgstr "BlindFB ne sait pas encore lire ce type d’élément (par exemple un album photo). L’ouvrir dans votre navigateur web ?"
 
-#: app/src\group_dialog.rs:519 app/src\main.rs:4310 app/src\main.rs:4343
-#: app/src\main.rs:5658
+#: app/src\group_dialog.rs:519 app/src\main.rs:4444 app/src\main.rs:4477
+#: app/src\main.rs:5858
 msgid "Open post"
 msgstr "Ouvrir la publication"
 
-#: app/src\group_dialog.rs:556 app/src\main.rs:5138
+#: app/src\group_dialog.rs:556 app/src\main.rs:5272
 msgid "Text copied."
 msgstr "Texte copié."
 
-#: app/src\group_dialog.rs:562 app/src\main.rs:5142 app/src\post_dialog.rs:622
+#: app/src\group_dialog.rs:562 app/src\main.rs:5276 app/src\post_dialog.rs:632
 msgid "Link copied."
 msgstr "Lien copié."
 
-#: app/src\group_dialog.rs:564 app/src\main.rs:5143
+#: app/src\group_dialog.rs:564 app/src\main.rs:5277
 msgid "This item has no link to copy."
 msgstr "Cet élément n’a pas de lien à copier."
 
@@ -457,298 +572,385 @@ msgstr "Impossible de charger les publications : {error}"
 msgid "Members could not load: {error}"
 msgstr "Impossible de charger les membres : {error}"
 
-#: app/src\main.rs:154
+#: app/src\group_picker.rs:22 app/src\group_picker.rs:26
+#: app/src\group_picker.rs:100 app/src\group_picker.rs:120
+msgid "Could not load groups. Try again."
+msgstr "Impossible de charger les groupes. Réessayez."
+
+#: app/src\group_picker.rs:106
+msgid "Loading your groups…"
+msgstr "Chargement de vos groupes…"
+
+#: app/src\group_picker.rs:145
+msgid "No joined groups were found. Retry to check again."
+msgstr "Aucun groupe auquel vous appartenez n’a été trouvé. Réessayez pour vérifier."
+
+#: app/src\group_picker.rs:148
+#, rust-format
+msgid "{n} group loaded. Load more checks for other groups."
+msgid_plural "{n} groups loaded. Load more checks for other groups."
+msgstr[0] "{n} groupe chargé. Charger plus vérifie la présence d’autres groupes."
+msgstr[1] "{n} groupes chargés. Charger plus vérifie la présence d’autres groupes."
+
+#: app/src\group_picker.rs:159
+#, rust-format
+msgid "Could not load groups: {error}"
+msgstr "Impossible de charger les groupes : {error}"
+
+#: app/src\group_picker.rs:168
+msgid "Choose a group"
+msgstr "Choisir un groupe"
+
+#: app/src\group_picker.rs:174
+msgid "Your &groups"
+msgstr "Vos &groupes"
+
+#: app/src\group_picker.rs:176
+msgid "Your groups. Type a name to find it; Enter chooses the selected group"
+msgstr "Vos groupes. Saisissez un nom pour le trouver ; Entrée choisit le groupe sélectionné"
+
+#: app/src\group_picker.rs:177 app/src\group_picker.rs:179
+msgid "Group loading status"
+msgstr "État du chargement des groupes"
+
+#: app/src\group_picker.rs:181
+msgid "&Choose group"
+msgstr "&Choisir le groupe"
+
+#: app/src\group_picker.rs:183
+msgid "&Load more groups"
+msgstr "Charger &plus de groupes"
+
+#: app/src\group_picker.rs:184
+msgid "&Retry"
+msgstr "&Réessayer"
+
+#: app/src\group_picker.rs:205
+msgid "The Facebook backend is not installed."
+msgstr "Le moteur Facebook n’est pas installé."
+
+#: app/src\invite_dialog.rs:22 app/src\invite_dialog.rs:68
+#: app/src\invite_dialog.rs:77 app/src\main.rs:4051 app/src\main.rs:4056
+msgid "Invite friends"
+msgstr "Inviter des amis"
+
+#: app/src\invite_dialog.rs:30
+msgid "Enter the full name of each friend to invite, one per line."
+msgstr "Entrez le nom complet de chaque ami à inviter, un par ligne."
+
+#: app/src\invite_dialog.rs:37
+msgid "Friends to invite, one per line"
+msgstr "Amis à inviter, un par ligne"
+
+#: app/src\invite_dialog.rs:39
+msgid "Names are matched exactly. If a name does not match exactly one friend, no invitations are sent."
+msgstr "Les noms doivent correspondre exactement. Si un nom ne correspond pas à exactement un ami, aucune invitation n’est envoyée."
+
+#: app/src\invite_dialog.rs:44
+msgid "&Send invitations"
+msgstr "&Envoyer les invitations"
+
+#: app/src\invite_dialog.rs:67
+msgid "Enter at least one friend name, one per line."
+msgstr "Entrez au moins un nom d’ami, un par ligne."
+
+#: app/src\invite_dialog.rs:76
+msgid "Invite at most 50 friends at once; split the list into smaller batches."
+msgstr "Invitez au maximum 50 amis à la fois ; divisez la liste en plus petits lots."
+
+#: app/src\main.rs:168
 msgid "React: like"
 msgstr "Réagir : J’aime"
 
-#: app/src\main.rs:155
+#: app/src\main.rs:169
 msgid "React: love"
 msgstr "Réagir : J’adore"
 
-#: app/src\main.rs:156
+#: app/src\main.rs:170
 msgid "React: care"
 msgstr "Réagir : Solidaire"
 
-#: app/src\main.rs:157
+#: app/src\main.rs:171
 msgid "React: haha"
 msgstr "Réagir : Haha"
 
-#: app/src\main.rs:158
+#: app/src\main.rs:172
 msgid "React: wow"
 msgstr "Réagir : Wouah"
 
-#: app/src\main.rs:159
+#: app/src\main.rs:173
 msgid "React: sad"
 msgstr "Réagir : Triste"
 
-#: app/src\main.rs:160
+#: app/src\main.rs:174
 msgid "React: angry"
 msgstr "Réagir : En colère"
 
-#: app/src\main.rs:161
+#: app/src\main.rs:175
 msgid "React: none"
 msgstr "Réagir : aucune"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:171
+#: app/src\main.rs:185
 msgid "like"
 msgstr "j’aime"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:173
+#: app/src\main.rs:187
 msgid "love"
 msgstr "j’adore"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:175
+#: app/src\main.rs:189
 msgid "care"
 msgstr "solidaire"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:177
+#: app/src\main.rs:191
 msgid "haha"
 msgstr "haha"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:179
+#: app/src\main.rs:193
 msgid "wow"
 msgstr "wouah"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:181
+#: app/src\main.rs:195
 msgid "sad"
 msgstr "triste"
 
 #. TRANSLATORS: a reaction name in a list of reactions (lower case in English).
-#: app/src\main.rs:183
+#: app/src\main.rs:197
 msgid "angry"
 msgstr "en colère"
 
 #. TRANSLATORS: the choice that removes your reaction, in a list of reactions.
-#: app/src\main.rs:185
+#: app/src\main.rs:199
 msgid "none"
 msgstr "aucune"
 
-#: app/src\main.rs:193 app/src\main.rs:194
+#: app/src\main.rs:207 app/src\main.rs:208
 msgid "&React"
 msgstr "&Réagir"
 
-#: app/src\main.rs:208 app/src\post_dialog.rs:59
+#: app/src\main.rs:222 app/src\post_dialog.rs:59
 msgid "Remove reaction"
 msgstr "Retirer la réaction"
 
-#: app/src\main.rs:287 app/src\main.rs:676
+#: app/src\main.rs:301 app/src\main.rs:709
 msgid "News feed"
 msgstr "Fil d’actualité"
 
-#: app/src\main.rs:288 app/src\main.rs:682
+#: app/src\main.rs:302 app/src\main.rs:715
 msgid "Feeds (most recent)"
 msgstr "Fils (plus récents)"
 
-#: app/src\main.rs:290 app/src\main.rs:677
+#: app/src\main.rs:304 app/src\main.rs:710
 msgid "Notifications"
 msgstr "Notifications"
 
-#: app/src\main.rs:291 app/src\main.rs:678 app/src\main.rs:5616
-#: app/src\main.rs:5888
+#: app/src\main.rs:305 app/src\main.rs:711 app/src\main.rs:5805
+#: app/src\main.rs:6088
 msgid "Friends"
 msgstr "Amis"
 
-#: app/src\main.rs:292 app/src\main.rs:679
+#: app/src\main.rs:306 app/src\main.rs:712
 msgid "My posts"
 msgstr "Mes publications"
 
-#: app/src\main.rs:293 app/src\main.rs:680
+#: app/src\main.rs:307 app/src\main.rs:713
 msgid "Chats"
 msgstr "Discussions"
 
-#: app/src\main.rs:294
+#: app/src\main.rs:308
 msgid "My groups"
 msgstr "Mes groupes"
 
-#: app/src\main.rs:295 app/src\main.rs:684 app/src\main.rs:5895
+#: app/src\main.rs:309 app/src\main.rs:717 app/src\main.rs:6095
 msgid "Marketplace"
 msgstr "Marketplace"
 
-#: app/src\main.rs:296 app/src\main.rs:685 app/src\main.rs:5894
+#: app/src\main.rs:310 app/src\main.rs:718 app/src\main.rs:6094
 msgid "Events"
 msgstr "Évènements"
 
-#: app/src\main.rs:297 app/src\main.rs:686 app/src\main.rs:5891
+#: app/src\main.rs:311 app/src\main.rs:719 app/src\main.rs:6091
 msgid "Pages"
 msgstr "Pages"
 
-#: app/src\main.rs:298 app/src\main.rs:687 app/src\main.rs:5892
+#: app/src\main.rs:312 app/src\main.rs:720 app/src\main.rs:6092
 msgid "Places"
 msgstr "Lieux"
 
-#: app/src\main.rs:299 app/src\main.rs:688
+#: app/src\main.rs:313 app/src\main.rs:721
 msgid "Saved posts"
 msgstr "Publications enregistrées"
 
-#: app/src\main.rs:300
+#: app/src\main.rs:314
 msgid "Search results"
 msgstr "Résultats de recherche"
 
-#: app/src\main.rs:301 crates/core/src\i18n.rs:162
+#: app/src\main.rs:315 crates/core/src\i18n.rs:162
 #, rust-format
 msgid "Posts by {who}"
 msgstr "Publications de {who}"
 
-#: app/src\main.rs:302
+#: app/src\main.rs:316
 #, rust-format
 msgid "Posts in group {group}"
 msgstr "Publications dans le groupe {group}"
 
-#: app/src\main.rs:303 app/src\post_dialog.rs:837
+#: app/src\main.rs:317 app/src\post_dialog.rs:864
 msgid "Post and comments"
 msgstr "Publication et commentaires"
 
-#: app/src\main.rs:304 crates/core/src\posts.rs:128
+#: app/src\main.rs:318 crates/core/src\posts.rs:136
 #, rust-format
 msgid "Profile of {who}"
 msgstr "Profil de {who}"
 
-#: app/src\main.rs:305
+#: app/src\main.rs:319
 #, rust-format
 msgid "Chat with {name}"
 msgstr "Discussion avec {name}"
 
-#: app/src\main.rs:663
+#: app/src\main.rs:696
 msgid "Ready. Pick a view to start."
 msgstr "Prêt. Choisissez une vue pour commencer."
 
-#: app/src\main.rs:665
+#: app/src\main.rs:698
 msgid "Setting up the Facebook backend…"
 msgstr "Configuration du moteur Facebook…"
 
-#: app/src\main.rs:673
+#: app/src\main.rs:706
 msgid "Views"
 msgstr "Vues"
 
-#: app/src\main.rs:681 app/src\main.rs:5893
+#: app/src\main.rs:714 app/src\main.rs:5805 app/src\main.rs:6093
 msgid "Groups"
 msgstr "Groupes"
 
-#: app/src\main.rs:683 crates/core/src\reels.rs:25
+#: app/src\main.rs:716 crates/core/src\reels.rs:25
 msgid "Reels"
 msgstr "Reels"
 
-#: app/src\main.rs:694
+#: app/src\main.rs:727
 msgid "Items"
 msgstr "Éléments"
 
-#: app/src\main.rs:700
+#: app/src\main.rs:733
 msgid "Lin&ks in selected item"
 msgstr "&Liens de l’élément sélectionné"
 
-#: app/src\main.rs:705
+#: app/src\main.rs:738
 msgid "Links in selected item. Enter opens the selected link in your browser"
 msgstr "Liens de l’élément sélectionné. Entrée ouvre le lien sélectionné dans votre navigateur"
 
-#: app/src\main.rs:707
+#: app/src\main.rs:740
 msgid "Open selected &link"
 msgstr "&Ouvrir le lien sélectionné"
 
-#: app/src\main.rs:711
+#: app/src\main.rs:744
 msgid "Details"
 msgstr "Détails"
 
-#: app/src\main.rs:718
+#: app/src\main.rs:751
 msgid "Refresh (F5)"
 msgstr "Actualiser (F5)"
 
-#: app/src\main.rs:720
+#: app/src\main.rs:753
 msgid "Open / read full post and links"
 msgstr "Ouvrir / lire la publication complète et ses liens"
 
-#: app/src\main.rs:722 app/src\main.rs:3881 app/src\main.rs:4419
-#: app/src\main.rs:4425 app/src\main.rs:5314 app/src\post_dialog.rs:921
-#: crates/core/src\fb.rs:80
+#: app/src\main.rs:755 app/src\main.rs:3965 app/src\main.rs:4553
+#: app/src\main.rs:4559 app/src\main.rs:5453 app/src\post_dialog.rs:954
+#: crates/core/src\fb.rs:81
 msgid "React"
 msgstr "Réagir"
 
-#: app/src\main.rs:723 app/src\main.rs:4474 app/src\main.rs:4481
+#: app/src\main.rs:756 app/src\main.rs:4608 app/src\main.rs:4615
 msgid "Comment"
 msgstr "Commenter"
 
-#: app/src\main.rs:724
+#: app/src\main.rs:757
 msgid "Profile"
 msgstr "Profil"
 
-#: app/src\main.rs:725 app/src\main.rs:5886
+#: app/src\main.rs:758 app/src\main.rs:6086
 msgid "Posts"
 msgstr "Publications"
 
-#: app/src\main.rs:726 app/src\main.rs:742
+#: app/src\main.rs:759 app/src\main.rs:775
 msgid "Message"
 msgstr "Message"
 
-#: app/src\main.rs:727 app/src\main.rs:4844 app/src\main.rs:4850
+#: app/src\main.rs:760 app/src\main.rs:4978 app/src\main.rs:4984
 msgid "Delete post"
 msgstr "Supprimer la publication"
 
-#: app/src\main.rs:746
+#: app/src\main.rs:779
 msgid "Attach files"
 msgstr "Joindre des fichiers"
 
-#: app/src\main.rs:748 app/src\main.rs:4964
+#: app/src\main.rs:781 app/src\main.rs:5098
 #, rust-format
 msgid "Attachments ({count})"
 msgstr "Pièces jointes ({count})"
 
-#: app/src\main.rs:750 app/src\main.rs:4966
+#: app/src\main.rs:783 app/src\main.rs:5100
 #, rust-format
 msgid "Attachments, {n} attached"
 msgid_plural "Attachments, {n} attached"
 msgstr[0] "Pièces jointes, {n} fichier joint"
 msgstr[1] "Pièces jointes, {n} fichiers joints"
 
-#: app/src\main.rs:751 app/src\main.rs:5052
+#: app/src\main.rs:784 app/src\main.rs:5186
 msgid "Send"
 msgstr "Envoyer"
 
-#: app/src\main.rs:821
+#: app/src\main.rs:854
 msgid "Show / hide BlindFB"
 msgstr "Afficher / masquer BlindFB"
 
-#: app/src\main.rs:823
+#: app/src\main.rs:856
 msgid "Exit BlindFB"
 msgstr "Quitter BlindFB"
 
-#: app/src\main.rs:901
+#: app/src\main.rs:935
 msgid "Checking the Facebook backend…"
 msgstr "Vérification du moteur Facebook…"
 
-#: app/src\main.rs:1137
+#: app/src\main.rs:1180
 msgid "Working…"
 msgstr "En cours…"
 
-#: app/src\main.rs:1294 app/src\main.rs:1315 app/src\main.rs:1363
-#: app/src\main.rs:1368 app/src\main.rs:1372 app/src\main.rs:1376
-#: app/src\main.rs:1382 app/src\main.rs:1386 app/src\main.rs:1390
-#: app/src\main.rs:1394 app/src\main.rs:1398 app/src\main.rs:1410
-#: app/src\main.rs:1414
+#: app/src\main.rs:1346 app/src\main.rs:1367 app/src\main.rs:1415
+#: app/src\main.rs:1420 app/src\main.rs:1424 app/src\main.rs:1428
+#: app/src\main.rs:1434 app/src\main.rs:1438 app/src\main.rs:1442
+#: app/src\main.rs:1446 app/src\main.rs:1450 app/src\main.rs:1454
+#: app/src\main.rs:1458 app/src\main.rs:1462 app/src\main.rs:1474
+#: app/src\main.rs:1478
 msgid "The Facebook backend is not installed"
 msgstr "Le moteur Facebook n’est pas installé"
 
-#: app/src\main.rs:1335
+#: app/src\main.rs:1387
 msgid "the backend is not installed yet"
 msgstr "le moteur n’est pas encore installé"
 
-#: app/src\main.rs:1352
+#: app/src\main.rs:1404
 msgid "the fb backend is not installed — use Backend → Install or update backend"
 msgstr "le moteur fb n’est pas installé — utilisez Moteur → Installer ou mettre à jour le moteur"
 
-#: app/src\main.rs:1453
+#: app/src\main.rs:1517
 msgid "the Chrome sign-in did not finish"
 msgstr "la connexion dans Chrome n’a pas abouti"
 
-#: app/src\main.rs:1470
+#: app/src\main.rs:1534
 msgid "install the browser first"
 msgstr "installez d’abord le navigateur"
 
-#: app/src\main.rs:1479
+#: app/src\main.rs:1543
 #, rust-format
 msgid ""
 "Session import failed: {why}\n"
@@ -759,648 +961,656 @@ msgstr ""
 "\n"
 "Échec de la connexion directe : {error}"
 
-#: app/src\main.rs:1606 app/src\main.rs:1607
+#: app/src\main.rs:1670 app/src\main.rs:1671
 msgid "Hide to system &tray"
 msgstr "Réduire en &zone de notification"
 
-#: app/src\main.rs:1620 app/src\main.rs:1642
+#: app/src\main.rs:1684 app/src\main.rs:1706
 msgid "Show/hide hotkey"
 msgstr "Afficher/masquer le raccourci"
 
-#: app/src\main.rs:1621 app/src\main.rs:1703
+#: app/src\main.rs:1685 app/src\main.rs:1772
 msgid "Pick the shortcut that hides and restores BlindFB, or turn it off"
 msgstr "Choisissez le raccourci qui masque et restaure BlindFB, ou désactivez-le"
 
-#: app/src\main.rs:1637
+#: app/src\main.rs:1701
 #, rust-format
 msgid "Show/hide hotkey: {label}"
 msgstr "Raccourci afficher/masquer : {label}"
 
-#: app/src\main.rs:1638
+#: app/src\main.rs:1702
 msgid "Show/hide hotkey off."
 msgstr "Raccourci afficher/masquer désactivé."
 
-#: app/src\main.rs:1665
+#: app/src\main.rs:1729
 msgid "Open Facebook &link…"
 msgstr "Ouvrir un &lien Facebook…"
 
-#: app/src\main.rs:1666
+#: app/src\main.rs:1730
 msgid "Open a Facebook post, video or reel link"
 msgstr "Ouvrir le lien d’une publication, d’une vidéo ou d’un Reel Facebook"
 
-#: app/src\main.rs:1668
+#: app/src\main.rs:1732
 msgid "&New post…"
 msgstr "&Nouvelle publication…"
 
-#: app/src\main.rs:1668
+#: app/src\main.rs:1732
 msgid "Write a new post"
 msgstr "Rédiger une nouvelle publication"
 
-#: app/src\main.rs:1671
+#: app/src\main.rs:1735
 msgid "New post with &media…"
 msgstr "Nouvelle publication avec &médias…"
 
-#: app/src\main.rs:1672
+#: app/src\main.rs:1736
 msgid "Write a post with photos and videos attached"
 msgstr "Rédiger une publication avec photos et vidéos jointes"
 
-#: app/src\main.rs:1676
+#: app/src\main.rs:1740
+msgid "New &group…"
+msgstr "Nouveau &groupe…"
+
+#: app/src\main.rs:1741
+msgid "Create a Facebook group"
+msgstr "Créer un groupe Facebook"
+
+#: app/src\main.rs:1745
 msgid "Sell on &Marketplace…"
 msgstr "&Vendre sur Marketplace…"
 
-#: app/src\main.rs:1677
+#: app/src\main.rs:1746
 msgid "Create a Marketplace listing with photos or video"
 msgstr "Créer une annonce Marketplace avec photos ou vidéo"
 
-#: app/src\main.rs:1681
+#: app/src\main.rs:1750
 msgid "&Search Facebook…"
 msgstr "&Rechercher sur Facebook…"
 
-#: app/src\main.rs:1682
+#: app/src\main.rs:1751
 msgid "Search everything: posts, people, friends, photos, videos, pages, places, groups, events and Marketplace"
 msgstr "Tout rechercher : publications, personnes, amis, photos, vidéos, pages, lieux, groupes, évènements et Marketplace"
 
-#: app/src\main.rs:1686
+#: app/src\main.rs:1755
 msgid "&OCR an image…"
 msgstr "&OCR d’une image…"
 
-#: app/src\main.rs:1687
+#: app/src\main.rs:1756
 msgid "Read the text in an image file with the operating system's OCR engine"
 msgstr "Lire le texte d’un fichier image avec la reconnaissance de texte (OCR) du système"
 
-#: app/src\main.rs:1691
+#: app/src\main.rs:1760
 msgid "Check for &updates…"
 msgstr "Rechercher des mises à &jour…"
 
-#: app/src\main.rs:1692
+#: app/src\main.rs:1761
 msgid "Check for a newer BlindFB"
 msgstr "Vérifier si une version plus récente de BlindFB existe"
 
-#: app/src\main.rs:1698
+#: app/src\main.rs:1767
 msgid "Hide BlindFB to the system tray; the tray icon or its menu brings it back"
 msgstr "Masque BlindFB dans la zone de notification ; l’icône ou son menu le restaure"
 
-#: app/src\main.rs:1702
+#: app/src\main.rs:1771
 msgid "Show/hide &hotkey…"
 msgstr "Afficher/masquer le &raccourci…"
 
-#: app/src\main.rs:1707
+#: app/src\main.rs:1776
 msgid "&Keyboard shortcuts…"
 msgstr "&Raccourcis clavier…"
 
-#: app/src\main.rs:1708
+#: app/src\main.rs:1777
 msgid "Give any command a shortcut, or change or remove one"
 msgstr "Attribuer un raccourci à n'importe quelle commande, ou le modifier ou le supprimer"
 
-#: app/src\main.rs:1710
+#: app/src\main.rs:1779
 msgid "Close BlindFB"
 msgstr "Fermer BlindFB"
 
-#: app/src\main.rs:1710
+#: app/src\main.rs:1779
 msgid "E&xit"
 msgstr "&Quitter"
 
-#: app/src\main.rs:1714
+#: app/src\main.rs:1783
 msgid "News &feed"
 msgstr "&Fil d’actualité"
 
-#: app/src\main.rs:1714
+#: app/src\main.rs:1783
 msgid "Your news feed"
 msgstr "Votre fil d’actualité"
 
-#: app/src\main.rs:1715
+#: app/src\main.rs:1784
 msgid "&Notifications"
 msgstr "&Notifications"
 
-#: app/src\main.rs:1715
+#: app/src\main.rs:1784
 msgid "Your notifications"
 msgstr "Vos notifications"
 
-#: app/src\main.rs:1716
+#: app/src\main.rs:1785
 msgid "Fr&iends"
 msgstr "&Amis"
 
-#: app/src\main.rs:1716
+#: app/src\main.rs:1785
 msgid "Your friends list"
 msgstr "Votre liste d’amis"
 
-#: app/src\main.rs:1717
+#: app/src\main.rs:1786
 msgid "&My posts"
 msgstr "&Mes publications"
 
-#: app/src\main.rs:1717
+#: app/src\main.rs:1786
 msgid "Posts on your own profile"
 msgstr "Les publications de votre profil"
 
-#: app/src\main.rs:1718
+#: app/src\main.rs:1787
 msgid "&Chats"
 msgstr "&Discussions"
 
-#: app/src\main.rs:1718
+#: app/src\main.rs:1787
 msgid "Messenger chats"
 msgstr "Discussions Messenger"
 
-#: app/src\main.rs:1719
+#: app/src\main.rs:1788
 msgid "&Groups"
 msgstr "&Groupes"
 
-#: app/src\main.rs:1719
+#: app/src\main.rs:1788
 msgid "Groups you belong to"
 msgstr "Les groupes dont vous êtes membre"
 
-#: app/src\main.rs:1722
+#: app/src\main.rs:1791
 msgid "Feeds (most &recent)"
 msgstr "Fils (&plus récents)"
 
-#: app/src\main.rs:1723
+#: app/src\main.rs:1792
 msgid "Newest posts from followed friends, pages and groups"
 msgstr "Publications les plus récentes des amis, pages et groupes suivis"
 
-#: app/src\main.rs:1727
+#: app/src\main.rs:1796
 msgid "Re&els"
 msgstr "&Reels"
 
-#: app/src\main.rs:1728
+#: app/src\main.rs:1797
 msgid "Browse reels with the accessible player"
 msgstr "Parcourir les Reels avec le lecteur accessible"
 
-#: app/src\main.rs:1732
+#: app/src\main.rs:1801
 msgid "&Marketplace"
 msgstr "Mar&ketplace"
 
-#: app/src\main.rs:1733
+#: app/src\main.rs:1802
 msgid "Browse Marketplace listings"
 msgstr "Parcourir les annonces Marketplace"
 
-#: app/src\main.rs:1735
+#: app/src\main.rs:1804
 msgid "&Events"
 msgstr "&Événements"
 
-#: app/src\main.rs:1735
+#: app/src\main.rs:1804
 msgid "Events from your events page"
 msgstr "Les événements de votre page d’événements"
 
-#: app/src\main.rs:1736
+#: app/src\main.rs:1805
 msgid "Pa&ges"
 msgstr "Pa&ges"
 
-#: app/src\main.rs:1736
+#: app/src\main.rs:1805
 msgid "Pages from your pages page"
 msgstr "Les pages de votre page de pages"
 
-#: app/src\main.rs:1737
+#: app/src\main.rs:1806
 msgid "P&laces"
 msgstr "P&laces"
 
-#: app/src\main.rs:1737
+#: app/src\main.rs:1806
 msgid "Places from the places page"
 msgstr "Les lieux de votre page de lieux"
 
-#: app/src\main.rs:1738
+#: app/src\main.rs:1807
 msgid "Posts you saved on Facebook"
 msgstr "Publications que vous avez enregistrées sur Facebook"
 
-#: app/src\main.rs:1738
+#: app/src\main.rs:1807
 msgid "Sa&ved posts"
 msgstr "Publications &enregistrées"
 
-#: app/src\main.rs:1741
+#: app/src\main.rs:1810
 msgid "&Unread chats only"
 msgstr "Discussions non l&ues uniquement"
 
-#: app/src\main.rs:1742
+#: app/src\main.rs:1811
 msgid "Chats with unread messages"
 msgstr "Discussions avec des messages non lus"
 
-#: app/src\main.rs:1745
+#: app/src\main.rs:1814
 msgid "Reload the current view"
 msgstr "Recharger la vue actuelle"
 
-#: app/src\main.rs:1748
+#: app/src\main.rs:1817
 msgid "&Load more"
 msgstr "&Charger plus"
 
-#: app/src\main.rs:1749
+#: app/src\main.rs:1818
 msgid "Append more items and keep your reading position"
 msgstr "Ajouter des éléments à la liste sans perdre votre position de lecture"
 
-#: app/src\main.rs:1754
+#: app/src\main.rs:1823
 msgid "&Voice alerts"
 msgstr "Alertes &vocales"
 
-#: app/src\main.rs:1755
+#: app/src\main.rs:1824
 msgid "Say new notifications, unread chats and published posts aloud"
 msgstr "Annoncer à voix haute les nouvelles notifications, les discussions non lues et les publications publiées"
 
-#: app/src\main.rs:1759
+#: app/src\main.rs:1828
 msgid "&Sound alerts"
 msgstr "Alertes &sonores"
 
-#: app/src\main.rs:1760
+#: app/src\main.rs:1829
 msgid "Play a sound for new notifications, unread chats and published posts"
 msgstr "Jouer un son pour les nouvelles notifications, les discussions non lues et les publications publiées"
 
-#: app/src\main.rs:1764
+#: app/src\main.rs:1833
 msgid "Voice alert when a &list loads"
 msgstr "Alerte vocale quand une &liste est chargée"
 
-#: app/src\main.rs:1765
+#: app/src\main.rs:1834
 msgid "Say the name and size of a list when it finishes loading"
 msgstr "Annoncer le nom et la taille d’une liste à la fin de son chargement"
 
-#: app/src\main.rs:1769
+#: app/src\main.rs:1838
 msgid "Sound alert when a list &loads"
 msgstr "Alerte s&onore quand une liste est chargée"
 
-#: app/src\main.rs:1770
+#: app/src\main.rs:1839
 msgid "Play a sound when a list finishes loading"
 msgstr "Jouer un son à la fin du chargement d’une liste"
 
-#: app/src\main.rs:1775
+#: app/src\main.rs:1844
 msgid "&Open post / comments"
 msgstr "&Ouvrir la publication / les commentaires"
 
-#: app/src\main.rs:1775
+#: app/src\main.rs:1844
 msgid "Open the selected item; Enter in the items list"
 msgstr "Ouvrir l’élément sélectionné ; Entrée dans la liste des éléments"
 
-#: app/src\main.rs:1776
+#: app/src\main.rs:1845
 msgid "Share the selected post"
 msgstr "Partager la publication sélectionnée"
 
-#: app/src\main.rs:1777
+#: app/src\main.rs:1846
 msgid "Comment on the selected post"
 msgstr "Commenter la publication sélectionnée"
 
-#: app/src\main.rs:1778 app/src\main.rs:5439
+#: app/src\main.rs:1847 app/src\main.rs:5597
 msgid "Facebook post &menu…"
 msgstr "&Menu Facebook de la publication…"
 
-#: app/src\main.rs:1778
+#: app/src\main.rs:1847
 msgid "Facebook's own menu for the selected post: Not interested, Save, Snooze, Hide, Report and more"
 msgstr "Le menu propre à Facebook pour la publication sélectionnée : Pas intéressé, Enregistrer, Mettre en veille, Masquer, Signaler et plus"
 
-#: app/src\main.rs:1779
+#: app/src\main.rs:1848
 msgid "Show the profile of the selected item's author or owner"
 msgstr "Afficher le profil de l’auteur ou du propriétaire de l’élément sélectionné"
 
-#: app/src\main.rs:1780
+#: app/src\main.rs:1849
 msgid "Posts by the selected item's author"
 msgstr "Publications de l’auteur de l’élément sélectionné"
 
-#: app/src\main.rs:1781 app/src\main.rs:5448
+#: app/src\main.rs:1850 app/src\main.rs:5606
 msgid "Group's p&osts"
 msgstr "Publications du &groupe"
 
-#: app/src\main.rs:1781
+#: app/src\main.rs:1850
 msgid "Posts in the group the selected post belongs to"
 msgstr "Publications du groupe auquel appartient la publication sélectionnée"
 
-#: app/src\main.rs:1782
+#: app/src\main.rs:1851
 msgid "&Message author / friend"
 msgstr "Envoyer un &message à l’auteur / l’ami"
 
-#: app/src\main.rs:1782
+#: app/src\main.rs:1851
 msgid "Open a Messenger chat with this person"
 msgstr "Ouvrir une discussion Messenger avec cette personne"
 
-#: app/src\main.rs:1783
+#: app/src\main.rs:1852
 msgid "Open the selected post in your browser"
 msgstr "Ouvrir la publication sélectionnée dans votre navigateur"
 
-#: app/src\main.rs:1784
+#: app/src\main.rs:1853
 msgid "Open person or group on Fa&cebook (web)"
 msgstr "Ouvrir la personne ou le groupe sur Face&book (web)"
 
-#: app/src\main.rs:1784
+#: app/src\main.rs:1853
 msgid "Open the selected person's profile (or the group) in your browser, where friend management lives"
 msgstr "Ouvrir le profil de la personne sélectionnée (ou le groupe) dans votre navigateur, où se gèrent les amis"
 
-#: app/src\main.rs:1786 app/src\main.rs:5475
+#: app/src\main.rs:1855 app/src\main.rs:5633
 msgid "&Delete post…"
 msgstr "&Supprimer la publication…"
 
-#: app/src\main.rs:1786
+#: app/src\main.rs:1855
 msgid "Delete the selected post (your own posts only)"
 msgstr "Supprimer la publication sélectionnée (vos propres publications uniquement)"
 
-#: app/src\main.rs:1791
+#: app/src\main.rs:1860
 msgid "Set this reaction on the selected post"
 msgstr "Mettre cette réaction sur la publication sélectionnée"
 
-#: app/src\main.rs:1797 app/src\main.rs:5500
+#: app/src\main.rs:1866 app/src\main.rs:5658
 msgid "&Open chat"
 msgstr "&Ouvrir la discussion"
 
-#: app/src\main.rs:1797
+#: app/src\main.rs:1866
 msgid "Open the selected chat"
 msgstr "Ouvrir la discussion sélectionnée"
 
-#: app/src\main.rs:1800
+#: app/src\main.rs:1869
 msgid "Open chat in &Messenger (web)"
 msgstr "Ouvrir la discussion dans &Messenger (web)"
 
-#: app/src\main.rs:1801
+#: app/src\main.rs:1870
 msgid "Open this chat in your browser — voice and video calls live there"
 msgstr "Ouvrir cette discussion dans votre navigateur — les appels audio et vidéo s’y trouvent"
 
-#: app/src\main.rs:1805 app/src\main.rs:5526
+#: app/src\main.rs:1874 app/src\main.rs:5684
 msgid "&Unsend my last message…"
 msgstr "&Annuler l’envoi de mon dernier message…"
 
-#: app/src\main.rs:1806
+#: app/src\main.rs:1875
 msgid "Remove your newest message in the open chat for everyone"
 msgstr "Retirer pour tout le monde votre dernier message dans la discussion ouverte"
 
-#: app/src\main.rs:1810
+#: app/src\main.rs:1879
 msgid "Unloc&k encrypted chats…"
 msgstr "&Déverrouiller les discussions chiffrées…"
 
-#: app/src\main.rs:1811
+#: app/src\main.rs:1880
 msgid "Enter your Messenger PIN to read end-to-end encrypted chats"
 msgstr "Saisir votre code PIN Messenger pour lire les discussions chiffrées de bout en bout"
 
-#: app/src\main.rs:1818
+#: app/src\main.rs:1887
 msgid "&Install or update backend…"
 msgstr "&Installer ou mettre à jour le moteur…"
 
-#: app/src\main.rs:1819
+#: app/src\main.rs:1888
 msgid "Download BlindFB's supported facebook-cli backend from Forgejo"
 msgstr "Télécharger depuis Forgejo le moteur facebook-cli pris en charge par BlindFB"
 
-#: app/src\main.rs:1821
+#: app/src\main.rs:1890
 msgid "Backend &status"
 msgstr "É&tat du moteur"
 
-#: app/src\main.rs:1821
+#: app/src\main.rs:1890
 msgid "Show fb daemon status"
 msgstr "Afficher l’état du service fb"
 
-#: app/src\main.rs:1822
+#: app/src\main.rs:1891
 msgid "&Sign in…"
 msgstr "Se &connecter…"
 
-#: app/src\main.rs:1822
+#: app/src\main.rs:1891
 msgid "Sign in through your browser"
 msgstr "Se connecter via votre navigateur"
 
-#: app/src\main.rs:1825
+#: app/src\main.rs:1894
 msgid "Install a &browser…"
 msgstr "Installer un &navigateur…"
 
-#: app/src\main.rs:1826
+#: app/src\main.rs:1895
 msgid "Download a browser BlindFB can use (Chrome, Brave, Edge, Firefox)"
 msgstr "Télécharger un navigateur utilisable par BlindFB (Chrome, Brave, Edge, Firefox)"
 
-#: app/src\main.rs:1828
+#: app/src\main.rs:1897
 msgid "S&top daemon"
 msgstr "&Arrêter le service"
 
-#: app/src\main.rs:1828
+#: app/src\main.rs:1897
 msgid "Stop the fb daemon"
 msgstr "Arrêter le service fb"
 
-#: app/src\main.rs:1831
+#: app/src\main.rs:1900
 msgid "&Quit daemon and Chrome"
 msgstr "&Quitter le service et Chrome"
 
-#: app/src\main.rs:1832
+#: app/src\main.rs:1901
 msgid "Stop the daemon and close its hidden Chrome"
 msgstr "Arrêter le service et fermer son Chrome masqué"
 
-#: app/src\main.rs:1839
+#: app/src\main.rs:1908
 msgid "&Keyboard commands"
 msgstr "&Commandes clavier"
 
-#: app/src\main.rs:1840
+#: app/src\main.rs:1909
 msgid "Keyboard commands and reader controls"
 msgstr "Commandes clavier et commandes de la fenêtre de lecture"
 
-#: app/src\main.rs:1844
+#: app/src\main.rs:1913
 msgid "BlindFB on &Forgejo"
 msgstr "BlindFB sur &Forgejo"
 
-#: app/src\main.rs:1845
+#: app/src\main.rs:1914
 msgid "Open the BlindFB repository"
 msgstr "Ouvrir le dépôt de BlindFB"
 
-#: app/src\main.rs:1850
+#: app/src\main.rs:1919
 msgid "&Debug logging"
 msgstr "&Journal de débogage"
 
-#: app/src\main.rs:1851
+#: app/src\main.rs:1920
 msgid "Record what BlindFB runs and the errors it gets, for a bug report"
 msgstr "Enregistrer ce que BlindFB exécute et les erreurs rencontrées, pour signaler un bogue"
 
-#: app/src\main.rs:1855
+#: app/src\main.rs:1924
 msgid "Save debug &report…"
 msgstr "Enregistrer un &rapport de débogage…"
 
-#: app/src\main.rs:1856
+#: app/src\main.rs:1925
 msgid "Save a file you can send to the developer"
 msgstr "Enregistrer un fichier à envoyer au développeur"
 
-#: app/src\main.rs:1862
+#: app/src\main.rs:1931
 msgid "Language: &system default"
 msgstr "Langue : celle du &système"
 
-#: app/src\main.rs:1863
+#: app/src\main.rs:1932
 msgid "Use the system language when BlindFB has it, English otherwise"
 msgstr "Utiliser la langue du système si BlindFB la propose, sinon l’anglais"
 
-#: app/src\main.rs:1882
+#: app/src\main.rs:1951
 msgid "&About BlindFB"
 msgstr "À &propos de BlindFB"
 
-#: app/src\main.rs:1882
+#: app/src\main.rs:1951
 msgid "About this program"
 msgstr "À propos de ce programme"
 
-#: app/src\main.rs:1886 app/src\shortcuts_dialog.rs:128
+#: app/src\main.rs:1955 app/src\shortcuts_dialog.rs:129
 msgid "&File"
 msgstr "&Fichier"
 
-#: app/src\main.rs:1887 app/src\shortcuts_dialog.rs:129
+#: app/src\main.rs:1956 app/src\shortcuts_dialog.rs:130
 msgid "&View"
 msgstr "&Affichage"
 
-#: app/src\main.rs:1888 app/src\shortcuts_dialog.rs:130
+#: app/src\main.rs:1957 app/src\shortcuts_dialog.rs:131
 msgid "&Post"
 msgstr "&Publication"
 
-#: app/src\main.rs:1889 app/src\shortcuts_dialog.rs:131
+#: app/src\main.rs:1958 app/src\shortcuts_dialog.rs:132
 msgid "&Chat"
 msgstr "&Discussion"
 
-#: app/src\main.rs:1890 app/src\shortcuts_dialog.rs:132
+#: app/src\main.rs:1959 app/src\shortcuts_dialog.rs:133
 msgid "&Backend"
 msgstr "&Moteur"
 
-#: app/src\main.rs:1891 app/src\shortcuts_dialog.rs:133
+#: app/src\main.rs:1960 app/src\shortcuts_dialog.rs:134
 msgid "&Help"
 msgstr "Aid&e"
 
-#: app/src\main.rs:1986
+#: app/src\main.rs:2055
 msgid "Alerts"
 msgstr "Alertes"
 
-#: app/src\main.rs:1991
+#: app/src\main.rs:2060
 msgid "Voice alerts on."
 msgstr "Alertes vocales activées."
 
-#: app/src\main.rs:1992
+#: app/src\main.rs:2061
 msgid "Voice alerts off."
 msgstr "Alertes vocales désactivées."
 
-#: app/src\main.rs:1993
+#: app/src\main.rs:2062
 msgid "Sound alerts on."
 msgstr "Alertes sonores activées."
 
-#: app/src\main.rs:1994
+#: app/src\main.rs:2063
 msgid "Sound alerts off."
 msgstr "Alertes sonores désactivées."
 
-#: app/src\main.rs:1995
+#: app/src\main.rs:2064
 msgid "List voice alerts on."
 msgstr "Alerte vocale quand une liste est chargée : activée."
 
-#: app/src\main.rs:1996
+#: app/src\main.rs:2065
 msgid "List voice alerts off."
 msgstr "Alerte vocale quand une liste est chargée : désactivée."
 
-#: app/src\main.rs:1997
+#: app/src\main.rs:2066
 msgid "List sound alerts on."
 msgstr "Alerte sonore quand une liste est chargée : activée."
 
-#: app/src\main.rs:1998
+#: app/src\main.rs:2067
 msgid "List sound alerts off."
 msgstr "Alerte sonore quand une liste est chargée : désactivée."
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:2079 app/src\main.rs:2105 app/src\main.rs:2255
+#: app/src\main.rs:2148 app/src\main.rs:2174 app/src\main.rs:2324
 #, rust-format
 msgid "Loading {view}…"
 msgstr "Chargement : {view}…"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:2161
+#: app/src\main.rs:2230
 #, rust-format
 msgid "Back to {view}"
 msgstr "Retour : {view}"
 
-#: app/src\main.rs:2164
+#: app/src\main.rs:2233
 msgid "No previous list to go back to."
 msgstr "Aucune liste précédente où revenir."
 
-#: app/src\main.rs:2271
+#: app/src\main.rs:2340
 msgid "BlindFB needs an installed Chromium browser (Chrome, Brave or Edge) to run its separate browser profile. Firefox can supply your Facebook session but cannot run the backend. Install Google Chrome now?"
 msgstr "BlindFB a besoin d’un navigateur Chromium installé (Chrome, Brave ou Edge) pour faire fonctionner son profil de navigateur séparé. Firefox peut fournir votre session Facebook, mais ne peut pas faire fonctionner le moteur. Installer Google Chrome maintenant ?"
 
-#: app/src\main.rs:2272 app/src\main.rs:2292 app/src\main.rs:4053
+#: app/src\main.rs:2341 app/src\main.rs:2361 app/src\main.rs:4187
 msgid "Sign in"
 msgstr "Se connecter"
 
-#: app/src\main.rs:2282
+#: app/src\main.rs:2351
 #, rust-format
 msgid "{browser} (your default browser)"
 msgstr "{browser} (votre navigateur par défaut)"
 
-#: app/src\main.rs:2288
+#: app/src\main.rs:2357
 msgid "Sign in in a new browser window"
 msgstr "Se connecter dans une nouvelle fenêtre de navigateur"
 
-#: app/src\main.rs:2294
+#: app/src\main.rs:2363
 msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. Close the browser first if its cookie database is locked. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks. Or choose a new browser window to sign in directly."
 msgstr "Copier votre session Facebook depuis quel navigateur ? Vous devez être connecté à Facebook dans ce navigateur. Fermez d'abord le navigateur si sa base de cookies est verrouillée. Dans Chrome, Brave et Edge, cochez « Autoriser le débogage à distance » si le navigateur le demande. Ou choisissez une nouvelle fenêtre de navigateur pour vous connecter directement."
 
-#: app/src\main.rs:2296
+#: app/src\main.rs:2365
 msgid "Copy your Facebook session from which browser? You must be signed in to Facebook in that browser. In Chrome, Brave and Edge, tick \"Allow remote debugging\" if the browser asks."
 msgstr "Depuis quel navigateur copier votre session Facebook ? Vous devez y être connecté à Facebook. Dans Chrome, Brave et Edge, cochez \"Autoriser le débogage à distance\" si le navigateur le demande."
 
-#: app/src\main.rs:2348 app/src\main.rs:2404
+#: app/src\main.rs:2417 app/src\main.rs:2473
 #, rust-format
 msgid "Installing {browser}…"
 msgstr "Installation de {browser}…"
 
-#: app/src\main.rs:2360
+#: app/src\main.rs:2429
 msgid "Signing in through your browser…"
 msgstr "Connexion via votre navigateur…"
 
-#: app/src\main.rs:2386
+#: app/src\main.rs:2455
 #, rust-format
 msgid "{browser} (installed)"
 msgstr "{browser} (installé)"
 
-#: app/src\main.rs:2395
+#: app/src\main.rs:2464
 msgid "Install a browser"
 msgstr "Installer un navigateur"
 
-#: app/src\main.rs:2396
+#: app/src\main.rs:2465
 msgid "Install which browser? Downloads come from the vendor. Chrome, Chromium, Brave and Edge can run BlindFB's separate browser profile. Firefox can supply a Facebook session."
 msgstr "Quel navigateur installer ? Le téléchargement vient de son éditeur. Chrome, Chromium, Brave et Edge peuvent faire fonctionner le profil de navigateur séparé de BlindFB. Firefox peut fournir une session Facebook."
 
-#: app/src\main.rs:2418
+#: app/src\main.rs:2487
 msgid "Wait for this section to finish loading before refreshing."
 msgstr "Attendez la fin du chargement de cette section avant d’actualiser."
 
-#: app/src\main.rs:2491
+#: app/src\main.rs:2560
 msgid "Reels are already loading…"
 msgstr "Les Reels sont déjà en cours de chargement…"
 
-#: app/src\main.rs:2493
+#: app/src\main.rs:2562
 msgid "Load the reels list first, or refresh it to retry."
 msgstr "Chargez d’abord la liste des Reels, ou actualisez-la pour réessayer."
 
-#: app/src\main.rs:2502
+#: app/src\main.rs:2571
 msgid "Wait for this section to load before requesting more items."
 msgstr "Attendez la fin du chargement de cette section avant de demander plus d’éléments."
 
-#: app/src\main.rs:2509
+#: app/src\main.rs:2578
 msgid "Load more is available for feeds, posts, search results, notifications, friends and chat lists."
 msgstr "Charger plus est disponible pour les fils d’actualité, les publications, les résultats de recherche, les notifications, les amis et les listes de discussions."
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:2527
+#: app/src\main.rs:2596
 #, rust-format
 msgid "Loading more {view}…"
 msgstr "Chargement de la suite : {view}…"
 
 #. TRANSLATORS: {item} is a list row (a post); the mark says it has no link to open.
-#: app/src\main.rs:2637
+#: app/src\main.rs:2706
 #, rust-format
 msgid "{item} (no link)"
 msgstr "{item} (sans lien)"
 
-#: app/src\main.rs:2662
+#: app/src\main.rs:2731
 #, rust-format
 msgid "Actions: {actions}"
 msgstr "Actions : {actions}"
 
 #. TRANSLATORS: {notification} is a notification's text and time.
-#: app/src\main.rs:2724
+#: app/src\main.rs:2793
 #, rust-format
 msgid "Unread. {notification}"
 msgstr "Non lue. {notification}"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2750
+#: app/src\main.rs:2819
 #, rust-format
 msgid "{name} (unread) (group)"
 msgstr "{name} (non lue) (groupe)"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2752
+#: app/src\main.rs:2821
 #, rust-format
 msgid "{name} (unread)"
 msgstr "{name} (non lue)"
 
 #. TRANSLATORS: {name} is a chat's name in the Chats list.
-#: app/src\main.rs:2754
+#: app/src\main.rs:2823
 #, rust-format
 msgid "{name} (group)"
 msgstr "{name} (groupe)"
 
-#: app/src\main.rs:2802
+#: app/src\main.rs:2871
 #, rust-format
 msgid ""
 "Author: {author}\n"
@@ -1415,7 +1625,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src\main.rs:2813
+#: app/src\main.rs:2882
 #, rust-format
 msgid ""
 "Name: {name}\n"
@@ -1426,7 +1636,7 @@ msgstr ""
 "Réf. : {reference}\n"
 "{info}"
 
-#: app/src\main.rs:2821
+#: app/src\main.rs:2890
 #, rust-format
 msgid ""
 "Chat: {name}\n"
@@ -1441,7 +1651,7 @@ msgstr ""
 "\n"
 "{text}"
 
-#: app/src\main.rs:2834
+#: app/src\main.rs:2903
 #, rust-format
 msgid ""
 "{name}\n"
@@ -1450,7 +1660,7 @@ msgstr ""
 "{name}\n"
 "{info}Sur le web : {url}"
 
-#: app/src\main.rs:2848
+#: app/src\main.rs:2917
 #, rust-format
 msgid ""
 "Group: {name}\n"
@@ -1463,64 +1673,64 @@ msgstr ""
 "\n"
 "Ouvrez le groupe pour afficher sa fenêtre : ses publications et la liste complète de ses membres. Pour publier dans un groupe ou modifier ses paramètres, passez par la page web."
 
-#: app/src\main.rs:2938 crates/core/src\posts.rs:59
+#: app/src\main.rs:3007 crates/core/src\posts.rs:67
 msgid "Full post on Facebook"
 msgstr "Publication complète sur Facebook"
 
-#: app/src\main.rs:3073
+#: app/src\main.rs:3142
 msgid "&Links"
 msgstr "&Liens"
 
-#: app/src\main.rs:3073
+#: app/src\main.rs:3142
 msgid "Open a link in your browser"
 msgstr "Ouvrir un lien dans votre navigateur"
 
 #. TRANSLATORS: {action} is a "Load more…" row label such as "Load more posts".
-#: app/src\main.rs:3182
+#: app/src\main.rs:3251
 #, rust-format
 msgid "{action}. Press Enter to load the next batch."
 msgstr "{action}. Appuyez sur Entrée pour charger la suite."
 
-#: app/src\main.rs:3223
+#: app/src\main.rs:3292
 msgid "Load more reels"
 msgstr "Charger plus de Reels"
 
-#: app/src\main.rs:3224
+#: app/src\main.rs:3293
 msgid "Load more notifications"
 msgstr "Charger plus de notifications"
 
-#: app/src\main.rs:3225
+#: app/src\main.rs:3294
 msgid "Load more friends"
 msgstr "Charger plus d’amis"
 
-#: app/src\main.rs:3226
+#: app/src\main.rs:3295
 msgid "Load more groups"
 msgstr "Charger plus de groupes"
 
-#: app/src\main.rs:3227
+#: app/src\main.rs:3296
 msgid "Load more listings"
 msgstr "Charger plus d’annonces"
 
-#: app/src\main.rs:3228
+#: app/src\main.rs:3297
 msgid "Load more conversations"
 msgstr "Charger plus de discussions"
 
-#: app/src\main.rs:3250
+#: app/src\main.rs:3319
 #, rust-format
 msgid "Reactions: {reactions}, comments: {comments}, shares: {shares}"
 msgstr "Réactions : {reactions}, commentaires : {comments}, partages : {shares}"
 
-#: app/src\main.rs:3256
+#: app/src\main.rs:3325
 #, rust-format
 msgid "Reactions / comments / shares: {counts}"
 msgstr "Réactions / commentaires / partages : {counts}"
 
-#: app/src\main.rs:3377
+#: app/src\main.rs:3446
 msgid "(nothing here)"
 msgstr "(rien ici)"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:3380
+#: app/src\main.rs:3449
 #, rust-format
 msgid "{view} — {n} item"
 msgid_plural "{view} — {n} items"
@@ -1528,102 +1738,102 @@ msgstr[0] "{view} — {n} élément"
 msgstr[1] "{view} — {n} éléments"
 
 #. TRANSLATORS: {view} is a view title like "News feed" or "Chat with Ann".
-#: app/src\main.rs:3555 crates/core/src\alerts.rs:67
+#: app/src\main.rs:3629 crates/core/src\alerts.rs:67
 #, rust-format
 msgid "{view}: no items to show."
 msgstr "{view} : aucun élément à afficher."
 
-#: app/src\main.rs:3561
+#: app/src\main.rs:3635
 #, rust-format
 msgid "{n} new item loaded."
 msgid_plural "{n} new items loaded."
 msgstr[0] "{n} nouvel élément chargé."
 msgstr[1] "{n} nouveaux éléments chargés."
 
-#: app/src\main.rs:3562 crates/core/src\alerts.rs:64
+#: app/src\main.rs:3636 crates/core/src\alerts.rs:64
 #, rust-format
 msgid "{n} item total."
 msgid_plural "{n} items total."
 msgstr[0] "{n} élément au total."
 msgstr[1] "{n} éléments au total."
 
-#: app/src\main.rs:3598
+#: app/src\main.rs:3672
 msgid "Messenger needs its history restored. Enter your PIN in the unlock dialog."
 msgstr "Messenger doit restaurer son historique. Saisissez votre code PIN dans la fenêtre de déverrouillage."
 
-#: app/src\main.rs:3601
+#: app/src\main.rs:3675
 msgid "Messenger history is still locked. Use Chat → Unlock encrypted chats to retry."
 msgstr "L’historique Messenger est toujours verrouillé. Utilisez Discussion → Déverrouiller les discussions chiffrées pour réessayer."
 
-#: app/src\main.rs:3605
+#: app/src\main.rs:3679
 msgid "Messenger still blocks input after unlocking. Check your PIN or restore message history in Messenger, then retry."
 msgstr "Messenger bloque toujours la saisie après le déverrouillage. Vérifiez votre code PIN ou restaurez l’historique des messages dans Messenger, puis réessayez."
 
-#: app/src\main.rs:3606
+#: app/src\main.rs:3680
 msgid "Messenger history"
 msgstr "Historique Messenger"
 
-#: app/src\main.rs:3615
+#: app/src\main.rs:3689
 #, rust-format
 msgid "Could not update {view}. Showing earlier results."
 msgstr "Impossible de mettre à jour : {view}. Affichage des résultats précédents."
 
-#: app/src\main.rs:3620 app/src\main.rs:3806 app/src\main.rs:3814
-#: app/src\main.rs:3834 app/src\main.rs:3847 app/src\main.rs:3859
-#: app/src\main.rs:3892 app/src\main.rs:3906 app/src\main.rs:3921
-#: app/src\main.rs:3934 app/src\main.rs:3992 app/src\update.rs:55
+#: app/src\main.rs:3694 app/src\main.rs:3883 app/src\main.rs:3891
+#: app/src\main.rs:3911 app/src\main.rs:3924 app/src\main.rs:3939
+#: app/src\main.rs:3976 app/src\main.rs:3990 app/src\main.rs:4005
+#: app/src\main.rs:4068 app/src\main.rs:4126 app/src\update.rs:55
 msgid "Error"
 msgstr "Erreur"
 
-#: app/src\main.rs:3627 app/src\main.rs:3874 app/src\post_dialog.rs:1491
+#: app/src\main.rs:3701 app/src\main.rs:3958 app/src\post_dialog.rs:1552
 msgid "Reaction set."
 msgstr "Réaction enregistrée."
 
-#: app/src\main.rs:3655
+#: app/src\main.rs:3729
 msgid "Post ready."
 msgstr "Publication prête."
 
-#: app/src\main.rs:3658 app/src\main.rs:3899
+#: app/src\main.rs:3732 app/src\main.rs:3983
 msgid "Comment sent."
 msgstr "Commentaire envoyé."
 
-#: app/src\main.rs:3664
+#: app/src\main.rs:3741
 msgid "Like changed."
 msgstr "Mention J’aime modifiée."
 
-#: app/src\main.rs:3670
+#: app/src\main.rs:3747
 msgid "Facebook's translation switched. Press Translate again for the original."
 msgstr "Traduction de Facebook basculée. Appuyez à nouveau sur Traduire pour revenir à l’original."
 
-#: app/src\main.rs:3677
+#: app/src\main.rs:3754
 msgid "Shared to your feed."
 msgstr "Partagé sur votre fil d’actualité."
 
-#: app/src\main.rs:3684 app/src\post_dialog.rs:580
+#: app/src\main.rs:3761 app/src\post_dialog.rs:590
 msgid "Share cancelled. Nothing was shared."
 msgstr "Partage annulé. Rien n’a été partagé."
 
-#: app/src\main.rs:3712
+#: app/src\main.rs:3789
 msgid "PIN accepted. Facebook is still restoring your chat history — loading your chats…"
 msgstr "Code PIN accepté. Facebook restaure encore l’historique de vos discussions — chargement de vos discussions…"
 
-#: app/src\main.rs:3714
+#: app/src\main.rs:3791
 msgid "Messenger unlocked. Loading your chats…"
 msgstr "Messenger déverrouillé. Chargement de vos discussions…"
 
-#: app/src\main.rs:3720
+#: app/src\main.rs:3797
 msgid "PIN accepted. Facebook is still restoring your chat history; chats unlock as it finishes."
 msgstr "Code PIN accepté. Facebook restaure encore l’historique de vos discussions ; elles se déverrouilleront une fois la restauration terminée."
 
-#: app/src\main.rs:3722
+#: app/src\main.rs:3799
 msgid "Messenger unlocked."
 msgstr "Messenger déverrouillé."
 
-#: app/src\main.rs:3727
+#: app/src\main.rs:3804
 msgid "Messenger could not be unlocked."
 msgstr "Impossible de déverrouiller Messenger."
 
-#: app/src\main.rs:3731
+#: app/src\main.rs:3808
 #, rust-format
 msgid ""
 "Messenger could not restore your history. Check the PIN, or restore history in Messenger and retry.\n"
@@ -1634,15 +1844,15 @@ msgstr ""
 "\n"
 "{error}"
 
-#: app/src\main.rs:3734 app/src\main.rs:4186
+#: app/src\main.rs:3811 app/src\main.rs:4320
 msgid "Unlock encrypted chats"
 msgstr "Déverrouiller les discussions chiffrées"
 
-#: app/src\main.rs:3760
+#: app/src\main.rs:3837
 msgid "No login request is waiting."
 msgstr "Aucune demande de connexion n'est en attente."
 
-#: app/src\main.rs:3762
+#: app/src\main.rs:3839
 #, rust-format
 msgid ""
 "This login request is no longer waiting for an answer. It may have expired or been answered already.\n"
@@ -1653,98 +1863,128 @@ msgstr ""
 "\n"
 "{page}"
 
-#: app/src\main.rs:3765 app/src\main.rs:3768 app/src\main.rs:3773
-#: app/src\main.rs:3807 app/src\main.rs:3829 app/src\main.rs:3835
+#: app/src\main.rs:3842 app/src\main.rs:3845 app/src\main.rs:3850
+#: app/src\main.rs:3884 app/src\main.rs:3906 app/src\main.rs:3912
 msgid "Login request"
 msgstr "Demande de connexion"
 
-#: app/src\main.rs:3785
+#: app/src\main.rs:3862
 #, rust-format
 msgid "Answering: {answer}…"
 msgstr "Réponse : {answer}…"
 
-#: app/src\main.rs:3801
+#: app/src\main.rs:3878
 msgid "Login request left unanswered."
 msgstr "Demande de connexion laissée sans réponse."
 
-#: app/src\main.rs:3815 app/src\main.rs:4655 app/src\main.rs:4673
+#: app/src\main.rs:3892 app/src\main.rs:4789 app/src\main.rs:4807
 msgid "Facebook post menu"
 msgstr "Menu Facebook de la publication"
 
-#: app/src\main.rs:3822
+#: app/src\main.rs:3899
 msgid "Facebook took your answer."
 msgstr "Facebook a pris votre réponse."
 
-#: app/src\main.rs:3824
+#: app/src\main.rs:3901
 msgid "Your answer was pressed, but Facebook's login request is still showing. Open the notification again to check."
 msgstr "Votre réponse a été envoyée, mais la demande de connexion de Facebook est toujours affichée. Ouvrez à nouveau la notification pour vérifier."
 
-#: app/src\main.rs:3841
+#: app/src\main.rs:3918
 msgid "Debug report saved."
 msgstr "Rapport de débogage enregistré."
 
-#: app/src\main.rs:3842 app/src\main.rs:3848
+#: app/src\main.rs:3919 app/src\main.rs:3925
 msgid "Debug report"
 msgstr "Rapport de débogage"
 
-#: app/src\main.rs:3861 app/src\main.rs:5602
+#: app/src\main.rs:3945 app/src\main.rs:5791
 msgid "New post"
 msgstr "Nouvelle publication"
 
-#: app/src\main.rs:3889 app/src\main.rs:3917 app/src\main.rs:3928
-#: app/src\main.rs:5715
+#: app/src\main.rs:3973 app/src\main.rs:4001 app/src\main.rs:4062
+#: app/src\main.rs:5915
 msgid "Done"
 msgstr "Terminé"
 
-#: app/src\main.rs:3922
+#: app/src\main.rs:4006
 msgid "Join group"
 msgstr "Rejoindre le groupe"
 
-#: app/src\main.rs:3935 app/src\main.rs:5752
+#: app/src\main.rs:4013
+#, rust-format
+msgid "Created group {name}."
+msgstr "Groupe créé : {name}."
+
+#: app/src\main.rs:4022
+msgid "Group creation could not be confirmed."
+msgstr "La création du groupe n’a pas pu être confirmée."
+
+#: app/src\main.rs:4027
+msgid "Group could not be created."
+msgstr "Le groupe n’a pas pu être créé."
+
+#: app/src\main.rs:4030
+msgid "Facebook may have created your group, but BlindFB could not confirm it. Check your groups before trying again."
+msgstr "Facebook a peut-être créé votre groupe, mais BlindFB n’a pas pu le confirmer. Vérifiez vos groupes avant de réessayer."
+
+#: app/src\main.rs:4041
+#, rust-format
+msgid "Invited {count} friend(s) to {group}."
+msgstr "{count} ami(s) invité(s) dans {group}."
+
+#: app/src\main.rs:4050
+msgid "Invitations could not be confirmed."
+msgstr "Les invitations n’ont pas pu être confirmées."
+
+#: app/src\main.rs:4055
+msgid "Invitations could not be sent."
+msgstr "Les invitations n’ont pas pu être envoyées."
+
+#: app/src\main.rs:4069 app/src\main.rs:5952
 msgid "Leave group"
 msgstr "Quitter le groupe"
 
-#: app/src\main.rs:3961
+#: app/src\main.rs:4095
 msgid "Sent"
 msgstr "Envoyé"
 
-#: app/src\main.rs:3972
+#: app/src\main.rs:4106
 msgid "Message could not be sent. Your draft and attachments have been kept. Use the Attachments button to remove a file, for example one over Messenger's 25 MB limit."
 msgstr "Le message n’a pas pu être envoyé. Votre brouillon et vos pièces jointes sont conservés. Utilisez le bouton Pièces jointes pour retirer un fichier, par exemple s’il dépasse la limite de 25 Mo de Messenger."
 
-#: app/src\main.rs:3974
+#: app/src\main.rs:4108
 msgid "Message could not be sent. Your draft has been kept."
 msgstr "Le message n’a pas pu être envoyé. Votre brouillon est conservé."
 
-#: app/src\main.rs:3976
+#: app/src\main.rs:4110
 msgid "Send message"
 msgstr "Envoyer le message"
 
-#: app/src\main.rs:3986
+#: app/src\main.rs:4120
 msgid "Message removed"
 msgstr "Message retiré"
 
-#: app/src\main.rs:4005
+#: app/src\main.rs:4139
 msgid "The backend is installed but not signed in."
 msgstr "Le moteur est installé, mais pas connecté."
 
-#: app/src\main.rs:4007 app/src\main.rs:4028 app/src\main.rs:4061
+#: app/src\main.rs:4141 app/src\main.rs:4162 app/src\main.rs:4195
 msgid "Signed out. Use Backend → Sign in when ready."
 msgstr "Déconnecté. Utilisez Moteur → Se connecter quand vous serez prêt."
 
-#: app/src\main.rs:4012
+#: app/src\main.rs:4146
 msgid "Installing the Facebook backend…"
 msgstr "Installation du moteur Facebook…"
 
-#: app/src\main.rs:4019
+#: app/src\main.rs:4153
 msgid "The Facebook backend could not start."
 msgstr "Le moteur Facebook n’a pas pu démarrer."
 
-#: app/src\main.rs:4020
+#: app/src\main.rs:4154
 msgid "Backend startup"
 msgstr "Démarrage du moteur"
 
-#: app/src\main.rs:4035
+#: app/src\main.rs:4169
 #, rust-format
 msgid ""
 "The backend could not be installed automatically: {error}\n"
@@ -1753,261 +1993,257 @@ msgstr ""
 "Le moteur n’a pas pu être installé automatiquement : {error}\n"
 "Vous pouvez réessayer avec Moteur → Installer ou mettre à jour le moteur."
 
-#: app/src\main.rs:4038
+#: app/src\main.rs:4172
 msgid "Backend install failed"
 msgstr "Échec de l’installation du moteur"
 
-#: app/src\main.rs:4044
+#: app/src\main.rs:4178
 msgid "Signed in."
 msgstr "Connecté."
 
-#: app/src\main.rs:4049
+#: app/src\main.rs:4183
 msgid "Sign-in did not finish — see the details, or try Backend → Sign in."
 msgstr "La connexion n’a pas abouti — consultez les détails, ou essayez Moteur → Se connecter."
 
-#: app/src\main.rs:4050
+#: app/src\main.rs:4184
 msgid "Sign-in did not finish"
 msgstr "La connexion n’a pas abouti"
 
-#: app/src\main.rs:4054
+#: app/src\main.rs:4188
 msgid "Sign-in failed. Use Backend → Sign in to retry."
 msgstr "Échec de la connexion. Utilisez Moteur → Se connecter pour réessayer."
 
-#: app/src\main.rs:4065 app/src\main.rs:4071
+#: app/src\main.rs:4199 app/src\main.rs:4205
 msgid "Browser install"
 msgstr "Installation du navigateur"
 
-#: app/src\main.rs:4066
+#: app/src\main.rs:4200
 msgid "Browser installation failed."
 msgstr "Échec de l’installation du navigateur."
 
-#: app/src\main.rs:4186
+#: app/src\main.rs:4320
 msgid "Messenger PIN:"
 msgstr "Code PIN Messenger :"
 
-#: app/src\main.rs:4195
+#: app/src\main.rs:4329
 msgid "Unlock cancelled."
 msgstr "Déverrouillage annulé."
 
-#: app/src\main.rs:4218
+#: app/src\main.rs:4352
 msgid "Unlocking Messenger…"
 msgstr "Déverrouillage de Messenger…"
 
-#: app/src\main.rs:4233
+#: app/src\main.rs:4367
 msgid "Facebook post, video or reel link (full https:// URL):"
 msgstr "Lien d’une publication, d’une vidéo ou d’un Reel Facebook (adresse https:// complète) :"
 
-#: app/src\main.rs:4234 app/src\main.rs:4248
+#: app/src\main.rs:4368 app/src\main.rs:4382
 msgid "Open Facebook link"
 msgstr "Ouvrir un lien Facebook"
 
-#: app/src\main.rs:4247
+#: app/src\main.rs:4381
 msgid "Paste a full https:// Facebook post, video or reel link. This link is invalid or unsupported."
 msgstr "Collez le lien https:// complet d’une publication, d’une vidéo ou d’un Reel Facebook. Ce lien n’est pas valide ou pas pris en charge."
 
-#: app/src\main.rs:4269
+#: app/src\main.rs:4403
 msgid "Reading the login request…"
 msgstr "Lecture de la demande de connexion…"
 
-#: app/src\main.rs:4309
+#: app/src\main.rs:4443
 msgid "This row has no link, so there is no post to open. Sponsored and suggested rows usually have none."
 msgstr "Cette ligne n’a pas de lien : il n’y a donc pas de publication à ouvrir. Les lignes sponsorisées et suggérées n’en ont généralement pas."
 
-#: app/src\main.rs:4336
+#: app/src\main.rs:4470
 msgid "Opened notification on Facebook."
 msgstr "Notification ouverte sur Facebook."
 
-#: app/src\main.rs:4359
+#: app/src\main.rs:4493
 msgid "This page has no link, so there is nothing to open."
 msgstr "Cette page n’a pas de lien : il n’y a rien à ouvrir."
 
-#: app/src\main.rs:4360
+#: app/src\main.rs:4494
 msgid "Open page"
 msgstr "Ouvrir la page"
 
-#: app/src\main.rs:4373
+#: app/src\main.rs:4507
 msgid "This row has no link, so there is nothing to open."
 msgstr "Cette ligne n’a pas de lien : il n’y a rien à ouvrir."
 
-#: app/src\main.rs:4374 app/src\main.rs:5669 app/src\main.rs:5679
+#: app/src\main.rs:4508 app/src\main.rs:5869 app/src\main.rs:5879
 msgid "Open"
 msgstr "Ouvrir"
 
-#: app/src\main.rs:4378 app/src\main.rs:4392
+#: app/src\main.rs:4512 app/src\main.rs:4526
 msgid "Opened on Facebook in your browser."
 msgstr "Ouvert sur Facebook dans votre navigateur."
 
-#: app/src\main.rs:4389
+#: app/src\main.rs:4523
 msgid "This profile row has no link to open."
 msgstr "Cette ligne de profil n’a pas de lien à ouvrir."
 
-#: app/src\main.rs:4397
+#: app/src\main.rs:4531
 msgid "Information only. Applications or Shift+F10 opens this person's actions."
 msgstr "Information seulement. Applications ou Maj+F10 ouvre les actions de cette personne."
 
-#: app/src\main.rs:4409
+#: app/src\main.rs:4543
 msgid "This row has no link, so BlindFB cannot open, react to or comment on it. Sponsored and suggested rows usually have none."
 msgstr "Cette ligne n’a pas de lien : BlindFB ne peut donc ni l’ouvrir, ni y réagir, ni la commenter. Les lignes sponsorisées et suggérées n’en ont généralement pas."
 
-#: app/src\main.rs:4411
+#: app/src\main.rs:4545
 msgid "Select a post first."
 msgstr "Sélectionnez d’abord une publication."
 
-#: app/src\main.rs:4425
+#: app/src\main.rs:4559
 msgid "Reaction"
 msgstr "Réaction"
 
-#: app/src\main.rs:4481
+#: app/src\main.rs:4615
 msgid "Your comment:"
 msgstr "Votre commentaire :"
 
-#: app/src\main.rs:4580
+#: app/src\main.rs:4714
 #, rust-format
 msgid "Unfollowing {name}…"
 msgstr "Arrêt du suivi de {name}…"
 
-#: app/src\main.rs:4582
+#: app/src\main.rs:4716
 #, rust-format
 msgid "Following {name}…"
 msgstr "Abonnement à {name}…"
 
-#: app/src\main.rs:4654
+#: app/src\main.rs:4788
 msgid "This row has no link, so there is no post menu to open."
 msgstr "Cette ligne n'a pas de lien, il n'y a donc pas de menu de publication à ouvrir."
 
-#: app/src\main.rs:4663
+#: app/src\main.rs:4797
 msgid "Opening Facebook's post menu…"
 msgstr "Ouverture du menu Facebook de la publication…"
 
-#: app/src\main.rs:4676
+#: app/src\main.rs:4810
 #, rust-format
 msgid "Done: {choice}."
 msgstr "Terminé : {choice}."
 
-#: app/src\main.rs:4677
+#: app/src\main.rs:4811
 msgid "Facebook showed no menu for this post."
 msgstr "Facebook n'a affiché aucun menu pour cette publication."
 
-#: app/src\main.rs:4691
+#: app/src\main.rs:4825
 msgid "This is the post's own menu. Interested and Not interested exist only on the post's card in the News feed, and Facebook has already dropped this card from its feed page; reload the News feed to get them for newer posts."
 msgstr "Ceci est le menu propre à la publication. Intéressé et Pas intéressé n'existent que sur la carte de la publication dans le fil d'actualité, et Facebook a déjà retiré cette carte de sa page du fil ; rechargez le fil d'actualité pour les obtenir sur des publications plus récentes."
 
 #. TRANSLATORS: {choice} is a menu item Facebook shows as switched on.
-#: app/src\main.rs:4705
+#: app/src\main.rs:4839
 #, rust-format
 msgid "{choice} (on)"
 msgstr "{choice} (activé)"
 
-#: app/src\main.rs:4714
-msgid "Choose an action"
-msgstr "Choisissez une action"
-
-#: app/src\main.rs:4724
+#: app/src\main.rs:4858
 msgid "Facebook post menu closed."
 msgstr "Menu Facebook de la publication fermé."
 
-#: app/src\main.rs:4742
+#: app/src\main.rs:4876
 msgid "This row has no web link (it is a suggestion or ad row)."
 msgstr "Cette ligne n’a pas de lien web (c’est une suggestion ou une publicité)."
 
-#: app/src\main.rs:4743
+#: app/src\main.rs:4877
 msgid "Open on Facebook"
 msgstr "Ouvrir sur Facebook"
 
-#: app/src\main.rs:4824
+#: app/src\main.rs:4958
 msgid "Select or open a chat first."
 msgstr "Sélectionnez ou ouvrez d’abord une discussion."
 
-#: app/src\main.rs:4825
+#: app/src\main.rs:4959
 msgid "Open in Messenger"
 msgstr "Ouvrir dans Messenger"
 
-#: app/src\main.rs:4844
+#: app/src\main.rs:4978
 msgid "Select one of your posts first."
 msgstr "Sélectionnez d’abord une de vos publications."
 
-#: app/src\main.rs:4849
+#: app/src\main.rs:4983
 msgid "Delete this post? Facebook moves it to the trash (permanent removal after 30 days)."
 msgstr "Supprimer cette publication ? Facebook la place dans la corbeille (suppression définitive après 30 jours)."
 
-#: app/src\main.rs:4879 app/src\main.rs:4889
+#: app/src\main.rs:5013 app/src\main.rs:5023
 msgid "Attached files"
 msgstr "Fichiers joints"
 
-#: app/src\main.rs:4886
+#: app/src\main.rs:5020
 msgid "Attached &files"
 msgstr "&Fichiers joints"
 
-#: app/src\main.rs:4905
+#: app/src\main.rs:5039
 msgid "&Remove selected"
 msgstr "&Retirer la sélection"
 
-#: app/src\main.rs:4907
+#: app/src\main.rs:5041
 msgid "Remove &all"
 msgstr "&Tout retirer"
 
-#: app/src\main.rs:5024
+#: app/src\main.rs:5158
 #, rust-format
 msgid "Replying to: {text}. Write your reply in the message box and send as usual."
 msgstr "Réponse à : {text}. Écrivez votre réponse dans la zone de message et envoyez comme d’habitude."
 
-#: app/src\main.rs:5052
+#: app/src\main.rs:5186
 msgid "Open a chat first, then write and send."
 msgstr "Ouvrez d’abord une discussion, puis écrivez et envoyez."
 
-#: app/src\main.rs:5069
+#: app/src\main.rs:5203
 msgid "Wait for your message to finish sending."
 msgstr "Attendez la fin de l’envoi de votre message."
 
-#: app/src\main.rs:5117
+#: app/src\main.rs:5251
 msgid "Share"
 msgstr "Partager"
 
-#: app/src\main.rs:5122
+#: app/src\main.rs:5256
 msgid "BlindFB cannot share this kind of item yet. Open it on Facebook to share it."
 msgstr "BlindFB ne sait pas encore partager ce type d’élément. Ouvrez-le sur Facebook pour le partager."
 
-#: app/src\main.rs:5123 app/src\post_dialog.rs:561
+#: app/src\main.rs:5257 app/src\post_dialog.rs:571
 msgid "Share post"
 msgstr "Partager la publication"
 
-#: app/src\main.rs:5143
+#: app/src\main.rs:5277
 msgid "Copy link"
 msgstr "Copier le lien"
 
-#: app/src\main.rs:5148
+#: app/src\main.rs:5282
 msgid "Opened Facebook's share page in your browser."
 msgstr "Page de partage de Facebook ouverte dans votre navigateur."
 
-#: app/src\main.rs:5152
+#: app/src\main.rs:5286
 msgid "This item has no link to share."
 msgstr "Cet élément n’a pas de lien à partager."
 
-#: app/src\main.rs:5153
+#: app/src\main.rs:5287
 msgid "Share on Facebook"
 msgstr "Partager sur Facebook"
 
-#: app/src\main.rs:5167 app/src\main.rs:5648
+#: app/src\main.rs:5303 app/src\main.rs:5848
 msgid "Opened the listing in your browser."
 msgstr "Annonce ouverte dans votre navigateur."
 
-#: app/src\main.rs:5192
+#: app/src\main.rs:5328
 msgid "Downloading the Facebook backend…"
 msgstr "Téléchargement du moteur Facebook…"
 
-#: app/src\main.rs:5210
+#: app/src\main.rs:5346
 msgid "Remove your newest message in this chat for everyone?"
 msgstr "Retirer pour tout le monde votre dernier message dans cette discussion ?"
 
-#: app/src\main.rs:5211 app/src\main.rs:5219
+#: app/src\main.rs:5347 app/src\main.rs:5355
 msgid "Unsend"
 msgstr "Annuler l’envoi"
 
-#: app/src\main.rs:5219
+#: app/src\main.rs:5355
 msgid "Open a chat first."
 msgstr "Ouvrez d’abord une discussion."
 
-#: app/src\main.rs:5283
+#: app/src\main.rs:5363
 msgid ""
 "Ctrl+O: open a Facebook post, video or reel link.\n"
 "Enter on an item: open it. Applications or Shift+F10: item actions.\n"
@@ -2039,15 +2275,23 @@ msgstr ""
 "Avec Tab, allez à Identité des commentaires pour lire votre identité actuelle dans le groupe et les restrictions. Changer l’identité des commentaires ouvre les choix proposés par Facebook et la configuration du pseudonyme. Continuer applique le choix ; Annuler conserve votre brouillon et la cible de votre réponse.\n"
 "Ctrl+Entrée dans le champ de commentaire envoie. Échap ferme la lecture et arrête la vidéo."
 
-#: app/src\main.rs:5240
+#: app/src\main.rs:5377
+msgid "File, New group: choose a group name, privacy and visibility, then Create group. Tab moves between fields; Escape cancels."
+msgstr "Fichier, Nouveau groupe : choisissez le nom, la confidentialité et la visibilité, puis Créer le groupe. Tab passe d’un champ à l’autre ; Échap annule."
+
+#: app/src\main.rs:5378
+msgid "Groups list, Invite friends: enter each friend's full name on its own line; names must match exactly or no invitations are sent."
+msgstr "Liste des groupes, Inviter des amis : entrez le nom complet de chaque ami sur sa propre ligne ; les noms doivent correspondre exactement, sinon aucune invitation n’est envoyée."
+
+#: app/src\main.rs:5379
 msgid "File, Keyboard shortcuts: change any of these shortcuts, or give any menu command one."
 msgstr "Fichier, Raccourcis clavier : modifiez n'importe lequel de ces raccourcis, ou attribuez-en un à n'importe quelle commande de menu."
 
-#: app/src\main.rs:5242
+#: app/src\main.rs:5381
 msgid "Keyboard commands"
 msgstr "Commandes clavier"
 
-#: app/src\main.rs:5252
+#: app/src\main.rs:5391
 msgid ""
 "An accessible Facebook and Messenger client for screen reader users.\n"
 "Built with wxDragon on the facebook-cli (fb) backend."
@@ -2055,348 +2299,352 @@ msgstr ""
 "Un client Facebook et Messenger accessible, pour les utilisateurs de lecteurs d’écran.\n"
 "Conçu avec wxDragon sur le moteur facebook-cli (fb)."
 
-#: app/src\main.rs:5276
+#: app/src\main.rs:5415
 msgid "Language saved. Restart BlindFB to use it."
 msgstr "Langue enregistrée. Redémarrez BlindFB pour l’appliquer."
 
-#: app/src\main.rs:5277
+#: app/src\main.rs:5416
 msgid "Language"
 msgstr "Langue"
 
-#: app/src\main.rs:5284
+#: app/src\main.rs:5423
 msgid "Debug logging on. Repeat what failed, then use Help, Save debug report."
 msgstr "Journal de débogage activé. Refaites ce qui a échoué, puis utilisez Aide, Enregistrer un rapport de débogage."
 
-#: app/src\main.rs:5286
+#: app/src\main.rs:5425
 msgid "Debug logging off."
 msgstr "Journal de débogage désactivé."
 
-#: app/src\main.rs:5287
+#: app/src\main.rs:5426
 msgid "Debug logging"
 msgstr "Journal de débogage"
 
-#: app/src\main.rs:5292
+#: app/src\main.rs:5431
 msgid "Save debug report"
 msgstr "Enregistrer un rapport de débogage"
 
 #. TRANSLATORS: a file-type filter; translate "Text files" only, keep "(*.txt)|*.txt".
-#: app/src\main.rs:5295
+#: app/src\main.rs:5434
 msgid "Text files (*.txt)|*.txt"
 msgstr "Fichiers texte (*.txt)|*.txt"
 
-#: app/src\main.rs:5300
+#: app/src\main.rs:5439
 msgid "Saving the debug report…"
 msgstr "Enregistrement du rapport de débogage…"
 
-#: app/src\main.rs:5327
+#: app/src\main.rs:5484
 msgid "Copy"
 msgstr "Copier"
 
-#: app/src\main.rs:5327
+#: app/src\main.rs:5484
 msgid "Could not copy to the clipboard."
 msgstr "Impossible de copier dans le presse-papiers."
 
-#: app/src\main.rs:5387 app/src\main.rs:5545
+#: app/src\main.rs:5544 app/src\main.rs:5703
 msgid "&Open group"
 msgstr "&Ouvrir le groupe"
 
-#: app/src\main.rs:5388
+#: app/src\main.rs:5545
 msgid "&Join group"
 msgstr "&Rejoindre le groupe"
 
-#: app/src\main.rs:5389 app/src\main.rs:5547
+#: app/src\main.rs:5546 app/src\main.rs:5704
+msgid "&Invite friends…"
+msgstr "&Inviter des amis…"
+
+#: app/src\main.rs:5547 app/src\main.rs:5706
 msgid "Open group on &Facebook (web)"
 msgstr "Ouvrir le groupe sur &Facebook (web)"
 
-#: app/src\main.rs:5396 app/src\main.rs:5491
+#: app/src\main.rs:5554 app/src\main.rs:5649
 msgid "&Profile"
 msgstr "&Profil"
 
-#: app/src\main.rs:5397 app/src\main.rs:5492 app/src\main.rs:5555
+#: app/src\main.rs:5555 app/src\main.rs:5650 app/src\main.rs:5714
 msgid "P&osts"
 msgstr "P&ublications"
 
-#: app/src\main.rs:5400 app/src\main.rs:5422 app/src\main.rs:5485
-#: app/src\main.rs:5494 app/src\main.rs:5560 app/src\post_dialog.rs:1242
+#: app/src\main.rs:5558 app/src\main.rs:5580 app/src\main.rs:5643
+#: app/src\main.rs:5652 app/src\main.rs:5719 app/src\post_dialog.rs:1285
 msgid "Open on &Facebook (web)"
 msgstr "Ouvrir sur &Facebook (web)"
 
-#: app/src\main.rs:5407
+#: app/src\main.rs:5565
 msgid "&Open listing in browser"
 msgstr "&Ouvrir l’annonce dans le navigateur"
 
-#: app/src\main.rs:5408
+#: app/src\main.rs:5566
 msgid "&Message seller…"
 msgstr "Envoyer un &message au vendeur…"
 
-#: app/src\main.rs:5410
+#: app/src\main.rs:5568
 msgid "Share on &Facebook…"
 msgstr "Partager sur &Facebook…"
 
-#: app/src\main.rs:5417 app/src\main.rs:5481
+#: app/src\main.rs:5575 app/src\main.rs:5639
 msgid "&Open"
 msgstr "&Ouvrir"
 
-#: app/src\main.rs:5471
+#: app/src\main.rs:5629
 msgid "Open author on Fa&cebook (web)"
 msgstr "Ouvrir le profil de l’&auteur sur Facebook (web)"
 
-#: app/src\main.rs:5501 app/src\main.rs:5527
+#: app/src\main.rs:5659 app/src\main.rs:5685
 msgid "Open in &Messenger (web)"
 msgstr "Ouvrir dans &Messenger (web)"
 
-#: app/src\main.rs:5534
+#: app/src\main.rs:5692
 msgid "Commenter &profile"
 msgstr "&Profil de l’auteur du commentaire"
 
-#: app/src\main.rs:5536 app/src\main.rs:5558
+#: app/src\main.rs:5694 app/src\main.rs:5717
 msgid "Follo&w"
 msgstr "S&uivre"
 
-#: app/src\main.rs:5537 app/src\main.rs:5559
+#: app/src\main.rs:5695 app/src\main.rs:5718
 msgid "U&nfollow"
 msgstr "Ne plus suivr&e"
 
-#: app/src\main.rs:5538
+#: app/src\main.rs:5696
 msgid "&Message commenter"
 msgstr "Envoyer un &message à l’auteur du commentaire"
 
-#: app/src\main.rs:5549
+#: app/src\main.rs:5708
 msgid "&Leave group…"
 msgstr "&Quitter le groupe…"
 
-#: app/src\main.rs:5602
+#: app/src\main.rs:5774
+msgid "This group row has no link, so nobody can be invited."
+msgstr "Cette ligne de groupe n’a pas de lien, donc personne ne peut être invité."
+
+#: app/src\main.rs:5780
+#, rust-format
+msgid "Inviting {n} friend(s) to {name}…"
+msgstr "Invitation de {n} ami(s) dans {name}…"
+
+#: app/src\main.rs:5791
 msgid "Post text:"
 msgstr "Texte de la publication :"
 
-#: app/src\main.rs:5616
+#: app/src\main.rs:5805
 msgid "Only me"
 msgstr "Moi uniquement"
 
-#: app/src\main.rs:5616
-msgid "Public"
-msgstr "Public"
-
-#: app/src\main.rs:5619
+#: app/src\main.rs:5808
 msgid "Audience"
 msgstr "Audience"
 
-#: app/src\main.rs:5619
+#: app/src\main.rs:5808
 msgid "Who can see this?"
 msgstr "Qui peut voir cette publication ?"
 
-#: app/src\main.rs:5650
+#: app/src\main.rs:5850
 msgid "This listing row has no link to open."
 msgstr "Cette ligne d’annonce n’a pas de lien à ouvrir."
 
-#: app/src\main.rs:5657
+#: app/src\main.rs:5857
 msgid "This row has no link, so there is no post to open."
 msgstr "Cette ligne n’a pas de lien : il n’y a donc pas de publication à ouvrir."
 
-#: app/src\main.rs:5668
+#: app/src\main.rs:5868
 msgid "This row has no link, so it cannot be opened."
 msgstr "Cette ligne n’a pas de lien : impossible de l’ouvrir."
 
-#: app/src\main.rs:5678
+#: app/src\main.rs:5878
 msgid "BlindFB cannot read this kind of item yet. Open it in your web browser?"
 msgstr "BlindFB ne sait pas encore lire ce type d’élément. L’ouvrir dans votre navigateur web ?"
 
-#: app/src\main.rs:5695
+#: app/src\main.rs:5895
 msgid "This group row has no link, so it cannot be joined."
 msgstr "Cette ligne de groupe n’a pas de lien : impossible de rejoindre le groupe."
 
-#: app/src\main.rs:5698
+#: app/src\main.rs:5898
 #, rust-format
 msgid "Joining {group}…"
 msgstr "Adhésion au groupe {group}…"
 
-#: app/src\main.rs:5722
+#: app/src\main.rs:5922
 msgid "Membership questions"
 msgstr "Questions d’adhésion"
 
 #. TRANSLATORS: {question} is a group's membership question, asked in a text box.
-#: app/src\main.rs:5722
+#: app/src\main.rs:5922
 #, rust-format
 msgid "{question}:"
 msgstr "{question} :"
 
-#: app/src\main.rs:5724
+#: app/src\main.rs:5924
 msgid "Join cancelled: the membership questions were not answered."
 msgstr "Adhésion annulée : les questions d’adhésion sont restées sans réponse."
 
-#: app/src\main.rs:5729
+#: app/src\main.rs:5929
 msgid "Submitting your answers…"
 msgstr "Envoi de vos réponses…"
 
-#: app/src\main.rs:5742
+#: app/src\main.rs:5942
 msgid "This group row has no link, so it cannot be left."
 msgstr "Cette ligne de groupe n’a pas de lien : impossible de quitter le groupe."
 
-#: app/src\main.rs:5749
+#: app/src\main.rs:5949
 #, rust-format
 msgid "Leave the group {name}? You can rejoin later, but private groups will need approval again."
 msgstr "Quitter le groupe {name} ? Vous pourrez le rejoindre plus tard, mais les groupes privés demanderont une nouvelle approbation."
 
-#: app/src\main.rs:5756
+#: app/src\main.rs:5956
 #, rust-format
 msgid "Leaving {name}…"
 msgstr "Départ du groupe {name}…"
 
-#: app/src\main.rs:5769
+#: app/src\main.rs:5969
 msgid "This listing row has no link, so its seller cannot be messaged."
 msgstr "Cette ligne d’annonce n’a pas de lien : impossible d’écrire au vendeur."
 
-#: app/src\main.rs:5774
+#: app/src\main.rs:5974
 #, rust-format
 msgid "Message to the seller of {listing}:"
 msgstr "Message au vendeur de {listing} :"
 
-#: app/src\main.rs:5775
+#: app/src\main.rs:5975
 msgid "Message seller"
 msgstr "Envoyer un message au vendeur"
 
-#: app/src\main.rs:5782
+#: app/src\main.rs:5982
 msgid "Messaging the seller…"
 msgstr "Envoi du message au vendeur…"
 
-#: app/src\main.rs:5792
+#: app/src\main.rs:5992
 msgid "Listing title:"
 msgstr "Titre de l’annonce :"
 
-#: app/src\main.rs:5792 app/src\main.rs:5801 app/src\main.rs:5811
-#: app/src\main.rs:5825 app/src\main.rs:5842 app/src\main.rs:5848
-#: app/src\main.rs:5858
+#: app/src\main.rs:5992 app/src\main.rs:6001 app/src\main.rs:6011
+#: app/src\main.rs:6025 app/src\main.rs:6042 app/src\main.rs:6048
+#: app/src\main.rs:6058
 msgid "Sell on Marketplace"
 msgstr "Vendre sur Marketplace"
 
-#: app/src\main.rs:5800
+#: app/src\main.rs:6000
 msgid "Price (0 lists it as free):"
 msgstr "Prix (0 pour une annonce gratuite) :"
 
-#: app/src\main.rs:5810
+#: app/src\main.rs:6010
 msgid "Enter the price as a number, for example 40 or 12.50. Use 0 for a free listing."
 msgstr "Saisissez le prix en chiffres, par exemple 40 ou 12,50. Indiquez 0 pour une annonce gratuite."
 
-#: app/src\main.rs:5816
+#: app/src\main.rs:6016
 msgid "New"
 msgstr "Neuf"
 
-#: app/src\main.rs:5817
+#: app/src\main.rs:6017
 msgid "Used - like new"
 msgstr "D’occasion - comme neuf"
 
-#: app/src\main.rs:5818
+#: app/src\main.rs:6018
 msgid "Used - good"
 msgstr "D’occasion - bon état"
 
-#: app/src\main.rs:5819
+#: app/src\main.rs:6019
 msgid "Used - fair"
 msgstr "D’occasion - état correct"
 
-#: app/src\main.rs:5824
+#: app/src\main.rs:6024
 msgid "Condition:"
 msgstr "État :"
 
-#: app/src\main.rs:5841
+#: app/src\main.rs:6041
 msgid "Category (leave empty to skip):"
 msgstr "Catégorie (laisser vide pour ignorer) :"
 
-#: app/src\main.rs:5847
+#: app/src\main.rs:6047
 msgid "Description (leave empty to skip):"
 msgstr "Description (laisser vide pour ignorer) :"
 
-#: app/src\main.rs:5857
+#: app/src\main.rs:6057
 msgid "Marketplace allows at most 10 photos and videos per listing."
 msgstr "Marketplace accepte au plus 10 photos et vidéos par annonce."
 
-#: app/src\main.rs:5862
+#: app/src\main.rs:6062
 #, rust-format
 msgid "Listing {title} on Marketplace…"
 msgstr "Mise en vente de {title} sur Marketplace…"
 
-#: app/src\main.rs:5885
+#: app/src\main.rs:6085
 msgid "Everything"
 msgstr "Tout"
 
-#: app/src\main.rs:5887
+#: app/src\main.rs:6087
 msgid "People"
 msgstr "Personnes"
 
-#: app/src\main.rs:5889
+#: app/src\main.rs:6089
 msgid "Photos"
 msgstr "Photos"
 
-#: app/src\main.rs:5890
+#: app/src\main.rs:6090
 msgid "Videos"
 msgstr "Vidéos"
 
-#: app/src\main.rs:5920
+#: app/src\main.rs:6120
 msgid "Search Facebook"
 msgstr "Rechercher sur Facebook"
 
-#: app/src\main.rs:5927
+#: app/src\main.rs:6127
 msgid "Search &for:"
 msgstr "&Texte à rechercher :"
 
-#: app/src\main.rs:5932
+#: app/src\main.rs:6132
 msgid "Search for"
 msgstr "Texte à rechercher"
 
-#: app/src\main.rs:5934
+#: app/src\main.rs:6134
 msgid "Search &in:"
 msgstr "Rechercher &dans :"
 
-#: app/src\main.rs:5942
+#: app/src\main.rs:6142
 msgid "Search in"
 msgstr "Rechercher dans"
 
-#: app/src\main.rs:5947
+#: app/src\main.rs:6147
 msgid "&Search"
 msgstr "&Rechercher"
 
-#: app/src\main.rs:5949
+#: app/src\main.rs:6149
 msgid "Search"
 msgstr "Rechercher"
 
-#: app/src\main.rs:5953 app/src\main.rs:5955 app/src\participation_dialog.rs:88
-#: app/src\shortcuts_dialog.rs:369 app/src\update.rs:50
-msgid "Cancel"
-msgstr "Annuler"
-
-#: app/src\main.rs:5986
+#: app/src\main.rs:6186
 msgid "Enter starts a new line. Tab to OK when done."
 msgstr "Entrée commence une nouvelle ligne. Une fois terminé, Tab jusqu’à OK."
 
-#: app/src\main.rs:6001
+#: app/src\main.rs:6201
 msgid "No OCR engine is available on this system. On Linux, install tesseract-ocr."
 msgstr "Aucun logiciel de reconnaissance de texte (OCR) n’est disponible sur ce système. Sous Linux, installez tesseract-ocr."
 
-#: app/src\main.rs:6002
+#: app/src\main.rs:6202
 msgid "OCR an image"
 msgstr "Reconnaître le texte d’une image (OCR)"
 
-#: app/src\main.rs:6008
+#: app/src\main.rs:6208
 msgid "Choose a picture file (a screenshot or a saved photo) to read the text written in it"
 msgstr "Choisissez un fichier image (capture d’écran ou photo enregistrée) pour lire le texte qui y est écrit"
 
-#: app/src\main.rs:6012
+#: app/src\main.rs:6212
 msgid "Pictures"
 msgstr "Images"
 
-#: app/src\main.rs:6013
+#: app/src\main.rs:6213
 msgid "All files"
 msgstr "Tous les fichiers"
 
-#: app/src\main.rs:6023
+#: app/src\main.rs:6223
 msgid "Reading image text…"
 msgstr "Lecture du texte de l’image…"
 
-#: app/src\main.rs:6035
+#: app/src\main.rs:6235
 #, rust-format
 msgid "could not open image: {error}"
 msgstr "impossible d’ouvrir l’image : {error}"
 
-#: app/src\main.rs:6039
+#: app/src\main.rs:6239
 #, rust-format
 msgid "OCR failed: {error}"
 msgstr "Échec de l’OCR : {error}"
@@ -2412,10 +2660,6 @@ msgstr "Questions et &règles du groupe"
 #: app/src\participation_dialog.rs:25
 msgid "Questions and group rules"
 msgstr "Questions et règles du groupe"
-
-#: app/src\participation_dialog.rs:49
-msgid "Choose an answer"
-msgstr "Choisir une réponse"
 
 #: app/src\participation_dialog.rs:84
 msgid "Submit sends these answers to the group admins. Your comment stays in its draft until confirmed."
@@ -2478,96 +2722,96 @@ msgstr "&Je n’aime plus"
 msgid "&Remove your reaction ({reaction})"
 msgstr "&Retirer votre réaction ({reaction})"
 
-#: app/src\post_dialog.rs:267 app/src\post_dialog.rs:298
+#: app/src\post_dialog.rs:277 app/src\post_dialog.rs:308
 msgid "Nothing to copy yet."
 msgstr "Rien à copier pour l’instant."
 
-#: app/src\post_dialog.rs:271
+#: app/src\post_dialog.rs:281
 msgid "Copied."
 msgstr "Copié."
 
-#: app/src\post_dialog.rs:302
+#: app/src\post_dialog.rs:312
 msgid "Post and comments copied."
 msgstr "Publication et commentaires copiés."
 
-#: app/src\post_dialog.rs:323
+#: app/src\post_dialog.rs:333
 msgid "This comment has no link to open."
 msgstr "Ce commentaire n’a pas de lien à ouvrir."
 
-#: app/src\post_dialog.rs:341
+#: app/src\post_dialog.rs:351
 #, rust-format
 msgid "Links in {author}'s comment. Enter opens the selected link in your browser"
 msgstr "Liens dans le commentaire de {author}. Entrée ouvre le lien sélectionné dans votre navigateur"
 
-#: app/src\post_dialog.rs:348 app/src\post_dialog.rs:847
+#: app/src\post_dialog.rs:358 app/src\post_dialog.rs:874
 msgid "Post links. Enter opens the selected link in your browser"
 msgstr "Liens de la publication. Entrée ouvre le lien sélectionné dans votre navigateur"
 
-#: app/src\post_dialog.rs:366
+#: app/src\post_dialog.rs:376
 msgid "&Pause video"
 msgstr "&Mettre la vidéo en pause"
 
-#: app/src\post_dialog.rs:368 app/src\post_dialog.rs:869
+#: app/src\post_dialog.rs:378 app/src\post_dialog.rs:896
 msgid "&Play video"
 msgstr "&Lire la vidéo"
 
-#: app/src\post_dialog.rs:385
+#: app/src\post_dialog.rs:395
 msgid "Video paused."
 msgstr "Vidéo en pause."
 
-#: app/src\post_dialog.rs:387 app/src\post_dialog.rs:491
+#: app/src\post_dialog.rs:397 app/src\post_dialog.rs:501
 msgid "Playing video."
 msgstr "Lecture de la vidéo."
 
-#: app/src\post_dialog.rs:397 app/src\post_dialog.rs:493
+#: app/src\post_dialog.rs:407 app/src\post_dialog.rs:503
 msgid "Playback failed. Press Play to retry."
 msgstr "Échec de la lecture. Appuyez sur Lire la vidéo pour réessayer."
 
-#: app/src\post_dialog.rs:419
+#: app/src\post_dialog.rs:429
 msgid "Preparing video…"
 msgstr "Préparation de la vidéo…"
 
-#: app/src\post_dialog.rs:431
+#: app/src\post_dialog.rs:441
 msgid "Loading video…"
 msgstr "Chargement de la vidéo…"
 
-#: app/src\post_dialog.rs:434
+#: app/src\post_dialog.rs:444
 msgid "Could not load video. Press Play to retry."
 msgstr "Impossible de charger la vidéo. Appuyez sur Lire la vidéo pour réessayer."
 
-#: app/src\post_dialog.rs:453
+#: app/src\post_dialog.rs:463
 msgid "Could not stop video. Try Pause or close the reader."
 msgstr "Impossible d’arrêter la vidéo. Essayez Mettre la vidéo en pause, ou fermez la fenêtre."
 
-#: app/src\post_dialog.rs:455
+#: app/src\post_dialog.rs:465
 msgid "Video stopped."
 msgstr "Vidéo arrêtée."
 
-#: app/src\post_dialog.rs:463
+#: app/src\post_dialog.rs:473
 msgid "This video could not seek."
 msgstr "Impossible de se déplacer dans cette vidéo."
 
-#: app/src\post_dialog.rs:468
+#: app/src\post_dialog.rs:478
 #, rust-format
 msgid "Video position: {n} second."
 msgid_plural "Video position: {n} seconds."
 msgstr[0] "Position de la vidéo : {n} seconde."
 msgstr[1] "Position de la vidéo : {n} secondes."
 
-#: app/src\post_dialog.rs:502
+#: app/src\post_dialog.rs:512
 msgid "Video finished."
 msgstr "Vidéo terminée."
 
-#: app/src\post_dialog.rs:511 app/src\post_dialog.rs:1404
+#: app/src\post_dialog.rs:521 app/src\post_dialog.rs:1461
 #, rust-format
 msgid "{error} Press Play to retry."
 msgstr "{error} Appuyez sur Lire la vidéo pour réessayer."
 
-#: app/src\post_dialog.rs:549
+#: app/src\post_dialog.rs:559
 msgid "Opening Facebook's share dialog…"
 msgstr "Ouverture de la fenêtre de partage de Facebook…"
 
-#: app/src\post_dialog.rs:558
+#: app/src\post_dialog.rs:568
 #, rust-format
 msgid ""
 "Share this post to your feed. Audience: {audience}.\n"
@@ -2576,350 +2820,386 @@ msgstr ""
 "Partager cette publication dans votre fil. Audience : {audience}.\n"
 "Écrivez quelque chose à ce sujet (facultatif), puis appuyez sur OK pour partager :"
 
-#: app/src\post_dialog.rs:573
+#: app/src\post_dialog.rs:583
 msgid "Sharing…"
 msgstr "Partage en cours…"
 
-#: app/src\post_dialog.rs:598
+#: app/src\post_dialog.rs:608
 msgid "Asking Facebook to translate…"
 msgstr "Demande de traduction à Facebook…"
 
-#: app/src\post_dialog.rs:604
+#: app/src\post_dialog.rs:614
 msgid "The post has not loaded yet. Try again in a moment."
 msgstr "La publication n’est pas encore chargée. Réessayez dans un instant."
 
-#: app/src\post_dialog.rs:611
+#: app/src\post_dialog.rs:621
 msgid "Post copied."
 msgstr "Publication copiée."
 
-#: app/src\post_dialog.rs:613
+#: app/src\post_dialog.rs:623
 msgid "Could not copy the post."
 msgstr "Impossible de copier la publication."
 
-#: app/src\post_dialog.rs:624
+#: app/src\post_dialog.rs:634
 msgid "Could not copy the link."
 msgstr "Impossible de copier le lien."
 
-#: app/src\post_dialog.rs:640 app/src\post_dialog.rs:650
+#: app/src\post_dialog.rs:650 app/src\post_dialog.rs:660
 msgid "Reacting…"
 msgstr "Réaction en cours…"
 
-#: app/src\post_dialog.rs:659
+#: app/src\post_dialog.rs:669
 msgid "Write a comment or reply first."
 msgstr "Écrivez d’abord un commentaire ou une réponse."
 
-#: app/src\post_dialog.rs:680
+#: app/src\post_dialog.rs:691
 msgid "Sending comment…"
 msgstr "Envoi du commentaire…"
 
-#: app/src\post_dialog.rs:711
+#: app/src\post_dialog.rs:707
+msgid "Loading comment identities…"
+msgstr "Chargement des identités des commentaires…"
+
+#: app/src\post_dialog.rs:738
 #, rust-format
 msgid "Reply to {author} (Ctrl+Enter to send)"
 msgstr "Répondre à {author} (Ctrl+Entrée pour envoyer)"
 
-#: app/src\post_dialog.rs:716
+#: app/src\post_dialog.rs:743
 #, rust-format
 msgid "Replying to {author}."
 msgstr "Réponse à {author}."
 
-#: app/src\post_dialog.rs:720
+#: app/src\post_dialog.rs:747
 msgid "Comment copied."
 msgstr "Commentaire copié."
 
-#: app/src\post_dialog.rs:722
+#: app/src\post_dialog.rs:749
 msgid "Could not copy the comment."
 msgstr "Impossible de copier le commentaire."
 
-#: app/src\post_dialog.rs:737
+#: app/src\post_dialog.rs:764
 #, rust-format
 msgid "Changing your Like on {author}'s comment…"
 msgstr "Modification de votre J’aime sur le commentaire de {author}…"
 
-#: app/src\post_dialog.rs:744
+#: app/src\post_dialog.rs:771
 msgid "Opening the commenter's profile…"
 msgstr "Ouverture du profil de l’auteur du commentaire…"
 
-#: app/src\post_dialog.rs:754
+#: app/src\post_dialog.rs:781
 #, rust-format
 msgid "Sending a friend request to {author}…"
 msgstr "Envoi d’une invitation à {author}…"
 
-#: app/src\post_dialog.rs:844
+#: app/src\post_dialog.rs:871
 msgid "Post lin&ks"
 msgstr "Lien&s de la publication"
 
-#: app/src\post_dialog.rs:852
+#: app/src\post_dialog.rs:879
 msgid "&Open link"
 msgstr "&Ouvrir le lien"
 
-#: app/src\post_dialog.rs:854
+#: app/src\post_dialog.rs:881
 msgid "&Full post"
 msgstr "Publication &complète"
 
-#: app/src\post_dialog.rs:860
+#: app/src\post_dialog.rs:887
 msgid "Full post. Applications or Shift+F10 for links, comment, react, share and copy"
 msgstr "Publication complète. Touche Applications ou Maj+F10 pour les liens, commenter, réagir, partager et copier"
 
-#: app/src\post_dialog.rs:862
+#: app/src\post_dialog.rs:889
 msgid "Loading post and comments…"
 msgstr "Chargement de la publication et des commentaires…"
 
-#: app/src\post_dialog.rs:865
+#: app/src\post_dialog.rs:892
 msgid "Video player"
 msgstr "Lecteur vidéo"
 
-#: app/src\post_dialog.rs:870
+#: app/src\post_dialog.rs:897
 msgid "S&top video"
 msgstr "A&rrêter la vidéo"
 
-#: app/src\post_dialog.rs:872
+#: app/src\post_dialog.rs:899
 msgid "Back 10 seconds"
 msgstr "Reculer de 10 secondes"
 
-#: app/src\post_dialog.rs:875
+#: app/src\post_dialog.rs:902
 msgid "Forward 10 seconds"
 msgstr "Avancer de 10 secondes"
 
-#: app/src\post_dialog.rs:884
+#: app/src\post_dialog.rs:911
 msgid "Video &volume (percent)"
 msgstr "&Volume de la vidéo (pourcentage)"
 
-#: app/src\post_dialog.rs:891
+#: app/src\post_dialog.rs:918
 msgid "Video volume, percent"
 msgstr "Volume de la vidéo, en pourcentage"
 
-#: app/src\post_dialog.rs:892
+#: app/src\post_dialog.rs:919
 msgid "&Comments"
 msgstr "Commen&taires"
 
-#: app/src\post_dialog.rs:895 app/src\shortcuts_dialog.rs:179
-#: app/src\shortcuts_dialog.rs:354
+#: app/src\post_dialog.rs:922 app/src\shortcuts_dialog.rs:180
+#: app/src\shortcuts_dialog.rs:355
 msgid "no shortcut"
 msgstr "aucun raccourci"
 
-#: app/src\post_dialog.rs:897
+#: app/src\post_dialog.rs:924
 #, rust-format
 msgid "Comments. {copy} copies the comment. {copy_all} copies the post and all comments. {open} opens the comment's first link. Applications or Shift+F10 for reply, like, profile, friend, copy and Facebook actions"
 msgstr "Commentaires. {copy} copie le commentaire. {copy_all} copie la publication et tous les commentaires. {open} ouvre le premier lien du commentaire. Applications ou Maj+F10 pour répondre, aimer, profil, ami, copier et actions Facebook"
 
-#: app/src\post_dialog.rs:909 app/src\post_dialog.rs:914
+#: app/src\post_dialog.rs:939
+msgid "Change comment &identity…"
+msgstr "Changer l’&identité des commentaires…"
+
+#: app/src\post_dialog.rs:940
+msgid "Change comment identity"
+msgstr "Changer l’identité des commentaires"
+
+#: app/src\post_dialog.rs:942 app/src\post_dialog.rs:947
 msgid "Reader status"
 msgstr "État de la fenêtre"
 
-#: app/src\post_dialog.rs:918
+#: app/src\post_dialog.rs:951
 msgid "&Send (Ctrl+Enter)"
 msgstr "&Envoyer (Ctrl+Entrée)"
 
-#: app/src\post_dialog.rs:923
+#: app/src\post_dialog.rs:956
 msgid "Tr&anslate"
 msgstr "Tr&aduire"
 
-#: app/src\post_dialog.rs:924
+#: app/src\post_dialog.rs:957
 msgid "Ca&ncel reply"
 msgstr "Ann&uler la réponse"
 
-#: app/src\post_dialog.rs:1071
+#: app/src\post_dialog.rs:1114
 msgid "Could not set video volume."
 msgstr "Impossible de régler le volume de la vidéo."
 
-#: app/src\post_dialog.rs:1125
+#: app/src\post_dialog.rs:1168
 msgid "Refreshing comments…"
 msgstr "Actualisation des commentaires…"
 
-#: app/src\post_dialog.rs:1150
+#: app/src\post_dialog.rs:1193
 msgid "Reply to this exact comment"
 msgstr "Répondre à ce commentaire précis"
 
-#: app/src\post_dialog.rs:1154
+#: app/src\post_dialog.rs:1197
 msgid "Like this comment, or remove your Like"
 msgstr "Aimer ce commentaire, ou retirer votre J’aime"
 
-#: app/src\post_dialog.rs:1156
+#: app/src\post_dialog.rs:1199
 msgid "&Copy comment"
 msgstr "C&opier le commentaire"
 
-#: app/src\post_dialog.rs:1156
+#: app/src\post_dialog.rs:1199
 msgid "Copy the full comment"
 msgstr "Copier le commentaire en entier"
 
-#: app/src\post_dialog.rs:1159 app/src\post_dialog.rs:1238
+#: app/src\post_dialog.rs:1202 app/src\post_dialog.rs:1281
 msgid "Copy &all comments"
 msgstr "Copier &tous les commentaires"
 
-#: app/src\post_dialog.rs:1160
+#: app/src\post_dialog.rs:1203
 msgid "Copy the post and every comment"
 msgstr "Copier la publication et chaque commentaire"
 
-#: app/src\post_dialog.rs:1164
+#: app/src\post_dialog.rs:1207
 msgid "Open comment on &Facebook"
 msgstr "Ouvrir le commentaire sur &Facebook"
 
-#: app/src\post_dialog.rs:1165
+#: app/src\post_dialog.rs:1208
 msgid "Open the comment permalink"
 msgstr "Ouvrir le lien permanent du commentaire"
 
-#: app/src\post_dialog.rs:1171
+#: app/src\post_dialog.rs:1214
 msgid "Open the commenter's profile"
 msgstr "Ouvrir le profil de l’auteur du commentaire"
 
-#: app/src\post_dialog.rs:1176
+#: app/src\post_dialog.rs:1219
 msgid "Send the commenter a friend request"
 msgstr "Envoyer une invitation à l’auteur du commentaire"
 
-#: app/src\post_dialog.rs:1181
+#: app/src\post_dialog.rs:1224
 msgid "Comment on the &post"
 msgstr "&Commenter la publication"
 
-#: app/src\post_dialog.rs:1182
+#: app/src\post_dialog.rs:1225
 msgid "Write a new top-level comment"
 msgstr "Écrire un nouveau commentaire sur la publication"
 
-#: app/src\post_dialog.rs:1213
+#: app/src\post_dialog.rs:1256
 msgid "Write a comment on this post"
 msgstr "Écrire un commentaire sur cette publication"
 
-#: app/src\post_dialog.rs:1218
+#: app/src\post_dialog.rs:1261
 msgid "Share with Facebook's own share dialog"
 msgstr "Partager avec la fenêtre de partage de Facebook"
 
-#: app/src\post_dialog.rs:1233
+#: app/src\post_dialog.rs:1276
 msgid "&Translate post and comments (Facebook)"
 msgstr "&Traduire la publication et les commentaires (Facebook)"
 
-#: app/src\post_dialog.rs:1237
+#: app/src\post_dialog.rs:1280
 msgid "Cop&y post text"
 msgstr "Copier le &texte de la publication"
 
-#: app/src\post_dialog.rs:1297
+#: app/src\post_dialog.rs:1340
 msgid "Video loading timed out. Press Play to retry."
 msgstr "Délai de chargement de la vidéo dépassé. Appuyez sur Lire la vidéo pour réessayer."
 
+#: app/src\post_dialog.rs:1388
+msgid "Cancelling identity selection…"
+msgstr "Annulation du choix d’identité…"
+
+#: app/src\post_dialog.rs:1389
+msgid "Updating comment identity…"
+msgstr "Mise à jour de l’identité des commentaires…"
+
 #. TRANSLATORS: a reply in the comments list: who wrote it, then
 #. whose comment it answers ("Bob to Ann: text — 2h")
-#: app/src\post_dialog.rs:1446
+#: app/src\post_dialog.rs:1503
 #, rust-format
 msgid "{author} to {parent}"
 msgstr "{author} à {parent}"
 
-#: app/src\post_dialog.rs:1518
+#: app/src\post_dialog.rs:1579
 msgid "This group requires participation answers. Your comment draft has been kept."
 msgstr "Ce groupe exige des réponses aux questions de participation. Votre brouillon de commentaire a été conservé."
 
-#: app/src\post_dialog.rs:1526
+#: app/src\post_dialog.rs:1587 app/src\post_dialog.rs:1719
 #, rust-format
 msgid "{error} Your draft has been kept."
 msgstr "{error} Votre brouillon a été conservé."
 
-#: app/src\post_dialog.rs:1601
+#: app/src\post_dialog.rs:1659
+msgid "Facebook did not expose a comment identity for this post."
+msgstr "Facebook n’a pas fourni d’identité de commentaire pour cette publication."
+
+#: app/src\post_dialog.rs:1673
 #, rust-format
 msgid "{n} comment loaded."
 msgid_plural "{n} comments loaded."
 msgstr[0] "{n} commentaire chargé."
 msgstr[1] "{n} commentaires chargés."
 
-#: app/src\post_dialog.rs:1618
+#: app/src\post_dialog.rs:1690
 msgid "Answers submitted. Refresh to check whether your comment posted. Your draft has been kept."
 msgstr "Réponses envoyées. Actualisez pour vérifier si votre commentaire a été publié. Votre brouillon a été conservé."
 
-#: app/src\post_dialog.rs:1620
+#: app/src\post_dialog.rs:1692
 msgid "Participation review cancelled. Your comment draft has been kept."
 msgstr "Questions de participation annulées. Votre brouillon de commentaire a été conservé."
 
-#: app/src\shortcuts_dialog.rs:161
+#: app/src\post_dialog.rs:1700
+msgid "Choose your comment identity. Your draft has been kept."
+msgstr "Choisissez votre identité pour les commentaires. Votre brouillon est conservé."
+
+#: app/src\post_dialog.rs:1712
+msgid "Identity selection cancelled. Your draft has been kept."
+msgstr "Choix d’identité annulé. Votre brouillon est conservé."
+
+#: app/src\post_dialog.rs:1713
+msgid "Comment identity refreshed. Your draft has been kept."
+msgstr "Identité des commentaires actualisée. Votre brouillon est conservé."
+
+#: app/src\shortcuts_dialog.rs:162
 msgid "Post window"
 msgstr "Fenêtre de publication"
 
-#: app/src\shortcuts_dialog.rs:163
+#: app/src\shortcuts_dialog.rs:164
 msgid "copy the selected comment"
 msgstr "copier le commentaire sélectionné"
 
-#: app/src\shortcuts_dialog.rs:164
+#: app/src\shortcuts_dialog.rs:165
 msgid "copy the post and all comments"
 msgstr "copier la publication et tous les commentaires"
 
-#: app/src\shortcuts_dialog.rs:165
+#: app/src\shortcuts_dialog.rs:166
 msgid "open the comment's first link"
 msgstr "ouvrir le premier lien du commentaire"
 
-#: app/src\shortcuts_dialog.rs:190 app/src\shortcuts_dialog.rs:228
-#: app/src\shortcuts_dialog.rs:247 app/src\shortcuts_dialog.rs:259
-#: app/src\shortcuts_dialog.rs:278 app/src\shortcuts_dialog.rs:321
+#: app/src\shortcuts_dialog.rs:191 app/src\shortcuts_dialog.rs:229
+#: app/src\shortcuts_dialog.rs:248 app/src\shortcuts_dialog.rs:260
+#: app/src\shortcuts_dialog.rs:279 app/src\shortcuts_dialog.rs:322
 msgid "Keyboard shortcuts"
 msgstr "Raccourcis clavier"
 
-#: app/src\shortcuts_dialog.rs:196
+#: app/src\shortcuts_dialog.rs:197
 msgid "&Commands"
 msgstr "&Commandes"
 
-#: app/src\shortcuts_dialog.rs:198
+#: app/src\shortcuts_dialog.rs:199
 msgid "Commands and their shortcuts"
 msgstr "Commandes et leurs raccourcis"
 
-#: app/src\shortcuts_dialog.rs:211
+#: app/src\shortcuts_dialog.rs:212
 msgid "C&hange shortcut…"
 msgstr "&Modifier le raccourci…"
 
-#: app/src\shortcuts_dialog.rs:212
+#: app/src\shortcuts_dialog.rs:213
 msgid "&Remove shortcut"
 msgstr "&Supprimer le raccourci"
 
-#: app/src\shortcuts_dialog.rs:213
+#: app/src\shortcuts_dialog.rs:214
 msgid "Reset to &default"
 msgstr "Rétablir la valeur par &défaut"
 
-#: app/src\shortcuts_dialog.rs:214
+#: app/src\shortcuts_dialog.rs:215
 msgid "Reset &all"
 msgstr "Tout &rétablir"
 
-#: app/src\shortcuts_dialog.rs:244
+#: app/src\shortcuts_dialog.rs:245
 #, rust-format
 msgid "{key} copies, pastes and edits text, so a menu cannot use it."
 msgstr "{key} copie, colle et modifie du texte, un menu ne peut donc pas l'utiliser."
 
-#: app/src\shortcuts_dialog.rs:256
+#: app/src\shortcuts_dialog.rs:257
 #, rust-format
 msgid "{key} is the show/hide hotkey. Pick another, or change the hotkey first."
 msgstr "{key} est le raccourci afficher/masquer. Choisissez-en un autre, ou modifiez d'abord ce raccourci."
 
-#: app/src\shortcuts_dialog.rs:273
+#: app/src\shortcuts_dialog.rs:274
 #, rust-format
 msgid "{key} already runs \"{other}\". Move it to \"{this}\"?"
 msgstr "{key} lance déjà « {other} ». Le déplacer vers « {this} » ?"
 
-#: app/src\shortcuts_dialog.rs:321
+#: app/src\shortcuts_dialog.rs:322
 msgid "Put every shortcut back to its default?"
 msgstr "Rétablir tous les raccourcis par défaut ?"
 
-#: app/src\shortcuts_dialog.rs:343 app/src\shortcuts_dialog.rs:402
+#: app/src\shortcuts_dialog.rs:344 app/src\shortcuts_dialog.rs:403
 msgid "Change shortcut"
 msgstr "Modifier le raccourci"
 
-#: app/src\shortcuts_dialog.rs:347
+#: app/src\shortcuts_dialog.rs:348
 #, rust-format
 msgid "Shortcut for {command}"
 msgstr "Raccourci pour {command}"
 
-#: app/src\shortcuts_dialog.rs:349
+#: app/src\shortcuts_dialog.rs:350
 msgid "&Ctrl"
 msgstr "&Ctrl"
 
-#: app/src\shortcuts_dialog.rs:350
+#: app/src\shortcuts_dialog.rs:351
 msgid "&Alt"
 msgstr "&Alt"
 
-#: app/src\shortcuts_dialog.rs:351
+#: app/src\shortcuts_dialog.rs:352
 msgid "&Shift"
 msgstr "&Maj"
 
-#: app/src\shortcuts_dialog.rs:352
+#: app/src\shortcuts_dialog.rs:353
 msgid "&Key"
 msgstr "&Touche"
 
-#: app/src\shortcuts_dialog.rs:368
+#: app/src\shortcuts_dialog.rs:369
 msgid "OK"
 msgstr "OK"
 
-#: app/src\shortcuts_dialog.rs:401
+#: app/src\shortcuts_dialog.rs:402
 msgid "A letter, digit, space or punctuation key needs Ctrl or Alt, or it would type text."
 msgstr "Une lettre, un chiffre, l'espace ou une ponctuation a besoin de Ctrl ou Alt, sinon elle taperait du texte."
 
@@ -3085,89 +3365,89 @@ msgid_plural "And {n} more."
 msgstr[0] "Et {n} autre."
 msgstr[1] "Et {n} autres."
 
-#: crates/core/src\backend.rs:114 crates/core/src\backend.rs:116
-#: crates/core/src\backend.rs:200
+#: crates/core/src\backend.rs:116 crates/core/src\backend.rs:118
+#: crates/core/src\backend.rs:203
 #, rust-format
 msgid "download failed: {error}"
 msgstr "échec du téléchargement : {error}"
 
-#: crates/core/src\backend.rs:138 crates/core/src\backend.rs:161
+#: crates/core/src\backend.rs:140 crates/core/src\backend.rs:163
 #, rust-format
 msgid "could not open the backend download: {error}"
 msgstr "impossible d’ouvrir le téléchargement du moteur : {error}"
 
-#: crates/core/src\backend.rs:142 crates/core/src\backend.rs:164
+#: crates/core/src\backend.rs:144 crates/core/src\backend.rs:166
 #, rust-format
 msgid "could not read the backend download: {error}"
 msgstr "impossible de lire le téléchargement du moteur : {error}"
 
-#: crates/core/src\backend.rs:145 crates/core/src\backend.rs:167
+#: crates/core/src\backend.rs:147 crates/core/src\backend.rs:169
 #, rust-format
 msgid "bad backend download: {error}"
 msgstr "téléchargement du moteur non valide : {error}"
 
-#: crates/core/src\backend.rs:151 crates/core/src\backend.rs:173
+#: crates/core/src\backend.rs:153 crates/core/src\backend.rs:175
 #, rust-format
 msgid "could not unpack the backend: {error}"
 msgstr "impossible de décompresser le moteur : {error}"
 
-#: crates/core/src\backend.rs:155 crates/core/src\backend.rs:177
+#: crates/core/src\backend.rs:157 crates/core/src\backend.rs:179
 #, rust-format
 msgid "the backend download did not contain {want}"
 msgstr "le téléchargement du moteur ne contenait pas {want}"
 
-#: crates/core/src\backend.rs:185
+#: crates/core/src\backend.rs:187
 msgid "no prebuilt backend for this platform"
 msgstr "aucun moteur précompilé pour cette plateforme"
 
-#: crates/core/src\backend.rs:186
+#: crates/core/src\backend.rs:188
 msgid "could not find a place to install the backend"
 msgstr "impossible de trouver où installer le moteur"
 
-#: crates/core/src\backend.rs:204
+#: crates/core/src\backend.rs:207
 msgid "download failed: no tag in the release response"
 msgstr "échec du téléchargement : aucune étiquette dans la réponse sur la version"
 
-#: crates/core/src\backend.rs:209
+#: crates/core/src\backend.rs:212
 msgid "download failed: no assets in the release response"
 msgstr "échec du téléchargement : aucun fichier dans la réponse sur la version"
 
-#: crates/core/src\backend.rs:222
+#: crates/core/src\backend.rs:225
 msgid "download failed: release has no build for this platform"
 msgstr "échec du téléchargement : cette version n’a pas de compilation pour cette plateforme"
 
-#: crates/core/src\backend.rs:224
+#: crates/core/src\backend.rs:227
 msgid "download failed: release has no checksums file"
 msgstr "échec du téléchargement : cette version n’a pas de fichier de sommes de contrôle"
 
-#: crates/core/src\backend.rs:229
+#: crates/core/src\backend.rs:232
 msgid "download failed: no checksum for this build"
 msgstr "échec du téléchargement : aucune somme de contrôle pour cette compilation"
 
-#: crates/core/src\backend.rs:231
+#: crates/core/src\backend.rs:234
 msgid "the backend download failed its checksum — not installing it"
 msgstr "le téléchargement du moteur a échoué à la vérification de somme de contrôle — il n’est pas installé"
 
-#: crates/core/src\backend.rs:241 crates/core/src\media.rs:180
+#: crates/core/src\backend.rs:244 crates/core/src\media.rs:180
 msgid "bad install path"
 msgstr "chemin d’installation non valide"
 
-#: crates/core/src\backend.rs:243 crates/core/src\media.rs:182
+#: crates/core/src\backend.rs:246 crates/core/src\media.rs:182
 #, rust-format
 msgid "could not create the install folder: {error}"
 msgstr "impossible de créer le dossier d’installation : {error}"
 
-#: crates/core/src\backend.rs:245
+#: crates/core/src\backend.rs:248
 #, rust-format
 msgid "could not write the backend: {error}"
 msgstr "impossible d’écrire le moteur : {error}"
 
-#: crates/core/src\backend.rs:252
+#: crates/core/src\backend.rs:255
 #, rust-format
 msgid "could not install the backend: {error}"
 msgstr "impossible d’installer le moteur : {error}"
 
-#: crates/core/src\backend.rs:254
+#: crates/core/src\backend.rs:257
 #, rust-format
 msgid "Installed the Facebook backend {version} to {path}"
 msgstr "Moteur Facebook {version} installé dans {path}"
@@ -3438,77 +3718,100 @@ msgstr "{browser} n’a pas lancé le navigateur dédié à BlindFB dans les 40 
 msgid "BlindFB's dedicated browser did not close; close its window and retry sign-in"
 msgstr "Le navigateur dédié à BlindFB ne s’est pas fermé ; fermez sa fenêtre et relancez la connexion"
 
-#: crates/core/src\fb.rs:73
+#: crates/core/src\fb.rs:74
 msgid "Liked"
 msgstr "Aimé"
 
-#: crates/core/src\fb.rs:82
+#: crates/core/src\fb.rs:83
 #, rust-format
 msgid "React: {reaction}"
 msgstr "Réaction : {reaction}"
 
-#: crates/core/src\fb.rs:214
+#: crates/core/src\fb.rs:215
 msgid "Sponsored"
 msgstr "Sponsorisé"
 
-#: crates/core/src\fb.rs:245
+#: crates/core/src\fb.rs:246
 msgid "The backend returned unreadable notifications. Refresh to retry."
 msgstr "Le moteur a renvoyé des notifications illisibles. Actualisez pour réessayer."
 
-#: crates/core/src\fb.rs:252
+#: crates/core/src\fb.rs:253
 msgid "The backend returned no notification list"
 msgstr "Le moteur n’a renvoyé aucune liste de notifications"
 
-#: crates/core/src\fb.rs:285
+#: crates/core/src\fb.rs:286
 msgid "The backend returned no readable notifications. Refresh to retry."
 msgstr "Le moteur n’a renvoyé aucune notification lisible. Actualisez pour réessayer."
 
-#: crates/core/src\fb.rs:361
+#: crates/core/src\fb.rs:362
 msgid "Cookie import is unavailable with a custom FB_CDP browser. Sign in directly in that browser instead."
 msgstr "L’importation des cookies n’est pas disponible avec un navigateur FB_CDP personnalisé. Connectez-vous plutôt directement dans ce navigateur."
 
-#: crates/core/src\fb.rs:368
+#: crates/core/src\fb.rs:369
 msgid "the backend browser is not running"
 msgstr "le navigateur du moteur n’est pas lancé"
 
-#: crates/core/src\fb.rs:404 crates/core/src\fb.rs:521
-#: crates/core/src\fb.rs:533
+#: crates/core/src\fb.rs:405 crates/core/src\fb.rs:522
+#: crates/core/src\fb.rs:534
 #, rust-format
 msgid "could not run {program}: {error}"
 msgstr "impossible d’exécuter {program} : {error}"
 
-#: crates/core/src\fb.rs:450
+#: crates/core/src\fb.rs:451
 msgid "no dedicated browser selected"
 msgstr "aucun navigateur dédié sélectionné"
 
-#: crates/core/src\fb.rs:480
+#: crates/core/src\fb.rs:481
 msgid "Sign-in was cancelled: the browser window was closed"
 msgstr "Connexion annulée : la fenêtre du navigateur a été fermée"
 
 #. TRANSLATORS: "Backend → Sign in" is a menu path; {error} is the backend's last error.
-#: crates/core/src\fb.rs:497
+#: crates/core/src\fb.rs:498
 #, rust-format
 msgid "Sign-in did not finish within 15 minutes. Use Backend → Sign in to retry. {error}"
 msgstr "La connexion ne s’est pas terminée dans les 15 minutes. Utilisez Moteur → Se connecter pour réessayer. {error}"
 
-#: crates/core/src\fb.rs:585
+#: crates/core/src\fb.rs:586
 #, rust-format
 msgid "fb exited with {status}"
 msgstr "fb s’est arrêté : {status}"
 
+#: crates/core/src\fb.rs:831
+#, rust-format
+msgid "Facebook accepted your post for {group}. It may still be publishing or waiting for admin approval. Check the group before posting it again."
+msgstr "Facebook a accepté votre publication pour {group}. Sa publication peut être en cours ou en attente d’approbation par un administrateur. Vérifiez le groupe avant de la publier à nouveau."
+
+#: crates/core/src\fb.rs:833
+#, rust-format
+msgid "Your post is published in {group}."
+msgstr "Votre publication est publiée dans {group}."
+
+#: crates/core/src\fb.rs:839
+#, rust-format
+msgid "Facebook may have published your post, but BlindFB could not confirm it. Check {group} before posting it again."
+msgstr "Facebook a peut-être publié votre publication, mais BlindFB n’a pas pu le confirmer. Vérifiez {group} avant de la publier à nouveau."
+
 #. TRANSLATORS: "My posts" is a view name in BlindFB.
-#: crates/core/src\fb.rs:821
+#: crates/core/src\fb.rs:846
 msgid "Facebook accepted your post and is still publishing it. It should appear in My posts soon. You do not need to post it again."
 msgstr "Facebook a accepté votre publication et est encore en train de la publier. Elle devrait bientôt apparaître dans Mes publications. Vous n’avez pas besoin de la publier à nouveau."
 
-#: crates/core/src\fb.rs:824
+#: crates/core/src\fb.rs:849
 msgid "Your post is published."
 msgstr "Votre publication est en ligne."
 
 #. TRANSLATORS: "My posts" is a view name in BlindFB.
-#: crates/core/src\fb.rs:834
+#: crates/core/src\fb.rs:859
 msgid "Facebook may have published your post, but BlindFB could not confirm it. Check My posts before posting it again."
 msgstr "Facebook a peut-être mis votre publication en ligne, mais BlindFB n’a pas pu le confirmer. Vérifiez Mes publications avant de la publier à nouveau."
+
+#: crates/core/src\fb.rs:890
+msgid "Facebook did not confirm that the group was created. Check your groups before trying again."
+msgstr "Facebook n’a pas confirmé la création du groupe. Vérifiez vos groupes avant de réessayer."
+
+#: crates/core/src\fb.rs:908
+msgid "Facebook did not confirm that the invitations were sent."
+msgstr "Facebook n’a pas confirmé l’envoi des invitations."
 
 #: crates/core/src\i18n.rs:172 crates/core/src\i18n.rs:173
 #, rust-format
@@ -3889,78 +4192,84 @@ msgstr "Cette liste de Reels a expiré. Actualisez-la pour continuer."
 msgid "Unknown reaction. Nothing was changed."
 msgstr "Réaction inconnue. Rien n’a été modifié."
 
-#: crates/core/src\posts.rs:105
+#: crates/core/src\posts.rs:113
 #, rust-format
 msgid "Invalid post detail: {field} must be text"
 msgstr "Détail de publication non valide : {field} doit être du texte"
 
-#: crates/core/src\posts.rs:112
+#: crates/core/src\posts.rs:120
 #, rust-format
 msgid "Invalid post detail: {field}"
 msgstr "Détail de publication non valide : {field}"
 
-#: crates/core/src\posts.rs:149 crates/core/src\posts.rs:587
+#: crates/core/src\posts.rs:157 crates/core/src\posts.rs:632
+#: crates/core/src\posts.rs:713
 msgid "The post reader returned invalid JSON"
 msgstr "Le lecteur de publication a renvoyé un JSON non valide"
 
-#: crates/core/src\posts.rs:154
+#: crates/core/src\posts.rs:162
 msgid "Invalid post detail: comments must be a list"
 msgstr "Détail de publication non valide : les commentaires doivent être une liste"
 
-#: crates/core/src\posts.rs:160
+#: crates/core/src\posts.rs:168
 msgid "Invalid post detail: empty or duplicate comment identity"
 msgstr "Détail de publication non valide : identifiant de commentaire vide ou en double"
 
-#: crates/core/src\posts.rs:192
+#: crates/core/src\posts.rs:200
 msgid "Invalid post detail: cyclic comment thread"
 msgstr "Détail de publication non valide : fil de commentaires circulaire"
 
-#: crates/core/src\posts.rs:196
+#: crates/core/src\posts.rs:204
 msgid "Invalid post detail: missing parent comment"
 msgstr "Détail de publication non valide : commentaire parent manquant"
 
-#: crates/core/src\posts.rs:409
+#: crates/core/src\posts.rs:226 crates/core/src\posts.rs:627
+#: crates/core/src\posts.rs:634
+msgid "Invalid comment identity"
+msgstr "Identité de commentaire non valide"
+
+#: crates/core/src\posts.rs:426
 msgid "This item has no supported Facebook post URL. Refresh the list and open the post again."
 msgstr "Cet élément n’a pas d’URL de publication Facebook prise en charge. Actualisez la liste et rouvrez la publication."
 
-#: crates/core/src\posts.rs:535
+#: crates/core/src\posts.rs:554
 msgid "Enter a comment before sending"
 msgstr "Saisissez un commentaire avant d’envoyer"
 
-#: crates/core/src\posts.rs:548
+#: crates/core/src\posts.rs:568
 msgid "Could not identify the selected comment editor"
 msgstr "Impossible d’identifier la zone de commentaire sélectionnée"
 
-#: crates/core/src\posts.rs:555
+#: crates/core/src\posts.rs:575
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically."
 msgstr "L’envoi n’a pas pu être confirmé. Actualisez avant de réessayer ; ne renvoyez pas automatiquement."
 
-#: crates/core/src\posts.rs:559
+#: crates/core/src\posts.rs:579
 #, rust-format
 msgid "Submission could not be confirmed. Refresh before trying again; do not resend automatically. {error}"
 msgstr "L’envoi n’a pas pu être confirmé. Actualisez avant de réessayer ; ne renvoyez pas automatiquement. {error}"
 
-#: crates/core/src\posts.rs:591 crates/core/src\posts.rs:609
+#: crates/core/src\posts.rs:717 crates/core/src\posts.rs:735
 msgid "Invalid participation questions"
 msgstr "Questions de participation non valides"
 
-#: crates/core/src\posts.rs:597
+#: crates/core/src\posts.rs:723
 msgid "Invalid participation question"
 msgstr "Question de participation non valide"
 
-#: crates/core/src\posts.rs:600 crates/core/src\posts.rs:604
+#: crates/core/src\posts.rs:726 crates/core/src\posts.rs:730
 msgid "Invalid participation choices"
 msgstr "Choix de participation non valides"
 
-#: crates/core/src\posts.rs:602
+#: crates/core/src\posts.rs:728
 msgid "Invalid participation choice"
 msgstr "Choix de participation non valide"
 
-#: crates/core/src\posts.rs:666 crates/core/src\posts.rs:670
+#: crates/core/src\posts.rs:792 crates/core/src\posts.rs:796
 msgid "Could not read Facebook's share audience. Nothing was shared."
 msgstr "Impossible de lire l’audience du partage sur Facebook. Rien n’a été partagé."
 
-#: crates/core/src\posts.rs:683
+#: crates/core/src\posts.rs:809
 msgid "Could not identify the share text box. Nothing was shared."
 msgstr "Impossible d’identifier la zone de texte du partage. Rien n’a été partagé."
 
@@ -4128,85 +4437,3 @@ msgstr "Désactivé (aucun raccourci)"
 #~ "Les flèches sur Volume de la vidéo changent son pourcentage.\n"
 #~ "Applications ou Maj+F10 sur le texte de la publication : commenter, réagir ou partager. Sur un commentaire : répondre ou aimer.\n"
 #~ "Ctrl+Entrée dans la zone de commentaire envoie. Échap ferme le lecteur et arrête la lecture."
-
-#: app/src\comment_identity_dialog.rs:26 app/src\comment_identity_dialog.rs:126 app/src\post_dialog.rs:935 app/src\post_dialog.rs:937
-msgid "Comment identity"
-msgstr "Identité des commentaires"
-
-#: app/src\comment_identity_dialog.rs:32
-msgid "Identity &details"
-msgstr "&Détails de l’identité"
-
-#: app/src\comment_identity_dialog.rs:35
-msgid "Identity details"
-msgstr "Détails de l’identité"
-
-#: app/src\comment_identity_dialog.rs:47
-msgid "Identity or &action"
-msgstr "Identité ou &action"
-
-#: app/src\comment_identity_dialog.rs:50
-msgid "Identity or action"
-msgstr "Identité ou action"
-
-#: app/src\comment_identity_dialog.rs:60
-#, rust-format
-msgid "{identity} (current, unavailable)"
-msgstr "{identity} (actuelle, indisponible)"
-
-#: app/src\comment_identity_dialog.rs:61
-#, rust-format
-msgid "{identity} (unavailable)"
-msgstr "{identity} (indisponible)"
-
-#: app/src\comment_identity_dialog.rs:105
-msgid "Continue changes your Facebook identity or completes its setup. Your comment draft is kept."
-msgstr "Continuer change votre identité Facebook ou termine sa configuration. Le brouillon de votre commentaire est conservé."
-
-#: app/src\comment_identity_dialog.rs:108
-msgid "&Continue"
-msgstr "&Continuer"
-
-#: app/src\comment_identity_dialog.rs:126
-msgid "Choose an action before continuing."
-msgstr "Choisissez une action avant de continuer."
-
-#: app/src\post_dialog.rs:707
-msgid "Loading comment identities…"
-msgstr "Chargement des identités des commentaires…"
-
-#: app/src\post_dialog.rs:939
-msgid "Change comment &identity…"
-msgstr "Changer l’&identité des commentaires…"
-
-#: app/src\post_dialog.rs:940
-msgid "Change comment identity"
-msgstr "Changer l’identité des commentaires"
-
-#: app/src\post_dialog.rs:1388
-msgid "Cancelling identity selection…"
-msgstr "Annulation du choix d’identité…"
-
-#: app/src\post_dialog.rs:1389
-msgid "Updating comment identity…"
-msgstr "Mise à jour de l’identité des commentaires…"
-
-#: app/src\post_dialog.rs:1659
-msgid "Facebook did not expose a comment identity for this post."
-msgstr "Facebook n’a pas fourni d’identité de commentaire pour cette publication."
-
-#: app/src\post_dialog.rs:1700
-msgid "Choose your comment identity. Your draft has been kept."
-msgstr "Choisissez votre identité pour les commentaires. Votre brouillon est conservé."
-
-#: app/src\post_dialog.rs:1712
-msgid "Identity selection cancelled. Your draft has been kept."
-msgstr "Choix d’identité annulé. Votre brouillon est conservé."
-
-#: app/src\post_dialog.rs:1713
-msgid "Comment identity refreshed. Your draft has been kept."
-msgstr "Identité des commentaires actualisée. Votre brouillon est conservé."
-
-#: crates/core/src\posts.rs:226 crates/core/src\posts.rs:627 crates/core/src\posts.rs:634
-msgid "Invalid comment identity"
-msgstr "Identité de commentaire non valide"
