@@ -109,7 +109,7 @@ function fixture(mode = false) {
   const makeEditor = (parent, name = 'Write a comment') => box(parent, name, parent !== null);
   const replyBox = name => box(null, name, true);
   // Pressing Reply focuses the given box, and Facebook may prefill it with a name.
-  const replyAction = (owner, target, prefill = '') => ({closest: () => owner, getAttribute: () => 'Reply', click() { target.innerText = prefill; focus = target; }});
+  const replyAction = (owner, target, prefill = '', text = 'Reply') => ({closest: () => owner, getAttribute: () => text, click() { target.innerText = prefill; focus = target; }});
   let named = null, collapsed = false;
   const F = {
     canon: href => {const url = new URL(href); return url.pathname;},
@@ -315,6 +315,17 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   const right = f.article('3', parent); right.lines[2] = 'hello';
   assert.equal(JSON.parse(await f.api.confirm()).comments.find(c => c.id === '3').parent_id, '1');
 
+  // Michal's Czech/Slovak Facebook labels the Reply button Odpovědět / Odpovedať:
+  // prepare() must find it as the comment's unique Reply action (it previously
+  // matched nothing and threw "no unique Reply action").
+  for (const word of ['Odpovědět', 'Odpovedať']) {
+    f = fixture(); parent = f.article('1');
+    const czBox = f.makeEditor(parent);
+    parent.actions = [f.replyAction(parent, czBox, '', word)];
+    await f.api.initialize('https://www.facebook.com/a/posts/1');
+    assert.equal(await f.api.prepare('1', 'hello'), '"hello"', word);
+  }
+
   // Live layout: reply boxes sit beside the comments, outside every article, one per open thread.
   f = fixture(); parent = f.article('1');
   const replyBox = f.replyBox('Reply as Me');
@@ -498,6 +509,10 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   // and the Hide forms must not (they would collapse replies again).
   for (const text of ['Zobrazit odpovědi', 'Zobrazit 1 odpověď', 'Zobrazit 3 odpovědi', 'Zobrazit 12 odpovědí', 'Zobrazit další odpovědi', 'Zobrazit více odpovědí', 'Zobrazit předchozí odpovědi', 'Zobraziť odpovede', 'Zobraziť 1 odpoveď', 'Zobraziť 4 odpovede', 'Zobraziť 12 odpovedí', 'Zobraziť ďalšie odpovede', 'Zobraziť viac odpovedí', 'Zobraziť predchádzajúce odpovede']) assert.ok(W.viewReplies.test(text), text);
   for (const text of ['Skrýt odpovědi', 'Skryť odpovede', 'Zobrazit komentáře', 'Odpovědět', 'Odpovedať']) assert.ok(!W.viewReplies.test(text), text);
+  // Those two words are the Reply action itself: the reply patterns must match
+  // them exactly, and must not match the reply-count nouns.
+  for (const text of ['Odpovědět', 'Odpovedať']) assert.ok(W.reply.test(text), text);
+  for (const text of ['Zobrazit odpovědi', 'Odpovědi', 'Odpovedať sa']) assert.ok(!W.reply.test(text), text);
   for (const text of ['View more comments', 'View previous comments', 'View 10 comments', 'View 5 more comments', 'Voir plus de commentaires', 'Afficher plus de commentaires', 'Xem thêm bình luận', 'Zobrazit další komentáře', 'Zobrazit 7 komentářů', 'Zobrazit 1 komentář', 'Zobraziť ďalšie komentáre', 'Zobraziť 7 komentárov']) assert.ok(W.viewMoreComments.test(text), text);
   for (const text of ['Hide comments', 'Most relevant', 'Newest comments', 'View replies', 'Zobrazit odpovědi']) assert.ok(!W.viewMoreComments.test(text), text);
   // Issue #30: later top-level comments load on read too, in Michal's language.

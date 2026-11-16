@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.72 - 2026-11-16
+
+Replying to a comment works again on Czech and Slovak Facebook. The Reply
+button there reads Odpovědět / Odpovedať, which BlindFB did not recognise,
+so every reply failed with "The selected comment has no unique Reply
+action. Nothing was sent." Issue #30 taught those languages to the "View
+replies" and "View more comments" buttons but not to the Reply action
+itself; the Reply patterns and the comment action words now include them,
+with tests. Thanks to Michal for reporting it.
+
 ## v0.7.70 - 2026-11-16
 
 The Search dialog gains a Clear field button next to Search and Cancel.

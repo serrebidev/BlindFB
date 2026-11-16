@@ -1,5 +1,5 @@
 // Facebook's own words for every button, badge and time BlindFB looks for, in each
-// language seen so far (English, French, Vietnamese, Russian, Estonian). Facebook mixes languages on one
+// language seen so far (English, French, Vietnamese, Russian, Estonian, Czech, Slovak). Facebook mixes languages on one
 // page — a French page can keep an English Share button — so every pattern accepts
 // all of them. French values come from docs/fr-labels.md. Facebook writes the
 // apostrophe as ’ (U+2019); patterns accept ' as well.
@@ -31,7 +31,7 @@
     seeMore: exact('See more|Xem thêm|Voir plus|En voir plus|Afficher la suite'),
     // Words in a comment that are its actions, not its text.
     // "See original (Russian)": the language in brackets is optional.
-    commentAction: exact(`Like|Reply|Edited|Нравится|Ответить|Отредактировано|See translation|See original(?: [(][^)]+[)])?|Hide translation|Rate this translation|Translation unavailable|Thích|Trả lời|Xem bản dịch|Xem bản gốc|J${A}aime|Répondre|Modifié|Voir la traduction|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction`),
+    commentAction: exact(`Like|Reply|Edited|Нравится|Ответить|Отредактировано|See translation|See original(?: [(][^)]+[)])?|Hide translation|Rate this translation|Translation unavailable|Thích|Trả lời|Xem bản dịch|Xem bản gốc|J${A}aime|Répondre|Modifié|Voir la traduction|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Odpovědět|Odpovedať`),
     // Facebook's own translation toggle on a post, a caption or a comment.
     seeTranslation: exact('See translation|Voir la traduction|Xem bản dịch'),
     hideTranslation: exact(`See originals?(?: [(][^)]+[)])?|Hide translation|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Xem bản gốc|Ẩn bản dịch`),
@@ -43,8 +43,12 @@
     commentLike: exact(`Like|Thích|J${A}aime|Нравится|Meeldib|Unlike|Je n${A}aime plus|${REMOVE}(?:${ANY_REACTION})|Удалить реакцию ["«]?(?:${ANY_REACTION})["»]?`),
     // The same button before any reaction.
     commentUnliked: exact(`Like|Thích|J${A}aime|Нравится|Meeldib`),
-    reply: exact('Reply|Trả lời|Répondre|Ответить'),
-    replyStart: /^(?:Reply|Trả lời|Répondre|Ответить)(?!\p{L})/iu,
+    // Czech and Slovak (Michal's languages): issue #30 taught them to viewReplies
+    // and viewMoreComments but never to the Reply action itself, so on his Czech
+    // Facebook prepare() found no Reply button and refused to send ("The selected
+    // comment has no unique Reply action") — reported via blindDL issue #4.
+    reply: exact('Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať'),
+    replyStart: /^(?:Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať)(?!\p{L})/iu,
     // Buttons that load a comment's hidden replies: "View replies", "View 3 replies",
     // "View more replies". Never "Hide replies" — that would collapse them again.
     // Czech and Slovak (issue #30, Michal's languages, already taught to the audience
