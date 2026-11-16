@@ -890,6 +890,10 @@ pub fn parse_created_group(output: &str) -> Result<String, String> {
     group.ok_or_else(|| t("Facebook did not confirm that the group was created. Check your groups before trying again."))
 }
 
+pub fn group_photos_args(group: &str, n: u32) -> Vec<String> {
+    vec!["group-photos".to_owned(), group.to_owned(), "-n".to_owned(), n.to_string()]
+}
+
 pub fn group_invite_args(group: &str, names: &[String]) -> Vec<String> {
     let mut args = vec!["group-invite".to_owned(), group.to_owned()];
     args.extend(names.iter().cloned());
