@@ -7,6 +7,8 @@ A vibe-coded, screen-reader-friendly Facebook and Messenger client for Windows, 
 
 **Questions, bugs, or release news?** Join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects), the fastest place to get help.
 
+More serrebi projects: [projects.serrebiradio.com](https://projects.serrebiradio.com)
+
 BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-lee/facebook-cli), which drives a dedicated browser profile that stays logged in to your Facebook account. BlindFB runs `fb` for everything and presents its output in a keyboard-first window built on [wxDragon](https://github.com/trypsynth/wxDragon): native lists, menus and dialogs, the real platform widgets your screen reader already knows.
 
 ## Features
@@ -117,3 +119,7 @@ BlindFB is an unofficial client and is not affiliated with Meta.
 ## Community and support
 
 Report bugs and request features in [Issues](https://github.com/serrebidev/BlindFB/issues). For questions, feedback, and release news, join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects).
+
+## Credits
+
+See [CREDITS.md](CREDITS.md) for where the ideas behind this project came from, and the third-party projects it builds on.
