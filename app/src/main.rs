@@ -21,7 +21,10 @@
 //! any other posts here.
 
 mod chat_dialog;
+mod create_group_dialog;
 mod group_dialog;
+mod group_picker;
+mod invite_dialog;
 mod player;
 mod participation_dialog;
 mod comment_identity_dialog;
@@ -44,7 +47,8 @@ use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
     chats_args, comment_args, delete_args, events_args, facebook_share_url, feed_args,
-    follow_args, friend_add_args, friends_args, group_apply_args, group_join_args, group_leave_args,
+    follow_args, friend_add_args, friends_args, group_apply_args, group_invite_args, group_join_args,
+    group_leave_args,
     groups_args, link_url, listing_message_args, marketplace_args, msg_react_args, notifs_args,
     pages_args, parse_feed, parse_notifications, parse_records, places_args, post_args,
     post_done_message, post_unconfirmed_message,
@@ -93,6 +97,8 @@ const ID_PLACES_VIEW: i32 = 10099;
 const ID_SAVED_VIEW: i32 = 10131;
 const ID_FOLLOW: i32 = 10132;
 const ID_UNFOLLOW: i32 = 10133;
+const ID_NEW_GROUP: i32 = 10134;
+const ID_INVITE: i32 = 10135;
 const ID_TRAY_TOGGLE: i32 = 10110;
 const ID_TRAY_HOTKEY: i32 = 10111;
 const ID_GROUP_POSTS: i32 = 10112;
@@ -317,6 +323,9 @@ impl View {
 
 enum Tag {
     Post,
+    GroupPost(String),
+    GroupCreated(String),
+    GroupInvited { group: String },
     List {
         view: View,
         request: u64,
@@ -913,6 +922,7 @@ fn run() {
         jobs: job_tx.clone(),
         done_tx,
         post_reader: Rc::new(RefCell::new(None)),
+        group_modal: Rc::new(RefCell::new(None)),
         group_window: Arc::new(Mutex::new(None)),
         chat_window: Arc::new(Mutex::new(None)),
         latest_list,
@@ -1155,6 +1165,7 @@ struct Ui {
     jobs: Sender<Job>,
     done_tx: Sender<Done>,
     post_reader: Rc<RefCell<Option<post_dialog::PostReader>>>,
+    group_modal: Rc<RefCell<Option<Dialog>>>,
     group_window: Arc<Mutex<Option<group_dialog::GroupWindow>>>,
     chat_window: Arc<Mutex<Option<chat_dialog::ChatWindow>>>,
     /// The list request the user is waiting for; the worker skips older ones.
@@ -1723,6 +1734,11 @@ fn build_menus(frame: &Frame) {
             ID_NEW_POST_IMAGES,
             &shortcuts_dialog::menu_label(ID_NEW_POST_IMAGES, t("New post with &media…")),
             &t("Write a post with photos and videos attached"),
+        )
+        .append_item(
+            ID_NEW_GROUP,
+            &shortcuts_dialog::menu_label(ID_NEW_GROUP, t("New &group…")),
+            &t("Create a Facebook group"),
         )
         .append_item(
             ID_SELL,
@@ -3484,13 +3500,16 @@ fn refresh_controls(ui: &Ui) {
 /// opens over the group and chat windows, so it owns input while it lasts.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ModalKind {
+    GroupForm,
     Reader,
     Group,
     Chat,
 }
 
-fn modal_kind(reader: bool, group: bool, chat: bool) -> Option<ModalKind> {
-    if reader {
+fn modal_kind(form: bool, reader: bool, group: bool, chat: bool) -> Option<ModalKind> {
+    if form {
+        Some(ModalKind::GroupForm)
+    } else if reader {
         Some(ModalKind::Reader)
     } else if group {
         Some(ModalKind::Group)
@@ -3508,6 +3527,7 @@ fn modal_kind(reader: bool, group: bool, chat: bool) -> Option<ModalKind> {
 /// widget is a Copy handle, so this copies it out and holds no borrow
 /// while the caller blocks on the popup.
 fn modal_dialog(ui: &Ui) -> Option<Dialog> {
+    let form = *ui.group_modal.borrow();
     let reader = ui
         .post_reader
         .borrow()
@@ -3525,7 +3545,8 @@ fn modal_dialog(ui: &Ui) -> Option<Dialog> {
         .unwrap()
         .as_ref()
         .map(|window| window.dialog());
-    match modal_kind(reader.is_some(), group.is_some(), chat.is_some()) {
+    match modal_kind(form.is_some(), reader.is_some(), group.is_some(), chat.is_some()) {
+        Some(ModalKind::GroupForm) => form,
         Some(ModalKind::Reader) => reader,
         Some(ModalKind::Group) => group,
         Some(ModalKind::Chat) => chat,
@@ -3904,16 +3925,23 @@ fn apply_done(ui: &Ui, done: Done) {
                 show_error(parent, &e, &t("Debug report"));
             }
         },
-        Tag::Post => match done.result {
+        tag @ (Tag::Post | Tag::GroupPost(_)) => match done.result {
             Ok(text) => {
-                let message = post_done_message(&text);
+                let message = match &tag {
+                    Tag::GroupPost(group) => blindfb_core::fb::group_post_done_message(&text, group),
+                    _ => post_done_message(&text),
+                };
                 set_details(ui, &message, None);
                 ui.status(&message);
                 alert_done(&message);
             }
             Err(e) => {
                 ui.status(&t("Error"));
-                match post_unconfirmed_message(&e) {
+                let warning = match &tag {
+                    Tag::GroupPost(group) => blindfb_core::fb::group_post_unconfirmed_message(&e, group),
+                    _ => post_unconfirmed_message(&e),
+                };
+                match warning {
                     Some(message) => show_warning(parent, message, &t("New post")),
                     None => show_error(parent, &e, "BlindFB"),
                 }
@@ -3976,6 +4004,56 @@ fn apply_done(ui: &Ui, done: Done) {
             Err(e) => {
                 ui.status(&t("Error"));
                 show_error(parent, &e, &t("Join group"));
+            }
+        },
+        Tag::GroupCreated(name) => match done.result {
+            Ok(output) => match blindfb_core::fb::parse_created_group(&output) {
+                Ok(url) => {
+                    ui.state.borrow_mut().cache.remove(&View::Groups);
+                    let message = tf!("Created group {name}.", name = name);
+                    set_details(ui, &format!("{message}\n{url}"), None);
+                    ui.status(&message);
+                    alert_done(&message);
+                    if ui.state.borrow().view == View::Groups {
+                        load_view(ui, View::Groups);
+                    }
+                }
+                Err(error) => {
+                    ui.status(&t("Group creation could not be confirmed."));
+                    show_warning(parent, error, &t("New group"));
+                }
+            },
+            Err(error) => {
+                ui.status(&t("Group could not be created."));
+                if error.contains("group may have been created") || error.contains("timed out after") {
+                    show_warning(parent,
+                        t("Facebook may have created your group, but BlindFB could not confirm it. Check your groups before trying again."),
+                        &t("New group"));
+                } else {
+                    show_error(parent, error, &t("New group"));
+                }
+            }
+        },
+        Tag::GroupInvited { group } => match done.result {
+            Ok(output) => match blindfb_core::fb::parse_invited(&output) {
+                Ok(count) => {
+                    let message = tf!(
+                        "Invited {count} friend(s) to {group}.",
+                        count = count,
+                        group = group,
+                    );
+                    set_details(ui, &message, None);
+                    ui.status(&message);
+                    alert_done(&message);
+                }
+                Err(error) => {
+                    ui.status(&t("Invitations could not be confirmed."));
+                    show_warning(parent, error, &t("Invite friends"));
+                }
+            },
+            Err(error) => {
+                ui.status(&t("Invitations could not be sent."));
+                show_error(parent, error, &t("Invite friends"));
             }
         },
         Tag::GroupLeave => match done.result {
@@ -5211,6 +5289,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         },
         ID_NEW_POST => new_post(ui, false),
         ID_NEW_POST_IMAGES => new_post(ui, true),
+        ID_NEW_GROUP => create_group(ui),
+        ID_INVITE => invite_selected(ui),
         ID_SELL => sell_dialog(ui),
         ID_GROUP_JOIN => group_join_selected(ui),
         ID_GROUP_LEAVE => group_leave_selected(ui),
@@ -5279,7 +5359,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             let dialog = MessageDialog::builder(
                 &ui.frame,
                 &format!(
-                    "{}\n{}",
+                    "{}\n{}\n{}\n{}",
                     t("Ctrl+O: open a Facebook post, video or reel link.\n\
                  Enter on an item: open it. Applications or Shift+F10: item actions.\n\
                  End then Enter on Load more posts or Load more reels loads the next batch.\n\
@@ -5294,6 +5374,8 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
                  Tab to Comment identity to read your current group identity and restrictions. Change comment identity opens Facebook's available choices and nickname setup. Continue applies the choice; Cancel keeps your draft and reply target.\n\
                  Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."),
+                    t("File, New group: choose a group name, privacy and visibility, then Create group. Tab moves between fields; Escape cancels."),
+                    t("Groups list, Invite friends: enter each friend's full name on its own line; names must match exactly or no invitations are sent."),
                     t("File, Keyboard shortcuts: change any of these shortcuts, or give any menu command one.")
                 ),
                 &t("Keyboard commands"),
@@ -5461,6 +5543,7 @@ fn show_item_menu(ui: &Ui) {
                     &[
                         (ID_OPEN, t("&Open group")),
                         (ID_GROUP_JOIN, t("&Join group")),
+                        (ID_INVITE, t("&Invite friends…")),
                         (ID_WEB_POST, t("Open group on &Facebook (web)")),
                         (ID_COPY_TEXT, t("Cop&y text")),
                     ],
@@ -5618,6 +5701,7 @@ fn show_item_menu(ui: &Ui) {
             &menu,
             &[
                 (ID_OPEN, t("&Open group")),
+                (ID_INVITE, t("&Invite friends…")),
                 (ID_COPY_LINK, t("Copy &link")),
                 (ID_WEB_PERSON, t("Open group on &Facebook (web)")),
                 (0, String::new()),
@@ -5673,6 +5757,36 @@ fn is_video_path(path: &str) -> bool {
         .any(|ext| lower.ends_with(ext))
 }
 
+fn create_group(ui: &Ui) {
+    let Some((name, privacy, hidden)) = create_group_dialog::show(ui) else { return };
+    ui.send(Job {
+        task: Task::Fb(blindfb_core::fb::group_create_args(&name, privacy, hidden), None),
+        tag: Tag::GroupCreated(name),
+    });
+}
+
+fn invite_selected(ui: &Ui) {
+    let Some((_, record)) = selected(ui) else {
+        return;
+    };
+    let group = record.field(1).to_owned();
+    if group.is_empty() {
+        ui.status(&t("This group row has no link, so nobody can be invited."));
+        return;
+    }
+    let Some(names) = invite_dialog::show(ui, &group) else { return };
+    let name = record.field(0).to_owned();
+    ui.status(&tf!(
+        "Inviting {n} friend(s) to {name}…",
+        n = names.len(),
+        name = name
+    ));
+    ui.send(Job {
+        task: Task::Fb(group_invite_args(&group, &names), None),
+        tag: Tag::GroupInvited { group: name },
+    });
+}
+
 fn new_post(ui: &Ui, with_media: bool) {
     let Some(text) = prompt_long_text(&ui.frame, t("Post text:"), &t("New post")) else {
         return;
@@ -5688,18 +5802,29 @@ fn new_post(ui: &Ui, with_media: bool) {
         images = picked_images;
         videos = picked_videos;
     }
-    let labels = [t("Public"), t("Friends"), t("Only me")];
+    let labels = [t("Public"), t("Friends"), t("Only me"), t("Groups")];
     let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     let dialog =
         SingleChoiceDialog::builder(&ui.frame, &t("Who can see this?"), &t("Audience"), &labels)
             .build();
     if dialog.show_modal() != ID_OK {
+        dialog.destroy();
         return;
     }
-    let audience = match dialog.get_selection() {
+    let selection = dialog.get_selection();
+    dialog.destroy();
+    let audience = match selection {
         0 => Some("public"),
         1 => Some("friends"),
         2 => Some("me"),
+        3 => {
+            let Some((name, url)) = group_picker::show(ui) else { return };
+            ui.send(Job {
+                task: Task::Fb(blindfb_core::fb::group_post_args(&text, &url, &images, &videos), None),
+                tag: Tag::GroupPost(name),
+            });
+            return;
+        }
         _ => return,
     };
     ui.send(Job {
@@ -6184,11 +6309,13 @@ mod tests {
     fn modal_priority_is_reader_then_group_then_chat() {
         // The reader opens over the group and chat windows, so it owns
         // input while it lasts; popups must parent to the topmost modal.
-        assert_eq!(modal_kind(true, true, true), Some(ModalKind::Reader));
-        assert_eq!(modal_kind(true, false, false), Some(ModalKind::Reader));
-        assert_eq!(modal_kind(false, true, true), Some(ModalKind::Group));
-        assert_eq!(modal_kind(false, false, true), Some(ModalKind::Chat));
-        assert_eq!(modal_kind(false, false, false), None);
+        assert_eq!(modal_kind(true, true, true, true), Some(ModalKind::GroupForm));
+        assert_eq!(modal_kind(true, false, false, false), Some(ModalKind::GroupForm));
+        assert_eq!(modal_kind(false, true, true, true), Some(ModalKind::Reader));
+        assert_eq!(modal_kind(false, true, false, false), Some(ModalKind::Reader));
+        assert_eq!(modal_kind(false, false, true, true), Some(ModalKind::Group));
+        assert_eq!(modal_kind(false, false, false, true), Some(ModalKind::Chat));
+        assert_eq!(modal_kind(false, false, false, false), None);
     }
 
     #[test]

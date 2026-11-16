@@ -4,6 +4,22 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.67 - 2026-11-15
+
+Choose Groups in the new-post Audience dialog to publish to one of your joined
+groups. The native picker supports keyboard navigation, type-ahead, loading more
+groups, and retrying a failed read. It loads independently of the main groups list.
+Photos and videos use the same posting flow. Publication messages name the group
+and explain when a post may be waiting for admin approval or needs checking before
+you retry.
+
+File, New group creates a Facebook group with a name plus Public or Private
+privacy (Private can also be Visible or Hidden); creation is only confirmed by
+landing on the new group's own page, and no invitations are sent automatically.
+The Groups list context menu invites friends to a joined group by exact full
+name, one per line; a name must match exactly one friend or no invitations are
+sent. French, Russian, and Estonian include all of the new controls and messages.
+
 ## v0.7.66 - 2026-11-15
 
 Copied text no longer vanishes when BlindFB closes. Every copy in

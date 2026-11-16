@@ -37,6 +37,7 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("file", ID_OPEN_LINK, "open_link", "Ctrl+O"),
         ("file", ID_NEW_POST, "new_post", "Ctrl+N"),
         ("file", ID_NEW_POST_IMAGES, "new_post_media", ""),
+        ("file", ID_NEW_GROUP, "new_group", ""),
         ("file", ID_SELL, "sell", ""),
         ("file", ID_SEARCH, "search", "Ctrl+/"),
         ("file", ID_OCR, "ocr", ""),
