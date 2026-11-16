@@ -584,11 +584,16 @@
     const button = like();
     if (!button) throw Error('This reel has no Like button. Nothing was changed.');
     if (reaction(button) === kind) return read();
-    if (kind === 'none') button.click();
+    if (kind === 'none' || kind === 'like' && reaction(button) === 'none') button.click();
     else {
-      const open = buttonLabeled(scope, W.react).filter(element => !element.closest(ARTICLE));
-      if (open.length !== 1) throw Error('This reel has no unique React button. Nothing was changed.');
-      open[0].click();
+      // Facebook mounts its reaction menu trigger only while Like has keyboard focus.
+      button.focus({preventScroll: true});
+      const open = await F.waitFor(() => {
+        const found = buttonLabeled(scope, W.react).filter(element => !element.closest(ARTICLE));
+        return found.length === 1 ? found[0] : null;
+      }, 3000);
+      if (!open) throw Error('This reel has no unique React button. Nothing was changed.');
+      open.click();
       const choice = await F.waitFor(() => {
         const dialog = [...document.querySelectorAll('[role=dialog]')].find(element => F.visible(element) && W.reactionsDialog.test(label(element)));
         const found = dialog && buttonLabeled(dialog, W.reactionName(kind));

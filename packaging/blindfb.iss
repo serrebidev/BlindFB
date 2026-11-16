@@ -3,7 +3,7 @@
 ; the folder the in-app updater already replaces files in.
 ; The version comes from the release binary, so there is nothing to bump here.
 
-#define AppExe "..\target\release\blindfb.exe"
+#define AppExe "..\package-target\release\blindfb.exe"
 #define AppVersion GetStringFileInfo(AppExe, "ProductVersion")
 
 [Setup]

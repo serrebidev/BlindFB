@@ -137,10 +137,62 @@ function fixture(mode = false) {
   const window = {__fb: F};
   vm.runInNewContext(source, {window, document, location: {href: 'https://www.facebook.com/a/posts/1'}, NodeFilter: {SHOW_TEXT: 4, SHOW_ELEMENT: 1}, URL, innerHeight: 600,
     getSelection: () => ({selectAllChildren() {}, collapseToEnd() { collapsed = true; }})});
-  return {api: window.__blindfbPost, article, makeEditor, replyBox, replyAction, remove: e => {e.isConnected = false;}, snapshot: value => { named = value; }, get focused() {return focus;}, get collapsed() {return collapsed;}, set comments(value) {comments = value;}, get paused() {return paused;}};
+  return {api: window.__blindfbPost, document, scope: isReel ? reelCard : root, article, makeEditor, replyBox, replyAction, remove: e => {e.isConnected = false;}, snapshot: value => { named = value; }, get focused() {return focus;}, get collapsed() {return collapsed;}, set comments(value) {comments = value;}, get paused() {return paused;}};
+}
+
+// Facebook's CometUFIReactButtonBase exposes React only while the Like button has
+// keyboard focus, and calls it "Change <reaction> reaction" after a selection.
+function reactionFixture({watch = false, selected = 'none', focusOnly = false, duplicate = false, confirm = true} = {}) {
+  const f = fixture(watch || 'reel');
+  let opened = false, focused = false, clicks = 0;
+  const title = kind => kind[0].toUpperCase() + kind.slice(1);
+  const button = {closest: () => null, getAttribute: name => name === 'aria-label'
+    ? selected === 'none' ? watch ? "React with Like to Post author's post" : 'Like, 434 reactions'
+      : 'Remove ' + title(selected) + (watch ? " from Post author's post" : ', 435 reactions')
+    : null,
+    focus() { focused = true; },
+    click() { clicks++; if (confirm) selected = selected === 'none' ? 'like' : 'none'; }};
+  const trigger = {closest: () => null, get visible() {return !focusOnly || focused;},
+    getAttribute: name => name === 'aria-label' ? selected === 'none' ? watch ? "React to Post author's post" : 'React' : 'Change ' + title(selected) + ' reaction' : null,
+    click() { opened = true; }};
+  const choices = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'].map(kind => ({
+    getAttribute: () => title(kind), click() { clicks++; if (confirm) selected = kind; opened = false; }
+  }));
+  const picker = {getAttribute: () => 'Reactions', querySelectorAll: () => choices};
+  const query = f.scope.querySelectorAll;
+  f.scope.querySelectorAll = selector => selector === '[role=button][aria-label]'
+    ? [...query(selector), button, trigger, ...(duplicate ? [trigger] : [])]
+    : selector === '[data-ad-rendering-role=like_button]' ? [button] : query(selector);
+  const dialogs = f.document.querySelectorAll;
+  f.document.querySelectorAll = selector => selector === '[role=dialog]' && opened ? [picker] : dialogs(selector);
+  return {...f, get selected() {return selected;}, get clicks() {return clicks;}};
 }
 
 (async () => {
+  for (const [text, expected] of [
+    ['React with Like to Love\'s post', 'none'], ["Remove Love from Like's post", 'love'],
+    ['Réagir avec J’aime à la publication de X', 'none'], ['Retirer J’adore de la publication de X', 'love'],
+    ['Поставить Нравится публикации X', 'none'], ['Удалить Супер из публикации X', 'love'],
+    ['Удалить реакцию "Нравится"', 'like'], ['Eemalda Armastan kasutaja X postitusest', 'love']
+  ]) assert.equal(W.reelReaction(text, null), expected, text);
+  for (const options of [{focusOnly: true}, {selected: 'love'}, {watch: true}, {watch: true, selected: 'love'}]) {
+    const f = reactionFixture(options);
+    await f.api.initialize(options.watch ? 'https://www.facebook.com/page/videos/123/' : 'https://www.facebook.com/reel/123/');
+    await f.api.reelReact('wow');
+    assert.equal(f.selected, 'wow', JSON.stringify(options));
+    assert.equal(f.clicks, 1);
+    await f.api.reelReact('wow');
+    assert.equal(f.clicks, 1, 'repeating a confirmed reaction must not toggle it');
+    await f.api.reelReact('none');
+    assert.equal(f.selected, 'none');
+  }
+  const uncertain = reactionFixture({confirm: false});
+  await uncertain.api.initialize('https://www.facebook.com/reel/123/');
+  await assert.rejects(uncertain.api.reelReact('like'), /did not confirm the reaction/);
+  const duplicateReaction = reactionFixture({duplicate: true});
+  await duplicateReaction.api.initialize('https://www.facebook.com/reel/123/');
+  await assert.rejects(duplicateReaction.api.reelReact('love'), /no unique React button/);
+  assert.equal(duplicateReaction.clicks, 0, 'ambiguous controls must never change a reaction');
   const ownState = JSON.parse(await fixture().api.initialize('https://www.facebook.com/a/posts/1'));
   assert.equal(ownState.reaction_label, "Remove Love from Post author's post");
   assert.equal(ownState.reaction_pressed, true);

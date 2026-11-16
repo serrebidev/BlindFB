@@ -1,4 +1,5 @@
 /target
+/package-target
 /dist
 *.user
 # Built from the .po catalogs by app/build.rs

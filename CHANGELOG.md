@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.69 - 2026-11-16
+
+Reactions on Reels and video posts now find Facebook's reaction controls after
+they receive focus, including the renamed control for changing an existing
+reaction. Like works directly without opening the reaction picker, and an
+expired reader can recover before setting the requested reaction again.
+
+Load more in My posts continues the existing profile scan instead of loading
+the profile from the beginning for every batch. Posts read beyond the requested
+count are retained for the next batch. Refresh starts a fresh scan.
+
+The Windows installer now reads the executable from the packaging build folder,
+fixing the release failure after packaging builds moved to their own folder.
+
 ## v0.7.68 - 2026-11-15
 
 The group window gains a Photos list: every photo in the group's Media

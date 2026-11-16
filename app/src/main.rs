@@ -2186,7 +2186,13 @@ fn load_view(ui: &Ui, view: View) {
         load_reels(ui, source.clone(), false);
     } else if let Some(args) = cached
         .as_ref()
-        .map(|(_, _, args)| args.clone())
+        .map(|(_, _, args)| {
+            let mut args = args.clone();
+            if view == View::MyPosts {
+                args.retain(|arg| arg != "--continue");
+            }
+            args
+        })
         .or_else(|| default_args(&view))
     {
         load_args(ui, view, args);
@@ -2539,6 +2545,9 @@ fn more_args(
             let index = args.iter().position(|arg| arg == "-n")? + 1;
             let count: u32 = args.get(index)?.parse().ok()?;
             args[index] = count.checked_add(PAGE)?.to_string();
+            if *view == View::MyPosts && !args.iter().any(|arg| arg == "--continue") {
+                args.push("--continue".to_owned());
+            }
             Some(args)
         }
         _ => None,
@@ -6930,6 +6939,21 @@ mod tests {
         assert!(requests.finish(&View::Feed, fresh));
         assert!(!requests.finish(&View::Feed, old));
         assert!(requests.current(&View::Feed, fresh));
+    }
+
+    #[test]
+    fn my_posts_more_continues_the_profile_scan_and_refresh_starts_fresh() {
+        let initial = posts_args("me", MY_POSTS_FIRST, true);
+        assert!(!initial.iter().any(|arg| arg == "--continue"));
+        let mut expected = posts_args("me", MY_POSTS_FIRST + PAGE, true);
+        expected.push("--continue".to_owned());
+        let next = more_args(&View::MyPosts, &initial, MY_POSTS_FIRST as usize, false).unwrap();
+        assert_eq!(next, expected);
+        let third = more_args(&View::MyPosts, &next, (MY_POSTS_FIRST + PAGE) as usize, false).unwrap();
+        assert_eq!(third.iter().filter(|arg| *arg == "--continue").count(), 1);
+        assert_eq!(third[third.iter().position(|arg| arg == "-n").unwrap() + 1], (MY_POSTS_FIRST + PAGE * 2).to_string());
+        assert_eq!(refresh_args(&View::MyPosts, &third), Some(initial.clone()));
+        assert_eq!(more_args(&View::MyPosts, &initial, 5, true), None);
     }
 
     #[test]
