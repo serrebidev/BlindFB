@@ -277,7 +277,7 @@ impl PostReader {
             self.message(ui, &t("Nothing to copy yet."));
             return;
         }
-        let message = if Clipboard::get().set_text(&text) {
+        let message = if crate::copy_to_clipboard(&text) {
             t("Copied.")
         } else {
             t("Could not copy.")
@@ -308,7 +308,7 @@ impl PostReader {
             self.message(ui, &t("Nothing to copy yet."));
             return;
         }
-        let message = if Clipboard::get().set_text(&text) {
+        let message = if crate::copy_to_clipboard(&text) {
             t("Post and comments copied.")
         } else {
             t("Could not copy.")
@@ -614,7 +614,7 @@ impl PostReader {
                     self.message(ui, &t("The post has not loaded yet. Try again in a moment."));
                     return;
                 }
-                let copied = Clipboard::get().set_text(&self.post.get_value());
+                let copied = crate::copy_to_clipboard(&self.post.get_value());
                 self.message(
                     ui,
                     &if copied {
@@ -625,7 +625,7 @@ impl PostReader {
                 );
             }
             ID_COPY_POST_LINK => {
-                let copied = Clipboard::get().set_text(&self.state.borrow().target);
+                let copied = crate::copy_to_clipboard(&self.state.borrow().target);
                 self.message(
                     ui,
                     &if copied {
@@ -743,7 +743,7 @@ impl PostReader {
                 self.message(ui, &tf!("Replying to {author}.", author = author));
             }
             ID_COPY => {
-                let message = if Clipboard::get().set_text(&format!("{author}: {text}")) {
+                let message = if crate::copy_to_clipboard(&format!("{author}: {text}")) {
                     t("Comment copied.")
                 } else {
                     t("Could not copy the comment.")

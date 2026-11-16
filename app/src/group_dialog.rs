@@ -552,14 +552,14 @@ impl GroupWindow {
             }
             ID_POST_COPY => {
                 let text = super::display_for(&View::Feed, &record);
-                if Clipboard::get().set_text(&text) {
+                if crate::copy_to_clipboard(&text) {
                     self.note(&t("Text copied."));
                 }
                 return;
             }
             ID_POST_COPY_LINK => {
                 match self.selected_target().as_deref().and_then(link_url) {
-                    Some(link) if Clipboard::get().set_text(&link) => self.note(&t("Link copied.")),
+                    Some(link) if crate::copy_to_clipboard(&link) => self.note(&t("Link copied.")),
                     Some(_) => {}
                     None => self.note(&t("This item has no link to copy.")),
                 }

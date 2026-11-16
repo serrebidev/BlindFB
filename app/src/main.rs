@@ -5377,8 +5377,26 @@ fn handle_menu(ui: &Ui, id: i32) {
     }
 }
 
+/// Copy text to the clipboard so it SURVIVES the app closing
+/// (Brandon's report, 2026-11-15): wxdragon's bare set_text leaves
+/// the data owned by this process, and Windows drops it when the
+/// process exits — copied text was gone by the time he went to
+/// paste it. The BlindRadio pattern: open, set, FLUSH (hands the
+/// data to the system for good), close. Every copy site in the
+/// app goes through here; a source-scan test keeps it that way.
+pub(crate) fn copy_to_clipboard(text: &str) -> bool {
+    let clipboard = Clipboard::get();
+    if !clipboard.open() {
+        return false;
+    }
+    let set = clipboard.set_text(text);
+    clipboard.flush();
+    clipboard.close();
+    set
+}
+
 fn copy_text(ui: &Ui, text: &str, done: &str) {
-    if Clipboard::get().set_text(text) {
+    if crate::copy_to_clipboard(text) {
         ui.status(done);
     } else {
         show_error(&ui.frame, t("Could not copy to the clipboard."), &t("Copy"));
@@ -6129,6 +6147,37 @@ mod tests {
         assert_eq!(rows[1].reaction, None);
         update_reaction(&View::Feed, &mut rows, "/a/posts/1", Some("none"));
         assert_eq!(rows[0].reaction.as_deref(), Some("none"));
+    }
+
+    #[test]
+    fn clipboard_copies_flush_so_they_survive_exit() {
+        // Brandon's report, 2026-11-15: copy text, close the
+        // app, and the clipboard is empty — the copy was owned
+        // by the process and died with it. Every copy goes
+        // through copy_to_clipboard, which flushes (the
+        // BlindRadio pattern); no bare set_text may remain.
+        let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut names: Vec<_> = std::fs::read_dir(&src_dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.ends_with(".rs"))
+            .collect();
+        names.sort();
+        assert!(names.len() > 5, "the scan found no sources");
+        for name in &names {
+            let src = std::fs::read_to_string(src_dir.join(name)).unwrap();
+            let impl_src = src.split("#[cfg(test)]").next().unwrap();
+            assert!(
+                !impl_src.contains("Clipboard::get().set_text"),
+                "{name} writes the clipboard without flushing"
+            );
+        }
+        let main = std::fs::read_to_string(src_dir.join("main.rs")).unwrap();
+        let start = main.find("pub(crate) fn copy_to_clipboard").unwrap();
+        let helper = &main[start..start + 700];
+        assert!(helper.contains("clipboard.flush()"), "the copy helper does not flush");
+        assert!(helper.contains("clipboard.open()"), "the copy helper does not open");
     }
 
     #[test]

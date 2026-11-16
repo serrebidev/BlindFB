@@ -191,7 +191,7 @@ impl ChatWindow {
             ID_MSG_COPY => {
                 if let Some(index) = self.messages.get_selection() {
                     if let Some(line) = self.messages.get_string(index) {
-                        let done = Clipboard::get().set_text(&line);
+                        let done = crate::copy_to_clipboard(&line);
                         self.note(&if done {
                             t("Message copied.")
                         } else {
