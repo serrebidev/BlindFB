@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.73 - 2026-11-16
+
+A reel someone shared now names its creator in the news feed. A shared reel
+read as just the sharer ("Brandon Bracey"), not "Brandon Bracey / Costas
+Menegakis" as shared posts do. The home feed puts the reel's author in a
+deeper heading than a shared post's, which the backend did not read; it now
+does (backend 0.1.5-blindfb.74).
+
 ## v0.7.72 - 2026-11-16
 
 Replying to a comment works again on Czech and Slovak Facebook. The Reply
