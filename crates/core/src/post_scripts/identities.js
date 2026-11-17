@@ -15,15 +15,33 @@
   const picked = element => element.getAttribute('aria-checked') === 'true' || element.getAttribute('aria-selected') === 'true' || element.checked === true;
   const press = element => { if (!enabled(element)) throw Error('Facebook has disabled this identity action.'); element.click(); };
 
-  // Component names are an extra structural signal for translated actor buttons, never an action API.
-  function actorComponent(element) {
-    const key = Object.keys(element).find(key => key.startsWith('__reactFiber$'));
-    for (let fiber = key && element[key], depth = 0; fiber && depth < 15; fiber = fiber.return, depth++) {
-      const type = fiber.type || fiber.elementType;
-      const value = typeof type === 'string' ? type : type?.displayName || type?.name || '';
-      if (/(?:UFI.*(?:ActorButton|ActorSelector|VoiceSwitcher)|GroupsComet.*(?:IdentitySelector|VoiceSwitcher))/.test(value)) return true;
+  // Facebook's group actor switcher ("Comment as, choose profile" in English) is translated, and
+  // live DOM nodes carry no React fiber keys. Its popover trigger is found from the React root
+  // instead: it opens Facebook's anonymous/nickname actor menu, whatever the interface language.
+  // Structural signal only, never an action API.
+  function actorSwitchers() {
+    const found = new Set();
+    let entry;
+    try { entry = require('GroupsCometUFIAnonActorSwitcherMenu.entrypoint'); } catch { return found; }
+    if (!entry) return found;
+    for (const mount of document.querySelectorAll('[id^="mount_"]')) {
+      const key = Object.keys(mount).find(key => key.startsWith('__reactContainer$'));
+      const stack = key ? [mount[key]] : [];
+      while (stack.length) {
+        const fiber = stack.pop();
+        if (fiber.memoizedProps?.popoverEntryPoint === entry) {
+          for (const inner = [fiber.child]; inner.length;) {
+            const node = inner.pop();
+            if (!node) continue;
+            if (node.tag === 5 && node.stateNode?.matches?.(BUTTON)) { found.add(node.stateNode); break; }
+            inner.push(node.sibling, node.child);
+          }
+        }
+        if (fiber.sibling) stack.push(fiber.sibling);
+        if (fiber.child) stack.push(fiber.child);
+      }
     }
-    return false;
+    return found;
   }
 
   function create({current, editorFor, target, read}) {
@@ -35,6 +53,7 @@
       const root = current();
       editor = editor || editorFor(null);
       if (!editor || !root.contains(editor)) return null;
+      const switchers = actorSwitchers();
       for (let scope = editor.parentElement; scope && root.contains(scope); scope = scope.parentElement) {
         const candidates = [...scope.querySelectorAll(BUTTON)].filter(element => {
           if (!visible(element) || element.contains(editor) || element.closest('[role=article][aria-label]')) return false;
@@ -43,7 +62,7 @@
           if (/^Switch to a different profile or Page$/i.test(text)) return false;
           const prefix = text.split(',')[0].trim();
           const sharedPrefix = prefix.length > 4 && text.includes(',') && name(editor).startsWith(prefix + ' ');
-          return actorComponent(element) || AS.test(text) || sharedPrefix || /^(?:Choose (?:how|who)|Change (?:who|identity))/i.test(text);
+          return switchers.has(element) || AS.test(text) || sharedPrefix || /^(?:Choose (?:how|who)|Change (?:who|identity))/i.test(text);
         });
         if (candidates.length) return candidates.length === 1 ? candidates[0] : null;
         if (scope === root) break;
@@ -60,7 +79,9 @@
       const editorName = editor ? name(editor) : '';
       const prefix = button ? name(button).split(',')[0].trim() : '';
       const label = AS.test(editorName) ? editorName.replace(AS, '').trim() :
-        prefix.length > 4 && editorName.startsWith(prefix + ' ') ? editorName.slice(prefix.length).trim() : '';
+        prefix.length > 4 && editorName.startsWith(prefix + ' ') ? editorName.slice(prefix.length).trim() :
+        // Untranslated wording: the editor's whole label still names, and tracks, the identity.
+        button ? editorName : '';
       if (!label) return null;
       return {label, can_change: !!enabled(button), reason: enabled(button) ? '' : 'Facebook does not offer identity switching on this post.'};
     }
@@ -212,7 +233,8 @@
       if (changed?.done || !next) {
         const editor = saved.editor;
         saved = null;
-        if (actorName && !await F.waitFor(() => state(editorFor(null) || editor)?.label === actorName, 10000)) throw Error('Facebook did not confirm the selected commenting identity. Refresh before sending a comment.');
+        // An untranslated editor label holds the chosen name inside its own wording.
+        if (actorName && !await F.waitFor(() => state(editorFor(null) || editor)?.label.includes(actorName), 10000)) throw Error('Facebook did not confirm the selected commenting identity. Refresh before sending a comment.');
         return read();
       }
       return snapshot(changed?.next || describe(next), null, changed ? '' : 'Facebook has not completed this identity action. Check the information below.');

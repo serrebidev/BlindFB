@@ -281,7 +281,9 @@
   // Switch the sort to "All comments" first when the control is there and
   // unambiguous; any doubt leaves the sort exactly as Facebook left it.
   async function showAllComments() {
-    const text = element => F.clean(element.innerText || '') || label(element);
+    // Each sort menu item is its name over a description line ("All comments\nShow all
+    // comments, including potential spam."): match the name line only.
+    const text = element => F.clean((element.innerText || '').split('\n')[0]) || label(element);
     const controls = () => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element));
     if (controls().some(element => W.allComments.test(text(element)))) return;
     const triggers = controls().filter(element => W.commentSort.test(text(element)));
@@ -313,7 +315,7 @@
         // A load replaces its button with a spinner before the next batch's
         // button appears: one short re-check, so a batch still in flight is
         // not mistaken for the end of the thread.
-        if (!await F.waitFor(() => remaining().length ? true : null, 1500)) return;
+        if (!await F.waitFor(() => remaining().length ? true : null, 1500)) return true;
         continue;
       }
       const before = root.querySelectorAll(ARTICLE).length;
@@ -324,10 +326,11 @@
       // Never hand back a partial thread as if it were complete: a button
       // that is still there and still loads nothing means Facebook did not
       // finish loading, which is how a counted 18 comments became a listed 12.
-      if (!grew && remaining().length) throw Error('Facebook has not loaded all comments. Refresh the reader to retry.');
-      if (!grew) return;
+      // The caller marks the result incomplete: failing outright would leave a
+      // busy post (more batches than the round cap) unreadable.
+      if (!grew) return !remaining().length;
     }
-    if (remaining().length) throw Error('Facebook has not loaded all comments. Refresh the reader to retry.');
+    return !remaining().length;
   }
 
   async function read() {
@@ -345,12 +348,13 @@
     };
     await showAllComments();
     await expandText();
-    await expandReplies();
+    const complete = await expandReplies();
     await expandText();
+    const incomplete = complete ? {} : {comments_incomplete: true};
     const rows = collect();
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {
-      return JSON.stringify({url: target, ...reel, ...ownReaction(card, true), time: '', comments: rows.map(row => row.value), video: target});
+      return JSON.stringify({url: target, ...reel, ...ownReaction(card, true), time: '', comments: rows.map(row => row.value), ...incomplete, video: target});
     }
     await reveal(root);
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
@@ -388,7 +392,7 @@
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set([...outerMessages.map(element => F.postText(element)), ...attachments(root, messages)].filter(Boolean))].join('\n');
-    return JSON.stringify({url: target, author, ...ownReaction(root), comment_identity: commentIdentities.state(), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
+    return JSON.stringify({url: target, author, ...ownReaction(root), comment_identity: commentIdentities.state(), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), ...incomplete, links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
   function selected(id) {

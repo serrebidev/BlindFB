@@ -4,6 +4,26 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.76 - 2026-11-17
+
+Anonymous and nickname commenting in groups can be chosen again. In groups
+that allow it, Facebook puts a "Comment as, choose profile" button beside
+the comment box, and that label is translated. BlindFB knew only a few
+translations of it, so in other languages it reported that Facebook does
+not offer identity switching for the post. The reader now finds the button
+by the anonymous and nickname menu it opens, in every interface language,
+and Change comment identity offers Facebook's choices. Facebook's own
+"Switch to a different profile or Page" button is still never used: it
+switches your whole account, not just the comment. Thanks to Victor for
+reporting it.
+
+The comment sort switch from v0.7.75 now works. Facebook's "All comments"
+menu item carries a description line under its name, which the reader did
+not expect, so posts stayed under "Most relevant". A busy post whose
+comments Facebook does not finish loading now opens with the comments that
+did load and says so, instead of failing to open. The Clear field button
+is translated into French, Russian and Estonian.
+
 ## v0.7.75 - 2026-11-16
 
 All comments on a post are shown now. Facebook opens a post's comments

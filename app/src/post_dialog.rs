@@ -1646,6 +1646,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 reader.comments.set_selection(index, false);
             }
             let count = detail.comments.len();
+            let incomplete = detail.comments_incomplete;
             {
                 let mut state = reader.state.borrow_mut();
                 state.comments = detail.comments;
@@ -1671,7 +1672,12 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             // `done` is a whole sentence from the caller; the count is a second
             // sentence of its own, so neither is assembled from pieces.
             let loaded = ntf!("{n} comment loaded.", "{n} comments loaded.", count);
-            reader.message(ui, &format!("{done} {loaded}"));
+            if incomplete {
+                let more = t("Facebook did not load every comment. Refresh the reader to try again.");
+                reader.message(ui, &format!("{done} {loaded} {more}"));
+            } else {
+                reader.message(ui, &format!("{done} {loaded}"));
+            }
         }
     }
     reader.controls();

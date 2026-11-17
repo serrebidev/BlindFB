@@ -43,6 +43,8 @@ pub struct PostDetail {
     pub time: String,
     pub text: String,
     pub comments: Vec<Comment>,
+    /// Facebook left load-more buttons unanswered: `comments` is what did load.
+    pub comments_incomplete: bool,
     /// Links in the message and pages outside Facebook, for the browser.
     pub links: Vec<Link>,
     /// The Facebook URL of the post's video or reel, for the player.
@@ -216,6 +218,7 @@ pub fn parse_detail(output: &str) -> Result<PostDetail, String> {
         time: string(&value, "time")?,
         text: string(&value, "text")?,
         comments,
+        comments_incomplete: value["comments_incomplete"].as_bool().unwrap_or(false),
         links,
         video,
         comment_identity: match value.get("comment_identity") {
@@ -894,6 +897,14 @@ mod tests {
             value["comment_identity"] = bad;
             assert!(parse_detail(&value.to_string()).is_err());
         }
+    }
+
+    #[test]
+    fn a_partly_loaded_thread_is_flagged_not_fatal() {
+        let mut value = json!({"url":"https://www.facebook.com/a/posts/1","author":"A","time":"","text":"Body","comments":[]});
+        assert!(!parse_detail(&value.to_string()).unwrap().comments_incomplete);
+        value["comments_incomplete"] = true.into();
+        assert!(parse_detail(&value.to_string()).unwrap().comments_incomplete);
     }
 
     #[test]

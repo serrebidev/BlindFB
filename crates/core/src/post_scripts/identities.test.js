@@ -33,7 +33,7 @@ class Element {
   remove() { this.isConnected = false; if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(e => e !== this); }
 }
 
-function fixture(group = true) {
+function fixture(group = true, page = {}) {
   const body = new Element(), root = new Element('div', {role: 'dialog'});
   const shell = new Element(), editor = new Element('div', {role: 'textbox', contenteditable: 'true', 'aria-label': 'Comment as Test Person'});
   const button = new Element('div', {role: 'button', 'aria-haspopup': 'menu', 'aria-label': 'Comment as Test Person'});
@@ -56,7 +56,7 @@ function fixture(group = true) {
     body.append(menu); attach(menu); return menu;
   };
   button.onClick = () => { if (menu && visible(menu)) menu.remove(); else makeMenu(); };
-  const context = {window: {__fb: F}, document, URL, Event: class {constructor(type) {this.type = type;}}, KeyboardEvent: class {}, HTMLInputElement: Element, HTMLTextAreaElement: Element};
+  const context = {...page, window: {__fb: F}, document, URL, Event: class {constructor(type) {this.type = type;}}, KeyboardEvent: class {}, HTMLInputElement: Element, HTMLTextAreaElement: Element};
   vm.runInNewContext(fs.readFileSync(__dirname + '/identities.js', 'utf8'), context);
   const api = context.window.__blindfbIdentities.create({current: () => root, editorFor: () => editor,
     target: () => 'https://www.facebook.com/' + (group ? 'groups/123/posts/456/' : 'person/posts/456/'),
@@ -110,6 +110,25 @@ function fixture(group = true) {
   assert.equal(live.api.state().label, 'Test Person', 'current desktop selector has a constant button label; identity comes from the editor');
   live.button.attributes['aria-label'] = 'Switch to a different profile or Page';
   assert.equal(live.api.state().can_change, false, 'global profiles menu is not the group identity selector');
+
+  // Translated switcher: no known wording, no fiber key on the node. Found from the React root
+  // through Facebook's anonymous actor menu entrypoint (live DOM shape, 2026-11-17).
+  const entry = {getPreloadProps() {}}, mount = {};
+  const translated = fixture(true, {require: name => { if (name === 'GroupsCometUFIAnonActorSwitcherMenu.entrypoint') return entry; throw Error('no module'); }});
+  translated.button.attributes['aria-label'] = 'Profilauswahl';
+  translated.editor.attributes['aria-label'] = 'Schreib einen Kommentar';
+  const roots = translated.document.querySelectorAll;
+  translated.document.querySelectorAll = s => s === '[id^="mount_"]' ? [mount] : roots(s);
+  assert.equal(translated.api.state(), null, 'no switcher, unknown wording: no identity row');
+  mount.__reactContainer$x = {child: {memoizedProps: {popoverEntryPoint: entry}, child: {tag: 5, stateNode: {matches: () => false}, sibling: {tag: 5, stateNode: translated.button}}}};
+  assert.deepEqual({...translated.api.state()}, {label: 'Schreib einen Kommentar', can_change: true, reason: ''});
+  const translatedPanel = JSON.parse(await translated.api.open(null)).identity;
+  assert.equal(translatedPanel.options.length, 3, 'translated switcher opens Facebook choices');
+  const owl = translatedPanel.options.find(o => o.label === 'Blue Owl');
+  const pick = translated.menu.children[2].onClick;
+  translated.menu.children[2].onClick = () => { pick(); translated.editor.attributes['aria-label'] = 'Als Blue Owl kommentieren'; };
+  const switched = JSON.parse(await translated.api.act(translatedPanel.token, owl.key, []));
+  assert.equal(switched.comment_identity.label, 'Als Blue Owl kommentieren', 'untranslated label still confirms the chosen identity');
 
   const duplicate = fixture(); duplicate.shell.append(duplicate.button);
   assert.equal(duplicate.api.state(duplicate.editor)?.can_change || false, false, 'ambiguous controls must never be pressed');

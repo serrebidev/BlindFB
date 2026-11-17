@@ -45,11 +45,13 @@ function fixture(mode = false) {
     click() { if (!moreShown) { moreShown = true; const extra = article('2'); extra.lines[2] = 'A later comment'; } }};
   // "Most relevant" sort: one comment is filtered out until "All comments" is chosen.
   let menuOpen = false, allShown = false;
-  const sortButton = {innerText: '', isConnected: true, closest: () => null,
-    getAttribute: () => allShown ? 'All comments' : 'Most relevant',
+  // Live shape (2026-11-17): no aria-label; the trigger text ends in U+FEFF and each menu item
+  // is its name over a description line.
+  const sortButton = {get innerText() { return (allShown ? 'All comments' : 'Most relevant') + '﻿'; }, isConnected: true, closest: () => null,
+    getAttribute: () => null,
     click() { if (!allShown) menuOpen = !menuOpen; }};
-  const allOption = {innerText: '', isConnected: true, closest: () => null,
-    getAttribute: () => 'All comments',
+  const allOption = {innerText: 'All comments\nShow all comments, including potential spam.', isConnected: true, closest: () => null,
+    getAttribute: () => null,
     click() { menuOpen = false; if (!allShown) { allShown = true; const extra = article('2'); extra.lines[2] = 'A filtered comment'; } }};
   // A load-more button Facebook never answers: the click changes nothing.
   const stuckButton = {innerText: '', isConnected: true, closest: () => null,
@@ -544,11 +546,14 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   for (const text of ['Most relevant', 'Most relevant comments', 'Nejrelevantnější', 'Najrelevantnejšie']) assert.ok(W.commentSort.test(text), text);
   for (const text of ['All comments', 'Všechny komentáře', 'Všetky komentáre']) assert.ok(W.allComments.test(text), text);
   for (const text of ['Most relevant', 'Newest comments', 'All comments are here']) assert.ok(!W.allComments.test(text), text);
-  // A load-more button that loads nothing must surface as an error, never
-  // as a silently shortened comment list.
+  // A load-more button that loads nothing must be reported, never a silently
+  // shortened comment list, and must not make the post unreadable.
   const stuck = fixture('stuck');
   stuck.article('1');
-  await assert.rejects(stuck.api.initialize('https://www.facebook.com/a/posts/1'), /not loaded all comments/);
+  const stuckDetail = JSON.parse(await stuck.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(stuckDetail.comments_incomplete, true);
+  assert.equal(stuckDetail.comments.length, 1, 'what did load is still shown');
+  assert.equal(sortedDetail.comments_incomplete, undefined, 'a complete thread carries no flag');
   console.log('French Facebook fixtures passed: reel and video comments, reactions, counts, times, badges.');
   console.log('Reader safety fixtures passed: missing, stale, changed, ambiguous, no root fallback, exact-thread confirmation, reply boxes beside comments, prefilled names.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
