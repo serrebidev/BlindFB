@@ -17,11 +17,11 @@ msgstr ""
 
 #: app/src\about_dialog.rs:11
 msgid "GitHub: serrebidev/BlindFB"
-msgstr ""
+msgstr "GitHub: serrebidev/BlindFB"
 
 #: app/src\about_dialog.rs:12
 msgid "Forgejo: serrebi/BlindFB"
-msgstr ""
+msgstr "Forgejo: serrebi/BlindFB"
 
 #: app/src\about_dialog.rs:13
 msgid "Projects: projects.serrebiradio.com"
@@ -29,7 +29,7 @@ msgstr "Проекты: projects.serrebiradio.com"
 
 #: app/src\about_dialog.rs:14
 msgid "Telegram: SerrebiProjects"
-msgstr ""
+msgstr "Telegram: SerrebiProjects"
 
 #: app/src\about_dialog.rs:16
 msgid "Full credits"

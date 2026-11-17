@@ -4,7 +4,7 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## v0.7.76 - 2026-11-17
+## v0.7.77 - 2026-11-17
 
 Anonymous and nickname commenting in groups can be chosen again. In groups
 that allow it, Facebook puts a "Comment as, choose profile" button beside

@@ -6345,7 +6345,9 @@ mod tests {
     /// adds new English messages with an empty one, which this test then reports.
     #[test]
     fn every_french_message_is_translated() {
-        let po = include_str!("../locale/fr/LC_MESSAGES/blindfb.po");
+        // A Windows checkout has CRLF line ends: without this, "\n\n" never splits and
+        // the whole catalog reads as one block, so nothing was ever checked there.
+        let po = include_str!("../locale/fr/LC_MESSAGES/blindfb.po").replace("\r\n", "\n");
         let mut missing = Vec::new();
         let mut id = String::new();
         for block in po.split("\n\n") {
