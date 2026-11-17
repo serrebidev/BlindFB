@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.75 - 2026-11-16
+
+All comments on a post are shown now. Facebook opens a post's comments
+under its "Most relevant" sort, which silently hides comments it ranks
+low: a post counting 18 comments listed only 12, with no "View more
+comments" button left to press for the rest. The post reader now switches
+the sort to "All comments" first (in every interface language it knows,
+including Czech and Slovak) when the sort control is there and
+unambiguous, then loads the batches as before. A load-more button that
+Facebook does not answer now reports that not all comments loaded instead
+of handing back a shortened list as if it were complete. Thanks to Michal
+for reporting it.
+
 ## v0.7.74 - 2026-11-16
 
 Adding a friend works again on non-English Facebook. The backend's friend

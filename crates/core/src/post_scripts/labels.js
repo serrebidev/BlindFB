@@ -61,6 +61,13 @@
     // first batch while its count (which includes replies) kept counting (issue #30).
     // Never a sort label ("Most relevant") and never "Hide comments".
     viewMoreComments: exact(`View(?: more| previous)?(?: ${COUNT})? comments|View ${COUNT} more comments|Voir(?: plus de| les)?(?: ${COUNT})? commentaires|Afficher(?: plus de| les)?(?: ${COUNT})? commentaires|Xem(?: thêm)?(?: ${COUNT})? bình luận|Xem các bình luận trước(?: đó)?|Zobrazit(?: další| více| předchozí)?(?: ${COUNT})? komentář(?:e|ů)?|Zobraziť(?: ďalšie| viac| predchádzajúce)?(?: ${COUNT})? komentár(?:e|ov)?|Посмотреть(?: ещё| предыдущие| все)?(?: ${COUNT})? комментари(?:и|ев|я|й)`),
+    // The comment sort control: Facebook opens a post's comments under
+    // "Most relevant", which silently hides comments it ranks low — the post
+    // can say 18 comments while that view lists only 12, with no "View more
+    // comments" button left to press. "All comments" is the only sort that
+    // lists every comment, so read() switches to it when the control is there.
+    commentSort: exact(`Most relevant(?: comments)?|Les plus pertinents|Phù hợp nhất|Nejrelevantnější|Najrelevantnejšie|Сначала актуальные|Kõige asjakohasemad`),
+    allComments: exact(`All comments|Tous les commentaires|Tất cả bình luận|Všechny komentáře|Všetky komentáre|Все комментарии|Kõik kommentaarid`),
     // "Share", "Share X's post, 18 shares", "Partager la publication de X", "Partager, 4 partages".
     share: /^(?:Share|Partager)\b/i,
     shareNow: exact('Share now|Partager maintenant|Partager'),

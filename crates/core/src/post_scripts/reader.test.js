@@ -43,9 +43,20 @@ function fixture(mode = false) {
   const viewMore = {innerText: '', isConnected: true, closest: () => null,
     getAttribute: () => moreShown ? '' : 'Zobrazit další komentáře',
     click() { if (!moreShown) { moreShown = true; const extra = article('2'); extra.lines[2] = 'A later comment'; } }};
+  // "Most relevant" sort: one comment is filtered out until "All comments" is chosen.
+  let menuOpen = false, allShown = false;
+  const sortButton = {innerText: '', isConnected: true, closest: () => null,
+    getAttribute: () => allShown ? 'All comments' : 'Most relevant',
+    click() { if (!allShown) menuOpen = !menuOpen; }};
+  const allOption = {innerText: '', isConnected: true, closest: () => null,
+    getAttribute: () => 'All comments',
+    click() { menuOpen = false; if (!allShown) { allShown = true; const extra = article('2'); extra.lines[2] = 'A filtered comment'; } }};
+  // A load-more button Facebook never answers: the click changes nothing.
+  const stuckButton = {innerText: '', isConnected: true, closest: () => null,
+    getAttribute: () => 'View more comments', click() {}};
   const reactionButton = {closest: () => null, getAttribute: name => name === 'aria-label' ? "Remove Love from Post author's post" : name === 'aria-pressed' ? 'true' : ''};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector === '[role=button],button' && mode === 'sorted' ? [sortButton] : selector === '[role=menuitem],[role=option],[role=button],button' && mode === 'sorted' ? (menuOpen ? [allOption] : []) : selector === '[role=button],button' && mode === 'stuck' ? [stuckButton] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -522,6 +533,22 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   assert.equal(moreDetail.comments.length, 2);
   assert.equal(moreDetail.comments.find(c => c.id === '2').text, 'A later comment');
   assert.equal(moreDetail.comments.find(c => c.id === '2').parent_id, null);
+  // Michal: a post counting 18 comments listed only 12. Facebook's default
+  // "Most relevant" sort hides the rest and leaves no load-more button, so
+  // read() switches to "All comments" when the sort control is unambiguous.
+  const sorted = fixture('sorted');
+  sorted.article('1');
+  const sortedDetail = JSON.parse(await sorted.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(sortedDetail.comments.length, 2);
+  assert.equal(sortedDetail.comments.find(c => c.id === '2').text, 'A filtered comment');
+  for (const text of ['Most relevant', 'Most relevant comments', 'Nejrelevantnější', 'Najrelevantnejšie']) assert.ok(W.commentSort.test(text), text);
+  for (const text of ['All comments', 'Všechny komentáře', 'Všetky komentáre']) assert.ok(W.allComments.test(text), text);
+  for (const text of ['Most relevant', 'Newest comments', 'All comments are here']) assert.ok(!W.allComments.test(text), text);
+  // A load-more button that loads nothing must surface as an error, never
+  // as a silently shortened comment list.
+  const stuck = fixture('stuck');
+  stuck.article('1');
+  await assert.rejects(stuck.api.initialize('https://www.facebook.com/a/posts/1'), /not loaded all comments/);
   console.log('French Facebook fixtures passed: reel and video comments, reactions, counts, times, badges.');
   console.log('Reader safety fixtures passed: missing, stale, changed, ambiguous, no root fallback, exact-thread confirmation, reply boxes beside comments, prefilled names.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

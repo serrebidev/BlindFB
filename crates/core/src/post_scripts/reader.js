@@ -275,21 +275,59 @@
   // Press both in bounded rounds (loaded comments can hide replies of their own,
   // and a reply can hide further replies) so read() returns the whole thread,
   // not just the first batch (issues #22 and #30).
+  // Facebook opens comments under "Most relevant", which hides comments it
+  // ranks low: the post's count includes them, the list does not, and no
+  // load-more button remains (a post counting 18 comments listed only 12).
+  // Switch the sort to "All comments" first when the control is there and
+  // unambiguous; any doubt leaves the sort exactly as Facebook left it.
+  async function showAllComments() {
+    const text = element => F.clean(element.innerText || '') || label(element);
+    const controls = () => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element));
+    if (controls().some(element => W.allComments.test(text(element)))) return;
+    const triggers = controls().filter(element => W.commentSort.test(text(element)));
+    if (triggers.length !== 1) return;
+    triggers[0].click();
+    const option = await F.waitFor(() => {
+      const found = [...new Set([...root.querySelectorAll('[role=menuitem],[role=option],[role=button],button'), ...document.querySelectorAll('[role=menuitem],[role=option],[role=button],button')])].filter(element => F.visible(element) && W.allComments.test(text(element)));
+      return found.length === 1 ? found[0] : null;
+    }, 5000);
+    if (!option) {
+      // Close the menu again so it does not stay over the comments.
+      if (triggers[0].isConnected) triggers[0].click();
+      return;
+    }
+    option.click();
+    // The list reloads under the new sort; wait until the menu is gone.
+    await F.waitFor(() => !option.isConnected || !F.visible(option), 5000);
+  }
+
   async function expandReplies() {
     const loadsMore = element => {
       const text = F.clean(element.innerText || '') || label(element);
       return W.viewReplies.test(text) || W.viewMoreComments.test(text);
     };
+    const remaining = () => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && loadsMore(element));
     for (let round = 0; round < 10; round++) {
-      const buttons = [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && loadsMore(element));
-      if (!buttons.length) return;
+      const buttons = remaining();
+      if (!buttons.length) {
+        // A load replaces its button with a spinner before the next batch's
+        // button appears: one short re-check, so a batch still in flight is
+        // not mistaken for the end of the thread.
+        if (!await F.waitFor(() => remaining().length ? true : null, 1500)) return;
+        continue;
+      }
       const before = root.querySelectorAll(ARTICLE).length;
       for (const button of buttons) {
         if (button.isConnected) button.click();
       }
       const grew = await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || buttons.every(button => !button.isConnected || !F.visible(button) || !loadsMore(button)), 5000);
+      // Never hand back a partial thread as if it were complete: a button
+      // that is still there and still loads nothing means Facebook did not
+      // finish loading, which is how a counted 18 comments became a listed 12.
+      if (!grew && remaining().length) throw Error('Facebook has not loaded all comments. Refresh the reader to retry.');
       if (!grew) return;
     }
+    if (remaining().length) throw Error('Facebook has not loaded all comments. Refresh the reader to retry.');
   }
 
   async function read() {
@@ -305,6 +343,7 @@
       }
       if (expand.length && !await F.waitFor(() => expand.every(button => !button.isConnected || !F.visible(button) || !seeMore(button)), 5000)) throw Error('Facebook has not expanded all text. Refresh the reader to retry.');
     };
+    await showAllComments();
     await expandText();
     await expandReplies();
     await expandText();
