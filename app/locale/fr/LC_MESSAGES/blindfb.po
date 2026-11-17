@@ -4480,3 +4480,21 @@ msgstr "Désactivé (aucun raccourci)"
 #~ "Les flèches sur Volume de la vidéo changent son pourcentage.\n"
 #~ "Applications ou Maj+F10 sur le texte de la publication : commenter, réagir ou partager. Sur un commentaire : répondre ou aimer.\n"
 #~ "Ctrl+Entrée dans la zone de commentaire envoie. Échap ferme le lecteur et arrête la lecture."
+
+msgid "About BlindFB"
+msgstr "À propos de BlindFB"
+
+msgid "Author: serrebidev."
+msgstr "Auteur : serrebidev."
+
+msgid "Copyright (c) 2026 Brandon Bracey. MIT licence."
+msgstr "Copyright (c) 2026 Brandon Bracey. Licence MIT."
+
+msgid "Projects: projects.serrebiradio.com"
+msgstr "Projets : projects.serrebiradio.com"
+
+msgid "Full credits"
+msgstr "Crédits complets"
+
+msgid "Close"
+msgstr "Fermer"

@@ -14,6 +14,11 @@ replies" and "View more comments" buttons but not to the Reply action
 itself; the Reply patterns and the comment action words now include them,
 with tests. Thanks to Michal for reporting it.
 
+Help, About is now a dialog with a button for each link: GitHub, Forgejo,
+the projects site, the Telegram channel and the full credits. Tab reaches
+each one and Enter or Space opens it; before, they were text in the About
+box that no key could reach.
+
 ## v0.7.70 - 2026-11-16
 
 The Search dialog gains a Clear field button next to Search and Cancel.

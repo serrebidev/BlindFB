@@ -4397,3 +4397,21 @@ msgstr "Väljas (ilma klahvita)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Vasta kasutajale {author}"
+
+msgid "About BlindFB"
+msgstr "BlindFB teave"
+
+msgid "Author: serrebidev."
+msgstr "Autor: serrebidev."
+
+msgid "Copyright (c) 2026 Brandon Bracey. MIT licence."
+msgstr "Autoriõigus (c) 2026 Brandon Bracey. MIT-litsents."
+
+msgid "Projects: projects.serrebiradio.com"
+msgstr "Projektid: projects.serrebiradio.com"
+
+msgid "Full credits"
+msgstr "Kõik tänuavaldused"
+
+msgid "Close"
+msgstr "Sulge"

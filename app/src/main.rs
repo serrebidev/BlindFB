@@ -20,6 +20,7 @@
 //! named-page browser primitives, and a group's posts read and behave like
 //! any other posts here.
 
+mod about_dialog;
 mod chat_dialog;
 mod create_group_dialog;
 mod group_dialog;
@@ -59,7 +60,7 @@ use blindfb_core::fb::{
 };
 use blindfb_core::posts::Link;
 use blindfb_core::reels::{self, ReelSource};
-use wx_utils::{confirm, prompt_text, show_warning, AboutBoxBuilder};
+use wx_utils::{confirm, prompt_text, show_warning};
 
 /// An error dialog. Backend errors arrive as "error: <message>"; the
 /// prefix is the command line's, not something to read out in a dialog.
@@ -5397,24 +5398,7 @@ fn handle_menu(ui: &Ui, id: i32) {
             dialog.show_modal();
             dialog.destroy();
         }
-        ID_ABOUT => {
-            AboutBoxBuilder::new(&ui.frame)
-                .name("BlindFB")
-                .version(env!("CARGO_PKG_VERSION"))
-                .description(t(
-                    "An accessible Facebook and Messenger client for screen reader users.\n\
-                     Built with wxDragon on the facebook-cli (fb) backend.\n\
-                     Author: serrebidev. GitHub: https://github.com/serrebidev/BlindFB. \
-                     Forgejo: https://git.serrebiradio.com/serrebi/BlindFB. \
-                     Projects: https://projects.serrebiradio.com. \
-                     Telegram: https://t.me/SerrebiProjects. Full credits: CREDITS.md."
-                ))
-                .copyright("Copyright (c) 2026 Brandon Bracey")
-                .website("https://git.serrebiradio.com/serrebi/BlindFB")
-                .licence("MIT")
-                .add_developer("Brandon Bracey")
-                .show();
-        }
+        ID_ABOUT => about_dialog::show(&ui.frame),
         ID_GITHUB => open_url("https://git.serrebiradio.com/serrebi/BlindFB"),
         ID_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::Voice),
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),

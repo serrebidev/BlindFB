@@ -4414,3 +4414,21 @@ msgstr "Выкл (без сочетания)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Ответ {author}"
+
+msgid "About BlindFB"
+msgstr "О программе BlindFB"
+
+msgid "Author: serrebidev."
+msgstr "Автор: serrebidev."
+
+msgid "Copyright (c) 2026 Brandon Bracey. MIT licence."
+msgstr "Copyright (c) 2026 Brandon Bracey. Лицензия MIT."
+
+msgid "Projects: projects.serrebiradio.com"
+msgstr "Проекты: projects.serrebiradio.com"
+
+msgid "Full credits"
+msgstr "Полный список благодарностей"
+
+msgid "Close"
+msgstr "Закрыть"
