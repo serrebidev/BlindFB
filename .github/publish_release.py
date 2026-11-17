@@ -65,10 +65,7 @@ def add_checksums(repo, release):
     by_name = {a["name"]: a for a in release["assets"]}
     lines = []
     for name in ARCHIVES:
-        # A draft's browser_download_url 404s for the job token: Forgejo takes
-        # a token on /attachments/<uuid> only (v0.7.68-v0.7.72 never published).
-        server = os.environ["GITHUB_API_URL"].rstrip("/").removesuffix("/api/v1")
-        digest = hashlib.sha256(download(f"{server}/attachments/{by_name[name]['uuid']}")).hexdigest()
+        digest = hashlib.sha256(download(by_name[name]["browser_download_url"])).hexdigest()
         lines.append(f"{digest}  {name}")
     if "SHA256SUMS" in by_name:
         call("DELETE", f"/repos/{repo}/releases/{release['id']}/assets/{by_name['SHA256SUMS']['id']}")
@@ -88,6 +85,10 @@ def main():
     missing = [name for name in WANTED if name not in present]
     if missing:
         sys.exit("missing: " + ", ".join(missing))
+    # The job token cannot download a draft's files (404 on both download
+    # routes; v0.7.68-v0.7.72 never published). A prerelease is public but
+    # not /releases/latest, so no updater offers it before SHA256SUMS lands.
+    release = call("PATCH", f"/repos/{repo}/releases/{release['id']}", {"draft": False, "prerelease": True})
     add_checksums(repo, release)
     call("PATCH", f"/repos/{repo}/releases/{release['id']}", {"body": notes, "draft": False, "prerelease": False})
     print(f"published {tag}")
