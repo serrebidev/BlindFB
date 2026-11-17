@@ -132,7 +132,9 @@ jobs:
         shell: pwsh
         env:
           TOKEN: ${{ github.token }}
-        run: python .github/upload_release_assets.py "${{ github.ref_name }}" dist
+        # py, not python: the runner's PATH Python can vanish (v0.7.73's first
+        # run); the launcher in C:\Windows finds any installed one.
+        run: py -3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
 
       - name: Upload to the Forgejo release draft
         if: runner.os != 'Windows'

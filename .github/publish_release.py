@@ -65,7 +65,10 @@ def add_checksums(repo, release):
     by_name = {a["name"]: a for a in release["assets"]}
     lines = []
     for name in ARCHIVES:
-        digest = hashlib.sha256(download(by_name[name]["browser_download_url"])).hexdigest()
+        # A draft's browser_download_url 404s for the job token: Forgejo takes
+        # a token on /attachments/<uuid> only (v0.7.68-v0.7.72 never published).
+        server = os.environ["GITHUB_API_URL"].rstrip("/").removesuffix("/api/v1")
+        digest = hashlib.sha256(download(f"{server}/attachments/{by_name[name]['uuid']}")).hexdigest()
         lines.append(f"{digest}  {name}")
     if "SHA256SUMS" in by_name:
         call("DELETE", f"/repos/{repo}/releases/{release['id']}/assets/{by_name['SHA256SUMS']['id']}")
