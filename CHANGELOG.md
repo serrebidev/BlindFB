@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.74 - 2026-11-16
+
+Adding a friend works again on non-English Facebook. The backend's friend
+button labels knew only English, Vietnamese and French, so on Michal's
+Czech interface an existing friend's "Přátelé" button matched nothing and
+choosing Add friend failed with "no Add friend button on this profile" —
+for a person already in his friend list. The Add friend, Friends and
+request-sent labels now cover every language the post composer knows,
+including Czech and Slovak, the profile check waits for the header button
+instead of racing it, and an unrecognized profile now names the buttons
+it actually shows in the error (backend 0.1.5-blindfb.76). Thanks to
+Michal for reporting it.
+
 ## v0.7.73 - 2026-11-16
 
 A reel someone shared now names its creator in the news feed. A shared reel
