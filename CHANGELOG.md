@@ -4,6 +4,17 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.80 - 2026-11-18
+
+Posting works again on Czech and Slovak Facebook. Writing a new post failed
+with "composer did not open" and a dialog titled with your own name that held
+only a Close button: BlindFB did not know the Czech or Slovak words Facebook
+shows in the "What's on your mind" box, and it missed the composer card on
+your profile page, so it clicked a profile header button instead. It now
+recognizes the composer in Czech, Slovak and the other languages it already
+knew for the Post button, on profile pages as well as the feed. Thanks to
+Michal for the report.
+
 ## v0.7.79 - 2026-11-18
 
 Reels and videos open again when Facebook is not set to English or French.
