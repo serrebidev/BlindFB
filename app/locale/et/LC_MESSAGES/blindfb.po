@@ -4396,3 +4396,21 @@ msgstr "Facebook pakub siin kommenteerija identiteedi valikut, kuid BlindFB ei l
 
 msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
 msgstr "See grupp lubab anonüümseid kommentaare, kuid Facebooki veebileht ei paku sinu kontole selle postituse juures valikut. Facebooki telefonirakenduses võib see olla saadaval."
+
+msgid "How do you want to post in {group}? Anonymous posts hide your name from group members, but group admins, moderators and Facebook can still see who you are."
+msgstr "Kuidas soovid grupis {group} postitada? Anonüümsed postitused peidavad sinu nime grupi liikmete eest, kuid grupi administraatorid, moderaatorid ja Facebook näevad siiski, kes sa oled."
+
+msgid "Post as"
+msgstr "Postita kui"
+
+msgid "With my name"
+msgstr "Minu nimega"
+
+msgid "Anonymously"
+msgstr "Anonüümselt"
+
+msgid "This group does not offer anonymous posts. Nothing was posted."
+msgstr "See grupp ei paku anonüümseid postitusi. Midagi ei postitatud."
+
+msgid "Facebook did not turn on anonymous posting. Nothing was posted."
+msgstr "Facebook ei lülitanud anonüümset postitamist sisse. Midagi ei postitatud."

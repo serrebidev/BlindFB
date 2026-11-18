@@ -4479,3 +4479,21 @@ msgstr "Facebook propose ici un choix d'identité pour commenter, mais BlindFB n
 
 msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
 msgstr "Ce groupe autorise les commentaires anonymes, mais le site de Facebook ne propose pas ce choix à votre compte sur cette publication. L'application mobile de Facebook le propose peut-être."
+
+msgid "How do you want to post in {group}? Anonymous posts hide your name from group members, but group admins, moderators and Facebook can still see who you are."
+msgstr "Comment voulez-vous publier dans {group} ? Les publications anonymes masquent votre nom aux membres du groupe, mais les administrateurs, les modérateurs du groupe et Facebook peuvent toujours voir qui vous êtes."
+
+msgid "Post as"
+msgstr "Publier en tant que"
+
+msgid "With my name"
+msgstr "Avec mon nom"
+
+msgid "Anonymously"
+msgstr "Anonymement"
+
+msgid "This group does not offer anonymous posts. Nothing was posted."
+msgstr "Ce groupe ne propose pas les publications anonymes. Rien n'a été publié."
+
+msgid "Facebook did not turn on anonymous posting. Nothing was posted."
+msgstr "Facebook n'a pas activé la publication anonyme. Rien n'a été publié."

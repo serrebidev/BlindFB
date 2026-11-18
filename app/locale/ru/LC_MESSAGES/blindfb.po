@@ -4413,3 +4413,21 @@ msgstr "Facebook предлагает здесь выбрать, от чьего
 
 msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
 msgstr "В этой группе разрешены анонимные комментарии, но сайт Facebook не предлагает вашему аккаунту этот выбор для данной публикации. В мобильном приложении Facebook он может быть доступен."
+
+msgid "How do you want to post in {group}? Anonymous posts hide your name from group members, but group admins, moderators and Facebook can still see who you are."
+msgstr "Как вы хотите опубликовать в группе {group}? Анонимные публикации скрывают ваше имя от участников группы, но администраторы, модераторы группы и Facebook всё равно видят, кто вы."
+
+msgid "Post as"
+msgstr "Опубликовать как"
+
+msgid "With my name"
+msgstr "От моего имени"
+
+msgid "Anonymously"
+msgstr "Анонимно"
+
+msgid "This group does not offer anonymous posts. Nothing was posted."
+msgstr "В этой группе нет анонимных публикаций. Ничего не опубликовано."
+
+msgid "Facebook did not turn on anonymous posting. Nothing was posted."
+msgstr "Facebook не включил анонимную публикацию. Ничего не опубликовано."

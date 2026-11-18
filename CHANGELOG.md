@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.81 - 2026-11-18
+
+You can now post anonymously in Facebook groups that allow it. After you
+choose a group for a new post, BlindFB asks whether to post with your name
+or anonymously. Anonymous posts hide your name from group members, but group
+admins, moderators and Facebook can still see who you are. BlindFB will not
+publish the post unless Facebook has really switched it to anonymous, and an
+anonymous post waiting for admin approval is reported as accepted.
+
+Anonymous comments stay as Facebook offers them. BlindFB shows the choice
+wherever Facebook's website offers it to your account. Where Facebook reserves
+it for its phone app, BlindFB says so.
+
 ## v0.7.80 - 2026-11-18
 
 Posting works again on Czech and Slovak Facebook. Writing a new post failed

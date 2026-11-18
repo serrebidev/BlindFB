@@ -820,10 +820,27 @@ pub fn group_post_args(
     group: &str,
     images: &[String],
     videos: &[String],
+    anonymous: bool,
 ) -> Vec<String> {
     let mut args = post_args(text, None, images, videos);
     args.extend(["--group".to_owned(), group.to_owned()]);
+    if anonymous {
+        args.push("--anonymous".to_owned());
+    }
     args
+}
+
+/// Why an anonymous group post stopped before Post was pressed, in the user's language.
+pub fn anonymous_post_error(error: &str) -> Option<String> {
+    if error.contains("does not offer anonymous posts") {
+        Some(t("This group does not offer anonymous posts. Nothing was posted."))
+    } else if error.contains("did not turn on anonymous posting")
+        || error.contains("anonymous posting is no longer on")
+    {
+        Some(t("Facebook did not turn on anonymous posting. Nothing was posted."))
+    } else {
+        None
+    }
 }
 
 pub fn group_post_done_message(output: &str, group: &str) -> String {
@@ -1529,9 +1546,23 @@ mod tests {
     #[test]
     fn group_post_args_keep_destination_separate_from_profile_audience() {
         assert_eq!(group_post_args("hello", "https://www.facebook.com/groups/123",
-            &["a.jpg".into()], &["b.mp4".into()]),
+            &["a.jpg".into()], &["b.mp4".into()], false),
             ["post", "hello", "--img", "a.jpg", "--video", "b.mp4",
                 "--group", "https://www.facebook.com/groups/123"]);
+    }
+
+    #[test]
+    fn anonymous_group_posts_ask_the_backend_and_explain_a_refusal() {
+        assert_eq!(group_post_args("hello", "/groups/123", &[], &[], true),
+            ["post", "hello", "--group", "/groups/123", "--anonymous"]);
+        for error in [
+            "error: this group does not offer anonymous posts; nothing was posted",
+            "error: Facebook did not turn on anonymous posting; nothing was posted",
+            "error: anonymous posting is no longer on; nothing was posted",
+        ] {
+            assert!(anonymous_post_error(error).is_some_and(|text| text.contains("Nothing was posted")), "{error}");
+        }
+        assert_eq!(anonymous_post_error("error: composer did not open"), None);
     }
 
     #[test]

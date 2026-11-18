@@ -3958,7 +3958,10 @@ fn apply_done(ui: &Ui, done: Done) {
                 };
                 match warning {
                     Some(message) => show_warning(parent, message, &t("New post")),
-                    None => show_error(parent, &e, "BlindFB"),
+                    None => {
+                        let shown = blindfb_core::fb::anonymous_post_error(&e).unwrap_or(e);
+                        show_error(parent, &shown, "BlindFB");
+                    }
                 }
             }
         },
@@ -5789,6 +5792,20 @@ fn invite_selected(ui: &Ui) {
     });
 }
 
+/// Whether to post in this group anonymously; `None` when the user cancels.
+fn choose_group_post_identity(ui: &Ui, group: &str) -> Option<bool> {
+    let labels = [t("With my name"), t("Anonymously")];
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let message = tf!(
+        "How do you want to post in {group}? Anonymous posts hide your name from group members, but group admins, moderators and Facebook can still see who you are.",
+        group = group
+    );
+    let dialog = SingleChoiceDialog::builder(&ui.frame, &message, &t("Post as"), &labels).build();
+    let chosen = (dialog.show_modal() == ID_OK).then(|| dialog.get_selection() == 1);
+    dialog.destroy();
+    chosen
+}
+
 fn new_post(ui: &Ui, with_media: bool) {
     let Some(text) = prompt_long_text(&ui.frame, t("Post text:"), &t("New post")) else {
         return;
@@ -5821,8 +5838,9 @@ fn new_post(ui: &Ui, with_media: bool) {
         2 => Some("me"),
         3 => {
             let Some((name, url)) = group_picker::show(ui) else { return };
+            let Some(anonymous) = choose_group_post_identity(ui, &name) else { return };
             ui.send(Job {
-                task: Task::Fb(blindfb_core::fb::group_post_args(&text, &url, &images, &videos), None),
+                task: Task::Fb(blindfb_core::fb::group_post_args(&text, &url, &images, &videos, anonymous), None),
                 tag: Tag::GroupPost(name),
             });
             return;
