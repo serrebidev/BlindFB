@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [wsl-linux, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v5
 
@@ -49,57 +49,6 @@ jobs:
         if: runner.os == 'Linux'
         run: sh packaging/test-linux-launcher.sh
 
-      # Host runners (macOS, Windows) start every job in a fresh,
-      # randomly named work folder, so rust-cache never matched
-      # there: its cache version hashes the absolute target path
-      # ("No cache found", full rebuilds every run). target/ points
-      # at a fixed folder on the runner instead and builds reuse the
-      # previous run directly. Two jobs on one folder take turns:
-      # cargo locks its target folder.
-      # Owner-approved 2026-11-10 (same fix as BlindRSS-Rust df47812).
-      # CARGO_TARGET_DIR is the folder's real path: CMake caches
-      # absolute paths, and the path through the link changes
-      # with every work folder ("CMakeCache.txt directory ... is
-      # different"). The link keeps target/... references working.
-      # ponytail: the folder only grows; delete it on the runner
-      # when disk gets tight (next build is cold once).
-      - name: Persistent target folder (Windows host runner)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $dir = 'C:/forgejo-runner/cargo-target/BlindFB/build'
-          New-Item -ItemType Directory -Force $dir | Out-Null
-          if (Test-Path target) { cmd /c rmdir /s /q target }
-          New-Item -ItemType Junction -Path target -Target $dir | Out-Null
-          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=$dir"
-
-      - name: Persistent target folder (macOS host runner)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          dir="$HOME/forgejo-runner/cargo-target/BlindFB/build"
-          mkdir -p "$dir"
-          rm -rf target
-          ln -s "$dir" target
-          echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
-
-      # Linux legs run on desknasbox's WSL (runner wsl-linux-x64) in a job
-      # container. The runner mounts persistent volumes at
-      # /root/forgejo-runner/cargo-target and cargo's registry and git
-      # caches, so target/ points at a fixed folder there exactly as on
-      # the host runners, and the job image ships the apt packages and
-      # Rust (owner request 2026-11-11: Linux as fast as the other legs).
-      # CARGO_TARGET_DIR is the real path: CMake caches absolute paths.
-      - name: Persistent target folder (Linux WSL runner)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          dir="$HOME/forgejo-runner/cargo-target/BlindFB/build"
-          mkdir -p "$dir"
-          rm -rf target
-          ln -s "$dir" target
-          echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
-
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
@@ -120,24 +69,9 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
-      # Drop only the link, never the shared folder behind it,
-      # before the runner deletes the work folder.
       - name: Cargo clean (free disk)
         if: always()
         continue-on-error: true
         run: cargo clean
-      - name: Unlink persistent target folder (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (Test-Path target) { (Get-Item target).Delete() }
-
-      - name: Unlink persistent target folder (macOS)
-        if: always() && runner.os == 'macOS'
-        shell: bash
-        run: rm -f target
-
-      - name: Unlink persistent target folder (Linux)
-        if: always() && runner.os == 'Linux'
-        shell: bash
-        run: rm -f target
+      # Ephemeral GitHub runners delete the work folder with
+      # the job; nothing to unlink (owner 2026-11-18).

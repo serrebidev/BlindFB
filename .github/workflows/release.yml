@@ -25,7 +25,7 @@ jobs:
         # Linux pins ubuntu-22.04 (glibc 2.35): an ubuntu-latest build
         # demanded glibc 2.43 and would not start on Debian 13 or
         # Ubuntu 24.04 LTS at all (found installing v0.7.8 on a server).
-        os: [windows-latest, wsl-linux-22.04, macos-latest]
+        os: [windows-latest, ubuntu-22.04, macos-latest]
     steps:
       - uses: actions/checkout@v5
 
@@ -54,57 +54,6 @@ jobs:
           # GStreamer backend, so remove it in this job's container only.
           sudo apt-get remove -y libgstreamer-plugins-bad1.0-dev
 
-      # Host runners (macOS, Windows) start every job in a fresh,
-      # randomly named work folder, so rust-cache never matched
-      # there: its cache version hashes the absolute target path
-      # ("No cache found", full rebuilds every run). target/ points
-      # at a fixed folder on the runner instead and builds reuse the
-      # previous run directly. Two jobs on one folder take turns:
-      # cargo locks its target folder.
-      # Owner-approved 2026-11-10 (same fix as BlindRSS-Rust df47812).
-      # CARGO_TARGET_DIR is the folder's real path: CMake caches
-      # absolute paths, and the path through the link changes
-      # with every work folder ("CMakeCache.txt directory ... is
-      # different"). The link keeps target/... references working.
-      # ponytail: the folder only grows; delete it on the runner
-      # when disk gets tight (next build is cold once).
-      - name: Persistent target folder (Windows host runner)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $dir = 'C:/forgejo-runner/cargo-target/BlindFB/package'
-          New-Item -ItemType Directory -Force $dir | Out-Null
-          if (Test-Path target) { cmd /c rmdir /s /q target }
-          New-Item -ItemType Junction -Path target -Target $dir | Out-Null
-          Add-Content -Path $env:GITHUB_ENV -Value "CARGO_TARGET_DIR=$dir"
-
-      - name: Persistent target folder (macOS host runner)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          dir="$HOME/forgejo-runner/cargo-target/BlindFB/package"
-          mkdir -p "$dir"
-          rm -rf target
-          ln -s "$dir" target
-          echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
-
-      # Linux legs run on desknasbox's WSL (runner wsl-linux-x64) in a job
-      # container. The runner mounts persistent volumes at
-      # /root/forgejo-runner/cargo-target and cargo's registry and git
-      # caches, so target/ points at a fixed folder there exactly as on
-      # the host runners, and the job image ships the apt packages and
-      # Rust (owner request 2026-11-11: Linux as fast as the other legs).
-      # CARGO_TARGET_DIR is the real path: CMake caches absolute paths.
-      - name: Persistent target folder (Linux WSL runner)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          dir="$HOME/forgejo-runner/cargo-target/BlindFB/package-22.04"
-          mkdir -p "$dir"
-          rm -rf target
-          ln -s "$dir" target
-          echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
-
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -132,7 +81,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          TOKEN: ${{ github.token }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_URL: https://git.serrebiradio.com
+          FORGEJO_REPO: serrebi/BlindFB
         # py, not python: the runner's PATH Python can vanish (v0.7.73's first
         # run); the launcher in C:\Windows finds any installed one.
         run: py -3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
@@ -141,30 +92,15 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         env:
-          TOKEN: ${{ github.token }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_URL: https://git.serrebiradio.com
+          FORGEJO_REPO: serrebi/BlindFB
         run: python3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
 
-      # Drop only the link, never the shared folder behind it,
-      # before the runner deletes the work folder.
       - name: Cargo clean (free disk)
         if: always()
         continue-on-error: true
         run: cargo clean
-      - name: Unlink persistent target folder (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (Test-Path target) { (Get-Item target).Delete() }
-
-      - name: Unlink persistent target folder (macOS)
-        if: always() && runner.os == 'macOS'
-        shell: bash
-        run: rm -f target
-
-      - name: Unlink persistent target folder (Linux)
-        if: always() && runner.os == 'Linux'
-        shell: bash
-        run: rm -f target
 
   publish:
     name: Publish
@@ -197,5 +133,7 @@ jobs:
 
       - name: Verify every asset and signature arrived, then publish
         env:
-          TOKEN: ${{ github.token }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_URL: https://git.serrebiradio.com
+          FORGEJO_REPO: serrebi/BlindFB
         run: python3 .github/publish_release.py "${{ github.ref_name }}" release-notes.md

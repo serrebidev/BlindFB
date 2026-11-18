@@ -1,7 +1,8 @@
 """Upload one package leg's dist/ files to the tag's draft release on Forgejo.
 
-Usage: upload_release_assets.py <tag> <dist dir>. Env: GITHUB_API_URL
-(Forgejo's /api/v1), GITHUB_REPOSITORY (owner/name), TOKEN.
+Usage: upload_release_assets.py <tag> <dist dir>. Env: FORGEJO_URL
+(default https://git.serrebiradio.com), FORGEJO_REPO (owner/name,
+default serrebi/BlindFB), FORGEJO_TOKEN.
 
 Replaces softprops/action-gh-release, a GitHub-only action, with Forgejo's
 own release API — the same move publish_release.py made for the Publish
@@ -19,9 +20,9 @@ import urllib.error
 import urllib.request
 import uuid
 
-API = os.environ["GITHUB_API_URL"].rstrip("/")
-REPO = os.environ["GITHUB_REPOSITORY"]
-TOKEN = os.environ["TOKEN"]
+API = os.environ.get("FORGEJO_URL", "https://git.serrebiradio.com").rstrip("/") + "/api/v1"
+REPO = os.environ.get("FORGEJO_REPO", "serrebi/BlindFB")
+TOKEN = os.environ["FORGEJO_TOKEN"]
 
 
 def call(method, path, body=None):

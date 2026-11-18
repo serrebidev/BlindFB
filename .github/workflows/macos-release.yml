@@ -24,29 +24,6 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy,rustfmt
-    # Host runners (macOS, Windows) start every job in a fresh,
-    # randomly named work folder, so rust-cache never matched
-    # there: its cache version hashes the absolute target path
-    # ("No cache found", full rebuilds every run). target/ points
-    # at a fixed folder on the runner instead and builds reuse the
-    # previous run directly. Two jobs on one folder take turns:
-    # cargo locks its target folder.
-    # Owner-approved 2026-11-10 (same fix as BlindRSS-Rust df47812).
-    # CARGO_TARGET_DIR is the folder's real path: CMake caches
-    # absolute paths, and the path through the link changes
-    # with every work folder ("CMakeCache.txt directory ... is
-    # different"). The link keeps target/... references working.
-    # ponytail: the folder only grows; delete it on the runner
-    # when disk gets tight (next build is cold once).
-    - name: Persistent target folder (macOS host runner)
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        dir="$HOME/forgejo-runner/cargo-target/BlindFB/macos"
-        mkdir -p "$dir"
-        rm -rf target
-        ln -s "$dir" target
-        echo "CARGO_TARGET_DIR=$dir" >> "$GITHUB_ENV"
     - uses: actions/setup-node@v7
       with:
         node-version: 22
@@ -69,7 +46,7 @@ jobs:
         FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
       run: |
         set -euo pipefail
-        api="$GITHUB_SERVER_URL/api/v1/repos/$GITHUB_REPOSITORY"
+        api="https://git.serrebiradio.com/api/v1/repos/serrebi/BlindFB"
         h="Authorization: token $FORGEJO_TOKEN"
         release="$(curl -sf -H "$h" "$api/releases/tags/$TAG")"
         id="$(echo "$release" | jq -r .id)"
@@ -81,13 +58,9 @@ jobs:
           echo "Attached $name to $TAG"
         done
 
-    # Drop only the link, never the shared folder behind it,
-    # before the runner deletes the work folder.
+    # Ephemeral GitHub runners delete the work folder with
+    # the job; nothing to unlink (owner 2026-11-18).
     - name: Cargo clean (free disk)
       if: always()
       continue-on-error: true
       run: cargo clean
-    - name: Unlink persistent target folder (macOS)
-      if: always() && runner.os == 'macOS'
-      shell: bash
-      run: rm -f target

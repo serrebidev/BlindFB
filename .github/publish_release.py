@@ -1,8 +1,9 @@
 """Publish a draft release on Forgejo once every asset and signature is on it.
 
-Usage: publish_release.py <tag> <notes file>. Env: GITHUB_API_URL (Forgejo's
-/api/v1), GITHUB_REPOSITORY (owner/name), TOKEN. The runners have no `gh`, and
-`gh` speaks GitHub's API anyway, so this talks to Forgejo's own release API.
+Usage: publish_release.py <tag> <notes file>. Env: FORGEJO_URL (default
+https://git.serrebiradio.com), FORGEJO_REPO (owner/name, default
+serrebi/BlindFB), FORGEJO_TOKEN. The runners have no `gh`, and `gh`
+speaks GitHub's API anyway, so this talks to Forgejo's own release API.
 It also writes SHA256SUMS over the four archives before publishing: no
 package leg can make it (each sees only its own platform's files), and the
 releases shipped without it had to be finished by hand.
@@ -26,12 +27,15 @@ WANTED = [
 ARCHIVES = ["BlindFB.zip", "BlindFB-Setup.exe", "BlindFB.tar.gz", "BlindFB-arm64.dmg"]
 
 
+API = os.environ.get("FORGEJO_URL", "https://git.serrebiradio.com").rstrip("/") + "/api/v1"
+
+
 def call(method, path, body=None):
     request = urllib.request.Request(
-        os.environ["GITHUB_API_URL"].rstrip("/") + path,
+        API + path,
         method=method,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": "token " + os.environ["TOKEN"], "Content-Type": "application/json"},
+        headers={"Authorization": "token " + os.environ["FORGEJO_TOKEN"], "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(request) as response:
         raw = response.read()
@@ -39,7 +43,7 @@ def call(method, path, body=None):
 
 
 def download(url):
-    request = urllib.request.Request(url, headers={"Authorization": "token " + os.environ["TOKEN"]})
+    request = urllib.request.Request(url, headers={"Authorization": "token " + os.environ["FORGEJO_TOKEN"]})
     with urllib.request.urlopen(request) as response:
         return response.read()
 
@@ -52,10 +56,10 @@ def upload_asset(repo, release_id, data, name):
         "Content-Type: application/octet-stream\r\n\r\n"
     ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
     request = urllib.request.Request(
-        os.environ["GITHUB_API_URL"].rstrip("/") + f"/repos/{repo}/releases/{release_id}/assets?name={name}",
+        API + f"/repos/{repo}/releases/{release_id}/assets?name={name}",
         method="POST",
         data=body,
-        headers={"Authorization": "token " + os.environ["TOKEN"], "Content-Type": f"multipart/form-data; boundary={boundary}"},
+        headers={"Authorization": "token " + os.environ["FORGEJO_TOKEN"], "Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     with urllib.request.urlopen(request) as response:
         return json.load(response)
@@ -75,7 +79,7 @@ def add_checksums(repo, release):
 
 def main():
     tag, notes = sys.argv[1], open(sys.argv[2], encoding="utf-8").read()
-    repo = os.environ["GITHUB_REPOSITORY"]
+    repo = os.environ.get("FORGEJO_REPO", "serrebi/BlindFB")
     # Fetching by tag skips drafts: find the draft in the list.
     release = next((r for r in call("GET", f"/repos/{repo}/releases?limit=50") if r["tag_name"] == tag), None)
     if release is None:
