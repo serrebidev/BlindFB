@@ -10,7 +10,7 @@ const ARTICLE = '[role=article][aria-label]';
 const EDITOR = '[role=textbox][contenteditable=true],textarea';
 
 function fixture(mode = false) {
-  const watch = mode === true || mode === 'watch-fr', isReel = mode === 'reel' || mode === 'reel-count' || mode === 'reel-fr' || mode === 'untitled';
+  const watch = mode === true || mode === 'watch-fr', isReel = mode === 'reel' || mode === 'reel-count' || mode === 'reel-fr' || mode === 'reel-et' || mode === 'video-reel' || mode === 'untitled';
   const french = mode === 'reel-fr' || mode === 'watch-fr';
   let comments = [], focus, editor;
   const boxes = [];
@@ -22,9 +22,11 @@ function fixture(mode = false) {
     closest: () => mode === 'slow' ? {} : null,
     click() {if (mode === 'slow') expanding = true; else expanded = true;}};
   const author = {innerText: 'Reel author', href: 'https://www.facebook.com/author', closest: () => null, getAttribute: () => ''};
-  const reelCard = {isConnected: true, closest: () => null, contains: () => true, querySelectorAll: selector => selector === 'a[href]' ? [author] : selector === '[role=button][aria-label]' ? [openComments] : selector === '[role=button],button' ? [expand] : []};
+  const reelCard = {isConnected: true, closest: () => null, contains: () => true, querySelectorAll: selector => selector === 'a[href]' ? [author] : selector === '[role=button][aria-label]' ? (mode === 'reel-et' ? [moreOptions, openComments] : [openComments]) : selector === '[role=button],button' ? [expand] : []};
+  // Estonian Facebook: words labels.js does not know. "More options" also expands, as a popup menu.
+  const moreOptions = {closest: () => null, getAttribute: name => ({'aria-label': 'Veel valikuid', 'aria-expanded': 'false', 'aria-haspopup': 'menu'})[name] ?? null, click() { throw Error('pressed the menu'); }};
   video.parentElement = isReel ? reelCard : null;
-  const openComments = {closest: () => null, getAttribute: () => mode === 'reel-fr' ? 'Commenter, 1,9 K commentaires' : mode === 'watch-fr' ? 'Laissez un commentaire' : mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
+  const openComments = {closest: () => null, getAttribute: name => mode === 'reel-et' ? ({'aria-label': 'Kommenteeri, 3 kommentaari', 'aria-expanded': 'false'})[name] ?? null : mode === 'reel-fr' ? 'Commenter, 1,9 K commentaires' : mode === 'watch-fr' ? 'Laissez un commentaire' : mode === 'reel-count' ? 'Comment, 6 comments' : isReel ? 'Comment' : 'Leave a comment', click() {opened = true;}};
   const cards = [{contains: () => false}, {contains: () => false}];
   // A YouTube clip shared into a post: Facebook wraps it in l.facebook.com/l.php?u=.
   const sharedVideo = {href: 'https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&h=AT0', getAttribute: () => '', closest: () => null, innerText: 'A video'};
@@ -148,7 +150,7 @@ function fixture(mode = false) {
   const snapshot = F.pageSnapshot;
   F.pageSnapshot = name => { F.lastName = name; return snapshot(name); };
   const window = {__fb: F};
-  vm.runInNewContext(source, {window, document, location: {href: 'https://www.facebook.com/a/posts/1'}, NodeFilter: {SHOW_TEXT: 4, SHOW_ELEMENT: 1}, URL, innerHeight: 600,
+  vm.runInNewContext(source, {window, document, location: {href: mode === 'video-reel' ? 'https://www.facebook.com/reel/123/' : 'https://www.facebook.com/a/posts/1'}, NodeFilter: {SHOW_TEXT: 4, SHOW_ELEMENT: 1}, URL, innerHeight: 600,
     getSelection: () => ({selectAllChildren() {}, collapseToEnd() { collapsed = true; }})});
   return {api: window.__blindfbPost, document, scope: isReel ? reelCard : root, article, makeEditor, replyBox, replyAction, remove: e => {e.isConnected = false;}, snapshot: value => { named = value; }, get focused() {return focus;}, get collapsed() {return collapsed;}, set comments(value) {comments = value;}, get paused() {return paused;}};
 }
@@ -272,6 +274,14 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   const french = JSON.parse(await fixture('reel-fr').api.initialize('https://www.facebook.com/reel/123/'));
   assert.equal(french.text, 'Entire reel caption');
   assert.equal(french.author, 'Reel author');
+  // A language labels.js has no words for: the Comment button is found by what it does.
+  const unknownWords = JSON.parse(await fixture('reel-et').api.initialize('https://www.facebook.com/reel/123/'));
+  assert.equal(unknownWords.text, 'Entire reel caption');
+  assert.equal(unknownWords.video, 'https://www.facebook.com/reel/123/');
+  // Facebook sends a /videos/ link on to the reel viewer.
+  const redirected = JSON.parse(await fixture('video-reel').api.initialize('https://www.facebook.com/page/videos/123/'));
+  assert.equal(redirected.text, 'Entire reel caption');
+  assert.equal(redirected.video, 'https://www.facebook.com/page/videos/123/');
   const watchedFr = JSON.parse(await fixture('watch-fr').api.initialize('https://www.facebook.com/page/videos/123/'));
   assert.equal(watchedFr.text, 'Entire post text');
   const untitled = fixture('untitled');
@@ -491,6 +501,29 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   for (const text of ['il y a 10 heures', '8 h', '1 j', '1 sem.', '2 ans', 'À l’instant', 'Hier à 14:05']) assert.ok(W.time.test(text), text);
   for (const text of ['J’aime', "J'aime", 'Répondre', 'Modifié', 'Voir la traduction']) assert.ok(W.commentAction.test(text), text);
   assert.ok(W.nextReel.test('Carte suivante'));
+  // Estonian and Russian Facebook, as read live.
+  for (const text of ['Kommenteeri', 'Kommenteeri, 10 kommentaari', 'Комментировать, 10 комментария']) assert.ok(W.comment.test(text), text);
+  for (const text of ['Jaga kasutaja The Verge postitust', 'Jaga, 2 jagamist', 'Поделиться, 2 репоста']) assert.ok(W.share.test(text), text);
+  assert.ok(!W.share.test('Jagatud sihtrühmaga Avalik'));
+  for (const text of ['Share now', 'Поделиться']) assert.ok(W.shareNow.test(text), text);
+  for (const text of ['Поделиться в группе', 'Jaga, 2 jagamist']) assert.ok(!W.shareNow.test(text), text);
+  assert.equal(('Muuda privaatsust. Jagamine: Sinu sõbrad.'.match(W.sharingWith) || [])[1], 'Sinu sõbrad');
+  assert.equal(('Изменить конфиденциальность. Аудитория: Ваши друзья.'.match(W.sharingWith) || [])[1], 'Ваши друзья');
+  for (const text of ['Muuda privaatsust. Jagamine: Sinu sõbrad.', 'Изменить конфиденциальность. Аудитория: Ваши друзья.']) assert.ok(W.editPrivacy.test(text), text);
+  for (const text of ['Sule', 'Закрыть']) assert.ok(W.close.test(text), text);
+  for (const text of ['Loobu', 'Сбросить']) assert.ok(W.discardDraft.test(text), text);
+  for (const text of ['Reaktsioonid', 'Реакции']) assert.ok(W.reactionsDialog.test(text), text);
+  for (const text of ['Järgmine kaart', 'Следующая карточка']) assert.ok(W.nextReel.test(text), text);
+  assert.ok(W.reply.test('Vasta') && W.replyStart.test('Vasta') && !W.replyStart.test('Vastamata'));
+  for (const text of ['Meeldib', 'Vasta', 'Muudetud', 'Kuva tõlge', 'Kuva algses keeles (vene keel)', 'Показать оригинал (Украинский)']) assert.ok(W.commentAction.test(text), text);
+  for (const text of ['Kuva tõlge', 'Показать перевод']) assert.ok(W.seeTranslation.test(text), text);
+  for (const text of ['Kuva algses keeles (vene keel)', 'Показать оригинал (Украинский)']) assert.ok(W.hideTranslation.test(text), text);
+  for (const text of ['Kuva 1 vastus', 'Kuva 3 vastust', 'Kuva veel vastuseid', 'Kuva veel 1 vastus', 'Kuva eelmised vastused', 'Показать 1 ответ', 'Показать ещё 1 ответ', 'Смотреть скрытые ответы', 'Посмотреть ответы']) assert.ok(W.viewReplies.test(text), text);
+  assert.ok(W.viewMoreComments.test('Смотреть скрытые комментарии'));
+  for (const text of ['Kuva kommentaarid ja reaktsioonid', 'Скрыть комментарии и реакции']) assert.ok(!W.viewMoreComments.test(text), text);
+  for (const text of ['Самые актуальные', 'Kõige asjakohasemad']) assert.ok(W.commentSort.test(text), text);
+  for (const text of ['Äsja', '5 t', '2 p', '3 näd', '8 a tagasi', '8 г.']) assert.ok(W.time.test(text), text);
+  for (const text of ['Kuva rohkem', 'Показать больше']) assert.ok(W.seeMore.test(text), text);
   assert.ok(W.seeMore.test('En voir plus'));
   // "See more" in a language labels.js does not know: the button after text cut with "…".
   assert.ok(W.cutShort({parentElement: {innerText: 'Я проверил информацию… Ещё'}}, 'Ещё'));

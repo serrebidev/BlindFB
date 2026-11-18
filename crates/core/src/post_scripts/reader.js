@@ -36,6 +36,13 @@
   const seeMore = element => { const text = F.clean(element.innerText || '') || label(element); return W.seeMore.test(text) || W.cutShort(element, text); };
   const buttonLabeled = (scope, pattern) => [...scope.querySelectorAll('[role=button][aria-label]')].filter(element => F.visible(element) && pattern.test(label(element)));
 
+  // A reel's Comment button by its words or, in languages labels.js does not know, by what it
+  // does: the one action that expands a panel in place (More options expands a popup menu).
+  const reelComment = scope => {
+    const named = buttonLabeled(scope, W.comment);
+    return named.length ? named : [...scope.querySelectorAll('[role=button][aria-label]')].filter(element => F.visible(element) && element.getAttribute('aria-expanded') !== null && element.getAttribute('aria-haspopup') === null);
+  };
+
   // The reel playing at the top of the viewer, as the card that owns its Comment button.
   function reelCard() {
     const video = [...document.querySelectorAll('video')].find(element => {
@@ -43,7 +50,7 @@
       return rect.height > 0 && rect.top >= -10 && rect.top < innerHeight / 2;
     });
     let element = video;
-    while (element && !buttonLabeled(element, W.comment).length) element = element.parentElement;
+    while (element && !reelComment(element).length) element = element.parentElement;
     // Until it shows its author the card is still loading, or is the next reel's.
     return element && [...element.querySelectorAll('a[href]')].some(a => F.clean(a.innerText || '')) ? element : null;
   }
@@ -679,7 +686,15 @@
     like, shareTarget, shareOpen, shareFill, shareNow, shareClose, reelReact,
     async initialize(url) {
       target = url;
-      if (/^\/reel\//.test(new URL(url).pathname)) {
+      const path = new URL(url).pathname, isVideo = /\/videos\/|^\/watch\/?/.test(path);
+      const inReelViewer = () => /^\/reel\//.test(new URL(location.href).pathname);
+      const leaveComment = () => {
+        const found = buttonLabeled(document, W.leaveComment);
+        return found.length === 1 ? found[0] : null;
+      };
+      // Facebook can send a /videos/ link on to the reel viewer once the page has loaded.
+      if (isVideo) await F.waitFor(() => inReelViewer() || leaveComment(), 15000);
+      if (/^\/reel\//.test(path) || inReelViewer()) {
         card = await F.waitFor(reelCard, 15000);
         if (!card) throw Error('The reel could not be read.');
         // BlindFB plays the reel itself; a playing page would move on to the next reel.
@@ -696,7 +711,7 @@
         const caption = lines.filter(text => text && text !== author && !W.captionNoise.test(text));
         await reveal(card);
         reel = {author, text: caption.join('\n'), links: links(card, card)};
-        const comment = buttonLabeled(card, W.comment);
+        const comment = reelComment(card);
         if (comment.length !== 1) throw Error('This reel has no unique Comment button.');
         // "Commenter, 2 commentaires": the button says whether there are comments to wait for.
         const counted = /,\s*(?!0\b)\d/.test(label(comment[0]));
@@ -709,11 +724,8 @@
         return read();
       }
       // Watch only exposes the full post after opening its comments dialog.
-      if (/\/videos\/|^\/watch\/?/.test(new URL(url).pathname)) {
-        const button = await F.waitFor(() => {
-          const found = buttonLabeled(document, W.leaveComment);
-          return found.length === 1 ? found[0] : null;
-        }, 15000);
+      if (isVideo) {
+        const button = leaveComment();
         if (!button) throw Error('The video comments could not be opened.');
         button.click();
       }

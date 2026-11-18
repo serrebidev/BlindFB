@@ -25,18 +25,18 @@
     COUNT,
     // A reel or video card's comment button: "Comment", "Comment, 1.2K comments",
     // "Commenter", "Commenter, 1,9 K commentaires".
-    comment: exact('Comment(?:, .+ comments?)?|Commenter(?:, .+ commentaires?)?'),
+    comment: exact('Comment(?:, .+ comments?)?|Commenter(?:, .+ commentaires?)?|Kommenteeri(?:, .+ kommentaari?)?|Комментировать(?:, .+ коммент\\S*)?'),
     // Opens the comments of a Watch video ("Leave a comment" in English).
     leaveComment: exact('Leave a comment|Laissez un commentaire|Laisser un commentaire', ''),
-    seeMore: exact('See more|Xem thêm|Voir plus|En voir plus|Afficher la suite'),
+    seeMore: exact('See more|Xem thêm|Voir plus|En voir plus|Afficher la suite|Kuva rohkem|Vaata rohkem|Показать больше'),
     // Words in a comment that are its actions, not its text.
     // "See original (Russian)": the language in brackets is optional.
-    commentAction: exact(`Like|Reply|Edited|Нравится|Ответить|Отредактировано|See translation|See original(?: [(][^)]+[)])?|Hide translation|Rate this translation|Translation unavailable|Thích|Trả lời|Xem bản dịch|Xem bản gốc|J${A}aime|Répondre|Modifié|Voir la traduction|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Odpovědět|Odpovedať`),
+    commentAction: exact(`Like|Reply|Edited|Нравится|Ответить|Отредактировано|See translation|See original(?: [(][^)]+[)])?|Hide translation|Rate this translation|Translation unavailable|Thích|Trả lời|Xem bản dịch|Xem bản gốc|J${A}aime|Répondre|Modifié|Voir la traduction|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Odpovědět|Odpovedať|Meeldib|Vasta|Muudetud|Kuva tõlge|Kuva algses keeles(?: [(][^)]+[)])?|Показать перевод|Скрыть перевод|Показать оригинал(?: [(][^)]+[)])?`),
     // Facebook's own translation toggle on a post, a caption or a comment.
-    seeTranslation: exact('See translation|Voir la traduction|Xem bản dịch'),
-    hideTranslation: exact(`See originals?(?: [(][^)]+[)])?|Hide translation|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Xem bản gốc|Ẩn bản dịch`),
+    seeTranslation: exact('See translation|Voir la traduction|Xem bản dịch|Kuva tõlge|Показать перевод'),
+    hideTranslation: exact(`See originals?(?: [(][^)]+[)])?|Hide translation|Voir l${A}original(?: [(][^)]+[)])?|Masquer la traduction|Xem bản gốc|Ẩn bản dịch|Kuva algses keeles(?: [(][^)]+[)])?|Показать оригинал(?: [(][^)]+[)])?|Скрыть перевод`),
     // Badges on a comment's author line.
-    commentBadge: exact('(?:by )?author|Top fan|Follow|Auteur|Fan assidu|Super fan|Suivre|·'),
+    commentBadge: exact('(?:by )?author|Top fan|Follow|Auteur|Fan assidu|Super fan|Suivre|Autor|Jälgi|Автор|Подписаться|·'),
     // A comment's own Like button, liked or not. Facebook labels it with the Like name
     // until you react, then "Remove <your reaction>" (Russian: Удалить реакцию "<name>"),
     // as its own CometUFIReactionLink source shows.
@@ -47,47 +47,47 @@
     // and viewMoreComments but never to the Reply action itself, so on his Czech
     // Facebook prepare() found no Reply button and refused to send ("The selected
     // comment has no unique Reply action") — reported via blindDL issue #4.
-    reply: exact('Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať'),
-    replyStart: /^(?:Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať)(?!\p{L})/iu,
+    reply: exact('Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať|Vasta'),
+    replyStart: /^(?:Reply|Trả lời|Répondre|Ответить|Odpovědět|Odpovedať|Vasta)(?!\p{L})/iu,
     // Buttons that load a comment's hidden replies: "View replies", "View 3 replies",
     // "View more replies". Never "Hide replies" — that would collapse them again.
     // Czech and Slovak (issue #30, Michal's languages, already taught to the audience
     // picker in issue #20 but never to this pattern, so his replies never loaded):
     // "Zobrazit odpovědi / 1 odpověď / další odpovědi", "Zobraziť odpovede / ďalšie
     // odpovede"; the noun stems cover every count declension (odpověď/odpovědi/odpovědí).
-    viewReplies: exact(`View(?: more| previous)?(?: ${COUNT})? replies|View 1 reply|Afficher(?: les| plus de)?(?: ${COUNT})? réponses|Voir(?: les| plus de)?(?: ${COUNT})? réponses|Xem(?: thêm)?(?: ${COUNT})?(?: câu)? trả lời|Zobrazit(?: další| více| předchozí| všechny)?(?: ${COUNT})? odpově(?:ď|di|dí)|Zobraziť(?: ďalšie| viac| predchádzajúce| všetky)?(?: ${COUNT})? odpove(?:ď|de|dí)|Посмотреть(?: все| ещё| предыдущие)?(?: ${COUNT})? ответ(?:а|ов|ы)?`),
+    viewReplies: exact(`View(?: more| previous)?(?: ${COUNT})? replies|View 1 reply|Afficher(?: les| plus de)?(?: ${COUNT})? réponses|Voir(?: les| plus de)?(?: ${COUNT})? réponses|Xem(?: thêm)?(?: ${COUNT})?(?: câu)? trả lời|Zobrazit(?: další| více| předchozí| všechny)?(?: ${COUNT})? odpově(?:ď|di|dí)|Zobraziť(?: ďalšie| viac| predchádzajúce| všetky)?(?: ${COUNT})? odpove(?:ď|de|dí)|Посмотреть(?: все| ещё| предыдущие)?(?: ${COUNT})? ответ(?:а|ов|ы)?|Показать(?: ещё)?(?: ${COUNT})? ответ(?:а|ов|ы)?|Смотреть(?: скрытые)? ответы|Kuva(?: veel| eelmised)?(?: ${COUNT})? vastus(?:t|ed|eid)?`),
     // Buttons that load more top-level comments: "View more comments", "View previous
     // comments". read() never pressed these, so a post's list stopped at Facebook's
     // first batch while its count (which includes replies) kept counting (issue #30).
     // Never a sort label ("Most relevant") and never "Hide comments".
-    viewMoreComments: exact(`View(?: more| previous)?(?: ${COUNT})? comments|View ${COUNT} more comments|Voir(?: plus de| les)?(?: ${COUNT})? commentaires|Afficher(?: plus de| les)?(?: ${COUNT})? commentaires|Xem(?: thêm)?(?: ${COUNT})? bình luận|Xem các bình luận trước(?: đó)?|Zobrazit(?: další| více| předchozí)?(?: ${COUNT})? komentář(?:e|ů)?|Zobraziť(?: ďalšie| viac| predchádzajúce)?(?: ${COUNT})? komentár(?:e|ov)?|Посмотреть(?: ещё| предыдущие| все)?(?: ${COUNT})? комментари(?:и|ев|я|й)`),
+    viewMoreComments: exact(`View(?: more| previous)?(?: ${COUNT})? comments|View ${COUNT} more comments|Voir(?: plus de| les)?(?: ${COUNT})? commentaires|Afficher(?: plus de| les)?(?: ${COUNT})? commentaires|Xem(?: thêm)?(?: ${COUNT})? bình luận|Xem các bình luận trước(?: đó)?|Zobrazit(?: další| více| předchozí)?(?: ${COUNT})? komentář(?:e|ů)?|Zobraziť(?: ďalšie| viac| predchádzajúce)?(?: ${COUNT})? komentár(?:e|ov)?|Посмотреть(?: ещё| предыдущие| все)?(?: ${COUNT})? комментари(?:и|ев|я|й)|Смотреть скрытые комментарии|Kuva(?: veel| rohkem| eelmised)(?: ${COUNT})? kommentaar(?:e|id)`),
     // The comment sort control: Facebook opens a post's comments under
     // "Most relevant", which silently hides comments it ranks low — the post
     // can say 18 comments while that view lists only 12, with no "View more
     // comments" button left to press. "All comments" is the only sort that
     // lists every comment, so read() switches to it when the control is there.
-    commentSort: exact(`Most relevant(?: comments)?|Les plus pertinents|Phù hợp nhất|Nejrelevantnější|Najrelevantnejšie|Сначала актуальные|Kõige asjakohasemad`),
+    commentSort: exact(`Most relevant(?: comments)?|Les plus pertinents|Phù hợp nhất|Nejrelevantnější|Najrelevantnejšie|Сначала актуальные|Самые актуальные|Kõige asjakohasemad`),
     allComments: exact(`All comments|Tous les commentaires|Tất cả bình luận|Všechny komentáře|Všetky komentáre|Все комментарии|Kõik kommentaarid`),
     // "Share", "Share X's post, 18 shares", "Partager la publication de X", "Partager, 4 partages".
-    share: /^(?:Share|Partager)\b/i,
-    shareNow: exact('Share now|Partager maintenant|Partager'),
+    share: /^(?:Share|Partager|Jaga|Поделиться)(?!\p{L})/iu,
+    shareNow: exact('Share now|Partager maintenant|Partager|Jaga kohe|Jaga|Поделиться'),
     // French Facebook first asks where to share; "to the feed" opens the editor with Partager.
     shareOptions: exact('Share options|Options de partage'),
     shareToFeed: exact('Share to Feed|Partager sur le Fil'),
     // Closing an unsent share asks what to do with its draft.
-    discardDraft: exact('Discard|Discard post|Supprimer le brouillon'),
-    editPrivacy: /^(?:Edit privacy|Modifier la confidentialité)/i,
-    sharingWith: /(?:Sharing with|Partag[ée] avec\s*:?)\s*(.+?)\.?$/i,
-    close: exact(`Close|Fermer|Fermer la boîte de dialogue de l${A}éditeur`),
+    discardDraft: exact('Discard|Discard post|Supprimer le brouillon|Loobu|Сбросить'),
+    editPrivacy: /^(?:Edit privacy|Modifier la confidentialité|Muuda privaatsust|Изменить конфиденциальность)/i,
+    sharingWith: /(?:Sharing with|Partag[ée] avec\s*:?|Jagamine:|Аудитория:)\s*(.+?)\.?$/i,
+    close: exact(`Close|Fermer|Fermer la boîte de dialogue de l${A}éditeur|Sule|Закрыть`),
     react: exact(`React(?: to .+['’]s post)?|Change (?:${ANY_REACTION}) reaction|Réagir(?: à la publication de .+)?|Отреагировать|Reageeri`),
-    reactionsDialog: exact('Reactions|Réactions'),
+    reactionsDialog: exact('Reactions|Réactions|Reaktsioonid|Реакции'),
     // A notification about several reels at once: "X posted 3 new reels" (French form supposed).
     manyReels: /\s(?:new reels|nouveaux reels|nouvelles vidéos reels)\b/i,
-    nextReel: exact('Next Card|Next reel|Carte suivante|Reel suivant'),
+    nextReel: exact('Next Card|Next reel|Carte suivante|Reel suivant|Järgmine kaart|Следующая карточка'),
     // Lines of a reel card that are not its caption: badges, Follow and counts.
     captionNoise: exact(`·|Follow|Following|Verified account|Suivre|Abonné(?:e)?|Vous suivez .+|Compte vérifié|${COUNT}`),
     // Post and comment times, when the backend does not supply its own pattern.
-    time: /^(?:\d+\s*(?:s|m|h|d|w|y|min|hr|day|week)s?|Just now|il y a .+|\d+\s*(?:j|sem\.?|ans?)|À l’instant|À l'instant|Hier.*|Aujourd’hui.*|Aujourd'hui.*|\d+\s*(?:сек|мин|ч|дн|нед|мес|г|л)\.?|Только что|Вчера.*)$/i,
+    time: /^(?:\d+\s*(?:s|m|h|d|w|y|min|hr|day|week)s?|Just now|il y a .+|\d+\s*(?:j|sem\.?|ans?)|À l’instant|À l'instant|Hier.*|Aujourd’hui.*|Aujourd'hui.*|\d+\s*(?:сек|мин|ч|дн|нед|мес|г|л)\.?|Только что|Вчера.*|Äsja|\d+\s*(?:h|min|t|p|näd|k|a)(?:\s+tagasi)?)$/i,
     // The account named by a reels page title: "X Reels | Facebook", French supposed "Reels de X".
     reelsTitleAuthor: title => String(title || '').replace(/ \| Facebook$/, '').replace(/ Reels.*$/, '').replace(/^Reels (?:de |d’|d')/i, ''),
     // "See more" in any language: a short button right after text that Facebook cut

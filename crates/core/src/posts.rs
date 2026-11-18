@@ -827,11 +827,27 @@ pub fn share_cancel(fb: &Fb, page: &str) -> Result<String, String> {
 
 pub fn close(fb: &Fb, page: &str) -> Result<String, String> {
     opened().lock().unwrap().remove(page);
-    fb.run(&["page", page, "close"])
+    closed_page(fb.run(&["page", page, "close"]))
+}
+
+/// A reader that failed to open has already lost its page: closing it again is no error.
+fn closed_page(result: Result<String, String>) -> Result<String, String> {
+    match result {
+        Err(error) if error.contains("nothing to close") => Ok(String::new()),
+        other => other,
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn closing_a_page_already_gone_is_not_an_error() {
+        let gone = Err("error: page expired or unknown; nothing to close".to_owned());
+        assert_eq!(super::closed_page(gone), Ok(String::new()));
+        let failed = Err("error: browser is gone".to_owned());
+        assert_eq!(super::closed_page(failed.clone()), failed);
+    }
+
     #[test]
     fn identity_panels_validate_options_fields_and_answers() {
         let panel = json!({"identity":{"token":"panel-1","text":"Comment identity","options":[

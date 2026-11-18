@@ -4,6 +4,22 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.79 - 2026-11-18
+
+Reels and videos open again when Facebook is not set to English or French.
+BlindFB looked for a reel's Comment button by name, so on Estonian, Russian
+and other Facebook languages every reel failed with "The reel could not be
+read". It now recognizes that button in any language, so the full caption,
+the comments and Play video all come back. Video links that Facebook now
+sends on to its reel viewer open too, in every language.
+
+Estonian and Russian Facebook are also understood across the post reader:
+sharing a post or reel, replying to comments, loading hidden replies,
+translating, reacting to reels, and comments no longer end with stray words
+such as "Vasta". A reader that failed to open no longer shows a second error
+about a page it could not close. Thanks to Victor for the reports and debug
+logs.
+
 ## v0.7.78 - 2026-11-17
 
 Reactions work on Estonian Facebook. A reaction other than Like could land
