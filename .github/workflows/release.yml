@@ -1,8 +1,14 @@
 name: Release
 
+# Manual only: the Forgejo-to-GitHub sync disables GitHub workflows with
+# automatic triggers.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing tag to build and publish, such as v0.7.80
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,6 +34,8 @@ jobs:
         os: [windows-latest, ubuntu-22.04, macos-latest]
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -86,7 +94,7 @@ jobs:
           FORGEJO_REPO: serrebi/BlindFB
         # py, not python: the runner's PATH Python can vanish (v0.7.73's first
         # run); the launcher in C:\Windows finds any installed one.
-        run: py -3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
+        run: py -3 .github/upload_release_assets.py "${{ inputs.release_tag }}" dist
 
       - name: Upload to the Forgejo release draft
         if: runner.os != 'Windows'
@@ -95,7 +103,7 @@ jobs:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
           FORGEJO_URL: https://git.serrebiradio.com
           FORGEJO_REPO: serrebi/BlindFB
-        run: python3 .github/upload_release_assets.py "${{ github.ref_name }}" dist
+        run: python3 .github/upload_release_assets.py "${{ inputs.release_tag }}" dist
 
       - name: Cargo clean (free disk)
         if: always()
@@ -108,13 +116,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag }}
 
       # The release notes are the tag's section of CHANGELOG.md, the way
       # BlindRadio ships them — never an empty body or a compare link. A
       # release with no section written does not publish.
       - name: Take the release notes from CHANGELOG.md
         run: |
-          python3 - "${{ github.ref_name }}" <<'PY'
+          python3 - "${{ inputs.release_tag }}" <<'PY'
           import sys
           tag = sys.argv[1]
           notes, inside = [], False
@@ -136,4 +146,4 @@ jobs:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
           FORGEJO_URL: https://git.serrebiradio.com
           FORGEJO_REPO: serrebi/BlindFB
-        run: python3 .github/publish_release.py "${{ github.ref_name }}" release-notes.md
+        run: python3 .github/publish_release.py "${{ inputs.release_tag }}" release-notes.md

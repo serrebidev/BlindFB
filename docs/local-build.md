@@ -67,11 +67,11 @@ publishing an app release, check the pinned backend release exists;
 v0.7.18 shipped once with a missing backend and every install failed to
 fetch it.
 
-## Release (Forgejo, while GitHub is suspended)
+## Release (published on Forgejo, built on GitHub runners)
 
 Releases live at `https://git.serrebiradio.com/serrebi/BlindFB/releases`.
-A tag push runs `release.yml` on the Forgejo runners (Windows, WSL Ubuntu 22.04,
-Mac). It signs with the `MINISIGN_KEY` repository secret, uploads to a draft
+Push the tag, then start `release.yml` on GitHub runners (Windows, Ubuntu 22.04,
+macOS) with `gh workflow run release.yml --repo serrebidev/BlindFB -f release_tag=vX`. It signs with the `MINISIGN_KEY` repository secret, uploads to a draft
 release and publishes once every asset is there. The current signing key
 (F806D88DE00499EF) is not under `~/.minisign` on this PC: the keys there are
 older ones, and assets signed with them fail `cargo xtask verify`. The manual steps
@@ -104,12 +104,11 @@ below are for a leg that fails, and need the current key.
    API token stays on the VPS at `/root/forgejo-muse-token.txt`; run the
    upload from there so the token never leaves it.
 7. macOS: dispatch `macos-release.yml` on `main` with
-   `release_tag=vX`. The Forgejo Mac runner builds, signs and attaches
+   `release_tag=vX`. A GitHub macOS runner builds, signs and attaches
    `BlindFB-arm64.dmg` and its `.minisig`; it does not touch
    `SHA256SUMS`, so write that file after the dmg lands.
 
-Do not put `[skip ci]` in the commit the tag points at: Forgejo then skips
-`release.yml` and nothing is built. Create a manual release as a
+Create a manual release as a
 prerelease until every asset is attached (`/releases/latest` skips
 prereleases, so installed copies are not offered a half-built release),
 then clear the prerelease flag.
