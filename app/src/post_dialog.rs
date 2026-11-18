@@ -1656,7 +1656,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 state.reaction = detail.reaction;
                 let identity = detail.comment_identity.as_ref().map(|identity| {
                     if identity.reason.is_empty() { identity.label.clone() }
-                    else { format!("{} — {}", identity.label, identity.reason) }
+                    else { format!("{} — {}", identity.label, blindfb_core::page_errors::identity_reason(&identity.reason)) }
                 }).unwrap_or_else(|| t("Facebook did not expose a comment identity for this post."));
                 if reader.identity_text.get_value() != identity {
                     reader.identity_text.change_value(&identity);

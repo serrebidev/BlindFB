@@ -17,8 +17,16 @@ pub fn page_error(raw: &str) -> String {
     translated(message).unwrap_or_else(|| message.to_owned())
 }
 
+/// Why a post offers no comment identity choice, in the user's language.
+pub fn identity_reason(reason: &str) -> String {
+    translated(reason).unwrap_or_else(|| reason.to_owned())
+}
+
 fn translated(message: &str) -> Option<String> {
     Some(match message {
+        "Facebook does not offer identity switching on this post." => t("Facebook does not offer identity switching on this post."),
+        "Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report." => t("Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report."),
+        "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it." => t("This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."),
         "Ambiguous comment permalink; refresh the post." => t("Ambiguous comment permalink; refresh the post."),
         "Duplicate comment identity; refresh the post." => t("Duplicate comment identity; refresh the post."),
         "Facebook did not confirm the Like. Refresh to check." => t("Facebook did not confirm the Like. Refresh to check."),

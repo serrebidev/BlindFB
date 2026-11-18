@@ -4387,3 +4387,12 @@ msgstr "Väljas (ilma klahvita)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Vasta kasutajale {author}"
+
+msgid "Facebook does not offer identity switching on this post."
+msgstr "Facebook ei paku selle postituse juures identiteedi vahetamist."
+
+msgid "Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report."
+msgstr "Facebook pakub siin kommenteerija identiteedi valikut, kuid BlindFB ei leidnud seda. Palun saada silumisaruanne."
+
+msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
+msgstr "See grupp lubab anonüümseid kommentaare, kuid Facebooki veebileht ei paku sinu kontole selle postituse juures valikut. Facebooki telefonirakenduses võib see olla saadaval."

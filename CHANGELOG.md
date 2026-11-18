@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.78 - 2026-11-17
+
+Reactions work on Estonian Facebook. A reaction other than Like could land
+on the post and still be reported as failed, because BlindFB did not
+recognize Facebook's Estonian wording for a selected reaction. The same
+gap could make Like report success without pressing anything on a post you
+had not reacted to, and it is fixed too. Thanks to Victor for the report
+and debug log.
+
+When a group post offers no comment identity choice, the reader now says
+why, using what Facebook itself reports for the post. A group can allow
+anonymous comments while Facebook's website offers your account no choice
+on that post, even though Facebook's phone app does.
+
 ## v0.7.77 - 2026-11-17
 
 Anonymous and nickname commenting in groups can be chosen again. In groups

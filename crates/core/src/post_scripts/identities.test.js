@@ -130,6 +130,23 @@ function fixture(group = true, page = {}) {
   const switched = JSON.parse(await translated.api.act(translatedPanel.token, owl.key, []));
   assert.equal(switched.comment_identity.label, 'Als Blue Owl kommentieren', 'untranslated label still confirms the chosen identity');
 
+  // Facebook's own data says why no switcher is on the page.
+  const reasonFor = feedback => {
+    const page = fixture();
+    page.button.attributes['aria-label'] = 'Profilauswahl';
+    page.editor.attributes['aria-label'] = 'Comment as Test Person';
+    const roots = page.document.querySelectorAll;
+    const mount = {__reactContainer$x: {child: {memoizedProps: {isComposer: true, feedback}}}};
+    page.document.querySelectorAll = s => s === '[id^="mount_"]' ? [mount] : roots(s);
+    const state = page.api.state();
+    assert.equal(state.can_change, false);
+    return state.reason;
+  };
+  const allowed = extra => ({if_viewer_can_comment_anonymously: {associated_group: {if_viewer_can_use_nickname_on_comet: {}}, actor_provider: extra}});
+  assert.match(reasonFor({if_viewer_can_comment_anonymously: null}), /^Facebook does not offer/);
+  assert.match(reasonFor(allowed({has_multiple_eligible_actors: false})), /^This group allows anonymous comments/);
+  assert.match(reasonFor(allowed({has_multiple_eligible_actors: true})), /could not find it/);
+
   const duplicate = fixture(); duplicate.shell.append(duplicate.button);
   assert.equal(duplicate.api.state(duplicate.editor)?.can_change || false, false, 'ambiguous controls must never be pressed');
 

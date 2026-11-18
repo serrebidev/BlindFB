@@ -4470,3 +4470,12 @@ msgstr "Désactivé (aucun raccourci)"
 #~ "Les flèches sur Volume de la vidéo changent son pourcentage.\n"
 #~ "Applications ou Maj+F10 sur le texte de la publication : commenter, réagir ou partager. Sur un commentaire : répondre ou aimer.\n"
 #~ "Ctrl+Entrée dans la zone de commentaire envoie. Échap ferme le lecteur et arrête la lecture."
+
+msgid "Facebook does not offer identity switching on this post."
+msgstr "Facebook ne propose pas de changer d'identité sur cette publication."
+
+msgid "Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report."
+msgstr "Facebook propose ici un choix d'identité pour commenter, mais BlindFB ne l'a pas trouvé. Veuillez envoyer un rapport de débogage."
+
+msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
+msgstr "Ce groupe autorise les commentaires anonymes, mais le site de Facebook ne propose pas ce choix à votre compte sur cette publication. L'application mobile de Facebook le propose peut-être."

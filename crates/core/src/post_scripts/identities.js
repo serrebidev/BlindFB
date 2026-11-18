@@ -19,29 +19,52 @@
   // live DOM nodes carry no React fiber keys. Its popover trigger is found from the React root
   // instead: it opens Facebook's anonymous/nickname actor menu, whatever the interface language.
   // Structural signal only, never an action API.
-  function actorSwitchers() {
-    const found = new Set();
-    let entry;
-    try { entry = require('GroupsCometUFIAnonActorSwitcherMenu.entrypoint'); } catch { return found; }
-    if (!entry) return found;
+  function eachFiber(visit) {
     for (const mount of document.querySelectorAll('[id^="mount_"]')) {
       const key = Object.keys(mount).find(key => key.startsWith('__reactContainer$'));
       const stack = key ? [mount[key]] : [];
       while (stack.length) {
         const fiber = stack.pop();
-        if (fiber.memoizedProps?.popoverEntryPoint === entry) {
-          for (const inner = [fiber.child]; inner.length;) {
-            const node = inner.pop();
-            if (!node) continue;
-            if (node.tag === 5 && node.stateNode?.matches?.(BUTTON)) { found.add(node.stateNode); break; }
-            inner.push(node.sibling, node.child);
-          }
-        }
+        visit(fiber);
         if (fiber.sibling) stack.push(fiber.sibling);
         if (fiber.child) stack.push(fiber.child);
       }
     }
+  }
+
+  function actorSwitchers() {
+    const found = new Set();
+    let entry;
+    try { entry = require('GroupsCometUFIAnonActorSwitcherMenu.entrypoint'); } catch { return found; }
+    if (!entry) return found;
+    eachFiber(fiber => {
+      if (fiber.memoizedProps?.popoverEntryPoint !== entry) return;
+      for (const inner = [fiber.child]; inner.length;) {
+        const node = inner.pop();
+        if (!node) continue;
+        if (node.tag === 5 && node.stateNode?.matches?.(BUTTON)) { found.add(node.stateNode); break; }
+        inner.push(node.sibling, node.child);
+      }
+    });
     return found;
+  }
+
+  // Why no switcher is on the page, from the data Facebook's comment box draws it with
+  // (CometUFICommentRow.react). The website needs more than the group allowing anonymity.
+  function missingReason() {
+    let offer = '';
+    eachFiber(fiber => {
+      const props = fiber.memoizedProps, feedback = props?.isComposer === true ? props.feedback : null;
+      if (!feedback || typeof feedback !== 'object' || !('if_viewer_can_comment_anonymously' in feedback)) return;
+      const anonymous = feedback.if_viewer_can_comment_anonymously;
+      const shown = (anonymous?.associated_group?.if_viewer_can_use_nickname_on_comet != null &&
+        (anonymous.actor_provider?.has_multiple_eligible_actors || feedback.if_viewer_has_locked_actor != null)) ||
+        feedback.if_viewer_post_type_blocks_alternate_voice != null;
+      if (shown) offer = 'shown'; else if (anonymous && !offer) offer = 'limited';
+    });
+    return offer === 'shown' ? 'Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report.' :
+      offer === 'limited' ? 'This group allows anonymous comments, but Facebook\'s website does not offer your account a choice on this post. Facebook\'s phone app may still offer it.' :
+      'Facebook does not offer identity switching on this post.';
   }
 
   function create({current, editorFor, target, read}) {
@@ -83,7 +106,7 @@
         // Untranslated wording: the editor's whole label still names, and tracks, the identity.
         button ? editorName : '';
       if (!label) return null;
-      return {label, can_change: !!enabled(button), reason: enabled(button) ? '' : 'Facebook does not offer identity switching on this post.'};
+      return {label, can_change: !!enabled(button), reason: enabled(button) ? '' : missingReason()};
     }
 
     function capture(editor, expected) {

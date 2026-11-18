@@ -4404,3 +4404,12 @@ msgstr "Выкл (без сочетания)"
 #, rust-format
 #~ msgid "Reply to {author}"
 #~ msgstr "Ответ {author}"
+
+msgid "Facebook does not offer identity switching on this post."
+msgstr "Facebook не предлагает сменить профиль для этой публикации."
+
+msgid "Facebook offers a comment identity choice here, but BlindFB could not find it. Please send a debug report."
+msgstr "Facebook предлагает здесь выбрать, от чьего имени комментировать, но BlindFB не смог найти этот выбор. Отправьте, пожалуйста, отчёт отладки."
+
+msgid "This group allows anonymous comments, but Facebook's website does not offer your account a choice on this post. Facebook's phone app may still offer it."
+msgstr "В этой группе разрешены анонимные комментарии, но сайт Facebook не предлагает вашему аккаунту этот выбор для данной публикации. В мобильном приложении Facebook он может быть доступен."
