@@ -26,6 +26,10 @@ pub enum Kind {
     ListVoice,
     /// A list finished loading, chimed (issue #17).
     ListSound,
+    /// A post and its comments finished loading in the reader, spoken (#40).
+    PostVoice,
+    /// A post and its comments finished loading in the reader, chimed (#40).
+    PostSound,
 }
 
 fn marker(kind: Kind) -> Option<PathBuf> {
@@ -34,6 +38,8 @@ fn marker(kind: Kind) -> Option<PathBuf> {
         Kind::Sound => "alerts-sound-on",
         Kind::ListVoice => "alerts-list-voice-on",
         Kind::ListSound => "alerts-list-sound-on",
+        Kind::PostVoice => "alerts-post-voice-on",
+        Kind::PostSound => "alerts-post-sound-on",
     };
     data_dir().map(|dir| dir.join(name))
 }
@@ -48,6 +54,27 @@ pub fn any_enabled() -> bool {
 
 pub fn any_list_enabled() -> bool {
     enabled(Kind::ListVoice) || enabled(Kind::ListSound)
+}
+
+pub fn any_post_enabled() -> bool {
+    enabled(Kind::PostVoice) || enabled(Kind::PostSound)
+}
+
+/// The words for a post whose comments just finished loading in the reader:
+/// the post itself and the comments are two facts Michal asked to hear
+/// (#40), and an incomplete load says so instead of sounding finished.
+pub fn post_loaded(comments: usize, incomplete: bool) -> String {
+    let loaded = ntf!("{n} comment loaded.", "{n} comments loaded.", comments);
+    if incomplete {
+        format!(
+            "{} {} {}",
+            t("Post loaded."),
+            loaded,
+            t("Facebook did not load every comment.")
+        )
+    } else {
+        format!("{} {}", t("Post loaded."), loaded)
+    }
 }
 
 /// The words for a list that just finished loading: its name and how much
@@ -267,6 +294,17 @@ mod tests {
         assert_eq!(
             loaded("Chats", 11, 1, true),
             "Chats: 1 new item loaded. 11 items total."
+        );
+    }
+
+    #[test]
+    fn a_loaded_post_is_announced_with_its_comment_count() {
+        assert_eq!(post_loaded(94, false), "Post loaded. 94 comments loaded.");
+        assert_eq!(post_loaded(1, false), "Post loaded. 1 comment loaded.");
+        assert_eq!(post_loaded(0, false), "Post loaded. 0 comments loaded.");
+        assert_eq!(
+            post_loaded(11, true),
+            "Post loaded. 11 comments loaded. Facebook did not load every comment."
         );
     }
 

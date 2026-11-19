@@ -4,6 +4,23 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.82 - 2026-11-18
+
+Posts with many comments now load all of them. Opening a busy post could
+stop at the first batch of comments — 11 shown on a post with 94 — because
+Facebook's post window loads the next comments when you scroll, and BlindFB
+only pressed "View more comments" buttons, which that window does not have.
+BlindFB now scrolls the comment pane as well, and keeps loading through
+more batches before it calls a thread complete. Thanks to Michal for the
+report.
+
+Opening a post can now announce that it is ready. Two new settings beside
+the list alerts — "Voice alert when a post loads" and "Sound alert when a
+post loads" — say or chime "Post loaded" with the number of comments when
+a post you opened finishes loading, so you do not have to keep checking
+whether it has arrived; a load Facebook cut short says that too. Thanks
+to Michal for asking.
+
 ## v0.7.81 - 2026-11-18
 
 You can now post anonymously in Facebook groups that allow it. After you

@@ -102,6 +102,16 @@ function fixture(mode = false) {
     return element;
   };
   const list = {contains: e => comments.includes(e) || list === e || boxes.includes(e) && e.inList, parentElement: root};
+  // Issue #39: a dialog comment pane with no load-more button at all; each
+  // scroll to the bottom loads one more comment, three times, then no more.
+  if (mode === 'scroll') {
+    let batches = 0;
+    Object.defineProperties(list, {
+      scrollHeight: {get: () => 1000},
+      clientHeight: {value: 100},
+      scrollTop: {set: () => { if (batches < 3) { batches++; article(String(comments.length + 1)); } }}
+    });
+  }
   function article(id, parent = null) {
     const element = {
       lines: ['Comment author', '1h', 'Complete comment body'], isConnected: true,
@@ -568,6 +578,14 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   assert.equal(moreDetail.comments.length, 2);
   assert.equal(moreDetail.comments.find(c => c.id === '2').text, 'A later comment');
   assert.equal(moreDetail.comments.find(c => c.id === '2').parent_id, null);
+  // Issue #39: 11 of 94 comments shown. The dialog pane loads on scroll and
+  // offers no button, so a button-only loader stopped at the first batch and
+  // called it complete. Scrolling must load the rest, with no incomplete flag.
+  const scrolled = fixture('scroll');
+  scrolled.article('1');
+  const scrolledDetail = JSON.parse(await scrolled.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.equal(scrolledDetail.comments.length, 4);
+  assert.equal(scrolledDetail.comments_incomplete, undefined);
   // Michal: a post counting 18 comments listed only 12. Facebook's default
   // "Most relevant" sort hides the rest and leaves no load-more button, so
   // read() switches to "All comments" when the sort control is unambiguous.

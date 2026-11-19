@@ -152,6 +152,8 @@ const ID_VOICE_ALERTS: i32 = 10075;
 const ID_SOUND_ALERTS: i32 = 10076;
 const ID_LIST_VOICE_ALERTS: i32 = 10077;
 const ID_LIST_SOUND_ALERTS: i32 = 10078;
+const ID_POST_VOICE_ALERTS: i32 = 10079;
+const ID_POST_SOUND_ALERTS: i32 = 10091;
 const ID_LANG_SYSTEM: i32 = 10094;
 const ID_LANG_ENGLISH: i32 = 10095;
 const ID_LANG_FRENCH: i32 = 10096;
@@ -1841,6 +1843,16 @@ fn build_menus(frame: &Frame) {
             &shortcuts_dialog::menu_label(ID_LIST_SOUND_ALERTS, t("Sound alert when a list &loads")),
             &t("Play a sound when a list finishes loading"),
         )
+        .append_check_item(
+            ID_POST_VOICE_ALERTS,
+            &shortcuts_dialog::menu_label(ID_POST_VOICE_ALERTS, t("Voice alert when a &post loads")),
+            &t("Say that a post and its comments have loaded when a post opens"),
+        )
+        .append_check_item(
+            ID_POST_SOUND_ALERTS,
+            &shortcuts_dialog::menu_label(ID_POST_SOUND_ALERTS, t("Sound alert when a post &loads")),
+            &t("Play a sound when a post and its comments have loaded"),
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -1983,6 +1995,14 @@ fn build_menus(frame: &Frame) {
         ID_LIST_SOUND_ALERTS,
         alerts::enabled(alerts::Kind::ListSound),
     );
+    menu_bar.check_item(
+        ID_POST_VOICE_ALERTS,
+        alerts::enabled(alerts::Kind::PostVoice),
+    );
+    menu_bar.check_item(
+        ID_POST_SOUND_ALERTS,
+        alerts::enabled(alerts::Kind::PostSound),
+    );
     frame.set_menu_bar(menu_bar);
 }
 
@@ -2033,6 +2053,19 @@ fn alert_done(words: &str) {
     }
 }
 
+/// A post the user opened (or refreshed) finished loading, comments and
+/// all: say or chime it, when the post alerts are on (#40), so nobody has
+/// to watch the reader's status line to know the post is ready.
+pub(crate) fn alert_post_loaded(comments: usize, incomplete: bool) {
+    let (voice, sound) = (
+        alerts::enabled(alerts::Kind::PostVoice),
+        alerts::enabled(alerts::Kind::PostSound),
+    );
+    if voice || sound {
+        alerts::play(sound, voice.then(|| alerts::post_loaded(comments, incomplete)));
+    }
+}
+
 /// A list the user asked for just finished loading: say or chime it, when
 /// the list alerts are on (#17). Background reads (prefetch, feed read-ahead,
 /// a cached section refreshing itself) never reach here.
@@ -2058,7 +2091,7 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         show_error(&ui.frame, &error, &t("Alerts"));
         return;
     }
-    let voice = matches!(kind, alerts::Kind::Voice | alerts::Kind::ListVoice);
+    let voice = matches!(kind, alerts::Kind::Voice | alerts::Kind::ListVoice | alerts::Kind::PostVoice);
     let words = match (kind, on) {
         (alerts::Kind::Voice, true) => t("Voice alerts on."),
         (alerts::Kind::Voice, false) => t("Voice alerts off."),
@@ -2068,6 +2101,10 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         (alerts::Kind::ListVoice, false) => t("List voice alerts off."),
         (alerts::Kind::ListSound, true) => t("List sound alerts on."),
         (alerts::Kind::ListSound, false) => t("List sound alerts off."),
+        (alerts::Kind::PostVoice, true) => t("Post voice alerts on."),
+        (alerts::Kind::PostVoice, false) => t("Post voice alerts off."),
+        (alerts::Kind::PostSound, true) => t("Post sound alerts on."),
+        (alerts::Kind::PostSound, false) => t("Post sound alerts off."),
     };
     ui.status(&words);
     if !on {
@@ -2075,7 +2112,10 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     }
     // Hearing the alert now proves it works; nothing else would for a while.
     alerts::play(!voice, voice.then_some(words));
-    if matches!(kind, alerts::Kind::ListVoice | alerts::Kind::ListSound) {
+    if matches!(
+        kind,
+        alerts::Kind::ListVoice | alerts::Kind::ListSound | alerts::Kind::PostVoice | alerts::Kind::PostSound
+    ) {
         return;
     }
     if !was_on {
@@ -3712,7 +3752,7 @@ fn apply_done(ui: &Ui, done: Done) {
         }
         Tag::PostVideo(session, request) => post_dialog::stream(ui, session, request, done.result),
         Tag::PostReelReacted(session) => {
-            post_dialog::apply(ui, session, done.result, &t("Reaction set."), false)
+            post_dialog::apply(ui, session, done.result, &t("Reaction set."), false, false)
         }
         Tag::ReelPrepared { account, target } => {
             {
@@ -3741,10 +3781,10 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
         Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {
-            post_dialog::apply(ui, session, done.result, &t("Post ready."), false)
+            post_dialog::apply(ui, session, done.result, &t("Post ready."), false, true)
         }
         Tag::PostSent(session) => {
-            post_dialog::apply(ui, session, done.result, &t("Comment sent."), true)
+            post_dialog::apply(ui, session, done.result, &t("Comment sent."), true, false)
         }
         Tag::PostParticipation(session, submitted) => {
             post_dialog::participation_done(ui, session, done.result, submitted)
@@ -3753,13 +3793,14 @@ fn apply_done(ui: &Ui, done: Done) {
             post_dialog::identity_done(ui, session, done.result, cancelled)
         }
         Tag::PostLiked(session) => {
-            post_dialog::apply(ui, session, done.result, &t("Like changed."), false)
+            post_dialog::apply(ui, session, done.result, &t("Like changed."), false, false)
         }
         Tag::PostTranslated(session) => post_dialog::apply(
             ui,
             session,
             done.result,
             &t("Facebook's translation switched. Press Translate again for the original."),
+            false,
             false,
         ),
         Tag::PostShareReady(session) => post_dialog::share_ready(ui, session, done.result),
@@ -5407,6 +5448,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),
         ID_LIST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ListSound),
+        ID_POST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::PostVoice),
+        ID_POST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::PostSound),
         ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH | ID_LANG_RUSSIAN | ID_LANG_ESTONIAN => {
             let language = match id {
                 ID_LANG_ENGLISH => Language::English,

@@ -65,6 +65,8 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("view", ID_SOUND_ALERTS, "sound_alerts", ""),
         ("view", ID_LIST_VOICE_ALERTS, "list_voice_alerts", ""),
         ("view", ID_LIST_SOUND_ALERTS, "list_sound_alerts", ""),
+        ("view", ID_POST_VOICE_ALERTS, "post_voice_alerts", ""),
+        ("view", ID_POST_SOUND_ALERTS, "post_sound_alerts", ""),
         ("post", ID_OPEN, "open", ""),
         ("post", ID_SHARE, "share", ""),
         ("post", ID_COMMENT, "comment", ""),

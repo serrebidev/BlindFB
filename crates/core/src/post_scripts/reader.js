@@ -310,15 +310,43 @@
     await F.waitFor(() => !option.isConnected || !F.visible(option), 5000);
   }
 
+  // A post dialog's comment pane loads the next batch on scroll, with no
+  // load-more button at all: the first batch (11 of 94 comments, issue #39)
+  // looked complete to a button-only loader. Scroll every scrollable
+  // ancestor of the last comment (and the root) to the bottom; true when
+  // anything actually scrolled.
+  function scrollComments() {
+    let scrolled = false;
+    const dive = element => {
+      if (element && element.scrollHeight > element.clientHeight) {
+        element.scrollTop = element.scrollHeight;
+        scrolled = true;
+      }
+    };
+    const all = [...root.querySelectorAll(ARTICLE)];
+    let element = all.length ? all[all.length - 1] : null;
+    while (element) {
+      dive(element);
+      element = element.parentElement;
+    }
+    dive(root);
+    return scrolled;
+  }
+
   async function expandReplies() {
     const loadsMore = element => {
       const text = F.clean(element.innerText || '') || label(element);
       return W.viewReplies.test(text) || W.viewMoreComments.test(text);
     };
     const remaining = () => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && loadsMore(element));
-    for (let round = 0; round < 10; round++) {
+    for (let round = 0; round < 25; round++) {
       const buttons = remaining();
       if (!buttons.length) {
+        // No button: the pane may still load on scroll. Scroll, and only
+        // call the thread complete when scrolling loads nothing either.
+        const before = root.querySelectorAll(ARTICLE).length;
+        if (scrollComments()
+          && await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || remaining().length ? true : null, 5000)) continue;
         // A load replaces its button with a spinner before the next batch's
         // button appears: one short re-check, so a batch still in flight is
         // not mistaken for the end of the thread.

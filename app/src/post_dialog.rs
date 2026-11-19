@@ -1568,7 +1568,7 @@ pub(super) fn note(ui: &Ui, session: u64, result: Result<String, String>, releas
     }
 }
 
-pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done: &str, sent: bool) {
+pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done: &str, sent: bool, alert: bool) {
     let Some(reader) = active(ui, session) else {
         return;
     };
@@ -1677,6 +1677,12 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
                 reader.message(ui, &format!("{done} {loaded} {more}"));
             } else {
                 reader.message(ui, &format!("{done} {loaded}"));
+            }
+            // A load the user asked for (open or refresh, never a reaction,
+            // a send or a translation re-applying the same post): with the
+            // post alerts on, say or chime that it is ready (#40).
+            if alert {
+                super::alert_post_loaded(count, incomplete);
             }
         }
     }
