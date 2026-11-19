@@ -2228,10 +2228,9 @@ fn load_view(ui: &Ui, view: View) {
     } else if let Some(args) = cached
         .as_ref()
         .map(|(_, _, args)| {
+            // A stale section reloads fresh, not from its old scan.
             let mut args = args.clone();
-            if view == View::MyPosts {
-                args.retain(|arg| arg != "--continue");
-            }
+            args.retain(|arg| arg != "--continue");
             args
         })
         .or_else(|| default_args(&view))
@@ -2586,7 +2585,9 @@ fn more_args(
             let index = args.iter().position(|arg| arg == "-n")? + 1;
             let count: u32 = args.get(index)?.parse().ok()?;
             args[index] = count.checked_add(PAGE)?.to_string();
-            if matches!(view, View::MyPosts | View::GroupPosts(_))
+            // Every `posts` scan (My posts, a profile, a group, Most Recent) resumes where
+            // it stopped; a rescan from the top grows with every batch (40 posts: 22s vs 5s).
+            if args.first().is_some_and(|arg| arg == "posts")
                 && !args.iter().any(|arg| arg == "--continue")
             {
                 args.push("--continue".to_owned());
@@ -2671,7 +2672,14 @@ fn load_recent_ahead(ui: &Ui) {
         return;
     }
     activate_view(ui, &view);
-    send_ahead(ui, view, recent_feed_args(RECENT_AHEAD));
+    send_ahead(ui, view, recent_ahead_args());
+}
+
+/// Continues the first page's scan instead of scrolling past its posts again.
+fn recent_ahead_args() -> Vec<String> {
+    let mut args = recent_feed_args(RECENT_AHEAD);
+    args.push("--continue".to_owned());
+    args
 }
 
 /// Queue a read-ahead as background work that appends to `view`'s rows: on
@@ -6893,16 +6901,36 @@ mod tests {
 
     #[test]
     fn recent_feed_reads_ahead_like_the_news_feed() {
-        // Most Recent re-scrolls from the top per request, so like the News
-        // feed it reads ahead in the background and Load more grows from
-        // the read-ahead page instead of waiting behind the user's tap.
+        // Like the News feed, Most Recent reads ahead in the background and
+        // Load more grows from the read-ahead page. Both continue the first
+        // page's scan: a rescan from the top grows with every batch.
         const { assert!(RECENT_AHEAD > PAGE) };
-        let ahead = recent_feed_args(RECENT_AHEAD);
+        assert!(!default_args(&View::RecentFeed).unwrap().iter().any(|a| a == "--continue"));
+        let ahead = recent_ahead_args();
         assert!(ahead.windows(2).any(|w| w == ["-n", "30"]));
+        let mut expected = recent_feed_args(RECENT_AHEAD + PAGE);
+        expected.push("--continue".to_owned());
         assert_eq!(
             more_args(&View::RecentFeed, &ahead, RECENT_AHEAD as usize, false),
-            Some(recent_feed_args(RECENT_AHEAD + PAGE))
+            Some(expected)
         );
+        assert_eq!(refresh_args(&View::RecentFeed, &ahead), default_args(&View::RecentFeed));
+    }
+
+    #[test]
+    fn every_posts_scan_continues_on_load_more() {
+        for view in [View::PostsOf("/someone".into()), View::GroupPosts("/groups/1".into())] {
+            let first = default_args(&view).unwrap();
+            let more = more_args(&view, &first, PAGE as usize, false).unwrap();
+            assert_eq!(more.iter().filter(|arg| *arg == "--continue").count(), 1);
+            let again = more_args(&view, &more, 2 * PAGE as usize, false).unwrap();
+            assert_eq!(again.iter().filter(|arg| *arg == "--continue").count(), 1);
+        }
+        let friends = default_args(&View::Friends).unwrap();
+        assert!(!more_args(&View::Friends, &friends, PAGE as usize, false)
+            .unwrap()
+            .iter()
+            .any(|arg| arg == "--continue"));
     }
 
     #[test]

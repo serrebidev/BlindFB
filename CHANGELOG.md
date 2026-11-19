@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.85 - 2026-11-19
+
+Feeds (most recent) loads more posts much faster. Every Load more used to
+reload Facebook's Most Recent page from the top and scroll past every post
+already shown, so each batch took longer than the last: 40 posts took about
+22 seconds, 90 posts nearly 50. Load more and the background read-ahead now
+continue where the last batch stopped, so 40 posts take about 5 seconds.
+"Posts by" a person continues the same way, as My posts and group posts
+already did. Refresh (F5) still starts from the newest posts.
+
 ## v0.7.84 - 2026-11-19
 
 Replying to a comment works again. Facebook renamed its reply boxes from
