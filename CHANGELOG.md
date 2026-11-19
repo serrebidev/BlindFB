@@ -4,7 +4,7 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## v0.7.82 - 2026-11-18
+## v0.7.83 - 2026-11-18
 
 Posts with many comments now load all of them. Opening a busy post could
 stop at the first batch of comments — 11 shown on a post with 94 — because

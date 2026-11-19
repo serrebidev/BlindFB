@@ -1723,7 +1723,7 @@ pub(super) fn identity_done(ui: &Ui, session: u64, result: Result<String, String
             reader.state.borrow_mut().confirmed_reaction = None;
             let done = if cancelled { t("Identity selection cancelled. Your draft has been kept.") }
                 else { t("Comment identity refreshed. Your draft has been kept.") };
-            apply(ui, session, Ok(json), &done, false);
+            apply(ui, session, Ok(json), &done, false, false);
             if reader.identity.is_enabled() { reader.identity.set_focus(); }
             else { reader.composer.set_focus(); }
         }
