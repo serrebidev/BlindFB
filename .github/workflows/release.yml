@@ -9,6 +9,11 @@ on:
         description: Existing tag to build and publish, such as v0.7.80
         required: true
         type: string
+      dry_run:
+        description: Build and sign only; publish nothing
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -86,7 +91,7 @@ jobs:
       # the script finds or creates the tag's draft (the three legs race,
       # creation retries) and uploads this leg's dist/ files to it.
       - name: Upload to the Forgejo release draft
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && !inputs.dry_run }}
         shell: pwsh
         env:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
@@ -97,7 +102,7 @@ jobs:
         run: py -3 .github/upload_release_assets.py "${{ inputs.release_tag }}" dist
 
       - name: Upload to the Forgejo release draft
-        if: runner.os != 'Windows'
+        if: ${{ runner.os != 'Windows' && !inputs.dry_run }}
         shell: bash
         env:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
@@ -113,6 +118,7 @@ jobs:
   publish:
     name: Publish
     needs: package
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
