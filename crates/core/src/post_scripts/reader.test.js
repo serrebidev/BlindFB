@@ -426,6 +426,18 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   reply.actions = [f.replyAction(reply, named, 'my unsent words')];
   await assert.rejects(f.api.prepare('2', 'hello'), /already contains a draft/);
 
+  // Live 2026-11-19: the reply box names the commenter ("Reply as Me"), not the person
+  // replied to; the prefilled name is the selected comment's author.
+  f = fixture(); parent = f.article('1');
+  const asMe = f.replyBox('Reply as Me');
+  f.makeEditor(null, 'Comment as Me');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  parent.actions = [f.replyAction(parent, asMe, 'Comment author ')];
+  assert.equal(await f.api.prepare('1', 'hello'), '"hello"');
+  await f.api.read();
+  parent.actions = [f.replyAction(parent, asMe, 'my unsent words')];
+  await assert.rejects(f.api.prepare('1', 'hello'), /already contains a draft/);
+
   // Recorded live: Facebook draws emoji as pictures, so they are read back from the alt text.
   const block = {};
   const emojiLines = [{text: 'Comment author'}, {text: ' · '}, {text: '1h'}, {text: 'Nice work ', block}, {alt: '\u{1F44D}', block}, {text: ' thanks', block}, {text: 'Like'}, {text: 'Reply'}];

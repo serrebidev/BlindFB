@@ -4,6 +4,26 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.84 - 2026-11-19
+
+Replying to a comment works again. Facebook renamed its reply boxes from
+"Reply to <name>" to "Reply as <you>", and it still puts the person's name
+in the box for you. BlindFB used to check that name against the box's
+label, so every reply stopped with "The Facebook editor already contains a
+draft." It now checks the name against the comment you are replying to.
+Anything else already in the box still stops the send, so a real draft is
+never overwritten.
+
+Posts show their time again when Facebook scrambles it. Facebook has
+started drawing a post's timestamp as single letters mixed with hidden
+decoys; BlindFB now reads only the letters on screen, so the post says
+"November 15 at 11:37 AM" instead of nothing.
+
+A shared post now links to what it shares. The reader already named the
+original author, but gave no way to reach them. Its links now include the
+original author's profile and "Shared post by <author>", which opens the
+original post.
+
 ## v0.7.83 - 2026-11-18
 
 Posts with many comments now load all of them. Opening a busy post could

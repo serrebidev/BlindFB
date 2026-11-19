@@ -6,6 +6,20 @@
   const label = element => F.clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '');
   const rawContents = element => element.value === undefined ? element.innerText || '' : element.value;
   const contents = element => F.clean(rawContents(element));
+  // Facebook can scramble a post's timestamp into one-letter spans: the shown letters sit in
+  // flow (position: relative), the decoys are absolutely placed. Read the shown ones left to right.
+  const scrambled = element => {
+    const chars = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node; (node = walker.nextNode());) {
+      if (getComputedStyle(node.parentElement).position !== 'relative') continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const box = range.getBoundingClientRect();
+      if (box.width > 0) chars.push({text: node.data, left: box.left});
+    }
+    return F.clean(chars.sort((a, b) => a.left - b.left).map(char => char.text).join(''));
+  };
   // Facebook's words per language: labels.js, injected before this script.
   const W = window.__blindfbLabels;
   const action = W.commentAction;
@@ -149,9 +163,17 @@
     return [...found.values()];
   }
 
+  // A shared post's original author heads an unmarked linked heading between the sharer and the reactions.
+  function sharedAuthors(scope) {
+    const profile = scope.querySelector('[data-ad-rendering-role=profile_name]');
+    const like = scope.querySelector('[data-ad-rendering-role=like_button]');
+    return profile ? [...scope.querySelectorAll('h2,h3,h4')].filter(h => h.querySelector('a[href]') && F.visible(h) && !h.closest(ARTICLE + ',[data-ad-rendering-role=profile_name]') && !h.querySelector('[data-ad-rendering-role=profile_name]') && profile.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING && (!like || h.compareDocumentPosition(like) & Node.DOCUMENT_POSITION_FOLLOWING)) : [];
+  }
+
   async function sharedLinks(scope) {
     const found = new Map();
-    for (const profile of scope.querySelectorAll('[data-ad-rendering-role=profile_name]')) {
+    // Its header, like the sharer's, holds the original's profile and post links.
+    for (const profile of [...scope.querySelectorAll('[data-ad-rendering-role=profile_name]'), ...sharedAuthors(scope)]) {
       if (!F.visible(profile) || profile.closest(ARTICLE)) continue;
       const name = F.clean(profile.innerText || '').replace(/\s+/g, ' ');
       const header = profile.parentElement?.parentElement?.parentElement;
@@ -393,7 +415,8 @@
     }
     await reveal(root);
     const profile = root.querySelector('[data-ad-rendering-role=profile_name]');
-    const head = profile ? F.vtext(profile.parentElement.parentElement.parentElement) : [];
+    const headRoot = profile?.parentElement.parentElement.parentElement;
+    const head = headRoot ? F.vtext(headRoot) : [];
     const messages = [...root.querySelectorAll('[data-ad-rendering-role=story_message]')].filter(element => F.visible(element) && !element.closest(ARTICLE));
     // Photo captions carry no story_message marker: the longest plain text block before the reactions.
     if (photo && !messages.length) {
@@ -414,12 +437,8 @@
     // Group posts name the group, then the poster; comments carry their own names.
     // profileName drops the name's own buttons: a group you are not in says "· Join".
     const names = [...root.querySelectorAll('[data-ad-rendering-role=profile_name]')].filter(e => !e.closest(ARTICLE)).map(e => F.clean(F.profileName ? F.profileName(e) : e.innerText || '').replace(/\s+/g, ' ')).filter(Boolean);
-    // A shared post's original author heads an unmarked linked heading between the sharer and the reactions.
-    const like = root.querySelector('[data-ad-rendering-role=like_button]');
-    for (const h of profile ? root.querySelectorAll('h2,h3,h4') : []) {
-      const a = h.querySelector('a[href]');
-      if (!a || !F.visible(h) || h.closest(ARTICLE + ',[data-ad-rendering-role=profile_name]') || h.querySelector('[data-ad-rendering-role=profile_name]') || !(profile.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING) || (like && !(h.compareDocumentPosition(like) & Node.DOCUMENT_POSITION_FOLLOWING))) continue;
-      const name = F.clean(a.innerText || '').replace(/\s+/g, ' ');
+    for (const h of sharedAuthors(root)) {
+      const name = F.clean(h.querySelector('a[href]').innerText || '').replace(/\s+/g, ' ');
       if (name) names.push(name);
     }
     // A photo page names its poster in the panel's first linked heading.
@@ -427,7 +446,7 @@
     const author = names.length ? [...new Set(names)].join(' / ') : profile ? F.clean(profile.innerText || '').replace(/\s+/g, ' ') : photoAuthor;
     const outerMessages = messages.filter(element => !messages.some(other => other !== element && other.contains(element)));
     const text = [...new Set([...outerMessages.map(element => F.postText(element)), ...attachments(root, messages)].filter(Boolean))].join('\n');
-    return JSON.stringify({url: target, author, ...ownReaction(root), comment_identity: commentIdentities.state(), time: head.find(text => time.test(text)) || '', text, comments: rows.map(row => row.value), ...incomplete, links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
+    return JSON.stringify({url: target, author, ...ownReaction(root), comment_identity: commentIdentities.state(), time: head.find(text => time.test(text)) || (headRoot ? [...headRoot.querySelectorAll('a[href]')].map(scrambled).find(text => time.test(text)) : '') || '', text, comments: rows.map(row => row.value), ...incomplete, links: [...await sharedLinks(root), ...links(root, messages)], video: videoTarget(root)});
   }
 
   function selected(id) {
@@ -475,13 +494,14 @@
   async function prepare(parent, text, expectedIdentity = null) {
     current();
     pending = null;
-    let thread = null;
+    let thread = null, replyTo = '';
     if (parent !== null) {
       const article = selected(parent);
       const replies = [...article.querySelectorAll('[role=button],button,a')].filter(element => own(element, article) && F.visible(element) && W.reply.test(label(element) || F.clean(element.innerText || '')));
       if (replies.length !== 1) throw Error('The selected comment has no unique Reply action. Nothing was sent.');
       const value = comment(article);
       thread = value.parent_id || value.id;
+      replyTo = flat(value.author || '');
       // Blurred first, so the focus afterwards can only come from this Reply.
       document.activeElement?.blur?.();
       replies[0].click();
@@ -489,9 +509,11 @@
     const editor = await F.waitFor(() => editorFor(parent), 5000);
     if (!editor) throw Error(parent === null ? 'No unique comment box on this post. Nothing was sent.' : 'No unique editor inside the selected comment thread. Nothing was sent.');
     const identity = commentIdentities.capture(editor, expectedIdentity);
-    // Replying inside an open thread prefills the person's name; the box's name says who it is.
+    // Replying prefills the person's name. Older boxes were named "Reply to <name>"; since
+    // 2026-11 they say "Reply as <you>", so the name is matched against the comment's author.
     const draft = contents(editor);
-    if (draft && (parent === null || !label(editor).includes(draft))) throw Error('The Facebook editor already contains a draft. Nothing was overwritten.');
+    const prefilled = draft && parent !== null && (flat(draft) === replyTo || label(editor).includes(draft));
+    if (draft && !prefilled) throw Error('The Facebook editor already contains a draft. Nothing was overwritten.');
     editor.scrollIntoView({block: 'center'});
     const name = label(editor);
     if (!name || name.length > 160) throw Error('The comment editor has no reliable accessible name. Nothing was sent.');
