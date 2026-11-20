@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.86 - 2026-11-20
+
+Chats can now load their whole history. A chat window opened on the most
+recent 50 messages and Load more added 50 at a time, so reaching the start
+of a long conversation took many presses. The new "Load all messages"
+button in the chat window reads back to the very first message, and the
+status line tells you when every message is loaded — or when Facebook
+stopped loading before the start, so a partial history never pretends to
+be complete. Thanks to Michal for the request. This is the first of his
+five chat asks; viewing archived chats is next.
 ## v0.7.85 - 2026-11-19
 
 Feeds (most recent) loads more posts much faster. Every Load more used to
