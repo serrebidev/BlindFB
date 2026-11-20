@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.90 - 2026-11-20
+
+Chats can be deleted from inside BlindFB. The Chats list gains a
+"Delete chat" action that permanently removes the selected
+conversation; because deletion cannot be undone, BlindFB asks for
+confirmation first, and the backend confirms once more in Facebook's
+own dialog before proving the chat left the inbox. Fifth of Michal's
+five chat asks from issue #20.
+
 ## v0.7.89 - 2026-11-20
 
 Group chats show who is in them. A group chat window gains a Members
