@@ -12,7 +12,7 @@ permissions:
   contents: write
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 90
     env:
       TAG: ${{ inputs.release_tag }}
