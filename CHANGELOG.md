@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.89 - 2026-11-20
+
+Group chats show who is in them. A group chat window gains a Members
+button that lists everyone in the chat, with admins marked; the list
+comes from the thread's own details panel. The button stays disabled in
+one-to-one chats, which have no member list. Fourth of Michal's five
+chat asks from issue #20.
+
 ## v0.7.88 - 2026-11-20
 
 Chats can be archived from inside BlindFB. The Chats list gains an
