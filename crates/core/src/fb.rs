@@ -727,6 +727,11 @@ pub fn chatmembers_args(chat: &str) -> Vec<String> {
     vec!["chatmembers".to_owned(), chat.to_owned()]
 }
 
+/// Delete one chat permanently from the inbox list.
+pub fn deletechat_args(chat: &str) -> Vec<String> {
+    vec!["deletechat".to_owned(), chat.to_owned()]
+}
+
 /// Archive one chat: the backend moves it from the inbox to the archived view.
 pub fn archive_args(chat: &str) -> Vec<String> {
     vec!["archive".to_owned(), chat.to_owned()]
@@ -1227,6 +1232,11 @@ mod tests {
     #[test]
     fn chatmembers_args_name_the_chatmembers_command() {
         assert_eq!(chatmembers_args("c1234"), ["chatmembers", "c1234"]);
+    }
+
+    #[test]
+    fn deletechat_args_name_the_deletechat_command() {
+        assert_eq!(deletechat_args("c1234"), ["deletechat", "c1234"]);
     }
 
     #[test]

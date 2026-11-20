@@ -47,8 +47,8 @@ use std::time::{Duration, Instant};
 use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    archive_args, archived_chats_args, chats_args, comment_args, delete_args, events_args,
-    facebook_share_url, feed_args,
+    archive_args, archived_chats_args, chats_args, comment_args, delete_args, deletechat_args,
+    events_args, facebook_share_url, feed_args,
     follow_args, friend_add_args, friends_args, group_apply_args, group_invite_args, group_join_args,
     group_leave_args,
     groups_args, link_url, listing_message_args, marketplace_args, msg_react_args, notifs_args,
@@ -90,6 +90,7 @@ const ID_REFRESH: i32 = 10006;
 const ID_UNREAD_CHATS: i32 = 10007;
 const ID_ARCHIVED_CHATS: i32 = 10019;
 const ID_ARCHIVE_CHAT: i32 = 10022;
+const ID_DELETE_CHAT: i32 = 10023;
 const ID_GROUPS_VIEW: i32 = 10008;
 const ID_RECENT_FEED: i32 = 10009;
 const ID_MORE: i32 = 10016;
@@ -5076,6 +5077,34 @@ fn archive_selected(ui: &Ui) {
     });
 }
 
+/// Delete the selected inbox chat permanently. The app confirms first:
+/// unlike archiving, this cannot be undone.
+fn delete_chat_selected(ui: &Ui) {
+    if ui.state.borrow().view != View::Chats {
+        return;
+    }
+    let Some((_, record)) = selected(ui) else {
+        show_warning(&ui.frame, t("Select a chat first."), &t("Delete chat"));
+        return;
+    };
+    if !confirm(
+        &ui.frame,
+        tf!(
+            "Delete the chat with {name} permanently? This cannot be undone.",
+            name = record.field(3)
+        ),
+        &t("Delete chat"),
+    ) {
+        return;
+    }
+    let target = record.field(0).to_owned();
+    ui.status(&tf!("Deleting {name}…", name = record.field(3)));
+    ui.send(Job {
+        task: Task::Fb(deletechat_args(&target), None),
+        tag: Tag::Text,
+    });
+}
+
 fn delete_selected(ui: &Ui) {
     let Some(post) = selected_post_ref(ui) else {
         show_warning(&ui.frame, t("Select one of your posts first."), &t("Delete post"));
@@ -5347,6 +5376,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
         ID_ARCHIVED_CHATS => load_view(ui, View::ArchivedChats),
         ID_ARCHIVE_CHAT => archive_selected(ui),
+        ID_DELETE_CHAT => delete_chat_selected(ui),
         ID_REFRESH => refresh(ui),
         ID_MORE => load_more(ui),
         ID_OPEN => open_selected(ui),
@@ -5751,6 +5781,7 @@ fn show_item_menu(ui: &Ui) {
             &[
                 (ID_OPEN, t("&Open chat")),
                 (ID_ARCHIVE_CHAT, t("&Archive chat")),
+                (ID_DELETE_CHAT, t("&Delete chat")),
                 (ID_WEB_CHAT, t("Open in &Messenger (web)")),
             ],
         ),

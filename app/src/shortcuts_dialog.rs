@@ -61,6 +61,7 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("view", ID_UNREAD_CHATS, "unread_chats", ""),
         ("view", ID_ARCHIVED_CHATS, "archived_chats", ""),
         ("chat", ID_ARCHIVE_CHAT, "archive_chat", ""),
+        ("chat", ID_DELETE_CHAT, "delete_chat", ""),
         ("view", ID_REFRESH, "refresh", "F5"),
         ("view", ID_MORE, "load_more", "Ctrl+L"),
         ("view", ID_VOICE_ALERTS, "voice_alerts", ""),
