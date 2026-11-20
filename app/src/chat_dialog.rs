@@ -4,7 +4,10 @@
 //! with Enter or the Send button, files attach, and Load more walks back
 //! through the history.
 use super::{message_match_text, needs_messenger_unlock, Job, Tag, Task, Ui, REACTIONS};
-use blindfb_core::fb::{msg_react_args, read_all_args, read_args, reply_args, send_args, Record};
+use blindfb_core::fb::{
+    chatmembers_args, msg_react_args, parse_records, read_all_args, read_args, reply_args,
+    send_args, Record,
+};
 use blindfb_core::{ntf, tf};
 use patois::t;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -33,6 +36,8 @@ pub(super) struct ChatWindow {
 struct ChatState {
     id: String,
     name: String,
+    /// A group chat has a member list to view; a one-to-one chat does not.
+    group: bool,
     count: u32,
     files: Vec<String>,
     /// Text of the message the next send replies to (quotes).
@@ -159,6 +164,23 @@ impl ChatWindow {
         ui.send(Job {
             task: Task::Fb(read_args(&id, count), None),
             tag: Tag::ChatMessages(self.session),
+        });
+    }
+
+    /// The member list of a group chat (issue #20, item 4): the backend
+    /// reads it from the thread's details panel.
+    fn load_members(&self, ui: &Ui) {
+        let (id, group) = {
+            let state = self.state.lock().unwrap();
+            (state.id.clone(), state.group)
+        };
+        if !group {
+            return;
+        }
+        self.note(&t("Loading members…"));
+        ui.send(Job {
+            task: Task::Fb(chatmembers_args(&id), None),
+            tag: Tag::ChatMembers(self.session),
         });
     }
 
@@ -293,6 +315,9 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         .with_label(&t("Load &all messages"))
         .build();
     let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
+    let members = Button::builder(&dialog).with_label(&t("&Members…")).build();
+    members.set_name(&t("Members. Show who is in this group chat"));
+    members.enable(group);
     let compose_label = StaticText::builder(&dialog).with_label(&t("Me&ssage")).build();
     let compose = TextCtrl::builder(&dialog)
         .with_style(TextCtrlStyle::ProcessEnter)
@@ -319,6 +344,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     actions.add(&more, 0, SizerFlag::All, 4);
     actions.add(&load_all, 0, SizerFlag::All, 4);
     actions.add(&refresh, 0, SizerFlag::All, 4);
+    actions.add(&members, 0, SizerFlag::All, 4);
     actions.add(&attach, 0, SizerFlag::All, 4);
     actions.add(&manage, 0, SizerFlag::All, 4);
     actions.add(&send, 0, SizerFlag::All, 4);
@@ -341,6 +367,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         state: Arc::new(Mutex::new(ChatState {
             id,
             name: name.clone(),
+            group,
             count: PAGE,
             files: Vec::new(),
             reply_to: None,
@@ -407,6 +434,8 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         w.note(&t("Refreshing…"));
         w.load(&u);
     });
+    let (w, u) = (window.clone(), ui.clone());
+    members.on_click(move |_| w.load_members(&u));
     let (w, u) = (window.clone(), ui.clone());
     more.on_click(move |_| {
         let mut state = w.state.lock().unwrap();
@@ -526,6 +555,64 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
     }
 }
 
+/// One member's line in the members list: the name, with the admin
+/// marker the backend reports in the role field.
+fn member_line(record: &Record) -> String {
+    let name = record.field(0);
+    if record.field(2) == "admin" {
+        tf!("{name} (admin)", name = name)
+    } else {
+        name.to_owned()
+    }
+}
+
+/// The members answer for the chat window (issue #20, item 4): a modal
+/// list over the chat window, or the failure in the window's status.
+pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, String>) {
+    let window = ui.chat_window.lock().unwrap().clone();
+    let Some(window) = window.filter(|w| w.session == session) else {
+        return;
+    };
+    match result {
+        Ok(raw) => {
+            let records = parse_records(&raw);
+            let name = window.state.lock().unwrap().name.clone();
+            let dialog = Dialog::builder(&window.dialog(), &tf!("Members of {name}", name = name))
+                .with_size(520, 560)
+                .with_style(DialogStyle::DefaultDialogStyle | DialogStyle::ResizeBorder)
+                .build();
+            dialog.set_escape_id(ID_CANCEL);
+            let root = BoxSizer::builder(Orientation::Vertical).build();
+            let label = StaticText::builder(&dialog)
+                .with_label(&t("&Members"))
+                .build();
+            let list = ListBox::builder(&dialog).build();
+            list.set_name(&t("Members of this group chat"));
+            for record in &records {
+                list.append(&member_line(record));
+            }
+            if !records.is_empty() {
+                list.set_selection(0, true);
+            }
+            let close = Button::builder(&dialog)
+                .with_id(ID_CANCEL)
+                .with_label(&t("C&lose"))
+                .build();
+            root.add(&label, 0, SizerFlag::All, 6);
+            root.add(&list, 1, SizerFlag::Expand | SizerFlag::All, 6);
+            root.add(&close, 0, SizerFlag::All, 6);
+            dialog.set_sizer(root, true);
+            let d = dialog;
+            close.on_click(move |_| d.end_modal(ID_CANCEL));
+            window.note(&tf!("{count} members.", count = records.len()));
+            dialog.show_modal();
+        }
+        Err(e) => {
+            window.note(&tf!("Members could not load: {error}", error = e));
+        }
+    }
+}
+
 pub(super) fn deliver_sent(ui: &Ui, session: u64, result: Result<String, String>) {
     let window = ui.chat_window.lock().unwrap().clone();
     let Some(window) = window.filter(|w| w.session == session) else {
@@ -559,6 +646,14 @@ pub(super) fn deliver_sent(ui: &Ui, session: u64, result: Result<String, String>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_member_line_marks_only_admins() {
+        let plain = parse_records("Ann Example\tu123\t\n");
+        assert_eq!(member_line(&plain[0]), "Ann Example");
+        let admin = parse_records("Bob Example\tu456\tadmin\n");
+        assert_eq!(member_line(&admin[0]), "Bob Example (admin)");
+    }
 
     #[test]
     fn a_full_history_marker_is_split_off_the_display_lines() {

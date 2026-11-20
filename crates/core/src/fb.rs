@@ -722,6 +722,11 @@ pub fn chats_args(count: u32, unread_only: bool) -> Vec<String> {
     args
 }
 
+/// The members of a group chat, from its details panel.
+pub fn chatmembers_args(chat: &str) -> Vec<String> {
+    vec!["chatmembers".to_owned(), chat.to_owned()]
+}
+
 /// Archive one chat: the backend moves it from the inbox to the archived view.
 pub fn archive_args(chat: &str) -> Vec<String> {
     vec!["archive".to_owned(), chat.to_owned()]
@@ -1217,6 +1222,11 @@ mod tests {
     #[test]
     fn archive_args_name_the_archive_command() {
         assert_eq!(archive_args("c1234"), ["archive", "c1234"]);
+    }
+
+    #[test]
+    fn chatmembers_args_name_the_chatmembers_command() {
+        assert_eq!(chatmembers_args("c1234"), ["chatmembers", "c1234"]);
     }
 
     #[test]

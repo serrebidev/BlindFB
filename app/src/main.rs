@@ -374,6 +374,7 @@ enum Tag {
     GroupPosts(u64),
     GroupMembers(u64),
     ChatMessages(u64),
+    ChatMembers(u64),
     ChatWindowSent(u64),
     ReelPrepared {
         account: u64,
@@ -3803,6 +3804,7 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::GroupMembers(session) => group_dialog::deliver_members(ui, session, done.result),
         Tag::GroupPhotos(session) => group_dialog::deliver_photos(ui, session, done.result),
         Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
+        Tag::ChatMembers(session) => chat_dialog::deliver_members(ui, session, done.result),
         Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {
             post_dialog::apply(ui, session, done.result, &t("Post ready."), false, true)
