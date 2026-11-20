@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.88 - 2026-11-20
+
+Chats can be archived from inside BlindFB. The Chats list gains an
+"Archive chat" action that moves the selected conversation to the
+archived view; archiving asks for no confirmation because it is
+reversible — the chat waits in the Archived chats view added in
+v0.7.87. Third of Michal's five chat asks from issue #20.
+
 ## v0.7.87 - 2026-11-20
 
 Archived chats have their own view. The View menu's new "Archived chats"
