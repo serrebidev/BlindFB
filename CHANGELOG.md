@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.87 - 2026-11-20
+
+Archived chats have their own view. The View menu's new "Archived chats"
+item lists the conversations you archived in Messenger, in the same list
+shape as the inbox: Enter opens the chat, and Refresh and Load more stay
+in the archived list. Second of Michal's five chat asks from issue #20.
+
 ## v0.7.86 - 2026-11-20
 
 Chats can now load their whole history. A chat window opened on the most
