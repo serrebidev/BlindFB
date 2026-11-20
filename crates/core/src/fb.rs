@@ -722,6 +722,16 @@ pub fn chats_args(count: u32, unread_only: bool) -> Vec<String> {
     args
 }
 
+/// The archived chats view: same list shape as the inbox, another page.
+pub fn archived_chats_args(count: u32) -> Vec<String> {
+    vec![
+        "chats".to_owned(),
+        "-n".to_owned(),
+        count.to_string(),
+        "--archived".to_owned(),
+    ]
+}
+
 pub fn read_args(chat: &str, count: u32) -> Vec<String> {
     vec![
         "read".to_owned(),
@@ -1188,6 +1198,14 @@ mod tests {
         assert_eq!(
             read_all_args("/messages/t/42"),
             ["read", "/messages/t/42", "--all"]
+        );
+    }
+
+    #[test]
+    fn archived_chats_args_open_the_archived_view() {
+        assert_eq!(
+            archived_chats_args(50),
+            ["chats", "-n", "50", "--archived"]
         );
     }
 
