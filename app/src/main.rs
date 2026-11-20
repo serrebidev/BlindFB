@@ -2574,6 +2574,7 @@ fn more_args(
         | View::GroupPosts(_)
         | View::Friends
         | View::Chats
+        | View::ChatWith(..)
         | View::SearchResults
         | View::Marketplace
         | View::Events

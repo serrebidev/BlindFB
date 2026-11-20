@@ -731,6 +731,12 @@ pub fn read_args(chat: &str, count: u32) -> Vec<String> {
     ]
 }
 
+/// The whole history of a chat, oldest first: the backend scrolls to the
+/// start of the conversation and ends with a `# all` / `# more` marker.
+pub fn read_all_args(chat: &str) -> Vec<String> {
+    vec!["read".to_owned(), chat.to_owned(), "--all".to_owned()]
+}
+
 pub fn send_args(chat: &str, text: &str, files: &[String]) -> Vec<String> {
     let mut args = vec!["send".to_owned(), chat.to_owned(), text.to_owned()];
     for file in files {
@@ -1175,6 +1181,14 @@ mod tests {
         }
         assert_eq!(facebook_share_url("/marketplace/item/123/?a=1&b=2").as_deref(), Some("https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.facebook.com%2Fmarketplace%2Fitem%2F123%2F%3Fa%3D1%26b%3D2"));
         assert!(facebook_share_url("p1234").is_none());
+    }
+
+    #[test]
+    fn read_all_args_ask_for_the_whole_history() {
+        assert_eq!(
+            read_all_args("/messages/t/42"),
+            ["read", "/messages/t/42", "--all"]
+        );
     }
 
     #[test]

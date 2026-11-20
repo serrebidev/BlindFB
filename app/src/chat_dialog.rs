@@ -4,7 +4,7 @@
 //! with Enter or the Send button, files attach, and Load more walks back
 //! through the history.
 use super::{message_match_text, needs_messenger_unlock, Job, Tag, Task, Ui, REACTIONS};
-use blindfb_core::fb::{msg_react_args, read_args, reply_args, send_args, Record};
+use blindfb_core::fb::{msg_react_args, read_all_args, read_args, reply_args, send_args, Record};
 use blindfb_core::{ntf, tf};
 use patois::t;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -96,6 +96,17 @@ fn reaction_label(reaction: &str) -> String {
     }
 }
 
+/// A full-history read ends with a marker line from the backend: `# all`
+/// when the start of the conversation was reached, `# more` when it had
+/// to stop early. Split it off the display lines and report which it was.
+fn split_history_marker(lines: Vec<String>) -> (Vec<String>, Option<bool>) {
+    match lines.last().map(String::as_str) {
+        Some("# all") => (lines[..lines.len() - 1].to_vec(), Some(true)),
+        Some("# more") => (lines[..lines.len() - 1].to_vec(), Some(false)),
+        _ => (lines, None),
+    }
+}
+
 /// The backend prints a date header (`# Sep 5, 2026`) before each day's
 /// messages; the status line counts messages, so headers are not messages.
 fn message_count(lines: &[String]) -> usize {
@@ -147,6 +158,16 @@ impl ChatWindow {
         };
         ui.send(Job {
             task: Task::Fb(read_args(&id, count), None),
+            tag: Tag::ChatMessages(self.session),
+        });
+    }
+
+    /// The whole history in one read (issue #20, item 1): the backend
+    /// scrolls to the start of the conversation instead of paging.
+    fn load_all(&self, ui: &Ui) {
+        let id = self.state.lock().unwrap().id.clone();
+        ui.send(Job {
+            task: Task::Fb(read_all_args(&id), None),
             tag: Tag::ChatMessages(self.session),
         });
     }
@@ -268,6 +289,9 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     let messages = ListBox::builder(&dialog).build();
     messages.set_name(&t("Messages in this chat, oldest first"));
     let more = Button::builder(&dialog).with_label(&t("Load &more")).build();
+    let load_all = Button::builder(&dialog)
+        .with_label(&t("Load &all messages"))
+        .build();
     let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
     let compose_label = StaticText::builder(&dialog).with_label(&t("Me&ssage")).build();
     let compose = TextCtrl::builder(&dialog)
@@ -293,6 +317,7 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         .build();
     let actions = BoxSizer::builder(Orientation::Horizontal).build();
     actions.add(&more, 0, SizerFlag::All, 4);
+    actions.add(&load_all, 0, SizerFlag::All, 4);
     actions.add(&refresh, 0, SizerFlag::All, 4);
     actions.add(&attach, 0, SizerFlag::All, 4);
     actions.add(&manage, 0, SizerFlag::All, 4);
@@ -391,6 +416,12 @@ pub(super) fn open(ui: &Ui, record: &Record) {
         w.note(&t("Loading more…"));
         w.load(&u);
     });
+    let (w, u) = (window.clone(), ui.clone());
+    load_all.on_click(move |_| {
+        w.state.lock().unwrap().follow_tail = false;
+        w.note(&t("Loading all messages…"));
+        w.load_all(&u);
+    });
     let (w, parent) = (window.clone(), dialog);
     manage.on_click(move |_| {
         let mut files = w.state.lock().unwrap().files.clone();
@@ -437,11 +468,12 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
     };
     match result {
         Ok(raw) => {
-            let lines: Vec<String> = raw
+            let raw_lines: Vec<String> = raw
                 .lines()
                 .filter(|l| !l.trim().is_empty())
                 .map(str::to_owned)
                 .collect();
+            let (lines, history) = split_history_marker(raw_lines);
             let old: Vec<String> = (0..window.messages.get_count())
                 .filter_map(|i| window.messages.get_string(i))
                 .collect();
@@ -466,12 +498,20 @@ pub(super) fn deliver_messages(ui: &Ui, session: u64, result: Result<String, Str
                 }
             }
             let name = window.state.lock().unwrap().name.clone();
-            window.note(&ntf!(
+            let counted = ntf!(
                 "{name}: {n} message.",
                 "{name}: {n} messages.",
                 message_count(&lines),
                 name = name
-            ));
+            );
+            window.note(&match history {
+                Some(true) => format!("{counted} {}", t("All messages are loaded.")),
+                Some(false) => format!(
+                    "{counted} {}",
+                    t("Loading stopped before the start of the conversation.")
+                ),
+                None => counted,
+            });
         }
         Err(e) => {
             if needs_messenger_unlock(&e) {
@@ -519,6 +559,25 @@ pub(super) fn deliver_sent(ui: &Ui, session: u64, result: Result<String, String>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_full_history_marker_is_split_off_the_display_lines() {
+        let lines = vec!["# Sep 5, 2026".to_string(), "09:00 Ann: hi".to_string()];
+        let (shown, history) = split_history_marker(lines.clone());
+        assert_eq!(shown, lines);
+        assert_eq!(history, None);
+
+        let mut all = lines.clone();
+        all.push("# all".to_string());
+        let (shown, history) = split_history_marker(all);
+        assert_eq!(shown, lines);
+        assert_eq!(history, Some(true));
+
+        let mut more = lines;
+        more.push("# more".to_string());
+        let (_, history) = split_history_marker(more);
+        assert_eq!(history, Some(false));
+    }
 
     fn record(fields: &[&str]) -> Record {
         Record {
