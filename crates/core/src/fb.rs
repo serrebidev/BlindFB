@@ -722,6 +722,11 @@ pub fn chats_args(count: u32, unread_only: bool) -> Vec<String> {
     args
 }
 
+/// Archive one chat: the backend moves it from the inbox to the archived view.
+pub fn archive_args(chat: &str) -> Vec<String> {
+    vec!["archive".to_owned(), chat.to_owned()]
+}
+
 /// The archived chats view: same list shape as the inbox, another page.
 pub fn archived_chats_args(count: u32) -> Vec<String> {
     vec![
@@ -1207,6 +1212,11 @@ mod tests {
             archived_chats_args(50),
             ["chats", "-n", "50", "--archived"]
         );
+    }
+
+    #[test]
+    fn archive_args_name_the_archive_command() {
+        assert_eq!(archive_args("c1234"), ["archive", "c1234"]);
     }
 
     #[test]

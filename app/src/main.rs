@@ -47,8 +47,8 @@ use std::time::{Duration, Instant};
 use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    archived_chats_args, chats_args, comment_args, delete_args, events_args, facebook_share_url,
-    feed_args,
+    archive_args, archived_chats_args, chats_args, comment_args, delete_args, events_args,
+    facebook_share_url, feed_args,
     follow_args, friend_add_args, friends_args, group_apply_args, group_invite_args, group_join_args,
     group_leave_args,
     groups_args, link_url, listing_message_args, marketplace_args, msg_react_args, notifs_args,
@@ -89,6 +89,7 @@ const ID_CHATS: i32 = 10005;
 const ID_REFRESH: i32 = 10006;
 const ID_UNREAD_CHATS: i32 = 10007;
 const ID_ARCHIVED_CHATS: i32 = 10019;
+const ID_ARCHIVE_CHAT: i32 = 10022;
 const ID_GROUPS_VIEW: i32 = 10008;
 const ID_RECENT_FEED: i32 = 10009;
 const ID_MORE: i32 = 10016;
@@ -5055,6 +5056,24 @@ fn open_chat_web(ui: &Ui) {
     }
 }
 
+/// Archive the selected inbox chat. No confirmation: archiving is
+/// reversible — the chat waits in the Archived chats view.
+fn archive_selected(ui: &Ui) {
+    if ui.state.borrow().view != View::Chats {
+        return;
+    }
+    let Some((_, record)) = selected(ui) else {
+        show_warning(&ui.frame, t("Select a chat first."), &t("Archive chat"));
+        return;
+    };
+    let target = record.field(0).to_owned();
+    ui.status(&tf!("Archiving {name}…", name = record.field(3)));
+    ui.send(Job {
+        task: Task::Fb(archive_args(&target), None),
+        tag: Tag::Text,
+    });
+}
+
 fn delete_selected(ui: &Ui) {
     let Some(post) = selected_post_ref(ui) else {
         show_warning(&ui.frame, t("Select one of your posts first."), &t("Delete post"));
@@ -5325,6 +5344,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_WEB_CHAT => open_chat_web(ui),
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
         ID_ARCHIVED_CHATS => load_view(ui, View::ArchivedChats),
+        ID_ARCHIVE_CHAT => archive_selected(ui),
         ID_REFRESH => refresh(ui),
         ID_MORE => load_more(ui),
         ID_OPEN => open_selected(ui),
@@ -5724,7 +5744,15 @@ fn show_item_menu(ui: &Ui) {
                 (ID_WEB_PERSON, t("Open on &Facebook (web)")),
             ],
         ),
-        View::Chats | View::ArchivedChats => add(
+        View::Chats => add(
+            &menu,
+            &[
+                (ID_OPEN, t("&Open chat")),
+                (ID_ARCHIVE_CHAT, t("&Archive chat")),
+                (ID_WEB_CHAT, t("Open in &Messenger (web)")),
+            ],
+        ),
+        View::ArchivedChats => add(
             &menu,
             &[
                 (ID_OPEN, t("&Open chat")),
