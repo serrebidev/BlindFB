@@ -4,6 +4,12 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.95 - 2026-11-21
+
+Archived Chats now waits for the Messenger inbox Settings menu to load.
+This fixes a startup race that could still block the archived view
+after the v0.7.93 fix (issue #24).
+
 ## v0.7.94 - 2026-11-21
 
 Messenger voice messages play in BlindFB. Press Enter on a voice message
