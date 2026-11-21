@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.92 - 2026-11-21
+
+Group windows and video playback from a feedback report, on backend 86.
+Group Posts, Members and Photos now open with a small first page
+(10 posts, 50 members, 50 photos) and grow only on manual Load more;
+the old background fill up to 500 members and 200 photos is gone, so
+opening a photo-heavy group stays fast. The group Photos list is the
+group's Media tab: Enter opens the photo's post with its caption and
+comments, and rows show Facebook's own automatic descriptions. The
+post reader gains a Video playback speed control (0.50x to 2.00x)
+that applies live and to every video afterwards. File, OCR an image
+was documented as what it is: it reads the text written inside a
+picture file.
+
 ## v0.7.91 - 2026-11-21
 
 Chat fixes from Michal's report in issue #24, on backend 86.
