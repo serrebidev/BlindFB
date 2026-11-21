@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.91 - 2026-11-21
+
+Chat fixes from Michal's report in issue #24, on backend 86.
+Archiving a chat failed with "ReferenceError: dismissRestore is not
+defined" — the backend's archive, delete and group-members helpers
+called two page helpers that were never in their scope, so archiving
+and deleting a chat could never run; all three are fixed. Viewing
+archived chats with nothing archived yet no longer reports
+"no chat list": an empty archived view is an empty list.
+
 ## v0.7.90 - 2026-11-20
 
 Chats can be deleted from inside BlindFB. The Chats list gains a
