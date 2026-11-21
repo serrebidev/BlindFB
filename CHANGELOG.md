@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.93 - 2026-11-21
+
+Archived chats open again. Facebook retired the archived page the
+backend used to visit directly — it now serves an error page with no
+chat list, which is why the Archived chats view reported "no chat
+list" even after v0.7.91. The backend now opens the archived view the
+way the Facebook site itself does, from the inbox's settings menu,
+and proves it arrived by the pane's own heading before reading the
+list. Issue #24 stays open until Michal confirms on his machine.
+
 ## v0.7.92 - 2026-11-21
 
 Group windows and video playback from a feedback report, on backend 86.
