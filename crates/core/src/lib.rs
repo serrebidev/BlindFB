@@ -9,6 +9,7 @@
 pub mod alerts;
 pub mod backend;
 pub mod browsers;
+pub mod chat_voice;
 pub mod debug;
 mod engine;
 pub mod fb;

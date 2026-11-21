@@ -36,7 +36,7 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - Browse a group's photos in its window: every Media photo, newest first, each opening in the reader.
 - Search people, pages, groups, posts and events from one dialog with a filter combo box.
 - Marketplace: browse the listings feed (Enter opens a listing in your browser, Message seller from the context menu) and sell with photos or video.
-- Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored.
+- Messenger: browse chats (including unread only), read conversations, send text and file attachments, unsend your last message, and unlock end-to-end encrypted chats with your Messenger PIN, which is never stored. Select a voice message and press Enter to play it. Incoming voice messages play in the open chat. Use **Record voice message**, **Stop recording**, and **Send voice message** to send your own clip, or **Discard recording** to cancel.
 - OCR an image file with the OCR engine built into your operating system.
 - F1 lists the keyboard commands; Ctrl+1 to Ctrl+9 switch views, F5 refreshes, Ctrl+N writes a post, Ctrl+/ searches everything (posts, people, friends, photos, videos, pages, places, groups, events, Marketplace).
 - Alt+Ctrl+F hides BlindFB to the system tray and brings it back. File > Show/hide hotkey changes the shortcut (or turns it off); the new one applies right away.

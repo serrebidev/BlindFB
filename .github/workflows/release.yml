@@ -80,6 +80,7 @@ jobs:
           node crates/core/src/post_scripts/questions.test.js
           node crates/core/src/post_scripts/identities.test.js
           node crates/core/src/reels.test.js
+          node crates/core/src/chat_voice.test.js
 
       - name: Package with shipfitter (cargo xtask package)
         env:

@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.94 - 2026-11-21
+
+Messenger voice messages play in BlindFB. Press Enter on a voice message
+to hear it again. New incoming clips play in order while their chat is
+open. Use Record voice message, Stop recording, and Send voice message
+to send your own clip. Discard recording cancels the draft.
+
 ## v0.7.93 - 2026-11-21
 
 Archived chats open again. Facebook retired the archived page the

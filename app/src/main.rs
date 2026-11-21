@@ -374,7 +374,7 @@ enum Tag {
     PostLoaded(u64),
     GroupPosts(u64),
     GroupMembers(u64),
-    ChatMessages(u64),
+    ChatVoice(u64, blindfb_core::chat_voice::Action),
     ChatMembers(u64),
     ChatWindowSent(u64),
     ReelPrepared {
@@ -423,6 +423,11 @@ enum Task {
     },
     /// Run the backend with these args (and optional stdin, for the PIN).
     Fb(Vec<String>, Option<String>),
+    ChatVoice {
+        session: Arc<Mutex<blindfb_core::chat_voice::Session>>,
+        action: blindfb_core::chat_voice::Action,
+        clip: String,
+    },
     /// Write the debug report to this path.
     DebugReport(String),
     /// Download and install/update the managed backend binary.
@@ -1421,6 +1426,15 @@ fn spawn_worker(
                             Some(input) => fb.run_stdin(&refs(&args), input),
                             None => fb.run(&refs(&args)),
                         },
+                    }
+                }
+                Task::ChatVoice { session, action, clip } => {
+                    if fb.is_none() {
+                        fb = Fb::discover();
+                    }
+                    match &fb {
+                        Some(fb) => session.lock().unwrap().run(fb, action, &clip),
+                        None => Err(t("The Facebook backend is not installed")),
                     }
                 }
                 Task::DebugReport(path) => blindfb_core::debug::write_report(fb.as_ref(), &path),
@@ -3804,7 +3818,7 @@ fn apply_done(ui: &Ui, done: Done) {
         Tag::GroupPosts(session) => group_dialog::deliver_posts(ui, session, done.result),
         Tag::GroupMembers(session) => group_dialog::deliver_members(ui, session, done.result),
         Tag::GroupPhotos(session) => group_dialog::deliver_photos(ui, session, done.result),
-        Tag::ChatMessages(session) => chat_dialog::deliver_messages(ui, session, done.result),
+        Tag::ChatVoice(session, action) => chat_dialog::deliver_voice(ui, session, action, done.result),
         Tag::ChatMembers(session) => chat_dialog::deliver_members(ui, session, done.result),
         Tag::ChatWindowSent(session) => chat_dialog::deliver_sent(ui, session, done.result),
         Tag::PostLoaded(session) => {
