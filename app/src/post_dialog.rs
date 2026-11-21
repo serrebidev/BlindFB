@@ -27,6 +27,22 @@ const ID_COMMENT_PROFILE: i32 = 12110;
 const ID_COMMENT_FRIEND: i32 = 12111;
 const ID_COPY_ALL: i32 = 12112;
 const ID_TRANSLATE: i32 = 12113;
+/// Offered playback speeds; index 2 (1x) is the default.
+const SPEEDS: [f64; 7] = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+const DEFAULT_SPEED_INDEX: u32 = 2;
+
+fn format_speed(rate: f64) -> String {
+    // Numbers need no translation; `tf!` fills plain `{name}` only.
+    format!("{rate:.2}x")
+}
+
+#[cfg(test)]
+fn speed_index(rate: f64) -> Option<u32> {
+    SPEEDS
+        .iter()
+        .position(|&r| (r - rate).abs() < f64::EPSILON)
+        .map(|i| i as u32)
+}
 fn composer_label() -> String {
     t("&Write a comment (Ctrl+Enter to send)")
 }
@@ -81,6 +97,7 @@ pub(super) struct PostReader {
     back: Button,
     forward: Button,
     volume: Slider,
+    speed: ComboBox,
     composer_label: StaticText,
     composer: TextCtrl,
     identity_text: TextCtrl,
@@ -118,6 +135,7 @@ struct ReaderState {
     video: Option<String>,
     video_requested: bool,
     video_request: u64,
+    rate: f64,
     media_ready: bool,
     media_loading: Option<Instant>,
     parent: Option<String>,
@@ -203,6 +221,7 @@ impl PostReader {
         self.back.enable(state.media_ready);
         self.forward.enable(state.media_ready);
         self.volume.enable(state.video.is_some());
+        self.speed.enable(state.video.is_some());
         self.open_link.enable(self.links.get_selection().is_some());
         self.send.enable(state.loaded && !state.busy);
         self.identity.enable(state.loaded && !state.busy
@@ -491,6 +510,7 @@ impl PostReader {
                         continue;
                     }
                     self.media.set_volume(self.volume.value() as f64 / 100.0);
+                    self.media.set_rate(self.state.borrow().rate);
                     let ok = self.media.play();
                     self.state.borrow_mut().media_ready = ok;
                     self.play_label(ok);
@@ -916,6 +936,17 @@ fn open_requested(
         .with_max_value(100)
         .build();
     volume.set_name(&t("Video volume, percent"));
+    let speed_label = StaticText::builder(&dialog)
+        .with_label(&t("Video playback &speed"))
+        .build();
+    let speed_choices: Vec<String> = SPEEDS.iter().map(|&r| format_speed(r)).collect();
+    let speed_choices: Vec<&str> = speed_choices.iter().map(String::as_str).collect();
+    let speed = ComboBox::builder(&dialog)
+        .with_style(ComboBoxStyle::ReadOnly)
+        .with_string_choices(&speed_choices)
+        .build();
+    speed.set_name(&t("Video playback speed"));
+    speed.set_selection(DEFAULT_SPEED_INDEX);
     let comments_label = StaticText::builder(&dialog).with_label(&t("&Comments")).build();
     let comments = ListBox::builder(&dialog).build();
     // The keys are the user's, from File > Keyboard shortcuts.
@@ -975,6 +1006,8 @@ fn open_requested(
     root.add_sizer(&player_buttons, 0, SizerFlag::Expand, 0);
     root.add(&volume_label, 0, SizerFlag::All, 4);
     root.add(&volume, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&speed_label, 0, SizerFlag::All, 4);
+    root.add(&speed, 0, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&comments_label, 0, SizerFlag::All, 4);
     root.add(&comments, 3, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&composer_label, 0, SizerFlag::All, 4);
@@ -1002,6 +1035,7 @@ fn open_requested(
         back,
         forward,
         volume,
+        speed,
         composer_label,
         composer,
         identity_text,
@@ -1024,6 +1058,7 @@ fn open_requested(
             video: autoplay.then(|| target.to_owned()),
             video_requested: false,
             video_request: 0,
+            rate: SPEEDS[DEFAULT_SPEED_INDEX as usize],
             media_ready: false,
             media_loading: None,
             parent: None,
@@ -1112,6 +1147,21 @@ fn open_requested(
         let _ = blindfb_core::media::save_volume(r.volume.value() as u8);
         if r.state.borrow().media_ready && !r.media.set_volume(r.volume.value() as f64 / 100.0) {
             r.message(&u, &t("Could not set video volume."));
+        }
+    });
+    let (r, u) = (reader.clone(), ui.clone());
+    speed.on_selection_changed(move |_| {
+        let Some(index) = r.speed.get_selection() else {
+            return;
+        };
+        let Some(&rate) = SPEEDS.get(index as usize) else {
+            return;
+        };
+        r.state.borrow_mut().rate = rate;
+        if r.state.borrow().media_ready && !r.media.set_rate(rate) {
+            r.message(&u, &t("Could not set video speed."));
+        } else {
+            r.message(&u, &tf!("Playback speed: {rate}", rate = format_speed(rate)));
         }
     });
     let (r, u) = (reader.clone(), ui.clone());
@@ -1766,6 +1816,7 @@ mod tests {
             video: None,
             video_requested: false,
             video_request: 0,
+            rate: 1.0,
             media_ready: false,
             media_loading: None,
             parent: None,
@@ -1821,6 +1872,18 @@ mod tests {
         state.busy = false;
         assert!(state.take_autoplay_request());
         assert!(!state.take_autoplay_request());
+    }
+
+    #[test]
+    fn speed_choices_round_trip() {
+        assert_eq!(SPEEDS[DEFAULT_SPEED_INDEX as usize], 1.0);
+        for &rate in &SPEEDS {
+            assert_eq!(speed_index(rate), Some(SPEEDS.iter().position(|&r| r == rate).unwrap() as u32));
+        }
+        assert_eq!(speed_index(1.33), None);
+        assert_eq!(format_speed(0.5), "0.50x");
+        assert_eq!(format_speed(1.0), "1.00x");
+        assert_eq!(format_speed(2.0), "2.00x");
     }
 
     #[test]

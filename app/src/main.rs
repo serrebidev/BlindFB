@@ -5505,7 +5505,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
                  Enter on a selected link or Open link opens your browser.\n\
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
-                 Arrow keys on Video volume change its percentage.\n\
+                 Arrow keys on Video volume change its percentage. The Video playback speed list changes how fast the video plays.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
                  Tab to Comment identity to read your current group identity and restrictions. Change comment identity opens Facebook's available choices and nickname setup. Continue applies the choice; Cancel keeps your draft and reply target.\n\
                  Ctrl+Enter in the comment box sends. Escape closes the reader and stops playback."),

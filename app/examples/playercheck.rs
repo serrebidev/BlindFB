@@ -43,6 +43,7 @@ fn main() {
                 match event {
                     PlayerEvent::Loaded => {
                         assert!(checked_media.set_volume(0.5));
+                        assert!(checked_media.set_rate(1.5));
                         loaded.set(checked_media.play());
                     }
                     PlayerEvent::Error(error) => eprintln!("Player error: {error}"),

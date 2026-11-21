@@ -71,6 +71,9 @@ mod platform {
         pub fn set_volume(&self, volume: f64) -> bool {
             self.media.set_volume(volume)
         }
+        pub fn set_rate(&self, rate: f64) -> bool {
+            self.media.set_playback_rate(rate)
+        }
         pub fn get_state(&self) -> MediaState {
             self.media.get_state()
         }
@@ -232,6 +235,7 @@ mod platform {
         Pause,
         Stop,
         Volume(f64),
+        Speed(f64),
         Seek(i64),
     }
     struct Update {
@@ -329,6 +333,9 @@ mod platform {
         }
         pub fn set_volume(&self, volume: f64) -> bool {
             volume.is_finite() && self.send(Action::Volume(volume.clamp(0.0, 1.0)))
+        }
+        pub fn set_rate(&self, rate: f64) -> bool {
+            rate.is_finite() && self.send(Action::Speed(rate.clamp(0.25, 4.0)))
         }
         pub fn get_state(&self) -> MediaState {
             self.0.snapshot.borrow().state
@@ -570,6 +577,13 @@ mod platform {
                                 &mut pipe,
                                 &mut serial,
                                 json!(["set_property", "volume", volume * 100.0]),
+                            )?;
+                        }
+                        Action::Speed(rate) => {
+                            send_command(
+                                &mut pipe,
+                                &mut serial,
+                                json!(["set_property", "speed", rate]),
                             )?;
                         }
                     }

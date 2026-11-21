@@ -34,8 +34,8 @@ const ID_POST_COPY_LINK: i32 = 12217;
 const ID_POST_WEB: i32 = 12218;
 const ID_POST_REACT: i32 = 12220; // + index into REACTIONS
 const MEMBER_CAP: u32 = 500;
-/// The window loads like the news feed: a small first page paints at
-/// once, then one background top-up fills the rest in.
+/// The window opens with a small first page per list and grows only by
+/// manual "Load more", so photo-heavy groups stay fast to open.
 const POSTS_FIRST: u32 = 10;
 const POSTS_CAP: u32 = 50;
 /// Load more re-reads from the top, so each step asks for this many more.
@@ -43,6 +43,29 @@ const POSTS_CAP: u32 = 50;
 /// at most 120 s (~2000).
 const POSTS_STEP: u32 = 50;
 const MEMBERS_STEP: u32 = 500;
+
+/// The next "Load more" request size, or `None` once the cap is reached.
+fn next_posts_want(want: u32) -> Option<u32> {
+    if want >= POSTS_CAP {
+        None
+    } else {
+        Some(want.saturating_add(POSTS_STEP).min(POSTS_CAP))
+    }
+}
+fn next_members_want(want: u32) -> Option<u32> {
+    if want >= MEMBER_CAP {
+        None
+    } else {
+        Some(want.saturating_add(MEMBERS_STEP).min(MEMBER_CAP))
+    }
+}
+fn next_photos_want(want: u32) -> Option<u32> {
+    if want >= PHOTOS_CAP {
+        None
+    } else {
+        Some(want.saturating_mul(2).min(PHOTOS_CAP))
+    }
+}
 
 #[derive(Clone, Copy)]
 enum List {
@@ -79,7 +102,7 @@ struct GroupState {
     members_count: Option<usize>,
     photos_count: Option<usize>,
     /// How many rows the latest posts/members/photos fetch asked for; a full
-    /// page back means a background top-up to the cap is worthwhile.
+    /// page back means "Load more" may have more.
     posts_want: u32,
     members_want: u32,
     photos_want: u32,
@@ -497,27 +520,39 @@ impl GroupWindow {
             let url = state.url.clone();
             match which {
                 List::Posts if !state.posts_loading => {
-                    state.posts_loading = true;
-                    state.posts_want += POSTS_STEP;
-                    let mut args = posts_args(&url, state.posts_want, true);
-                    args.push("--continue".to_owned());
-                    Some((args, Tag::GroupPosts(self.session)))
+                    if let Some(next) = next_posts_want(state.posts_want) {
+                        state.posts_loading = true;
+                        state.posts_want = next;
+                        let mut args = posts_args(&url, state.posts_want, true);
+                        args.push("--continue".to_owned());
+                        Some((args, Tag::GroupPosts(self.session)))
+                    } else {
+                        None
+                    }
                 }
                 List::Members if !state.members_loading => {
-                    state.members_loading = true;
-                    state.members_want += MEMBERS_STEP;
-                    Some((
-                        members_args(&url, state.members_want, true),
-                        Tag::GroupMembers(self.session),
-                    ))
+                    if let Some(next) = next_members_want(state.members_want) {
+                        state.members_loading = true;
+                        state.members_want = next;
+                        Some((
+                            members_args(&url, state.members_want, true),
+                            Tag::GroupMembers(self.session),
+                        ))
+                    } else {
+                        None
+                    }
                 }
                 List::Photos if !state.photos_loading => {
-                    state.photos_loading = true;
-                    state.photos_want = state.photos_want.saturating_mul(2).min(PHOTOS_CAP);
-                    Some((
-                        group_photos_args(&url, state.photos_want),
-                        Tag::GroupPhotos(self.session),
-                    ))
+                    if let Some(next) = next_photos_want(state.photos_want) {
+                        state.photos_loading = true;
+                        state.photos_want = next;
+                        Some((
+                            group_photos_args(&url, state.photos_want),
+                            Tag::GroupPhotos(self.session),
+                        ))
+                    } else {
+                        None
+                    }
                 }
                 _ => None,
             }
@@ -763,21 +798,12 @@ pub(super) fn deliver_photos(ui: &Ui, session: u64, result: Result<String, Strin
         Ok(raw) => {
             let returned = parse_records(&raw).len();
             fill_photos(&window, &raw);
-            let (want, url) = {
-                let state = window.state.lock().unwrap();
-                (state.photos_want, state.url.clone())
-            };
-            if returned >= want as usize && want < PHOTOS_CAP {
-                window.state.lock().unwrap().photos_want = PHOTOS_CAP;
-                ui.send(Job {
-                    task: Task::Fb(group_photos_args(&url, PHOTOS_CAP), None),
-                    tag: Tag::GroupPhotos(session),
-                });
-            } else {
-                window.state.lock().unwrap().photos_loading = false;
-                window.show_more(List::Photos, returned >= want as usize);
-                refresh_note(&window);
-            }
+            let want = window.state.lock().unwrap().photos_want;
+            let _ = ui;
+            window.state.lock().unwrap().photos_loading = false;
+            window
+                .show_more(List::Photos, returned >= want as usize && want < PHOTOS_CAP);
+            refresh_note(&window);
         }
         Err(e) => {
             window.state.lock().unwrap().photos_loading = false;
@@ -797,7 +823,7 @@ fn member_label(record: &Record) -> String {
     }
 }
 
-/// First fill replaces; a staged top-up (which re-reads from the top)
+/// First fill replaces; a manual "Load more" (which re-reads from the top)
 /// appends only rows not already shown, so the user's place in the
 /// list never moves while the rest loads behind them.
 fn fill_posts(window: &GroupWindow, raw: &str) {
@@ -889,24 +915,12 @@ pub(super) fn deliver_posts(ui: &Ui, session: u64, result: Result<String, String
         Ok(raw) => {
             let returned = parse_feed(&raw).len();
             fill_posts(&window, &raw);
-            // A full first page means there may be more: top up to the
-            // cap in the background, like the feed's read-ahead.
-            let (want, url) = {
-                let state = window.state.lock().unwrap();
-                (state.posts_want, state.url.clone())
-            };
-            if returned >= want as usize && want < POSTS_CAP {
-                window.state.lock().unwrap().posts_want = POSTS_CAP;
-                ui.send(Job {
-                    task: Task::Fb(posts_args(&url, POSTS_CAP, true), None),
-                    tag: Tag::GroupPosts(session),
-                });
-            } else {
-                window.state.lock().unwrap().posts_loading = false;
-                // A full answer means Facebook may hold more: offer them.
-                window.show_more(List::Posts, returned >= want as usize);
-                refresh_note(&window);
-            }
+            let want = window.state.lock().unwrap().posts_want;
+            let _ = ui;
+            window.state.lock().unwrap().posts_loading = false;
+            // A full answer means Facebook may hold more: offer Load more.
+            window.show_more(List::Posts, returned >= want as usize && want < POSTS_CAP);
+            refresh_note(&window);
         }
         Err(e) => {
             window.state.lock().unwrap().posts_loading = false;
@@ -926,21 +940,12 @@ pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, Stri
         Ok(raw) => {
             let returned = parse_records(&raw).len();
             fill_members(&window, &raw);
-            let (want, url) = {
-                let state = window.state.lock().unwrap();
-                (state.members_want, state.url.clone())
-            };
-            if returned >= want as usize && want < MEMBER_CAP {
-                window.state.lock().unwrap().members_want = MEMBER_CAP;
-                ui.send(Job {
-                    task: Task::Fb(members_args(&url, MEMBER_CAP, true), None),
-                    tag: Tag::GroupMembers(session),
-                });
-            } else {
-                window.state.lock().unwrap().members_loading = false;
-                window.show_more(List::Members, returned >= want as usize);
-                refresh_note(&window);
-            }
+            let want = window.state.lock().unwrap().members_want;
+            let _ = ui;
+            window.state.lock().unwrap().members_loading = false;
+            window
+                .show_more(List::Members, returned >= want as usize && want < MEMBER_CAP);
+            refresh_note(&window);
         }
         Err(e) => {
             window.state.lock().unwrap().members_loading = false;
@@ -954,6 +959,17 @@ pub(super) fn deliver_members(ui: &Ui, session: u64, result: Result<String, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn load_more_steps_stop_at_the_caps() {
+        assert_eq!(next_posts_want(POSTS_FIRST), Some(POSTS_CAP));
+        assert_eq!(next_posts_want(POSTS_CAP), None);
+        assert_eq!(next_members_want(MEMBERS_FIRST), Some(MEMBER_CAP));
+        assert_eq!(next_members_want(MEMBER_CAP), None);
+        assert_eq!(next_photos_want(PHOTOS_FIRST), Some(100));
+        assert_eq!(next_photos_want(100), Some(PHOTOS_CAP));
+        assert_eq!(next_photos_want(PHOTOS_CAP), None);
+    }
 
     #[test]
     fn a_member_action_with_no_source_field_queues_nothing() {
