@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.96 - 2026-11-22
+
+Group windows offer New post and Copy photo link. Load more posts stays
+available after a short scan. Post readers list linked photos with other
+post links and let you copy the selected link. Comments start with up to
+30 entries. Use Load more comments to fetch the next batch.
+
 ## v0.7.95 - 2026-11-21
 
 Archived Chats now waits for the Messenger inbox Settings menu to load.

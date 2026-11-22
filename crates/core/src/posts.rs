@@ -444,7 +444,7 @@ fn page_lost(raw: &str) -> bool {
 
 fn initialize_script(target: &str) -> String {
     format!(
-        "{};window.__blindfbPost.initialize({})",
+        "{};window.__blindfbPost.initialize({}, 30)",
         concat!(
             include_str!("post_scripts/labels.js"),
             include_str!("post_scripts/questions.js"),
@@ -542,6 +542,12 @@ pub fn translate(fb: &Fb, page: &str) -> Result<String, String> {
 
 pub fn refresh(fb: &Fb, page: &str) -> Result<String, String> {
     let output = recover_eval(fb, page, "window.__blindfbPost.read()")?;
+    parse_detail(&output)?;
+    Ok(output)
+}
+
+pub fn load_more(fb: &Fb, page: &str) -> Result<String, String> {
+    let output = recover_eval(fb, page, "window.__blindfbPost.loadMore()")?;
     parse_detail(&output)?;
     Ok(output)
 }

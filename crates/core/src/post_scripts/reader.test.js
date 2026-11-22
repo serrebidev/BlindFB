@@ -59,8 +59,11 @@ function fixture(mode = false) {
   const stuckButton = {innerText: '', isConnected: true, closest: () => null,
     getAttribute: () => 'View more comments', click() {}};
   const reactionButton = {closest: () => null, getAttribute: name => name === 'aria-label' ? "Remove Love from Post author's post" : name === 'aria-pressed' ? 'true' : ''};
+  const photoLink = {href: 'https://www.facebook.com/photo/?fbid=123&fbclid=tracking', closest: () => null,
+    getAttribute: () => '', querySelector: () => ({alt: 'A mountain'})};
+  const commentPhoto = {...photoLink, href: 'https://www.facebook.com/photo/?fbid=456', closest: () => ({})};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector === '[role=button],button' && mode === 'sorted' ? [sortButton] : selector === '[role=menuitem],[role=option],[role=button],button' && mode === 'sorted' ? (menuOpen ? [allOption] : []) : selector === '[role=button],button' && mode === 'stuck' ? [stuckButton] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'post-photo' ? [photoLink, photoLink, commentPhoto] : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector === '[role=button],button' && mode === 'sorted' ? [sortButton] : selector === '[role=menuitem],[role=option],[role=button],button' && mode === 'sorted' ? (menuOpen ? [allOption] : []) : selector === '[role=button],button' && mode === 'stuck' ? [stuckButton] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -593,6 +596,17 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   // Issue #39: 11 of 94 comments shown. The dialog pane loads on scroll and
   // offers no button, so a button-only loader stopped at the first batch and
   // called it complete. Scrolling must load the rest, with no incomplete flag.
+  const photos = fixture('post-photo');
+  const photoDetail = JSON.parse(await photos.api.initialize('https://www.facebook.com/a/posts/1'));
+  assert.deepEqual(photoDetail.links, [{label: 'A mountain', url: 'https://www.facebook.com/photo/?fbid=123'}]);
+  const paged = fixture('more');
+  paged.article('1');
+  const firstBatch = JSON.parse(await paged.api.initialize('https://www.facebook.com/a/posts/1', 1));
+  assert.deepEqual(firstBatch.comments.map(c => c.id), ['1']);
+  assert.equal(firstBatch.comments_incomplete, true);
+  const nextBatch = JSON.parse(await paged.api.loadMore());
+  assert.deepEqual(nextBatch.comments.map(c => c.id), ['1', '2']);
+  assert.equal(nextBatch.comments_incomplete, undefined);
   const scrolled = fixture('scroll');
   scrolled.article('1');
   const scrolledDetail = JSON.parse(await scrolled.api.initialize('https://www.facebook.com/a/posts/1'));

@@ -25,6 +25,7 @@
   const action = W.commentAction;
   // The backend's times, plus the languages only labels.js knows (Russian "8 ч.").
   const time = {test: text => !!(F.TIME && F.TIME.test(text)) || W.time.test(text)};
+  let commentLimit = Infinity;
   let root, address, target, serial = 0, records = new Map(), pending;
   // A reel has no post dialog: its card holds the caption and actions, a side panel the comments.
   // Opening its comments hides the card's author and caption, so they are read before that.
@@ -127,9 +128,10 @@
       // Facebook's hashtag pages are UI; another site's /hashtag/ page is a real link.
       if (!external && /\/hashtag\//.test(url.pathname)) continue;
       const inMessage = (Array.isArray(message) ? message : [message]).some(element => element && element.contains(a));
-      if (!external && !inMessage) continue;
       for (const key of [...url.searchParams.keys()]) if (/^(__cft__|__tn__|fbclid)/.test(key)) url.searchParams.delete(key);
-      const text = F.clean(a.innerText || '') || label(a) || url.hostname;
+      const image = F.visible(a) && !external && /^\/photo(\.php)?\/?$/.test(url.pathname) && url.searchParams.get('fbid');
+      if (!external && !inMessage && !image) continue;
+      const text = F.clean(a.innerText || '') || label(a) || (image ? a.querySelector('img')?.alt || 'Photo' : url.hostname);
       if (!found.has(url.href)) found.set(url.href, {label: text, url: url.href});
     }
     return [...found.values()];
@@ -302,8 +304,7 @@
   // Facebook hides replies behind "View replies" buttons and later top-level
   // comments behind "View more comments"; neither is in the page until pressed.
   // Press both in bounded rounds (loaded comments can hide replies of their own,
-  // and a reply can hide further replies) so read() returns the whole thread,
-  // not just the first batch (issues #22 and #30).
+  // and a reply can hide further replies) until the requested batch is ready.
   // Facebook opens comments under "Most relevant", which hides comments it
   // ranks low: the post's count includes them, the list does not, and no
   // load-more button remains (a post counting 18 comments listed only 12).
@@ -362,6 +363,7 @@
     };
     const remaining = () => [...root.querySelectorAll('[role=button],button')].filter(element => F.visible(element) && loadsMore(element));
     for (let round = 0; round < 25; round++) {
+      if (root.querySelectorAll(ARTICLE).length >= commentLimit) return false;
       const buttons = remaining();
       if (!buttons.length) {
         // No button: the pane may still load on scroll. Scroll, and only
@@ -376,7 +378,7 @@
         continue;
       }
       const before = root.querySelectorAll(ARTICLE).length;
-      for (const button of buttons) {
+      for (const button of buttons.slice(0, commentLimit - before)) {
         if (button.isConnected) button.click();
       }
       const grew = await F.waitFor(() => root.querySelectorAll(ARTICLE).length > before || buttons.every(button => !button.isConnected || !F.visible(button) || !loadsMore(button)), 5000);
@@ -408,7 +410,7 @@
     const complete = await expandReplies();
     await expandText();
     const incomplete = complete ? {} : {comments_incomplete: true};
-    const rows = collect();
+    const rows = collect().slice(0, commentLimit);
     records = new Map(rows.map(row => [row.value.id, {...row, key: fingerprint(row.value)}]));
     if (card) {
       return JSON.stringify({url: target, ...reel, ...ownReaction(card, true), time: '', comments: rows.map(row => row.value), ...incomplete, video: target});
@@ -734,7 +736,9 @@
     setTitle(title) { current(); if (card && !reel.text) reel.text = title; return read(); },
     translate,
     like, shareTarget, shareOpen, shareFill, shareNow, shareClose, reelReact,
-    async initialize(url) {
+    loadMore() { commentLimit += 30; return read(); },
+    async initialize(url, limit = Infinity) {
+      commentLimit = limit;
       target = url;
       const path = new URL(url).pathname, isVideo = /\/videos\/|^\/watch\/?/.test(path);
       const inReelViewer = () => /^\/reel\//.test(new URL(location.href).pathname);

@@ -452,6 +452,7 @@ enum Task {
     },
     PostRefresh {
         page: String,
+        more: bool,
     },
     PostTranslate {
         page: String,
@@ -1447,7 +1448,8 @@ fn spawn_worker(
                     Some(fb) => blindfb_core::posts::reel_react(fb, &page, &reaction),
                     None => Err(t("The Facebook backend is not installed")),
                 },
-                Task::PostRefresh { page } => match &fb {
+                Task::PostRefresh { page, more } => match &fb {
+                    Some(fb) if more => blindfb_core::posts::load_more(fb, &page),
                     Some(fb) => blindfb_core::posts::refresh(fb, &page),
                     None => Err(t("The Facebook backend is not installed")),
                 },
@@ -5935,14 +5937,14 @@ fn invite_selected(ui: &Ui) {
 }
 
 /// Whether to post in this group anonymously; `None` when the user cancels.
-fn choose_group_post_identity(ui: &Ui, group: &str) -> Option<bool> {
+fn choose_group_post_identity(parent: &impl WxWidget, group: &str) -> Option<bool> {
     let labels = [t("With my name"), t("Anonymously")];
     let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
     let message = tf!(
         "How do you want to post in {group}? Anonymous posts hide your name from group members, but group admins, moderators and Facebook can still see who you are.",
         group = group
     );
-    let dialog = SingleChoiceDialog::builder(&ui.frame, &message, &t("Post as"), &labels).build();
+    let dialog = SingleChoiceDialog::builder(parent, &message, &t("Post as"), &labels).build();
     let chosen = (dialog.show_modal() == ID_OK).then(|| dialog.get_selection() == 1);
     dialog.destroy();
     chosen
@@ -5980,7 +5982,7 @@ fn new_post(ui: &Ui, with_media: bool) {
         2 => Some("me"),
         3 => {
             let Some((name, url)) = group_picker::show(ui) else { return };
-            let Some(anonymous) = choose_group_post_identity(ui, &name) else { return };
+            let Some(anonymous) = choose_group_post_identity(&ui.frame, &name) else { return };
             ui.send(Job {
                 task: Task::Fb(blindfb_core::fb::group_post_args(&text, &url, &images, &videos, anonymous), None),
                 tag: Tag::GroupPost(name),

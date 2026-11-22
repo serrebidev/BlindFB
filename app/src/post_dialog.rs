@@ -107,6 +107,7 @@ pub(super) struct PostReader {
     share: Button,
     react: Button,
     refresh: Button,
+    more: Button,
     translate: Button,
     cancel: Button,
     state: Rc<RefCell<ReaderState>>,
@@ -130,6 +131,7 @@ struct ReaderState {
     links: Vec<Link>,
     /// The post's own links, restored when no comment with links is selected.
     post_links: Vec<Link>,
+    comments_incomplete: bool,
     /// The comment whose links are showing, when the list is a comment's.
     links_for: Option<String>,
     video: Option<String>,
@@ -234,6 +236,7 @@ impl PostReader {
             self.react.set_name(&label);
         }
         self.refresh.enable(!state.busy);
+        self.more.enable(!state.busy && state.comments_incomplete);
         self.translate.enable(state.loaded && !state.busy);
         self.cancel.enable(state.parent.is_some() && !state.busy);
         self.composer.set_editable(!state.busy);
@@ -983,6 +986,8 @@ fn open_requested(
         .build();
     let share = Button::builder(&dialog).with_label(&t("S&hare…")).build();
     let react = Button::builder(&dialog).with_label(&t("React")).build();
+    let more = Button::builder(&dialog).with_label(&t("Load &more comments")).build();
+    let copy_link = Button::builder(&dialog).with_label(&t("Copy lin&k")).build();
     let refresh = Button::builder(&dialog).with_label(&t("&Refresh")).build();
     let translate = Button::builder(&dialog).with_label(&t("Tr&anslate")).build();
     let cancel = Button::builder(&dialog).with_label(&t("Ca&ncel reply")).build();
@@ -990,7 +995,7 @@ fn open_requested(
         .with_id(ID_CANCEL)
         .with_label(&t("C&lose"))
         .build();
-    for button in [&send, &share, &react, &refresh, &translate, &cancel, &close] {
+    for button in [&send, &share, &react, &refresh, &more, &translate, &cancel, &close] {
         // Same as above: strip the mnemonic marker before it becomes the
         // accessible name a screen reader announces.
         button.set_name(&button.get_label().replace('&', ""));
@@ -999,6 +1004,7 @@ fn open_requested(
     root.add(&links_label, 0, SizerFlag::All, 4);
     root.add(&links, 1, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&open_link, 0, SizerFlag::All, 4);
+    root.add(&copy_link, 0, SizerFlag::All, 4);
     root.add(&post_label, 0, SizerFlag::All, 4);
     root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&media_label, 0, SizerFlag::All, 4);
@@ -1045,6 +1051,7 @@ fn open_requested(
         share,
         react,
         refresh,
+        more,
         translate,
         cancel,
         state: Rc::new(RefCell::new(ReaderState {
@@ -1054,6 +1061,7 @@ fn open_requested(
             comments: Vec::new(),
             links: initial_links.clone(),
             post_links: initial_links,
+            comments_incomplete: false,
             links_for: None,
             video: autoplay.then(|| target.to_owned()),
             video_requested: false,
@@ -1192,31 +1200,46 @@ fn open_requested(
         r.composer.set_focus();
     });
     let (r, u) = (reader.clone(), ui.clone());
-    refresh.on_click(move |_| {
-        let loaded = {
-            let mut state = r.state.borrow_mut();
-            if state.busy {
-                return;
+    copy_link.on_click(move |_| {
+        let link = r.links.get_selection()
+            .and_then(|index| r.state.borrow().links.get(index as usize).cloned());
+        if let Some(link) = link {
+            if crate::copy_to_clipboard(&link.url) {
+                r.message(&u, &t("Link copied."));
             }
-            state.busy = true;
-            state.loaded
-        };
-        r.controls();
-        u.send(Job {
-            task: if loaded {
-                Task::PostRefresh {
-                    page: r.page.clone(),
-                }
-            } else {
-                Task::PostLoad {
-                    page: r.page.clone(),
-                    target: r.url.clone(),
-                }
-            },
-            tag: Tag::PostLoaded(r.session),
-        });
-        r.message(&u, &t("Refreshing comments…"));
+        } else {
+            r.message(&u, &t("This item has no link to copy."));
+        }
     });
+    for (button, more) in [(refresh, false), (more, true)] {
+        let (r, u) = (reader.clone(), ui.clone());
+        button.on_click(move |_| {
+            let loaded = {
+                let mut state = r.state.borrow_mut();
+                if state.busy {
+                    return;
+                }
+                state.busy = true;
+                state.loaded
+            };
+            r.controls();
+            u.send(Job {
+                task: if loaded {
+                    Task::PostRefresh {
+                        page: r.page.clone(),
+                        more,
+                    }
+                } else {
+                    Task::PostLoad {
+                        page: r.page.clone(),
+                        target: r.url.clone(),
+                    }
+                },
+                tag: Tag::PostLoaded(r.session),
+            });
+            r.message(&u, &if more { t("Loading more comments…") } else { t("Refreshing comments…") });
+        });
+    }
     close.on_click(move |_| dialog.end_modal(ID_CANCEL));
     dialog.bind_internal(EventType::CLOSE_WINDOW, move |event| {
         event.skip(false);
@@ -1700,6 +1723,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             {
                 let mut state = reader.state.borrow_mut();
                 state.comments = detail.comments;
+                state.comments_incomplete = incomplete;
                 state.target = detail.url;
                 state.post_links = detail.links;
                 state.video = detail.video;
@@ -1723,7 +1747,7 @@ pub(super) fn apply(ui: &Ui, session: u64, result: Result<String, String>, done:
             // sentence of its own, so neither is assembled from pieces.
             let loaded = ntf!("{n} comment loaded.", "{n} comments loaded.", count);
             if incomplete {
-                let more = t("Facebook did not load every comment. Refresh the reader to try again.");
+                let more = t("More comments may be available. Use Load more comments.");
                 reader.message(ui, &format!("{done} {loaded} {more}"));
             } else {
                 reader.message(ui, &format!("{done} {loaded}"));
@@ -1812,6 +1836,7 @@ mod tests {
             comments: Vec::new(),
             links: Vec::new(),
             post_links: Vec::new(),
+            comments_incomplete: false,
             links_for: None,
             video: None,
             video_requested: false,

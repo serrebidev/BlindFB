@@ -239,6 +239,8 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     status.set_name(&t("Group status"));
     status.enable_focus_from_keyboard();
     status.change_value(&t("Loading posts and members…"));
+    let new_post = Button::builder(&dialog).with_label(&t("&New post")).build();
+    let copy_photo = Button::builder(&dialog).with_label(&t("Copy photo &link")).build();
     let close = Button::builder(&dialog)
         .with_id(ID_CANCEL)
         .with_label(&t("C&lose"))
@@ -251,6 +253,8 @@ pub(super) fn open(ui: &Ui, record: &Record) {
     root.add(&photos, 2, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&status_label, 0, SizerFlag::All, 4);
     root.add(&status, 0, SizerFlag::Expand | SizerFlag::All, 4);
+    root.add(&new_post, 0, SizerFlag::All, 4);
+    root.add(&copy_photo, 0, SizerFlag::All, 4);
     root.add(&close, 0, SizerFlag::All, 4);
     dialog.set_sizer(root, true);
 
@@ -447,6 +451,32 @@ pub(super) fn open(ui: &Ui, record: &Record) {
             w.post_action(&u, &d, id);
         } else {
             event.skip(true);
+        }
+    });
+    let (w, u) = (window.clone(), ui.clone());
+    new_post.on_click(move |_| {
+        let (name, url) = {
+            let state = w.state.lock().unwrap();
+            (state.name.clone(), state.url.clone())
+        };
+        let Some(text) = super::prompt_long_text(&dialog, t("Post text:"), &t("New post")) else {
+            return;
+        };
+        if text.trim().is_empty() {
+            return;
+        }
+        let Some(anonymous) = super::choose_group_post_identity(&dialog, &name) else { return };
+        u.send(Job {
+            task: Task::Fb(blindfb_core::fb::group_post_args(&text, &url, &[], &[], anonymous), None),
+            tag: Tag::GroupPost(name),
+        });
+    });
+    let w = window.clone();
+    copy_photo.on_click(move |_| {
+        match w.selected_photo().and_then(|record| link_url(record.field(1))) {
+            Some(link) if crate::copy_to_clipboard(&link) => w.note(&t("Link copied.")),
+            Some(_) => {}
+            None => w.note(&t("This item has no link to copy.")),
         }
     });
     close.on_click(move |_| dialog.end_modal(ID_CANCEL));
@@ -913,19 +943,18 @@ pub(super) fn deliver_posts(ui: &Ui, session: u64, result: Result<String, String
     };
     match result {
         Ok(raw) => {
-            let returned = parse_feed(&raw).len();
             fill_posts(&window, &raw);
             let want = window.state.lock().unwrap().posts_want;
             let _ = ui;
             window.state.lock().unwrap().posts_loading = false;
-            // A full answer means Facebook may hold more: offer Load more.
-            window.show_more(List::Posts, returned >= want as usize && want < POSTS_CAP);
+            // A short scan can still have further posts on Facebook.
+            window.show_more(List::Posts, want < POSTS_CAP);
             refresh_note(&window);
         }
         Err(e) => {
             window.state.lock().unwrap().posts_loading = false;
-            let shown = !window.state.lock().unwrap().posts.is_empty();
-            window.show_more(List::Posts, shown);
+            let want = window.state.lock().unwrap().posts_want;
+            window.show_more(List::Posts, want < POSTS_CAP);
             window.note(&tf!("Posts could not load: {error}", error = e));
         }
     }
