@@ -476,6 +476,7 @@ impl Fb {
         )?;
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(900);
         let mut last_error = String::new();
+        let mut restarted = false;
         while std::time::Instant::now() < deadline {
             if crate::engine::endpoint().is_none() {
                 return Err(t("Sign-in was cancelled: the browser window was closed"));
@@ -486,6 +487,15 @@ impl Fb {
                     Ok(_) => return Ok(()),
                     Err(error) => {
                         last_error = error;
+                        if restarted {
+                            // Facebook accepted the session — status says
+                            // signed in even after a daemon restart — and
+                            // only the profile warm-up will not read (a
+                            // layout the scrape cannot parse, issue #28).
+                            // Do not loop for 15 minutes over a warm-up.
+                            return Ok(());
+                        }
+                        restarted = true;
                         // A checkpoint can leave the daemon's expired-session flag set until restart.
                         self.run(&["stop"])?;
                     }

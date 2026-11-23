@@ -933,7 +933,11 @@ fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
     cdp_call(&endpoint, "Storage.setCookies", &params)?;
     let current = status(fb)?;
     if signed_in(&current) {
-        fb.run(&["profile", "me"])?;
+        // Warm-up only: a profile page that will not scrape (a layout
+        // without a tablist, a slow load) must not fail a session Facebook
+        // already accepted — that threw away good sign-ins and dropped
+        // the user into a blank visible window (issue #28).
+        let _ = fb.run(&["profile", "me"]);
         Ok(current)
     } else {
         Err(t("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))

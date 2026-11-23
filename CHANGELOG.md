@@ -4,6 +4,18 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.101 - 2026-11-23
+
+Facebook sign-in works again for profiles the backend could not scrape.
+Importing a browser session (and the direct sign-in window) verified the
+import by reading the signed-in user's own profile page, and some profile
+layouts never mount the tab list that read waited for — so sign-in failed
+with "profile not found / not accessible" even though Facebook had
+accepted the session, and fell back to a blank sign-in window. The
+backend now reads those profiles, and BlindFB no longer treats the
+profile warm-up as the sign-in verdict: a session Facebook accepted is
+signed in (issue #28, reported by Michal).
+
 ## v0.7.100 - 2026-11-22
 
 Archived chats now show the archived list. The archived view's heading
