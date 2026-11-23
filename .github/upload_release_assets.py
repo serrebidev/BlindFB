@@ -86,8 +86,11 @@ def main():
     for name in names:
         if name in existing:
             call("DELETE", f"/repos/{REPO}/releases/{release['id']}/assets/{existing[name]}")
-        upload_asset(release["id"], os.path.join(dist, name), name)
-        print(f"uploaded {name} to draft {tag}")
+        path = os.path.join(dist, name)
+        print(f"uploading {name} ({os.path.getsize(path)} bytes) to draft {tag}", flush=True)
+        start = time.monotonic()
+        upload_asset(release["id"], path, name)
+        print(f"uploaded {name} in {time.monotonic() - start:.2f}s", flush=True)
 
 
 if __name__ == "__main__":

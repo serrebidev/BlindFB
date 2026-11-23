@@ -1147,7 +1147,7 @@ pub(crate) fn cdp_call(
     }
     let request = serde_json::json!({ "id": 1, "method": method, "params": params }).to_string();
     socket
-        .send(tungstenite::Message::Text(request))
+        .send(tungstenite::Message::Text(request.into()))
         .map_err(|e| tf!("cannot talk to the backend browser: {error}", error = e))?;
     loop {
         let message = socket

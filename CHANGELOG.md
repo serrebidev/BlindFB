@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.98 - 2026-11-23
+
+Updated desktop and networking dependencies. Release packaging skips
+building the graphical updater into the packaging tool and caches build
+dependencies between runs. Forgejo uploads report a duration for each
+file.
+
 ## v0.7.97 - 2026-11-22
 
 Play Video in Full Post now uses the embedded Facebook video's own address.

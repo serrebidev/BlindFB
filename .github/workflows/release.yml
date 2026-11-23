@@ -38,7 +38,7 @@ jobs:
         # Ubuntu 24.04 LTS at all (found installing v0.7.8 on a server).
         os: [windows-latest, ubuntu-22.04, xcode-27]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
 
@@ -67,9 +67,16 @@ jobs:
           # GStreamer backend, so remove it in this job's container only.
           sudo apt-get remove -y libgstreamer-plugins-bad1.0-dev
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 22
+          node-version: 26
+
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          key: ${{ matrix.os }}
+          workspaces: |
+            . -> target
+            . -> package-target
 
       - name: Validate release
         shell: bash
@@ -86,7 +93,7 @@ jobs:
         env:
           MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
           MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
-        run: cargo xtask package
+        run: cargo run --locked -p xtask --no-default-features -- package
 
       # Forgejo's own release API, not the GitHub-only softprops action:
       # the script finds or creates the tag's draft (the three legs race,
@@ -111,18 +118,13 @@ jobs:
           FORGEJO_REPO: serrebi/BlindFB
         run: python3 .github/upload_release_assets.py "${{ inputs.release_tag }}" dist
 
-      - name: Cargo clean (free disk)
-        if: always()
-        continue-on-error: true
-        run: cargo clean
-
   publish:
     name: Publish
     needs: package
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
 

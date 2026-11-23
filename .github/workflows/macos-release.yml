@@ -18,15 +18,15 @@ jobs:
       TAG: ${{ inputs.release_tag }}
       CARGO_TERM_COLOR: always
     steps:
-    - uses: actions/checkout@v7
+    - uses: actions/checkout@v7.0.1
       with:
         ref: ${{ inputs.release_tag }}
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy,rustfmt
-    - uses: actions/setup-node@v7
+    - uses: actions/setup-node@v7.1.0
       with:
-        node-version: 22
+        node-version: 26
     - name: Validate release
       shell: bash
       run: |
@@ -40,7 +40,7 @@ jobs:
       env:
         MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
         MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
-      run: cargo xtask package
+      run: cargo run --locked -p xtask --no-default-features -- package
     - name: Attach to the Forgejo release
       env:
         FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
@@ -54,13 +54,8 @@ jobs:
           name="$(basename "$file")"
           old="$(echo "$release" | jq -r --arg n "$name" '.assets[] | select(.name == $n) | .id')"
           [ -z "$old" ] || curl -sf -X DELETE -H "$h" "$api/releases/$id/assets/$old"
-          curl -sf -o /dev/null -H "$h" -F "attachment=@$file" "$api/releases/$id/assets?name=$name"
+          echo "Uploading $name ($(wc -c < "$file") bytes)"
+          curl -sf -o /dev/null -w 'HTTP %{http_code}, %{size_upload} bytes in %{time_total}s\n' \
+            -H "$h" -F "attachment=@$file" "$api/releases/$id/assets?name=$name"
           echo "Attached $name to $TAG"
         done
-
-    # Ephemeral GitHub runners delete the work folder with
-    # the job; nothing to unlink (owner 2026-11-18).
-    - name: Cargo clean (free disk)
-      if: always()
-      continue-on-error: true
-      run: cargo clean

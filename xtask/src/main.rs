@@ -25,6 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some("sign") => sign(),
         Some("verify") => verify(),
         Some("minisign-key") => minisign_key(),
+        #[cfg(feature = "update-check")]
         Some("update-check") => update_check(),
         Some("i18n") => i18n(),
         _ => {
@@ -238,6 +239,7 @@ fn minisign_key() -> Result<(), Box<dyn Error>> {
 
 /// Asks GitHub what a copy running `version` would be offered, downloads that asset and
 /// verifies it, exactly as the app does.
+#[cfg(feature = "update-check")]
 fn update_check() -> Result<(), Box<dyn Error>> {
     let current = env::args()
         .nth(2)
