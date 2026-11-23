@@ -3579,7 +3579,11 @@ msgstr "Не удалось импортировать {browser}: {error}. Во�
 msgid "The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."
 msgstr "В выбранном профиле нет действующего сеанса Facebook. Сначала войдите в Facebook в этом браузере."
 
-#: crates/core/src\browsers.rs:939
+#: crates/core/src\browsers.rs:1170
+msgid "Several Firefox profiles are signed in to Facebook. Choose a new browser window to sign in directly."
+msgstr "В нескольких профилях Firefox выполнен вход в Facebook. Выберите новое окно браузера, чтобы войти напрямую."
+
+#: crates/core/src\browsers.rs:929
 msgid "Facebook did not accept the imported session. Choose a new browser window to sign in directly."
 msgstr "Facebook не принял импортированный сеанс. Выберите новое окно браузера, чтобы войти напрямую."
 

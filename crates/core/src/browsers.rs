@@ -947,77 +947,53 @@ pub struct FfCookie {
     pub http_only: bool,
 }
 
-/// The default Firefox profile dir inside the profile root, following
-/// installs.ini (per-install default) then profiles.ini (Default=1),
-/// then any profile dir holding a cookies database.
-pub fn firefox_profile(root: &Path) -> Option<PathBuf> {
+/// Registered profiles, with Firefox's install defaults first.
+fn firefox_profiles(root: &Path) -> Vec<PathBuf> {
     let resolve = |raw: &str| -> Option<PathBuf> {
         let rel = raw.trim().replace('\\', "/");
+        if rel.is_empty() {
+            return None;
+        }
         let candidate = if Path::new(&rel).is_absolute() {
             PathBuf::from(&rel)
         } else {
             root.join(&rel)
         };
-        if candidate.is_dir() {
-            Some(candidate)
-        } else {
-            None
-        }
+        candidate.canonicalize().ok().filter(|path| path.is_dir())
     };
+    let mut profiles = Vec::new();
     if let Ok(text) = std::fs::read_to_string(root.join("installs.ini")) {
-        let mut is_relative = true;
-        for line in text.lines() {
-            let line = line.trim();
-            if let Some(value) = line.strip_prefix("IsRelative=") {
-                is_relative = value != "0";
-            }
-            if let Some(value) = line.strip_prefix("Default=") {
-                if is_relative {
-                    if let Some(found) = resolve(value) {
-                        return Some(found);
-                    }
-                } else if let Some(found) = resolve(value) {
-                    return Some(found);
-                }
-            }
-        }
+        profiles.extend(text.lines().filter_map(|line| {
+            resolve(line.trim().strip_prefix("Default=")?)
+        }));
     }
     if let Ok(text) = std::fs::read_to_string(root.join("profiles.ini")) {
-        let mut current: Option<String> = None;
-        let mut current_default = false;
-        let mut fallback: Option<PathBuf> = None;
-        for line in text.lines().chain(std::iter::once("[end]")) {
-            let line = line.trim();
-            if line.starts_with('[') {
-                if current_default {
-                    if let Some(path) = current.take().and_then(|p| resolve(&p)) {
-                        return Some(path);
-                    }
+        let mut others = Vec::new();
+        for section in text.split("\n[") {
+            let value = |key| section.lines().find_map(|line| line.trim().strip_prefix(key));
+            if let Some(path) = value("Path=").and_then(resolve) {
+                if value("Default=") == Some("1") {
+                    profiles.push(path);
+                } else {
+                    others.push(path);
                 }
-                current = None;
-                current_default = false;
-            } else if let Some(value) = line.strip_prefix("Path=") {
-                current = Some(value.to_owned());
-                if fallback.is_none() {
-                    fallback = current.clone().and_then(|p| resolve(&p));
-                }
-            } else if line == "Default=1" {
-                current_default = true;
+            } else if section.trim_start_matches('[').starts_with("Install") {
+                profiles.extend(value("Default=").and_then(resolve));
             }
         }
-        if let Some(found) = fallback {
-            return Some(found);
-        }
+        profiles.extend(others);
     }
-    // Last resort: a profile-shaped dir with a cookie database.
-    let mut entries: Vec<PathBuf> = std::fs::read_dir(root)
-        .ok()?
-        .filter_map(std::result::Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.join("cookies.sqlite").is_file())
-        .collect();
-    entries.sort();
-    entries.into_iter().next()
+    if profiles.is_empty() {
+        // Preserve the fallback for installations without registered profiles.
+        profiles.extend(std::fs::read_dir(root).into_iter().flatten().filter_map(|entry| {
+            let path = entry.ok()?.path();
+            path.join("cookies.sqlite").is_file().then_some(path)
+        }));
+        profiles.sort();
+    }
+    let mut seen = std::collections::HashSet::new();
+    profiles.retain(|path| seen.insert(path.clone()));
+    profiles
 }
 
 /// Read a consistent Facebook cookie snapshot through SQLite, including Firefox's WAL.
@@ -1172,11 +1148,32 @@ pub fn import_firefox(fb: &Fb, firefox: &Browser) -> Result<String, String> {
     let root = firefox.data_dir.clone().ok_or_else(|| {
         t("Firefox has not run yet — open it once, sign in to Facebook there, then try again")
     })?;
-    let profile = firefox_profile(&root)
-        .ok_or_else(|| t("no Firefox profile found — sign in to Facebook in Firefox first"))?;
-    let cookies = extract_firefox_cookies(&profile)?;
-
+    let cookies = firefox_session_cookies(&root)?;
     import_cookies(fb, &cookies)
+}
+
+fn firefox_session_cookies(root: &Path) -> Result<Vec<FfCookie>, String> {
+    let mut profiles = firefox_profiles(root).into_iter();
+    let preferred = profiles
+        .next()
+        .ok_or_else(|| t("no Firefox profile found — sign in to Facebook in Firefox first"))?;
+    let preferred = extract_firefox_cookies(&preferred);
+    if preferred.as_ref().is_ok_and(|cookies| has_facebook_session(cookies)) {
+        return preferred;
+    }
+
+    let mut session = None;
+    for profile in profiles {
+        if let Ok(cookies) = extract_firefox_cookies(&profile) {
+            if has_facebook_session(&cookies) {
+                if session.is_some() {
+                    return Err(t("Several Firefox profiles are signed in to Facebook. Choose a new browser window to sign in directly."));
+                }
+                session = Some(cookies);
+            }
+        }
+    }
+    session.map_or(preferred, Ok)
 }
 
 // ---------------------------------------------------------------- install
@@ -1649,7 +1646,7 @@ mod tests {
             "[Profile0]\nName=default-release\nIsRelative=1\nPath=abcd.default-release\nDefault=1\n",
         )
         .unwrap();
-        assert_eq!(firefox_profile(&root), Some(profile));
+        assert_eq!(firefox_profiles(&root), [profile.canonicalize().unwrap()]);
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -1662,7 +1659,41 @@ mod tests {
         std::fs::create_dir_all(&selected).unwrap();
         std::fs::write(root.join("profiles.ini"),
             "[Profile0]\nPath=old.default\n\n[Profile1]\nPath=selected.default-release\nDefault=1\n").unwrap();
-        assert_eq!(firefox_profile(&root), Some(selected));
+        assert_eq!(
+            firefox_profiles(&root),
+            [selected.canonicalize().unwrap(), old.canonicalize().unwrap()]
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn firefox_uses_the_only_session_when_first_install_profile_is_empty() {
+        let root = std::env::temp_dir().join(format!("blindfb-ff-session-{}", std::process::id()));
+        let unused = root.join("unused");
+        let signed_in = root.join("signed-in");
+        let other = root.join("other");
+        for path in [&unused, &signed_in, &other] {
+            std::fs::create_dir_all(path).unwrap();
+        }
+        std::fs::write(root.join("installs.ini"), "[old]\nDefault=unused\n").unwrap();
+        std::fs::write(
+            root.join("profiles.ini"),
+            "[Profile0]\nPath=signed-in\n[InstallCurrent]\nDefault=signed-in\n[Profile1]\nPath=other\n",
+        )
+        .unwrap();
+        let set_session = |profile: &Path| {
+            let conn = rusqlite::Connection::open(profile.join("cookies.sqlite")).unwrap();
+            conn.execute_batch("CREATE TABLE moz_cookies (originAttributes TEXT NOT NULL DEFAULT '',
+                name TEXT, value TEXT, host TEXT, path TEXT, expiry INTEGER, isSecure INTEGER, isHttpOnly INTEGER);
+                INSERT INTO moz_cookies VALUES ('','c_user','account','.facebook.com','/',0,1,1),
+                    ('','xs','session','.facebook.com','/',0,1,1);").unwrap();
+        };
+        set_session(&signed_in);
+        assert!(has_facebook_session(&firefox_session_cookies(&root).unwrap()));
+        set_session(&other);
+        assert!(firefox_session_cookies(&root).unwrap_err().contains("Several Firefox profiles"));
+        set_session(&unused);
+        assert!(has_facebook_session(&firefox_session_cookies(&root).unwrap()));
         let _ = std::fs::remove_dir_all(&root);
     }
 

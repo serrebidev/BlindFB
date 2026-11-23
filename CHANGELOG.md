@@ -4,7 +4,11 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
-## v0.7.103 - 2026-11-23
+## v0.7.104 - 2026-11-23
+
+Firefox session import can find a signed-in profile when the preferred
+profile has no usable Facebook session. If several other profiles are
+signed in, BlindFB asks you to sign in directly so you choose the account.
 
 If Facebook rejects a copied browser session or sends it to a security
 checkpoint, BlindFB reports that the import failed. It no longer retries with

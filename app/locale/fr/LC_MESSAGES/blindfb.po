@@ -3562,7 +3562,11 @@ msgstr "Impossible d’importer {browser} : {error}. Connectez-vous à Facebook 
 msgid "The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."
 msgstr "Le profil sélectionné n’a pas de session Facebook valide. Connectez-vous d’abord à Facebook dans ce navigateur."
 
-#: crates/core/src\browsers.rs:939
+#: crates/core/src\browsers.rs:1170
+msgid "Several Firefox profiles are signed in to Facebook. Choose a new browser window to sign in directly."
+msgstr "Plusieurs profils Firefox sont connectés à Facebook. Choisissez une nouvelle fenêtre de navigateur pour vous connecter directement."
+
+#: crates/core/src\browsers.rs:929
 msgid "Facebook did not accept the imported session. Choose a new browser window to sign in directly."
 msgstr "Facebook n’a pas accepté la session importée. Choisissez une nouvelle fenêtre de navigateur pour vous connecter directement."
 

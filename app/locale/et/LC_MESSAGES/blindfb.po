@@ -3563,7 +3563,11 @@ msgstr "{browser} importimine ebaõnnestus: {error}. Logi seal Facebooki sisse v
 msgid "The selected profile has no valid Facebook session. Sign in to Facebook in that browser first."
 msgstr "Valitud profiilil pole kehtivat Facebooki seanssi. Logi esmalt selles brauseris Facebooki sisse."
 
-#: crates/core/src\browsers.rs:939
+#: crates/core/src\browsers.rs:1170
+msgid "Several Firefox profiles are signed in to Facebook. Choose a new browser window to sign in directly."
+msgstr "Facebooki on sisse logitud mitmes Firefoxi profiilis. Otse sisselogimiseks vali uus brauseriaken."
+
+#: crates/core/src\browsers.rs:929
 msgid "Facebook did not accept the imported session. Choose a new browser window to sign in directly."
 msgstr "Facebook ei võtnud imporditud seanssi vastu. Vali uus brauseriaken, et otse sisse logida."
 
