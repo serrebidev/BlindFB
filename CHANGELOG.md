@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.100 - 2026-11-22
+
+Archived chats now show the archived list. The archived view's heading
+changed before its rows did, so the list could come back showing the
+inbox chats instead; the backend now waits for the archived rows to
+settle before reading them, and checks the view is still open after
+reading (issue #27, reported by Michal).
+
 ## v0.7.99 - 2026-11-22
 
 Chats loading can now be announced. View gains "Voice alert when chats
