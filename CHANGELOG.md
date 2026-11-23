@@ -6,7 +6,7 @@ same fix stream, they are combined with a version range such as
 
 ## v0.7.98 - 2026-11-23
 
-Updated desktop and networking dependencies. Release packaging skips
+Updated the Facebook backend, desktop and networking dependencies. Release packaging skips
 building the graphical updater into the packaging tool and caches build
 dependencies between runs. Forgejo uploads report a duration for each
 file.
