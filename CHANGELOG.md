@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.103 - 2026-11-23
+
+If Facebook rejects a copied browser session or sends it to a security
+checkpoint, BlindFB reports that the import failed. It no longer retries with
+another import or opens a separate sign-in window on its own. You can still
+choose “Sign in in a new browser window” from Backend → Sign in when ready
+(GitHub issue #45, reported by Michal).
+
 ## v0.7.102 - 2026-11-23
 
 On Windows, BlindFB checks the default browser without opening a console

@@ -684,18 +684,16 @@ fn status(fb: &Fb) -> Result<String, String> {
 
 /// Import the Facebook session from a Chromium browser fb does not
 /// enumerate itself — Brave, Edge, and every channel build (Brave
-/// Nightly, Chrome Beta, …), each with its own user-data dir. Mirrors
-/// fb's guided Chrome flow, then `fb login --from <port>`.
+/// Nightly, Chrome Beta, …), each with its own user-data dir.
 pub fn import_chromium(fb: &Fb, browser: &Browser) -> Result<String, String> {
     #[cfg(windows)]
     {
         // Windows first tries a cookie-file import, but current Edge and
         // Brave encrypt their cookies app-bound (v20), which only the
-        // browser itself can decrypt. When the file import cannot produce
-        // a session, import through the browser's debugging endpoint
-        // instead, as on every other platform.
-        match import_chromium_cookies(fb, browser) {
-            Ok(status) => Ok(status),
+        // browser itself can decrypt. Fall back only while reading cookies,
+        // before asking Facebook to accept a session in BlindFB's profile.
+        match read_chromium_cookies(browser) {
+            Ok(cookies) => import_cookies(fb, &cookies),
             Err(cookie_error) => import_chromium_debugging(fb, browser)
                 .map_err(|error| combined_import_error(browser.name(), &cookie_error, &error)),
         }
@@ -758,30 +756,7 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
     // through /json/version, which consent-mode browsers (the current
     // Edge and Brave) answer with 404, so that path reports "no browser
     // ws path" even while the socket itself works.
-    match import_cookies_from_endpoint(fb, &endpoint) {
-        Ok(status) => Ok(status),
-        Err(direct_error) => {
-            let port = endpoint.0.to_string();
-            fb.run(&["login", "--from", &port]).map_err(|fb_error| {
-                tf!(
-                    "Importing from {browser} through its browser connection failed: {direct_error} \
-                     The backend's guided import also failed: {fb_error}",
-                    browser = browser.name(),
-                    direct_error = direct_error,
-                    fb_error = fb_error
-                )
-            })?;
-            let status = status(fb)?;
-            if signed_in(&status) {
-                Ok(status)
-            } else {
-                Err(tf!(
-                    "{browser} is not signed in to Facebook — sign in there first, then try again",
-                    browser = browser.name()
-                ))
-            }
-        }
-    }
+    import_cookies_from_endpoint(fb, &endpoint)
 }
 
 /// The live Facebook cookies in a `Storage.getCookies` result, in the
@@ -820,7 +795,7 @@ fn import_cookies_from_endpoint(fb: &Fb, endpoint: &(u16, String)) -> Result<Str
 }
 
 #[cfg(windows)]
-fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String> {
+fn read_chromium_cookies(browser: &Browser) -> Result<Vec<FfCookie>, String> {
     let root = browser
         .data_dir
         .as_ref()
@@ -881,7 +856,7 @@ fn import_chromium_cookies(fb: &Fb, browser: &Browser) -> Result<String, String>
                     .filter(valid_facebook_cookie)
                     .collect();
                 if has_facebook_session(&cookies) {
-                    return import_cookies(fb, &cookies);
+                    return Ok(cookies);
                 }
             }
             Err(error) => {
@@ -935,17 +910,27 @@ fn import_cookies(fb: &Fb, cookies: &[FfCookie]) -> Result<String, String> {
         serde_json::from_str(&cookies_param_json(cookies)).map_err(|e| e.to_string())?;
     cdp_call(&endpoint, "Storage.clearCookies", &serde_json::json!({}))?;
     cdp_call(&endpoint, "Storage.setCookies", &params)?;
+    verify_import(fb)
+}
+
+/// Check the imported session. The backend's status only checks for a login
+/// cookie, so use its profile request to catch Facebook sending us back to
+/// sign-in or a checkpoint.
+pub fn verify_import(fb: &Fb) -> Result<String, String> {
     let current = status(fb)?;
     if signed_in(&current) {
-        // Warm-up only: a profile page that will not scrape (a layout
-        // without a tablist, a slow load) must not fail a session Facebook
-        // already accepted — that threw away good sign-ins and dropped
-        // the user into a blank visible window (issue #28).
-        let _ = fb.run(&["profile", "me"]);
-        Ok(current)
-    } else {
-        Err(t("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))
+        // Only an explicit authentication error counts. A profile layout
+        // that won't scrape must not fail sign-in (issue #28).
+        match fb.run(&["profile", "me"]) {
+            Err(error) if import_session_rejected(&error) => (),
+            _ => return Ok(current),
+        }
     }
+    Err(t("Facebook did not accept the imported session. Choose a new browser window to sign in directly."))
+}
+
+fn import_session_rejected(error: &str) -> bool {
+    error.contains("not logged in to Facebook:") || error.contains("the Facebook session expired:")
 }
 
 // ---------------------------------------------------------------- Firefox
@@ -1399,6 +1384,18 @@ pub fn install(kind: BrowserKind) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn import_rejection_is_distinct_from_a_profile_read_failure() {
+        assert!(import_session_rejected(
+            "fb: not logged in to Facebook: run `fb login`"
+        ));
+        assert!(import_session_rejected(
+            "fb: the Facebook session expired: run `fb login` to renew it"
+        ));
+        assert!(!import_session_rejected("profile not found / not accessible"));
+        assert!(!import_session_rejected("chrome connection closed"));
+    }
 
     #[cfg(windows)]
     #[test]

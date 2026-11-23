@@ -1525,63 +1525,26 @@ fn spawn_worker(
 
 /// Sign in with the session of the browser the user picked: the backend
 /// imports it (one "Allow" click in Chromium browsers; Firefox cookies are
-/// copied from its profile). If the import does not end signed in, fall
-/// back to `login --visible`, a window of the backend's own browser.
+/// copied from its profile). A direct sign-in window requires its own choice.
 fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
     match sign {
         SignIn::Browser(browser) if browser.kind == BrowserKind::Firefox => {
-            match browsers::import_firefox(fb, &browser) {
-                Ok(status) => Ok(status),
-                Err(why) => visible_fallback(fb, why),
-            }
+            browsers::import_firefox(fb, &browser)
         }
         SignIn::Browser(browser) if browser.uses_fb_login() => {
             // The backend's guided login copies the session from Chrome
             // itself over a debugging connection, so it survives Chrome's
             // app-bound cookie encryption, which a cookie-file import
-            // cannot always read. The import stays as the fallback.
-            match fb.run(&["login"]) {
-                Ok(_) => {
-                    let status = fb.run(&["status"])?;
-                    if browsers::signed_in(&status) {
-                        Ok(status)
-                    } else {
-                        visible_fallback(fb, t("the Chrome sign-in did not finish"))
-                    }
-                }
-                Err(why) => match browsers::import_chromium(fb, &browser) {
-                    Ok(status) => Ok(status),
-                    Err(_) => visible_fallback(fb, why),
-                },
-            }
+            // cannot always read.
+            fb.run(&["login"])?;
+            browsers::verify_import(fb)
         }
-        SignIn::Browser(browser) => match browsers::import_chromium(fb, &browser) {
-            Ok(status) => Ok(status),
-            Err(why) => visible_fallback(fb, why),
-        },
+        SignIn::Browser(browser) => browsers::import_chromium(fb, &browser),
         SignIn::Visible => {
             fb.run(&["login", "--visible"])?;
             fb.run(&["status"])
         }
         SignIn::Install(_) => Err(t("install the browser first")),
-    }
-}
-
-/// Last resort for every import path: a visible sign-in window. Reports
-/// the earlier failure when even that does not sign in.
-fn visible_fallback(fb: &Fb, why: String) -> Result<String, String> {
-    fb.run(&["login", "--visible"]).map_err(|error| {
-        tf!(
-            "Session import failed: {why}\n\nDirect sign-in failed: {error}",
-            why = why,
-            error = error
-        )
-    })?;
-    let status = fb.run(&["status"])?;
-    if browsers::signed_in(&status) {
-        Ok(status)
-    } else {
-        Err(why)
     }
 }
 
