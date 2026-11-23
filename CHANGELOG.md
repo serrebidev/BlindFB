@@ -4,6 +4,15 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.99 - 2026-11-22
+
+Chats loading can now be announced. View gains "Voice alert when chats
+load" and "Sound alert when chats load", both off at first and remembered
+across restarts. With either on, landing on Chats — hovering over it in
+the Views list is enough — says "Chats loaded" with the number of chats,
+or plays a chime, even though the list usually comes straight from the
+cache and never visibly loads (issue #26, reported by Michal).
+
 ## v0.7.98 - 2026-11-23
 
 Updated the Facebook backend, desktop and networking dependencies. Release packaging skips

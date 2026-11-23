@@ -158,6 +158,8 @@ const ID_LIST_VOICE_ALERTS: i32 = 10077;
 const ID_LIST_SOUND_ALERTS: i32 = 10078;
 const ID_POST_VOICE_ALERTS: i32 = 10079;
 const ID_POST_SOUND_ALERTS: i32 = 10091;
+const ID_CHAT_VOICE_ALERTS: i32 = 10123;
+const ID_CHAT_SOUND_ALERTS: i32 = 10124;
 const ID_LANG_SYSTEM: i32 = 10094;
 const ID_LANG_ENGLISH: i32 = 10095;
 const ID_LANG_FRENCH: i32 = 10096;
@@ -1883,6 +1885,16 @@ fn build_menus(frame: &Frame) {
             &shortcuts_dialog::menu_label(ID_POST_SOUND_ALERTS, t("Sound alert when a post &loads")),
             &t("Play a sound when a post and its comments have loaded"),
         )
+        .append_check_item(
+            ID_CHAT_VOICE_ALERTS,
+            &shortcuts_dialog::menu_label(ID_CHAT_VOICE_ALERTS, t("Voice alert when &chats load")),
+            &t("Say that your chats have loaded when you open Chats"),
+        )
+        .append_check_item(
+            ID_CHAT_SOUND_ALERTS,
+            &shortcuts_dialog::menu_label(ID_CHAT_SOUND_ALERTS, t("Sound alert when chats &load")),
+            &t("Play a sound when your chats have loaded"),
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -2033,6 +2045,14 @@ fn build_menus(frame: &Frame) {
         ID_POST_SOUND_ALERTS,
         alerts::enabled(alerts::Kind::PostSound),
     );
+    menu_bar.check_item(
+        ID_CHAT_VOICE_ALERTS,
+        alerts::enabled(alerts::Kind::ChatVoice),
+    );
+    menu_bar.check_item(
+        ID_CHAT_SOUND_ALERTS,
+        alerts::enabled(alerts::Kind::ChatSound),
+    );
     frame.set_menu_bar(menu_bar);
 }
 
@@ -2114,6 +2134,30 @@ fn alert_list_loaded(ui: &Ui, view: &View, total: usize, added: usize, append: b
     alerts::play(sound, voice.then_some(words));
 }
 
+/// Chats the user opened just finished loading — or were already loaded
+/// and waiting in the cache when they landed on the view: say or chime it,
+/// when the chat alerts are on (#43). Returns true when it announced, so
+/// the caller does not also fire the generic list alert for the same load.
+/// Unlike the list alerts (#17), this one also fires for a cached section
+/// refreshing itself and for a prefetch that finishes after the user has
+/// already landed on Chats: Chats is prefetched and cached, so those are
+/// the loads a user hovering over Chats actually waits for.
+fn alert_chats_loaded(ui: &Ui, view: &View, total: usize, added: usize, append: bool) -> bool {
+    let (voice, sound) = (
+        alerts::enabled(alerts::Kind::ChatVoice),
+        alerts::enabled(alerts::Kind::ChatSound),
+    );
+    if !(voice || sound) {
+        return false;
+    }
+    let words = alerts::loaded(&view.title(), total, added, append);
+    if voice {
+        ui.status(&words);
+    }
+    alerts::play(sound, voice.then_some(words));
+    true
+}
+
 fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     let on = !alerts::enabled(kind);
     let was_on = alerts::any_enabled();
@@ -2121,7 +2165,13 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         show_error(&ui.frame, &error, &t("Alerts"));
         return;
     }
-    let voice = matches!(kind, alerts::Kind::Voice | alerts::Kind::ListVoice | alerts::Kind::PostVoice);
+    let voice = matches!(
+        kind,
+        alerts::Kind::Voice
+            | alerts::Kind::ListVoice
+            | alerts::Kind::PostVoice
+            | alerts::Kind::ChatVoice
+    );
     let words = match (kind, on) {
         (alerts::Kind::Voice, true) => t("Voice alerts on."),
         (alerts::Kind::Voice, false) => t("Voice alerts off."),
@@ -2135,6 +2185,10 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         (alerts::Kind::PostVoice, false) => t("Post voice alerts off."),
         (alerts::Kind::PostSound, true) => t("Post sound alerts on."),
         (alerts::Kind::PostSound, false) => t("Post sound alerts off."),
+        (alerts::Kind::ChatVoice, true) => t("Chats voice alerts on."),
+        (alerts::Kind::ChatVoice, false) => t("Chats voice alerts off."),
+        (alerts::Kind::ChatSound, true) => t("Chats sound alerts on."),
+        (alerts::Kind::ChatSound, false) => t("Chats sound alerts off."),
     };
     ui.status(&words);
     if !on {
@@ -2144,7 +2198,12 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     alerts::play(!voice, voice.then_some(words));
     if matches!(
         kind,
-        alerts::Kind::ListVoice | alerts::Kind::ListSound | alerts::Kind::PostVoice | alerts::Kind::PostSound
+        alerts::Kind::ListVoice
+            | alerts::Kind::ListSound
+            | alerts::Kind::PostVoice
+            | alerts::Kind::PostSound
+            | alerts::Kind::ChatVoice
+            | alerts::Kind::ChatSound
     ) {
         return;
     }
@@ -2247,9 +2306,14 @@ fn load_view(ui: &Ui, view: View) {
         ui.status(&tf!("Loading {view}…", view = view.title()));
         return;
     }
-    if let Some((_, at, _)) = &cached {
+    if let Some((records, at, _)) = &cached {
         // The News feed pages forward on every load, so it waits for F5.
         if matches!(view, View::Feed | View::Reels(_)) || at.elapsed() < FRESH {
+            // Chats shown straight from the cache will not load at all, so
+            // landing on the view is the loaded moment to announce (#43).
+            if matches!(view, View::Chats | View::ArchivedChats) {
+                alert_chats_loaded(ui, &view, records.len(), records.len(), false);
+            }
             return;
         }
     }
@@ -3732,7 +3796,12 @@ fn apply_done(ui: &Ui, done: Done) {
                             ntf!("{n} item total.", "{n} items total.", total)
                         ));
                     }
-                    if !background_read {
+                    // Chats announces even for a background read the user
+                    // landed on mid-load (#43); every other view keeps the
+                    // foreground-only rule from #17.
+                    let chat_announced = matches!(view, View::Chats | View::ArchivedChats)
+                        && alert_chats_loaded(ui, &view, total, added, append);
+                    if !chat_announced && !background_read {
                         alert_list_loaded(ui, &view, total, added, append);
                     }
                     if view == View::Feed && !append {
@@ -5542,6 +5611,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_LIST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ListSound),
         ID_POST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::PostVoice),
         ID_POST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::PostSound),
+        ID_CHAT_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ChatVoice),
+        ID_CHAT_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ChatSound),
         ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH | ID_LANG_RUSSIAN | ID_LANG_ESTONIAN => {
             let language = match id {
                 ID_LANG_ENGLISH => Language::English,

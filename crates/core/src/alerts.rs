@@ -30,18 +30,29 @@ pub enum Kind {
     PostVoice,
     /// A post and its comments finished loading in the reader, chimed (#40).
     PostSound,
+    /// The chats list finished loading, spoken (#43). Separate from the
+    /// list alerts: Chats is prefetched and cached, so the foreground load
+    /// those announce usually never happens for it.
+    ChatVoice,
+    /// The chats list finished loading, chimed (#43).
+    ChatSound,
 }
 
-fn marker(kind: Kind) -> Option<PathBuf> {
-    let name = match kind {
+fn marker_name(kind: Kind) -> &'static str {
+    match kind {
         Kind::Voice => "alerts-voice-on",
         Kind::Sound => "alerts-sound-on",
         Kind::ListVoice => "alerts-list-voice-on",
         Kind::ListSound => "alerts-list-sound-on",
         Kind::PostVoice => "alerts-post-voice-on",
         Kind::PostSound => "alerts-post-sound-on",
-    };
-    data_dir().map(|dir| dir.join(name))
+        Kind::ChatVoice => "alerts-chat-voice-on",
+        Kind::ChatSound => "alerts-chat-sound-on",
+    }
+}
+
+fn marker(kind: Kind) -> Option<PathBuf> {
+    data_dir().map(|dir| dir.join(marker_name(kind)))
 }
 
 pub fn enabled(kind: Kind) -> bool {
@@ -58,6 +69,10 @@ pub fn any_list_enabled() -> bool {
 
 pub fn any_post_enabled() -> bool {
     enabled(Kind::PostVoice) || enabled(Kind::PostSound)
+}
+
+pub fn any_chat_enabled() -> bool {
+    enabled(Kind::ChatVoice) || enabled(Kind::ChatSound)
 }
 
 /// The words for a post whose comments just finished loading in the reader:
@@ -295,6 +310,24 @@ mod tests {
             loaded("Chats", 11, 1, true),
             "Chats: 1 new item loaded. 11 items total."
         );
+    }
+
+    #[test]
+    fn every_alert_kind_has_its_own_marker_file() {
+        let kinds = [
+            Kind::Voice,
+            Kind::Sound,
+            Kind::ListVoice,
+            Kind::ListSound,
+            Kind::PostVoice,
+            Kind::PostSound,
+            Kind::ChatVoice,
+            Kind::ChatSound,
+        ];
+        let names: HashSet<&str> = kinds.iter().map(|kind| marker_name(*kind)).collect();
+        assert_eq!(names.len(), kinds.len());
+        assert_eq!(marker_name(Kind::ChatVoice), "alerts-chat-voice-on");
+        assert_eq!(marker_name(Kind::ChatSound), "alerts-chat-sound-on");
     }
 
     #[test]
