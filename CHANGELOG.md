@@ -4,6 +4,12 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.102 - 2026-11-23
+
+On Windows, BlindFB checks the default browser without opening a console
+window. This keeps focus in BlindFB and prevents NVDA from repeating
+“News feed, 1 of 13” when the check runs.
+
 ## v0.7.101 - 2026-11-23
 
 Facebook sign-in works again for profiles the backend could not scrape.

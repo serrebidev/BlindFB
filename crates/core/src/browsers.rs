@@ -522,7 +522,11 @@ fn kind_from_hint(hint: &str) -> Option<BrowserKind> {
 pub fn default_browser_kind() -> Option<BrowserKind> {
     #[cfg(windows)]
     {
+        use std::os::windows::process::CommandExt;
+
         let output = Command::new("reg")
+            // A console steals focus and makes NVDA repeat the focused row.
+            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
             .args([
                 "query",
                 r"HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice",
