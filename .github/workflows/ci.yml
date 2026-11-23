@@ -33,7 +33,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             libclang-dev pkg-config libgtk-3-dev libpng-dev libjpeg-dev \
             libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
@@ -62,6 +62,7 @@ jobs:
           node crates/core/src/post_scripts/questions.test.js
           node crates/core/src/post_scripts/identities.test.js
           node crates/core/src/reels.test.js
+          node crates/core/src/chat_voice.test.js
 
       - name: Build
         run: cargo build --workspace --all-targets

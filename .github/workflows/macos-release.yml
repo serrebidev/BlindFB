@@ -24,18 +24,7 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy,rustfmt
-    - uses: actions/setup-node@v7.1.0
-      with:
-        node-version: 26
-    - name: Validate release
-      shell: bash
-      run: |
-        cargo clippy --locked --workspace --all-targets -- -D warnings
-        cargo test --locked --workspace
-        node crates/core/src/post_scripts/reader.test.js
-        node crates/core/src/post_scripts/questions.test.js
-        node crates/core/src/post_scripts/identities.test.js
-        node crates/core/src/reels.test.js
+    # No Validate step: CI (push/PR) already gates the same commit.
     - name: Package with shipfitter (cargo xtask package)
       env:
         MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}

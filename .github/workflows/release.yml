@@ -54,8 +54,8 @@ jobs:
           # transaction apt refuses libgstreamer1.0-dev's libunwind-dev
           # dependency; installing libunwind-dev on its own first
           # anchors it and the full list then resolves.
-          sudo apt-get install -y libunwind-dev
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends libunwind-dev
+          sudo apt-get install -y --no-install-recommends \
             libclang-dev pkg-config libgtk-3-dev libpng-dev libjpeg-dev \
             libgl1-mesa-dev libglu1-mesa-dev libxkbcommon-dev libexpat1-dev libtiff-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
@@ -67,10 +67,6 @@ jobs:
           # GStreamer backend, so remove it in this job's container only.
           sudo apt-get remove -y libgstreamer-plugins-bad1.0-dev
 
-      - uses: actions/setup-node@v7.1.0
-        with:
-          node-version: 26
-
       - uses: Swatinem/rust-cache@v2.9.3
         with:
           key: ${{ matrix.os }}
@@ -78,16 +74,9 @@ jobs:
             . -> target
             . -> package-target
 
-      - name: Validate release
-        shell: bash
-        run: |
-          cargo clippy --locked --workspace --all-targets -- -D warnings
-          cargo test --locked --workspace
-          node crates/core/src/post_scripts/reader.test.js
-          node crates/core/src/post_scripts/questions.test.js
-          node crates/core/src/post_scripts/identities.test.js
-          node crates/core/src/reels.test.js
-          node crates/core/src/chat_voice.test.js
+      # No Validate step: CI (push/PR) already runs clippy, the node
+      # fixtures, cargo build and cargo test on the same commit, so
+      # re-running them here would only repeat ~10 minutes per leg.
 
       - name: Package with shipfitter (cargo xtask package)
         env:
