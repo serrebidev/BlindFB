@@ -281,5 +281,5 @@
 
     return {state, capture, check, open, act, cancel};
   }
-  window.__blindfbIdentities = {create};
+  window.__blindfbIdentities = {create, eachFiber};
 })();

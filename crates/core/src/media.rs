@@ -18,9 +18,9 @@ use crate::backend::{data_dir, expected_hash, get, sha256_hex};
 use crate::tf;
 use crate::Fb;
 
-const RELEASES: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/";
+const RELEASES: &str = "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/";
 /// Facebook changes its pages often and yt-dlp follows; refresh a copy older than this.
-const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 /// mpv handles HD codecs on Windows; other system players prefer H.264 SD streams.
 const FORMAT: &str = if cfg!(windows) {
     "hd/sd/best[vcodec!=none][acodec!=none]"
@@ -149,7 +149,7 @@ fn fresh(path: &Path) -> bool {
         .is_some_and(|age| age < MAX_AGE)
 }
 
-/// Install yt-dlp if it is missing or older than a week. An old copy keeps working when the
+/// Install yt-dlp if it is missing or older than a day. An old copy keeps working when the
 /// refresh fails (offline, GitHub down). Blocking; call from a worker thread.
 pub fn ensure() -> Result<PathBuf, String> {
     static INSTALL: Mutex<()> = Mutex::new(());
@@ -227,9 +227,11 @@ pub fn is_external_video_url(url: &str) -> bool {
         return false;
     };
     let host = host.trim_end_matches('.').to_ascii_lowercase();
-    EXTERNAL_HOSTS
-        .iter()
-        .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+    EXTERNAL_HOSTS.iter().any(|domain| host_matches(&host, domain))
+}
+
+fn host_matches(host: &str, domain: &str) -> bool {
+    host == domain || host.strip_suffix(domain).is_some_and(|prefix| prefix.ends_with('.'))
 }
 
 /// Anything the player knows how to resolve.
@@ -396,7 +398,16 @@ pub fn stream_details(fb: &Fb, page: &str, video: &str) -> Result<String, String
     // is fetched here, so a third-party site is never handed your Facebook session.
     if !is_facebook_url(video) {
         #[cfg(target_os = "windows")]
-        return Ok(serde_json::json!({"url": video, "title": ""}).to_string());
+        {
+            ensure()?;
+            if let Ok(uri) = video.parse::<tungstenite::http::Uri>() {
+                let host = uri.host().unwrap_or_default().trim_end_matches('.').to_ascii_lowercase();
+                if host_matches(&host, "youtube.com") || host_matches(&host, "youtu.be") {
+                    crate::mpv::ensure_deno()?;
+                }
+            }
+            return Ok(serde_json::json!({"url": video, "title": ""}).to_string());
+        }
         #[cfg(not(target_os = "windows"))]
         return Err(t(
             "Videos from other sites play in BlindFB's own player, which this build does not have."

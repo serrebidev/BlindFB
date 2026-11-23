@@ -426,6 +426,10 @@ mod platform {
         // itself, while direct Facebook stream URLs are played without the hook.
         let path = blindfb_core::backend::data_dir().map(|dir| {
             let mut value = dir.join("bin").into_os_string();
+            if let Some(deno) = blindfb_core::mpv::deno_dir() {
+                value.push(";");
+                value.push(deno);
+            }
             if let Some(existing) = std::env::var_os("PATH") {
                 value.push(";");
                 value.push(existing);

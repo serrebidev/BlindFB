@@ -4,6 +4,13 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.97 - 2026-11-22
+
+Play Video in Full Post now uses the embedded Facebook video's own address.
+BlindFB checks for a new yt-dlp nightly daily and keeps the existing helper
+if a download fails. Windows playback uses mpv 0.42.0 and installs
+Deno 2.9.8 on first use of a YouTube link.
+
 ## v0.7.96 - 2026-11-22
 
 Group windows offer New post and Copy photo link. Load more posts stays

@@ -1,7 +1,7 @@
 //! Pinned, app-managed Windows mpv bundle. Installation blocks; use a worker thread.
 
 use std::fs;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -9,9 +9,10 @@ use patois::t;
 
 use crate::tf;
 
-const RELEASE_URL: &str = "https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-w64-mingw32.zip";
-const RELEASE_SHA256: &str = "a49811c0752c108b8260636f9c6f6fcb97406641c98b30f1e7b500dfb20177de";
-const BUNDLE_NAME: &str = "mpv-git-2025-12-21-41f6a64-x86_64.zip";
+const RELEASE_URL: &str = "https://github.com/mpv-player/mpv/releases/download/v0.42.0/mpv-v0.42.0-x86_64-w64-mingw32-full.zip";
+const RELEASE_SHA256: &str = "c7d4ff6a67dd33659f71d81efa56335fea2213c7522fd67235f3abf0d9ea1dbd";
+const DENO_URL: &str = "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip";
+const DENO_SHA256: &str = "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf";
 static INSTALL_LOCK: Mutex<()> = Mutex::new(());
 
 /// The pinned executable path, whether or not installation has completed.
@@ -19,7 +20,7 @@ pub fn managed_bin() -> Option<PathBuf> {
     if !cfg!(windows) {
         return None;
     }
-    crate::backend::data_dir().map(|dir| dir.join("bin/mpv-0.41.0/mpv.exe"))
+    crate::backend::data_dir().map(|dir| dir.join("bin/mpv-0.42.0/mpv.exe"))
 }
 
 /// Install the complete verified bundle on first use. Never replaces a running version.
@@ -35,25 +36,41 @@ pub fn ensure() -> Result<PathBuf, String> {
         return Ok(target);
     }
     let bytes = crate::backend::get(RELEASE_URL)?;
-    install(&bytes, &target)?;
+    install(&bytes, &target, "mpv.exe", RELEASE_SHA256)?;
     Ok(target)
 }
 
-fn install(bytes: &[u8], target: &Path) -> Result<(), String> {
-    // Authenticate the outer archive before interpreting either archive's contents.
-    if crate::backend::sha256_hex(bytes) != RELEASE_SHA256 {
-        return Err(t("the mpv download failed its checksum; it was not installed"));
+pub fn deno_dir() -> Option<PathBuf> {
+    crate::backend::data_dir().map(|dir| dir.join("bin/deno-2.9.8"))
+}
+
+pub fn ensure_deno() -> Result<(), String> {
+    let dir = deno_dir().ok_or_else(|| t("could not find BlindFB's data folder"))?;
+    let target = dir.join("deno.exe");
+    let _lock = INSTALL_LOCK
+        .lock()
+        .map_err(|_| t("the video helper installer was interrupted"))?;
+    if target.is_file() {
+        return Ok(());
     }
-    let bundle = bundle_bytes(bytes)?;
+    let bytes = crate::backend::get(DENO_URL)?;
+    install(&bytes, &target, "deno.exe", DENO_SHA256)
+}
+
+fn install(bytes: &[u8], target: &Path, executable: &str, checksum: &str) -> Result<(), String> {
+    // Verify the archive before interpreting its contents.
+    if crate::backend::sha256_hex(bytes) != checksum {
+        return Err(t("the video helper download failed its checksum — not installing it"));
+    }
     let destination = target.parent().ok_or_else(|| t("bad mpv install path"))?;
     let parent = destination.parent().ok_or_else(|| t("bad mpv install path"))?;
     fs::create_dir_all(parent)
         .map_err(|e| tf!("could not create the mpv install folder: {error}", error = e))?;
     let stage = create_stage(parent)?;
     let result = (|| {
-        extract_bundle(&bundle, &stage)?;
-        if !stage.join("mpv.exe").is_file() {
-            return Err(t("the mpv download did not contain mpv.exe"));
+        extract_bundle(bytes, &stage)?;
+        if !stage.join(executable).is_file() {
+            return Err(t("no video helper is available for this platform"));
         }
         match fs::rename(&stage, destination) {
             Ok(()) => Ok(()),
@@ -82,25 +99,6 @@ fn create_stage(parent: &Path) -> Result<PathBuf, String> {
         }
     }
     Err(t("could not find an unused mpv staging folder"))
-}
-
-fn bundle_bytes(bytes: &[u8]) -> Result<Vec<u8>, String> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| tf!("could not open the mpv download: {error}", error = e))?;
-    if zip.len() != 1 {
-        return Err(t("unexpected mpv release archive contents"));
-    }
-    let mut entry = zip
-        .by_index(0)
-        .map_err(|e| tf!("could not read the mpv download: {error}", error = e))?;
-    if entry.name().map_err(|e| e.to_string())? != BUNDLE_NAME {
-        return Err(t("unexpected mpv bundle name"));
-    }
-    let mut bundle = Vec::new();
-    entry
-        .read_to_end(&mut bundle)
-        .map_err(|e| tf!("could not read the mpv bundle: {error}", error = e))?;
-    Ok(bundle)
 }
 
 fn safe_name(name: &str) -> bool {
@@ -208,7 +206,7 @@ mod tests {
         let parent =
             std::env::temp_dir().join(format!("blindfb-mpv-bad-hash-{}", std::process::id()));
         assert!(!parent.exists());
-        assert!(install(b"untrusted archive", &parent.join("mpv.exe"))
+        assert!(install(b"untrusted archive", &parent.join("mpv.exe"), "mpv.exe", RELEASE_SHA256)
             .unwrap_err()
             .contains("checksum"));
         assert!(!parent.exists());

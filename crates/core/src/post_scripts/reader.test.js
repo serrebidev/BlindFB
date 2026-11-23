@@ -63,7 +63,7 @@ function fixture(mode = false) {
     getAttribute: () => '', querySelector: () => ({alt: 'A mountain'})};
   const commentPhoto = {...photoLink, href: 'https://www.facebook.com/photo/?fbid=456', closest: () => ({})};
   const root = {isConnected: true, getAttribute: () => mode === 'ambiguous' ? 'main' : 'dialog', contains: e => e === root || e === list || comments.includes(e) || cards.includes(e) || boxes.includes(e),    querySelector: selector => selector.includes('profile_name') ? profile : isReel && selector.includes('contenteditable') ? {} : null,
-    querySelectorAll: selector => selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'post-photo' ? [photoLink, photoLink, commentPhoto] : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector === '[role=button],button' && mode === 'sorted' ? [sortButton] : selector === '[role=menuitem],[role=option],[role=button],button' && mode === 'sorted' ? (menuOpen ? [allOption] : []) : selector === '[role=button],button' && mode === 'stuck' ? [stuckButton] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
+    querySelectorAll: selector => selector === 'video' && mode === 'embedded-video' ? [embeddedVideo] : selector === '[data-ad-rendering-role=like_button]' ? [reactionButton] : selector === ARTICLE ? comments : selector === 'a[href]' && mode === 'post-photo' ? [photoLink, photoLink, commentPhoto] : selector === 'a[href]' && mode === 'external-video' ? [sharedVideo] : selector === 'a[href]' && mode === 'card' ? [linkCard] : selector === '[data-ad-rendering-role=profile_name]' && mode === 'shared-source' ? profiles : selector === '[role=button],button' && mode === 'slow' ? [expand] : selector === '[role=button],button' && mode === 'replies' ? [viewReplies] : selector === '[role=button],button' && mode === 'more' ? [viewMore] : selector === '[role=button],button' && mode === 'sorted' ? [sortButton] : selector === '[role=menuitem],[role=option],[role=button],button' && mode === 'sorted' ? (menuOpen ? [allOption] : []) : selector === '[role=button],button' && mode === 'stuck' ? [stuckButton] : selector.includes('story_message') ? watch ? [] : messages : selector.includes('text-align') && watch ? [{closest: () => null, contains: () => false}] : selector === EDITOR ? boxes : []};
   const profile = {innerText: 'Post author', closest: () => null, parentElement: {parentElement: {parentElement: {querySelectorAll: () => []}}}};
   let revealed = false;
   const sourceLink = {get href() {return revealed ? 'https://www.facebook.com/bistro/posts/2?__cft__[0]=tracking' : 'https://www.facebook.com/a/posts/1?__cft__[0]=tracking';},
@@ -79,8 +79,12 @@ function fixture(mode = false) {
       headerLink('https://www.facebook.com/bistro/posts/3', true)]}}}},
     {innerText: 'Hidden template', visible: false, closest: () => null},
     {innerText: 'Comment author', closest: () => ({}), parentElement: {parentElement: {parentElement: {querySelectorAll() {throw Error('Do not inspect comment headers');}}}}}];
+  const embeddedVideo = {...video, closest: () => null};
+  const embeddedFiber = {stateNode: embeddedVideo, return: {memoizedProps: {coreVideoPlayerMetaData: {videoFBID: '456'}}}};
+  const mount = {'__reactContainer$fixture': {child: {stateNode: video, sibling: embeddedFiber,
+    return: {memoizedProps: {coreVideoPlayerMetaData: {videoFBID: '999'}}}}}};
   const document = {
-    querySelectorAll: selector => selector === 'video' ? [video] : selector === '[role=button][aria-label]' ? [openComments] : (selector === '[role=dialog]' && watch || selector === '[role=complementary]' && isReel) && opened ? [root] : [],
+    querySelectorAll: selector => selector === '[id^="mount_"]' && mode === 'embedded-video' ? [mount] : selector === 'video' ? [video] : selector === '[role=button][aria-label]' ? [openComments] : (selector === '[role=dialog]' && watch || selector === '[role=complementary]' && isReel) && opened ? [root] : [],
     querySelector: () => opened ? {closest: () => root} : null,
     createTreeWalker(article) {
       let index = 0;
@@ -302,6 +306,8 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   assert.equal(JSON.parse(await untitled.api.setTitle('Dedicated To Bart Simpson')).text, 'Dedicated To Bart Simpson');
   assert.equal(JSON.parse(await untitled.api.read()).text, 'Dedicated To Bart Simpson');
   assert.equal(JSON.parse(await reel.api.setTitle('Other title')).text, 'Entire reel caption');
+  const embedded = JSON.parse(await fixture('embedded-video').api.initialize('https://www.facebook.com/groups/example/posts/123/'));
+  assert.equal(embedded.video, 'https://www.facebook.com/watch/?v=456');
   const sharedVideo = JSON.parse(await fixture('external-video').api.initialize('https://www.facebook.com/a/posts/1'));
   assert.equal(sharedVideo.video, 'https://www.youtube.com/watch?v=abc');
   assert.deepEqual(sharedVideo.links, [{label: 'A video', url: 'https://www.youtube.com/watch?v=abc'}]);

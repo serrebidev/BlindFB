@@ -83,7 +83,22 @@
     if (card) return target;
     const link = [...scope.querySelectorAll('a[href]')].filter(a => !a.closest(ARTICLE)).map(a => a.href).find(href => /facebook\.com\/(?:[^/?#]+\/videos\/|videos\/|reel\/|watch\/?\?v=)/.test(href));
     if (link) return F.canon(link) ? 'https://www.facebook.com' + F.canon(link) : link;
-    if (scope.querySelector('video')) return target;
+    const video = [...scope.querySelectorAll('video')].find(element => !element.closest(ARTICLE) && F.visible(element));
+    if (video) {
+      // A group permalink can resolve to a different clip. Use the ID of the rendered player.
+      let id;
+      window.__blindfbIdentities.eachFiber(fiber => {
+        if (fiber.stateNode !== video) return;
+        for (let parent = fiber.return; parent; parent = parent.return) {
+          const candidate = parent.memoizedProps?.coreVideoPlayerMetaData?.videoFBID;
+          if (typeof candidate === 'string' && /^\d+$/.test(candidate)) {
+            id = candidate;
+            break;
+          }
+        }
+      });
+      return id ? 'https://www.facebook.com/watch/?v=' + id : target;
+    }
     // A link-preview card or an embedded player, unwrapped like any other link.
     for (const a of scope.querySelectorAll('a[href]')) {
       if (a.closest(ARTICLE)) continue;
