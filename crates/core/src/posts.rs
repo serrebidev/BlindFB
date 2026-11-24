@@ -430,6 +430,56 @@ pub fn validate_target(target: &str) -> Result<(), String> {
     ))
 }
 
+/// A Facebook photo page (`/photo/?fbid=<id>`): the photo viewer can show its picture.
+pub fn is_photo_url(url: &str) -> bool {
+    validate_target(url).is_ok()
+        && matches!(
+            url.split(['?', '#']).next().unwrap_or("").trim_end_matches('/').rsplit('/').next(),
+            Some("photo" | "photo.php")
+        )
+}
+
+/// The photo page's own picture: the largest loaded image, Facebook's media image first.
+const PHOTO_SCRIPT: &str = r#"(async()=>{for(let i=0;i<60;i++){const found=[...document.querySelectorAll('img')].filter(img=>img.naturalWidth>=200&&img.getBoundingClientRect().width>0).sort((a,b)=>(b.dataset.visualcompletion==='media-vc-image')-(a.dataset.visualcompletion==='media-vc-image')||b.naturalWidth*b.naturalHeight-a.naturalWidth*a.naturalHeight)[0];if(found)return JSON.stringify({src:found.currentSrc||found.src,alt:found.alt||''});await new Promise(r=>setTimeout(r,250));}return JSON.stringify({});})()"#;
+
+/// Download the full-size copy of a photo, for the viewer: a feed or post shows
+/// only a small preview (about 470 pixels wide), the photo page the original.
+/// Returns JSON `{"path": <saved file>, "alt": <Facebook's description>}`.
+pub fn photo(fb: &Fb, url: &str) -> Result<String, String> {
+    if !is_photo_url(url) {
+        return Err(t("This link is not a Facebook photo."));
+    }
+    let found: Value = serde_json::from_str(fb.run(&["eval", url, PHOTO_SCRIPT])?.trim())
+        .unwrap_or(Value::Null);
+    let src = found["src"]
+        .as_str()
+        .filter(|src| photo_source(src))
+        .ok_or_else(|| t("Facebook did not show this photo. It may have been removed."))?;
+    let mut response = crate::http::agent()
+        .get(src)
+        .call()
+        .map_err(|e| tf!("The photo could not be downloaded: {error}", error = e))?;
+    let bytes = crate::http::download_body(response.body_mut())
+        .map_err(|e| tf!("The photo could not be downloaded: {error}", error = e))?;
+    // Named by photo, so a viewer still open saves its own picture.
+    let id = url
+        .split(['?', '&'])
+        .find_map(|part| part.strip_prefix("fbid="))
+        .unwrap_or_default();
+    let path = std::env::temp_dir().join(format!("blindfb-photo-{id}.jpg"));
+    std::fs::write(&path, bytes)
+        .map_err(|e| tf!("The photo could not be saved: {error}", error = e))?;
+    Ok(json!({"path": path, "alt": found["alt"].as_str().unwrap_or("")}).to_string())
+}
+
+/// Only Facebook's image servers: the page could name any address.
+fn photo_source(src: &str) -> bool {
+    src.parse::<tungstenite::http::Uri>().is_ok_and(|uri| {
+        uri.scheme_str() == Some("https")
+            && uri.host().is_some_and(|host| host.ends_with(".fbcdn.net"))
+    })
+}
+
 /// The post each reader page holds, so a page the backend lost can be reopened.
 fn opened() -> &'static std::sync::Mutex<HashMap<String, String>> {
     static OPENED: std::sync::OnceLock<std::sync::Mutex<HashMap<String, String>>> =
@@ -993,6 +1043,19 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn only_facebook_photo_pages_and_image_servers_reach_the_photo_viewer() {
+        assert!(is_photo_url("https://www.facebook.com/photo/?fbid=1183312084342526&set=pcb.9"));
+        assert!(is_photo_url("https://www.facebook.com/photo.php?fbid=12"));
+        assert!(!is_photo_url("https://www.facebook.com/photo/?fbid="));
+        assert!(!is_photo_url("https://www.facebook.com/a/posts/1"));
+        assert!(!is_photo_url("https://example.org/photo/?fbid=1"));
+        assert!(photo_source("https://scontent-sea1-1.xx.fbcdn.net/v/t39/1_n.jpg?stp=dst-jpg_tt6"));
+        assert!(!photo_source("http://scontent.xx.fbcdn.net/1.jpg"));
+        assert!(!photo_source("https://fbcdn.net.example.org/1.jpg"));
+        assert!(!photo_source("data:image/png;base64,AAAA"));
+    }
 
     #[test]
     fn links_put_external_pages_first_and_the_current_post_last() {

@@ -26,6 +26,7 @@ mod create_group_dialog;
 mod group_dialog;
 mod group_picker;
 mod invite_dialog;
+mod photo_viewer;
 mod player;
 mod participation_dialog;
 mod comment_identity_dialog;
@@ -384,6 +385,7 @@ enum Tag {
         target: String,
     },
     PostVideo(u64, u64),
+    Photo,
     PostReelReacted(u64),
     PostSent(u64),
     PostParticipation(u64, bool),
@@ -448,6 +450,8 @@ enum Task {
         page: String,
         target: String,
     },
+    /// Download a photo page's full-size picture for the viewer.
+    Photo(String),
     PostReelReact {
         page: String,
         reaction: String,
@@ -1371,6 +1375,18 @@ fn spawn_worker(
                 });
                 continue;
             }
+            if let Task::Photo(url) = &job.task {
+                // A photo page load takes seconds: keep the worker free for the reader.
+                let (fb, url, tag, done) = (fb.clone(), url.clone(), job.tag, done.clone());
+                thread::spawn(move || {
+                    let result = match fb {
+                        Some(fb) => blindfb_core::posts::photo(&fb, &url),
+                        None => Err(t("The Facebook backend is not installed")),
+                    };
+                    let _ = done.send(Done { tag, result });
+                });
+                continue;
+            }
             let video = match &job.task {
                 Task::PostVideo { page, target } => Some((page.clone(), target.clone())),
                 _ => None,
@@ -1446,6 +1462,7 @@ fn spawn_worker(
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostVideo { .. } => unreachable!("video preparation runs independently"),
+                Task::Photo(_) => unreachable!("photo downloads run independently"),
                 Task::PostReelReact { page, reaction } => match &fb {
                     Some(fb) => blindfb_core::posts::reel_react(fb, &page, &reaction),
                     None => Err(t("The Facebook backend is not installed")),
@@ -3232,7 +3249,7 @@ fn open_detail_link(ui: &Ui) {
     }
 }
 
-fn append_links_menu(menu: &Menu, links: &[Link]) {
+fn append_links_menu(ui: &Ui, menu: &Menu, links: &[Link]) {
     if links.is_empty() {
         return;
     }
@@ -3263,6 +3280,41 @@ fn append_links_menu(menu: &Menu, links: &[Link]) {
         }
     });
     menu.append_submenu(submenu, &t("&Links"), &t("Open a link in your browser"));
+    let photos: Vec<Link> = links
+        .iter()
+        .filter(|link| blindfb_core::posts::is_photo_url(&link.url))
+        .cloned()
+        .collect();
+    if photos.is_empty() {
+        return;
+    }
+    const PHOTO_BASE: i32 = 20500;
+    let submenu = Menu::builder().build();
+    for (index, link) in photos.iter().enumerate() {
+        let label = link.label.replace('&', "&&").replace(['\t', '\r', '\n'], " ");
+        submenu.append(
+            PHOTO_BASE + index as i32,
+            &format!("{}. {label}", index + 1),
+            &link.url,
+            ItemKind::Normal,
+        );
+    }
+    let ui = ui.clone();
+    submenu.on_selected(move |event| {
+        event.event.skip(false);
+        if let Some(link) = event
+            .get_id()
+            .checked_sub(PHOTO_BASE)
+            .and_then(|index| photos.get(index as usize))
+        {
+            photo_viewer::request(&ui, &link.url);
+        }
+    });
+    menu.append_submenu(
+        submenu,
+        &t("View photo f&ull screen"),
+        &t("Show a photo full screen, for Be My Eyes or other picture description"),
+    );
 }
 
 /// A row became selected, by arrows or by type-ahead.
@@ -3825,6 +3877,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
         }
         Tag::PostVideo(session, request) => post_dialog::stream(ui, session, request, done.result),
+        Tag::Photo => photo_viewer::show(ui, modal, done.result),
         Tag::PostReelReacted(session) => {
             post_dialog::apply(ui, session, done.result, &t("Reaction set."), false, false)
         }
@@ -5552,6 +5605,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
                  Enter on a selected link or Open link opens your browser.\n\
+                 On a photo link, View photo full screen (Alt+W), or the View photo full screen submenu, shows the full-size photo alone on screen for Be My Eyes, screen reader picture description or OCR. Escape closes it, Ctrl+C copies the photo, Ctrl+S saves it.\n\
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
                  Arrow keys on Video volume change its percentage. The Video playback speed list changes how fast the video plays.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
@@ -5788,7 +5842,7 @@ fn show_item_menu(ui: &Ui) {
                 react.check_item(ID_REACT_BASE + i as i32, *reaction != "none" && current == Some(*reaction));
             }
             menu.append_submenu(react, &react_submenu_title(current), "");
-            append_links_menu(&menu, &ui.link_targets.borrow());
+            append_links_menu(ui, &menu, &ui.link_targets.borrow());
             add(
                 &menu,
                 &[

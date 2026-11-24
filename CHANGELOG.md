@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.105 - 2026-11-24
+
+Photos can be viewed full screen. In the post reader, select a photo in Post
+links and press View photo full screen (Alt+W), or use the View photo full
+screen submenu from the post, a comment or a feed item. BlindFB fetches
+Facebook's full-size copy (the feed only holds a small preview) and shows it
+alone on a black screen, so Be My Eyes, NVDA's or JAWS's picture description
+and OCR see the whole picture. The window title reads Facebook's own
+description. Escape closes it, Ctrl+C copies the picture for pasting into an
+AI app, and Ctrl+S saves it. Nothing loads until you ask, so reading posts is
+as fast as before.
+
+French, Russian and Estonian translations now cover the voice message, chat
+archive, alert and video speed messages added in recent releases.
+
 ## v0.7.104 - 2026-11-23
 
 Firefox session import can find a signed-in profile when the preferred

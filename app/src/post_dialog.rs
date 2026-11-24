@@ -91,6 +91,7 @@ pub(super) struct PostReader {
     comments: ListBox,
     links: ListBox,
     open_link: Button,
+    view_photo: Button,
     media: Player,
     play: Button,
     stop: Button,
@@ -201,7 +202,7 @@ impl PostReader {
         self.dialog
     }
 
-    fn message(&self, ui: &Ui, text: &str) {
+    pub(super) fn message(&self, ui: &Ui, text: &str) {
         self.status.change_value(text);
         ui.status(text);
     }
@@ -225,6 +226,9 @@ impl PostReader {
         self.volume.enable(state.video.is_some());
         self.speed.enable(state.video.is_some());
         self.open_link.enable(self.links.get_selection().is_some());
+        self.view_photo.enable(self.selected_link().is_some_and(|link| {
+            blindfb_core::posts::is_photo_url(&link.url)
+        }));
         self.send.enable(state.loaded && !state.busy);
         self.identity.enable(state.loaded && !state.busy
             && state.comment_identity.as_ref().is_some_and(|identity| identity.can_change));
@@ -242,14 +246,15 @@ impl PostReader {
         self.composer.set_editable(!state.busy);
     }
 
+    fn selected_link(&self) -> Option<Link> {
+        let index = self.links.get_selection()?;
+        self.state.borrow().links.get(index as usize).cloned()
+    }
+
     /// Open the selected link: a profile in BlindFB (the reader closes, as
     /// for a commenter's profile), anything else in the browser.
     fn open_link(&self) {
-        let Some(link) = self
-            .links
-            .get_selection()
-            .and_then(|index| self.state.borrow().links.get(index as usize).cloned())
-        else {
+        let Some(link) = self.selected_link() else {
             return;
         };
         match link.profile {
@@ -900,6 +905,8 @@ fn open_requested(
     }
     links.set_selection(0, true);
     let open_link = Button::builder(&dialog).with_label(&t("&Open link")).build();
+    let view_photo = Button::builder(&dialog).with_label(&t("Vie&w photo full screen")).build();
+    view_photo.set_name(&t("View photo full screen"));
     let post_label = StaticText::builder(&dialog)
         .with_label(&t("&Full post"))
         .build();
@@ -1004,6 +1011,7 @@ fn open_requested(
     root.add(&links_label, 0, SizerFlag::All, 4);
     root.add(&links, 1, SizerFlag::Expand | SizerFlag::All, 4);
     root.add(&open_link, 0, SizerFlag::All, 4);
+    root.add(&view_photo, 0, SizerFlag::All, 4);
     root.add(&copy_link, 0, SizerFlag::All, 4);
     root.add(&post_label, 0, SizerFlag::All, 4);
     root.add(&post, 2, SizerFlag::Expand | SizerFlag::All, 4);
@@ -1035,6 +1043,7 @@ fn open_requested(
         comments,
         links,
         open_link,
+        view_photo,
         media,
         play,
         stop,
@@ -1089,6 +1098,12 @@ fn open_requested(
     identity.on_click(move |_| r.identity_open(&u));
     let r = reader.clone();
     open_link.on_click(move |_| r.open_link());
+    let (r, u) = (reader.clone(), ui.clone());
+    view_photo.on_click(move |_| {
+        if let Some(link) = r.selected_link() {
+            super::photo_viewer::request(&u, &link.url);
+        }
+    });
     let r = reader.clone();
     links.on_item_double_clicked(move |_| r.open_link());
     let r = reader.clone();
@@ -1245,7 +1260,7 @@ fn open_requested(
         event.skip(false);
         dialog.end_modal(ID_CANCEL);
     });
-    let r = reader.clone();
+    let (r, u) = (reader.clone(), ui.clone());
     comments.bind_internal(EventType::CONTEXT_MENU, move |event| {
         event.skip(false);
         let available = r.comments.get_selection().and_then(|i| {
@@ -1311,11 +1326,11 @@ fn open_requested(
                 .map(|comment| comment.links.clone())
         });
         if let Some(links) = comment_links.filter(|links| !links.is_empty()) {
-            append_links_menu(&menu, &links);
+            append_links_menu(&u, &menu, &links);
         }
         r.comments.popup_menu(&mut menu, None);
     });
-    let r = reader.clone();
+    let (r, u) = (reader.clone(), ui.clone());
     post.bind_internal(EventType::CONTEXT_MENU, move |event| {
         event.skip(false);
         let (loaded, ready) = {
@@ -1342,7 +1357,7 @@ fn open_requested(
             react.check_item(ID_REACT + i as i32, *reaction != "none" && current.as_deref() == Some(*reaction));
         }
         menu.append_submenu(react, &blindfb_core::fb::reaction_button_label(r.state.borrow().reaction.as_deref()), "");
-        append_links_menu(&menu, &r.state.borrow().post_links);
+        append_links_menu(&u, &menu, &r.state.borrow().post_links);
         menu.append_separator();
         menu.append(
             ID_TRANSLATE,
