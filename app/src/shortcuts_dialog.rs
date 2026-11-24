@@ -92,6 +92,7 @@ fn menu_table() -> Vec<(&'static str, i32, String, &'static str)> {
         ("backend", ID_QUIT_DAEMON, "quit_daemon", ""),
         ("help", ID_KEYS, "keyboard_commands", "F1"),
         ("help", ID_GITHUB, "repository", ""),
+        ("help", ID_REPORT_ISSUE, "report_issue", ""),
         ("help", ID_DEBUG_LOGGING, "debug_logging", ""),
         ("help", ID_DEBUG_REPORT, "debug_report", ""),
         ("help", crate::ID_ABOUT, "about", ""),

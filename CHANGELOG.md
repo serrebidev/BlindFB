@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.106 - 2026-11-24
+
+Every photo of a post is reachable now, not only the four Facebook shows in
+the post. In the full-screen photo viewer, Right and Left arrows (or Page Down
+and Page Up) load the next and previous photo of the same post or album at
+full size, going round from the last to the first; the title says when you
+are back at the photo you started from. The "+3" link that stands for hidden
+photos opens one of them, and the arrows reach the rest.
+
+Help, Report an issue on GitHub asks for a title and a description in BlindFB,
+then opens GitHub's new issue page with both filled in and your BlindFB,
+system and backend versions added. Sign in on GitHub and press Create.
+
 ## v0.7.105 - 2026-11-24
 
 Photos can be viewed full screen. In the post reader, select a photo in Post

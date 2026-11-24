@@ -439,22 +439,37 @@ pub fn is_photo_url(url: &str) -> bool {
         )
 }
 
-/// The photo page's own picture: the largest loaded image, Facebook's media image first.
-const PHOTO_SCRIPT: &str = r#"(async()=>{for(let i=0;i<60;i++){const found=[...document.querySelectorAll('img')].filter(img=>img.naturalWidth>=200&&img.getBoundingClientRect().width>0).sort((a,b)=>(b.dataset.visualcompletion==='media-vc-image')-(a.dataset.visualcompletion==='media-vc-image')||b.naturalWidth*b.naturalHeight-a.naturalWidth*a.naturalHeight)[0];if(found)return JSON.stringify({src:found.currentSrc||found.src,alt:found.alt||''});await new Promise(r=>setTimeout(r,250));}return JSON.stringify({});})()"#;
+/// The photo page's own picture (the largest loaded image, Facebook's media image
+/// first), after `STEP` presses of the page's next (1) or previous (-1) photo button.
+/// Those buttons are found by shape, any language: full-height strips beside the photo.
+const PHOTO_SCRIPT: &str = r#"(async(step)=>{const sleep=t=>new Promise(r=>setTimeout(r,t));const pick=()=>[...document.querySelectorAll('img')].filter(img=>img.naturalWidth>=200&&img.complete&&img.getBoundingClientRect().width>0).sort((a,b)=>(b.dataset.visualcompletion==='media-vc-image')-(a.dataset.visualcompletion==='media-vc-image')||b.naturalWidth*b.naturalHeight-a.naturalWidth*a.naturalHeight)[0];let found;for(let i=0;i<60&&!(found=pick());i++)await sleep(250);if(!found)return JSON.stringify({});if(step){const box=found.getBoundingClientRect(),middle=box.left+box.width/2;const button=[...document.querySelectorAll('[role=main] [role=button]')].find(b=>{const r=b.getBoundingClientRect();return r.height>300&&r.width<200&&(step>0?r.left>middle:r.right<middle);});if(!button)return JSON.stringify({alone:true});const before=found.src;button.click();for(let i=0;i<60;i++){await sleep(250);const now=pick();if(now&&now.src!==before){found=now;break;}}if(found.src===before)return JSON.stringify({});}return JSON.stringify({src:found.currentSrc||found.src,alt:found.alt||'',url:location.href});})(STEP)"#;
+
+/// The photo id in a photo page link (`fbid=`), empty when it has none.
+pub fn photo_id(url: &str) -> &str {
+    url.split(['?', '&', '#']).find_map(|part| part.strip_prefix("fbid=")).unwrap_or_default()
+}
 
 /// Download the full-size copy of a photo, for the viewer: a feed or post shows
 /// only a small preview (about 470 pixels wide), the photo page the original.
-/// Returns JSON `{"path": <saved file>, "alt": <Facebook's description>}`.
-pub fn photo(fb: &Fb, url: &str) -> Result<String, String> {
+/// `step` 1 or -1 moves to the next or previous photo of the same post or album
+/// first (Facebook goes round: after the last comes the first).
+/// Returns JSON `{"path": <saved file>, "alt": <Facebook's description>, "url": <photo page>}`.
+pub fn photo(fb: &Fb, url: &str, step: i32) -> Result<String, String> {
     if !is_photo_url(url) {
         return Err(t("This link is not a Facebook photo."));
     }
-    let found: Value = serde_json::from_str(fb.run(&["eval", url, PHOTO_SCRIPT])?.trim())
-        .unwrap_or(Value::Null);
+    let script = PHOTO_SCRIPT.replace("STEP", &step.signum().to_string());
+    let found: Value =
+        serde_json::from_str(fb.run(&["eval", url, &script])?.trim()).unwrap_or(Value::Null);
+    if found["alone"] == true {
+        return Err(t("This is the only photo here."));
+    }
     let src = found["src"]
         .as_str()
         .filter(|src| photo_source(src))
         .ok_or_else(|| t("Facebook did not show this photo. It may have been removed."))?;
+    // The page's own address names the photo now showing; keep the old one if it is odd.
+    let page = found["url"].as_str().filter(|page| is_photo_url(page)).unwrap_or(url);
     let mut response = crate::http::agent()
         .get(src)
         .call()
@@ -462,14 +477,10 @@ pub fn photo(fb: &Fb, url: &str) -> Result<String, String> {
     let bytes = crate::http::download_body(response.body_mut())
         .map_err(|e| tf!("The photo could not be downloaded: {error}", error = e))?;
     // Named by photo, so a viewer still open saves its own picture.
-    let id = url
-        .split(['?', '&'])
-        .find_map(|part| part.strip_prefix("fbid="))
-        .unwrap_or_default();
-    let path = std::env::temp_dir().join(format!("blindfb-photo-{id}.jpg"));
+    let path = std::env::temp_dir().join(format!("blindfb-photo-{}.jpg", photo_id(page)));
     std::fs::write(&path, bytes)
         .map_err(|e| tf!("The photo could not be saved: {error}", error = e))?;
-    Ok(json!({"path": path, "alt": found["alt"].as_str().unwrap_or("")}).to_string())
+    Ok(json!({"path": path, "alt": found["alt"].as_str().unwrap_or(""), "url": page}).to_string())
 }
 
 /// Only Facebook's image servers: the page could name any address.
@@ -1055,6 +1066,10 @@ mod tests {
         assert!(!photo_source("http://scontent.xx.fbcdn.net/1.jpg"));
         assert!(!photo_source("https://fbcdn.net.example.org/1.jpg"));
         assert!(!photo_source("data:image/png;base64,AAAA"));
+        assert_eq!(photo_id("https://www.facebook.com/photo/?fbid=12&set=pcb.9"), "12");
+        assert_eq!(photo_id("https://www.facebook.com/photo.php?set=a.1&fbid=7"), "7");
+        assert_eq!(photo_id("https://www.facebook.com/a/posts/1"), "");
+        assert!(PHOTO_SCRIPT.ends_with("(STEP)"), "the step goes in as the script's argument");
     }
 
     #[test]

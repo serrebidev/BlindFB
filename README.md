@@ -19,7 +19,7 @@ BlindFB is a front end for the [`fb` command-line tool](https://github.com/hieu-
 - Reels on Ctrl+8, in a cached list you can browse by caption; Enter plays, Escape returns to the same reel.
 - Videos and reels play in the reader, with Play/Pause, Stop, seek and a volume slider, and every control reachable with Tab. A video shared from another site — a YouTube, Vimeo, Twitch or TikTok clip in a group post — plays there too; the player fetches that page itself and your Facebook session is never sent to it.
   Windows uses automatically installed mpv and its bundled codecs. Native NVDA controls keep the video surface out of Tab order.
-- View photo full screen: a post's photos are in its links. Pick one and press View photo full screen (Alt+W in the reader), or use the View photo full screen submenu, and BlindFB fetches Facebook's full-size copy and shows it alone on screen for Be My Eyes, your screen reader's picture description or OCR. Escape closes it, Ctrl+C copies the picture, Ctrl+S saves it. Nothing is downloaded until you ask, so reading posts stays fast.
+- View photo full screen: a post's photos are in its links. Pick one and press View photo full screen (Alt+W in the reader), or use the View photo full screen submenu, and BlindFB fetches Facebook's full-size copy and shows it alone on screen for Be My Eyes, your screen reader's picture description or OCR. Right and Left arrows (or Page Down and Page Up) move through every photo of that post or album, going round from the last to the first. Escape closes it, Ctrl+C copies the picture, Ctrl+S saves it. Nothing is downloaded until you ask, so reading posts stays fast.
 - File, Open Facebook link (Ctrl+O) opens a post, video or reel URL directly.
 - The final Load more list item (Enter, or Ctrl+L) appends the next posts, reels, results or chats and selects the first new item. Sections and searches open with 10 items (five for My posts and reels), then Load more requests another 10 (five reels); Facebook may return fewer. The news feed opens with 10 posts and reads the next 10 in the background once you are within three posts of the end. It reads only that far ahead because Facebook keeps just the last 10 to 25 posts of its feed page, and Not interested needs a post still there.
 - External links come first, shared source links follow, and the current Facebook post stays last. Links have a context submenu and receive focus first in the reader.
@@ -119,7 +119,7 @@ BlindFB is an unofficial client and is not affiliated with Meta.
 
 ## Community and support
 
-Report bugs and request features in [Issues](https://github.com/serrebidev/BlindFB/issues). For questions, feedback, and release news, join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects).
+Report bugs and request features in [Issues](https://github.com/serrebidev/BlindFB/issues), or from BlindFB with Help, Report an issue on GitHub: type a title and description, and your browser opens the issue filled in with your BlindFB version, ready to Create. For questions, feedback, and release news, join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects).
 
 ## Credits
 

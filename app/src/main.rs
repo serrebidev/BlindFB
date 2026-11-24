@@ -151,6 +151,7 @@ const ID_STOP_DAEMON: i32 = 10062;
 const ID_QUIT_DAEMON: i32 = 10063;
 const ID_ABOUT: i32 = 10070;
 const ID_GITHUB: i32 = 10071;
+const ID_REPORT_ISSUE: i32 = 10125;
 const ID_DEBUG_LOGGING: i32 = 10073;
 const ID_DEBUG_REPORT: i32 = 10074;
 const ID_VOICE_ALERTS: i32 = 10075;
@@ -385,7 +386,8 @@ enum Tag {
         target: String,
     },
     PostVideo(u64, u64),
-    Photo,
+    /// The step the photo viewer asked for: 0 opens, 1 or -1 moves.
+    Photo(i32),
     PostReelReacted(u64),
     PostSent(u64),
     PostParticipation(u64, bool),
@@ -450,8 +452,8 @@ enum Task {
         page: String,
         target: String,
     },
-    /// Download a photo page's full-size picture for the viewer.
-    Photo(String),
+    /// Download a photo page's full-size picture for the viewer, `step` photos on.
+    Photo { url: String, step: i32 },
     PostReelReact {
         page: String,
         reaction: String,
@@ -1375,12 +1377,12 @@ fn spawn_worker(
                 });
                 continue;
             }
-            if let Task::Photo(url) = &job.task {
+            if let Task::Photo { url, step } = &job.task {
                 // A photo page load takes seconds: keep the worker free for the reader.
-                let (fb, url, tag, done) = (fb.clone(), url.clone(), job.tag, done.clone());
+                let (fb, url, step, tag, done) = (fb.clone(), url.clone(), *step, job.tag, done.clone());
                 thread::spawn(move || {
                     let result = match fb {
-                        Some(fb) => blindfb_core::posts::photo(&fb, &url),
+                        Some(fb) => blindfb_core::posts::photo(&fb, &url, step),
                         None => Err(t("The Facebook backend is not installed")),
                     };
                     let _ = done.send(Done { tag, result });
@@ -1462,7 +1464,7 @@ fn spawn_worker(
                     None => Err(t("The Facebook backend is not installed")),
                 },
                 Task::PostVideo { .. } => unreachable!("video preparation runs independently"),
-                Task::Photo(_) => unreachable!("photo downloads run independently"),
+                Task::Photo { .. } => unreachable!("photo downloads run independently"),
                 Task::PostReelReact { page, reaction } => match &fb {
                     Some(fb) => blindfb_core::posts::reel_react(fb, &page, &reaction),
                     None => Err(t("The Facebook backend is not installed")),
@@ -1949,6 +1951,11 @@ fn build_menus(frame: &Frame) {
             ID_GITHUB,
             &shortcuts_dialog::menu_label(ID_GITHUB, t("BlindFB on &Forgejo")),
             &t("Open the BlindFB repository"),
+        )
+        .append_item(
+            ID_REPORT_ISSUE,
+            &shortcuts_dialog::menu_label(ID_REPORT_ISSUE, t("Report an &issue on GitHub…")),
+            &t("Describe a problem or an idea, then send it as a GitHub issue"),
         )
         .append_separator()
         .append_check_item(
@@ -3877,7 +3884,7 @@ fn apply_done(ui: &Ui, done: Done) {
             }
         }
         Tag::PostVideo(session, request) => post_dialog::stream(ui, session, request, done.result),
-        Tag::Photo => photo_viewer::show(ui, modal, done.result),
+        Tag::Photo(step) => photo_viewer::show(ui, modal, step, done.result),
         Tag::PostReelReacted(session) => {
             post_dialog::apply(ui, session, done.result, &t("Reaction set."), false, false)
         }
@@ -5605,7 +5612,7 @@ fn handle_menu(ui: &Ui, id: i32) {
                  Tab from Items to Links in selected item; Enter opens its selected link. External links come first and Full post on Facebook is last.\n\
                  The post reader starts on Post links. Applications or Shift+F10 on a post includes a Links submenu. Tab reaches post text, video controls, comments and the composer.\n\
                  Enter on a selected link or Open link opens your browser.\n\
-                 On a photo link, View photo full screen (Alt+W), or the View photo full screen submenu, shows the full-size photo alone on screen for Be My Eyes, screen reader picture description or OCR. Escape closes it, Ctrl+C copies the photo, Ctrl+S saves it.\n\
+                 On a photo link, View photo full screen (Alt+W), or the View photo full screen submenu, shows the full-size photo alone on screen for Be My Eyes, screen reader picture description or OCR. Right and Left arrows move through the post's or album's other photos. Escape closes it, Ctrl+C copies the photo, Ctrl+S saves it.\n\
                  Tab to Play/Pause, Stop, Back 10 seconds or Forward 10 seconds, then press Space.\n\
                  Arrow keys on Video volume change its percentage. The Video playback speed list changes how fast the video plays.\n\
                  Applications or Shift+F10 on post text: comment, react or share. On a comment: reply or like.\n\
@@ -5622,6 +5629,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         }
         ID_ABOUT => about_dialog::show(&ui.frame),
         ID_GITHUB => open_url("https://git.serrebiradio.com/serrebi/BlindFB"),
+        ID_REPORT_ISSUE => report_issue(ui),
         ID_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::Voice),
         ID_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::Sound),
         ID_LIST_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ListVoice),
@@ -6436,6 +6444,58 @@ fn search_dialog(ui: &Ui) {
     load_args(ui, View::SearchResults, search_args(&text, kind, PAGE));
 }
 
+/// Help > Report an issue: title and description asked here, where the screen
+/// reader knows the boxes, then GitHub's new-issue page opens with both filled
+/// in and the version line added. GitHub needs the user's own account, so the
+/// last step, Create, is theirs in the browser.
+fn report_issue(ui: &Ui) {
+    let title = t("Report an issue");
+    let Some(summary) = prompt_text(
+        &ui.frame,
+        t("Issue title: one line saying what went wrong or what you would like"),
+        &title,
+    )
+    .map(|text| text.trim().to_owned())
+    .filter(|text| !text.is_empty()) else {
+        return;
+    };
+    let Some(details) = prompt_long_text(
+        &ui.frame,
+        t("Describe what you did, what happened, and what you expected.\nYour browser then opens GitHub with this filled in. Sign in, attach a debug report if you have one, and press Create."),
+        &title,
+    ) else {
+        return;
+    };
+    open_url(&issue_url(&summary, &details));
+}
+
+fn issue_url(summary: &str, details: &str) -> String {
+    let body = format!(
+        "{details}\n\n---\nBlindFB {} on {} {}, backend {}",
+        env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        blindfb_core::backend::BACKEND_VERSION,
+    );
+    format!(
+        "https://github.com/serrebidev/BlindFB/issues/new?title={}&body={}",
+        query_encode(summary),
+        query_encode(&body)
+    )
+}
+
+/// Percent-encode a query value: everything but unreserved ASCII, as UTF-8 bytes.
+fn query_encode(text: &str) -> String {
+    text.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
 /// Ask for text that can run over several lines: a post, a comment, a description.
 /// A one-line box keeps only the first line of pasted text and reads long text as
 /// one line; in this one Enter starts a new line, Tab reaches OK.
@@ -6617,6 +6677,16 @@ mod tests {
         assert!(missing.is_empty(), "untranslated: {missing:?}");
     }
     use super::*;
+
+    #[test]
+    fn issue_link_carries_title_body_and_version() {
+        let url = issue_url("Photo & video", "Line 1\nПривет");
+        assert!(url.starts_with(
+            "https://github.com/serrebidev/BlindFB/issues/new?title=Photo%20%26%20video&body=Line%201%0A%D0%9F"
+        ));
+        assert!(url.contains(&query_encode(env!("CARGO_PKG_VERSION"))));
+        assert!(!url[url.find('?').unwrap()..].contains(['\n', ' ', '#']));
+    }
 
     #[test]
     fn match_nth_counts_newer_duplicates() {
