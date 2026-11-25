@@ -4,6 +4,28 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.109 - 2026-11-25
+
+Commenting on a post works again on pages where Facebook renders the
+comment box twice. Facebook can draw the one composer in two places at
+once (in the comments and as a sticky bar), and BlindFB read that as two
+different boxes and refused with "No unique comment box on this post",
+sending nothing. It now recognises the duplicates as the one composer —
+and still refuses, as before, when two genuinely different boxes are
+showing.
+
+Archived chats take another step (issues #24, #27 and #30, reported by
+Michal). Messenger can keep the inbox list mounted on the page while the
+archived list mounts beside it, and every check then read the inbox list
+forever — the archived rows could never be seen to replace it. The
+backend now finds the archived list by its own name and reads that list
+only. If it still fails on your account, the error now names what the
+page actually showed, so a debug report carries the evidence.
+
+The "Voice alert when notifications load" menu item works again: it
+shared its command number with "Report an issue on GitHub", which made
+the alert toggle unreachable.
+
 ## v0.7.108 - 2026-11-24
 
 Archived chats no longer show the inbox by mistake (issue #30, reported by
