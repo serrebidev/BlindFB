@@ -36,6 +36,12 @@ pub enum Kind {
     ChatVoice,
     /// The chats list finished loading, chimed (#43).
     ChatSound,
+    /// The notifications list finished loading, spoken (#46). Separate
+    /// from the list alerts for the same reason as the chat ones:
+    /// Notifications is prefetched and cached.
+    NotifVoice,
+    /// The notifications list finished loading, chimed (#46).
+    NotifSound,
 }
 
 fn marker_name(kind: Kind) -> &'static str {
@@ -48,6 +54,8 @@ fn marker_name(kind: Kind) -> &'static str {
         Kind::PostSound => "alerts-post-sound-on",
         Kind::ChatVoice => "alerts-chat-voice-on",
         Kind::ChatSound => "alerts-chat-sound-on",
+        Kind::NotifVoice => "alerts-notif-voice-on",
+        Kind::NotifSound => "alerts-notif-sound-on",
     }
 }
 
@@ -73,6 +81,10 @@ pub fn any_post_enabled() -> bool {
 
 pub fn any_chat_enabled() -> bool {
     enabled(Kind::ChatVoice) || enabled(Kind::ChatSound)
+}
+
+pub fn any_notif_enabled() -> bool {
+    enabled(Kind::NotifVoice) || enabled(Kind::NotifSound)
 }
 
 /// The words for a post whose comments just finished loading in the reader:
@@ -323,11 +335,15 @@ mod tests {
             Kind::PostSound,
             Kind::ChatVoice,
             Kind::ChatSound,
+            Kind::NotifVoice,
+            Kind::NotifSound,
         ];
         let names: HashSet<&str> = kinds.iter().map(|kind| marker_name(*kind)).collect();
         assert_eq!(names.len(), kinds.len());
         assert_eq!(marker_name(Kind::ChatVoice), "alerts-chat-voice-on");
         assert_eq!(marker_name(Kind::ChatSound), "alerts-chat-sound-on");
+        assert_eq!(marker_name(Kind::NotifVoice), "alerts-notif-voice-on");
+        assert_eq!(marker_name(Kind::NotifSound), "alerts-notif-sound-on");
     }
 
     #[test]

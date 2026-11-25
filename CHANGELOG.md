@@ -4,6 +4,16 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.107 - 2026-11-24
+
+Notifications loading can now be announced. View gains "Voice alert when
+notifications load" and "Sound alert when notifications load", both off
+at first and remembered across restarts. With either on, landing on
+Notifications — hovering over it in the Views list is enough — says
+"Notifications loaded" with the number of notifications, or plays a
+chime, even though the list usually comes straight from the prefetch
+cache and never visibly loads (issue #29, reported by Michal).
+
 ## v0.7.106 - 2026-11-24
 
 Every photo of a post is reachable now, not only the four Facebook shows in

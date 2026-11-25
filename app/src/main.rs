@@ -162,6 +162,8 @@ const ID_POST_VOICE_ALERTS: i32 = 10079;
 const ID_POST_SOUND_ALERTS: i32 = 10091;
 const ID_CHAT_VOICE_ALERTS: i32 = 10123;
 const ID_CHAT_SOUND_ALERTS: i32 = 10124;
+const ID_NOTIF_VOICE_ALERTS: i32 = 10125;
+const ID_NOTIF_SOUND_ALERTS: i32 = 10126;
 const ID_LANG_SYSTEM: i32 = 10094;
 const ID_LANG_ENGLISH: i32 = 10095;
 const ID_LANG_FRENCH: i32 = 10096;
@@ -1877,6 +1879,16 @@ fn build_menus(frame: &Frame) {
             &shortcuts_dialog::menu_label(ID_CHAT_SOUND_ALERTS, t("Sound alert when chats &load")),
             &t("Play a sound when your chats have loaded"),
         )
+        .append_check_item(
+            ID_NOTIF_VOICE_ALERTS,
+            &shortcuts_dialog::menu_label(ID_NOTIF_VOICE_ALERTS, t("Voice alert when &notifications load")),
+            &t("Say that your notifications have loaded when you open Notifications"),
+        )
+        .append_check_item(
+            ID_NOTIF_SOUND_ALERTS,
+            &shortcuts_dialog::menu_label(ID_NOTIF_SOUND_ALERTS, t("Sound alert when notifications &load")),
+            &t("Play a sound when your notifications have loaded"),
+        )
         .build();
 
     let mut post_menu = Menu::builder()
@@ -2040,6 +2052,14 @@ fn build_menus(frame: &Frame) {
         ID_CHAT_SOUND_ALERTS,
         alerts::enabled(alerts::Kind::ChatSound),
     );
+    menu_bar.check_item(
+        ID_NOTIF_VOICE_ALERTS,
+        alerts::enabled(alerts::Kind::NotifVoice),
+    );
+    menu_bar.check_item(
+        ID_NOTIF_SOUND_ALERTS,
+        alerts::enabled(alerts::Kind::NotifSound),
+    );
     frame.set_menu_bar(menu_bar);
 }
 
@@ -2145,6 +2165,26 @@ fn alert_chats_loaded(ui: &Ui, view: &View, total: usize, added: usize, append: 
     true
 }
 
+/// Notifications the user opened just finished loading — or were already
+/// loaded and waiting in the cache: same shape as the chats alert (#43),
+/// for the same reason — Notifications is prefetched and cached, so the
+/// generic list alert usually never fires for it (#46).
+fn alert_notifications_loaded(ui: &Ui, view: &View, total: usize, added: usize, append: bool) -> bool {
+    let (voice, sound) = (
+        alerts::enabled(alerts::Kind::NotifVoice),
+        alerts::enabled(alerts::Kind::NotifSound),
+    );
+    if !(voice || sound) {
+        return false;
+    }
+    let words = alerts::loaded(&view.title(), total, added, append);
+    if voice {
+        ui.status(&words);
+    }
+    alerts::play(sound, voice.then_some(words));
+    true
+}
+
 fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
     let on = !alerts::enabled(kind);
     let was_on = alerts::any_enabled();
@@ -2158,6 +2198,7 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
             | alerts::Kind::ListVoice
             | alerts::Kind::PostVoice
             | alerts::Kind::ChatVoice
+            | alerts::Kind::NotifVoice
     );
     let words = match (kind, on) {
         (alerts::Kind::Voice, true) => t("Voice alerts on."),
@@ -2176,6 +2217,10 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
         (alerts::Kind::ChatVoice, false) => t("Chats voice alerts off."),
         (alerts::Kind::ChatSound, true) => t("Chats sound alerts on."),
         (alerts::Kind::ChatSound, false) => t("Chats sound alerts off."),
+        (alerts::Kind::NotifVoice, true) => t("Notifications voice alerts on."),
+        (alerts::Kind::NotifVoice, false) => t("Notifications voice alerts off."),
+        (alerts::Kind::NotifSound, true) => t("Notifications sound alerts on."),
+        (alerts::Kind::NotifSound, false) => t("Notifications sound alerts off."),
     };
     ui.status(&words);
     if !on {
@@ -2191,6 +2236,8 @@ fn toggle_alert(ui: &Ui, kind: alerts::Kind) {
             | alerts::Kind::PostSound
             | alerts::Kind::ChatVoice
             | alerts::Kind::ChatSound
+            | alerts::Kind::NotifVoice
+            | alerts::Kind::NotifSound
     ) {
         return;
     }
@@ -2300,6 +2347,11 @@ fn load_view(ui: &Ui, view: View) {
             // landing on the view is the loaded moment to announce (#43).
             if matches!(view, View::Chats | View::ArchivedChats) {
                 alert_chats_loaded(ui, &view, records.len(), records.len(), false);
+            }
+            // Notifications shown straight from the cache will not load
+            // at all, so landing on the view is the loaded moment (#46).
+            if matches!(view, View::Notifications) {
+                alert_notifications_loaded(ui, &view, records.len(), records.len(), false);
             }
             return;
         }
@@ -3823,7 +3875,11 @@ fn apply_done(ui: &Ui, done: Done) {
                     // foreground-only rule from #17.
                     let chat_announced = matches!(view, View::Chats | View::ArchivedChats)
                         && alert_chats_loaded(ui, &view, total, added, append);
-                    if !chat_announced && !background_read {
+                    // Notifications announces the same way (#46).
+                    let notif_announced = !chat_announced
+                        && matches!(view, View::Notifications)
+                        && alert_notifications_loaded(ui, &view, total, added, append);
+                    if !chat_announced && !notif_announced && !background_read {
                         alert_list_loaded(ui, &view, total, added, append);
                     }
                     if view == View::Feed && !append {
@@ -5638,6 +5694,8 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_POST_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::PostSound),
         ID_CHAT_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::ChatVoice),
         ID_CHAT_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::ChatSound),
+        ID_NOTIF_VOICE_ALERTS => toggle_alert(ui, alerts::Kind::NotifVoice),
+        ID_NOTIF_SOUND_ALERTS => toggle_alert(ui, alerts::Kind::NotifSound),
         ID_LANG_SYSTEM | ID_LANG_ENGLISH | ID_LANG_FRENCH | ID_LANG_RUSSIAN | ID_LANG_ESTONIAN => {
             let language = match id {
                 ID_LANG_ENGLISH => Language::English,
