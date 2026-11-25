@@ -403,6 +403,26 @@ function reactionFixture({watch = false, selected = 'none', focusOnly = false, d
   next.actions = [f.replyAction(next, otherBox)];
   assert.equal(await f.api.prepare('2', 'hello'), '"hello"');
 
+  // Facebook can render the one composer twice (in-flow and a sticky bar):
+  // same name, neither enclosing the other. It is still one composer, and a
+  // top-level comment must land (Brandon hit "No unique comment box" on this).
+  f = fixture(); f.article('1');
+  const dupe = f.makeEditor(null, 'Comment as Me');
+  f.makeEditor(null, 'Comment as Me');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  assert.equal(await f.api.prepare(null, 'top'), '"top"');
+  assert.equal(f.focused, dupe);
+  dupe.innerText = 'top';
+  assert.equal(f.api.check(), true);
+  dupe.innerText = '';
+
+  // Two differently named boxes stay ambiguous: nothing is sent.
+  f = fixture(); f.article('1');
+  f.makeEditor(null, 'Comment as Me');
+  f.makeEditor(null, 'Write a comment');
+  await f.api.initialize('https://www.facebook.com/a/posts/1');
+  await assert.rejects(f.api.prepare(null, 'top'), /No unique comment box/);
+
   // Only a reply box showing: a top-level comment must not land in it, but the reply may.
   f = fixture(); parent = f.article('1');
   const lone = f.replyBox('Reply as Me');

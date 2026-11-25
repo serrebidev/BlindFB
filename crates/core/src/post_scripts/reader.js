@@ -477,12 +477,25 @@
 
   // Facebook draws reply boxes beside the comments, one per open thread, outside every article.
   // The top-level box sits outside the comment list, so it alone encloses every other box.
+  // A reply box is never the top-level composer, so it leaves the contest first; a reply box
+  // winning the enclosure test used to reject a page whose real composer was right there.
   function composer() {
-    const boxes = [...root.querySelectorAll(EDITOR)].filter(element => F.visible(element) && F.enabled(element) && !element.closest(ARTICLE));
-    const first = root.querySelectorAll(ARTICLE)[0];
-    const scope = box => { let element = first; while (!element.contains(box)) element = element.parentElement; return element; };
-    const found = boxes.length > 1 && first ? boxes.filter(box => boxes.every(other => other === box || (scope(box) !== scope(other) && scope(box).contains(scope(other))))) : boxes;
-    return found.length === 1 && !W.replyStart.test(label(found[0])) ? found[0] : null;
+    const boxes = [...root.querySelectorAll(EDITOR)].filter(element => F.visible(element) && F.enabled(element) && !element.closest(ARTICLE) && !W.replyStart.test(label(element)));
+    if (boxes.length !== 1) {
+      if (!boxes.length) return null;
+      const first = root.querySelectorAll(ARTICLE)[0];
+      if (first) {
+        const scope = box => { let element = first; while (!element.contains(box)) element = element.parentElement; return element; };
+        const found = boxes.filter(box => boxes.every(other => other === box || (scope(box) !== scope(other) && scope(box).contains(scope(other)))));
+        if (found.length === 1) return found[0];
+      }
+      // Facebook can render the one composer twice in a post view (in-flow and a sticky
+      // bar): same name, neither enclosing the other, so the enclosure test finds nothing.
+      // They mirror a single composer, and prepare() verifies by focus before typing.
+      if (boxes.every(box => label(box) === label(boxes[0]))) return boxes[0];
+      return null;
+    }
+    return boxes[0];
   }
 
   // The box Facebook focused for this comment's Reply: it follows the comment, with only the
@@ -524,7 +537,12 @@
       replies[0].click();
     }
     const editor = await F.waitFor(() => editorFor(parent), 5000);
-    if (!editor) throw Error(parent === null ? 'No unique comment box on this post. Nothing was sent.' : 'No unique editor inside the selected comment thread. Nothing was sent.');
+    if (!editor) {
+      if (parent !== null) throw Error('No unique editor inside the selected comment thread. Nothing was sent.');
+      // The first line is the translated message; the inventory rides along for debug reports.
+      const seen = [...root.querySelectorAll(EDITOR)].map(element => `${label(element) || '(no name)'} [${F.visible(element) ? 'visible' : 'hidden'}${element.closest(ARTICLE) ? ', in a comment' : ''}]`);
+      throw Error(`No unique comment box on this post. Nothing was sent.\nEditors on the page: ${seen.join(' | ') || 'none'}`);
+    }
     const identity = commentIdentities.capture(editor, expectedIdentity);
     // Replying prefills the person's name. Older boxes were named "Reply to <name>"; since
     // 2026-11 they say "Reply as <you>", so the name is matched against the comment's author.
