@@ -4,6 +4,21 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.108 - 2026-11-24
+
+Archived chats no longer show the inbox by mistake (issue #30, reported by
+Michal). The archived view's heading can flip long before Facebook swaps
+the rows underneath it, and the old wait could accept the still-unchanged
+inbox rows as the archived list. The backend now only trusts the archived
+list once its rows have actually replaced the inbox rows, and refuses to
+read the list at all if they never do.
+
+Unlocking encrypted chats now reports a failed restore honestly (issue
+#30). When Facebook answers "Messenger could not restore your history"
+after the PIN is entered, BlindFB says the restore failed and suggests
+restoring history in the Messenger app first, instead of leaving the PIN
+looking wrong or the unlock looking successful.
+
 ## v0.7.107 - 2026-11-24
 
 Notifications loading can now be announced. View gains "Voice alert when
