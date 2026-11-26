@@ -4,6 +4,20 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.110 - 2026-11-25
+
+Archived chats, one more step (issue #31, reported by Michal). On his
+account the archived view is the only chat list on the page, and its
+list carries no "archived" name of its own — the name sits in the
+pane's heading instead. The check that opens the archived view
+accepted that list, but the scan that reads it insisted on a list
+labelled archived, so viewing archived chats could only ever answer
+"no chat list". The scan now reads the page's only list once the
+archived view has been proven open, the same evidence the opening
+check already settled on. The Polish name for the archived list is
+recognised too, and if the view still cannot be read, the error names
+the lists the page actually showed.
+
 ## v0.7.109 - 2026-11-25
 
 Commenting on a post works again on pages where Facebook renders the
