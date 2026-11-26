@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.111 - 2026-11-26
+
+Chats load past the first page again (issue #32, reported by Michal).
+The chat list scan decided it had reached the end of the list after
+one short look at the bottom of what was loaded so far. Facebook
+fetches the next page of chats once the bottom is reached, and when
+that fetch takes more than a moment — a slow connection is enough —
+the scan stopped at the first page it saw (14 chats for Michal) and
+Load more could never get past it. The scan now waits at the bottom
+until the list has stayed unchanged, with nothing still loading,
+for a few seconds before calling it the end, so slower pages of
+chats arrive and are read. Backend 0.1.5-blindfb.95.
+
 ## v0.7.110 - 2026-11-25
 
 Archived chats, one more step (issue #31, reported by Michal). On his
