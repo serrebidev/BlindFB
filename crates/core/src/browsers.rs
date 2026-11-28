@@ -70,18 +70,6 @@ impl BrowserKind {
             _ => "chrome://inspect/#remote-debugging",
         }
     }
-
-    /// Process image names (Windows) / `pgrep -x` names (Unix) for "is it
-    /// running" checks.
-    fn process_names(self) -> &'static [&'static str] {
-        match self {
-            BrowserKind::Chrome => &["chrome.exe", "chrome"],
-            BrowserKind::Chromium => &["chromium.exe", "chromium"],
-            BrowserKind::Brave => &["brave.exe", "brave"],
-            BrowserKind::Edge => &["msedge.exe", "msedge", "microsoft-edge"],
-            BrowserKind::Firefox => &["firefox.exe", "firefox", "firefox-esr"],
-        }
-    }
 }
 
 /// A browser found on this machine.
@@ -598,31 +586,68 @@ pub fn devtools_endpoint(data_dir: &Path) -> Option<(u16, String)> {
     parse_active_port(&text)
 }
 
-fn browser_running(kind: BrowserKind) -> bool {
-    for name in kind.process_names() {
-        #[cfg(windows)]
-        {
-            if let Ok(output) = Command::new("tasklist")
-                .args(["/FI", &format!("IMAGENAME eq {name}"), "/NH"])
-                .output()
-            {
-                if String::from_utf8_lossy(&output.stdout).contains(name) {
-                    return true;
-                }
-            }
-        }
-        #[cfg(unix)]
-        {
-            if Command::new("pgrep")
-                .args(["-x", name])
-                .output()
-                .is_ok_and(|o| o.status.success())
-            {
-                return true;
-            }
-        }
+/// Whether a browser is running on this user-data dir. On Windows Chromium
+/// holds `lockfile` open exclusively; elsewhere `SingletonLock` links to
+/// "host-pid" and outlives a crash, so the pid must still be alive.
+fn profile_in_use(dir: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        let lock = dir.join("lockfile");
+        lock.exists() && std::fs::OpenOptions::new().write(true).open(&lock).is_err()
     }
-    false
+    #[cfg(unix)]
+    {
+        let Ok(target) = std::fs::read_link(dir.join("SingletonLock")) else {
+            return false;
+        };
+        let target = target.to_string_lossy().into_owned();
+        let pid = target.rsplit('-').next().unwrap_or_default();
+        pid.parse::<u32>().is_err()
+            || Command::new("kill")
+                .args(["-0", pid])
+                .stderr(Stdio::null())
+                .status()
+                .is_ok_and(|s| s.success())
+    }
+}
+
+/// Whether the dir's `DevToolsActivePort` names a socket that still answers
+/// (Chromium leaves the file behind when it stops).
+fn endpoint_live(dir: &Path) -> bool {
+    devtools_endpoint(dir).is_some_and(|(port, _)| {
+        let addr = (std::net::Ipv4Addr::LOCALHOST, port).into();
+        std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
+    })
+}
+
+/// A Chromium browser that is open without a debugging endpoint cannot hand
+/// over its session: it ignores chrome:// addresses on its command line
+/// (Chrome 158 opens a New Tab instead of the inspect page, so the user never
+/// sees the "Allow remote debugging" checkbox), and it rewrites `Local State`
+/// from memory, dropping the remote-debugging switch. It has to be closed
+/// first; the import then starts it again with the switch on.
+pub fn must_close_first(browser: &Browser) -> bool {
+    browser.kind.is_chromium()
+        && browser
+            .data_dir
+            .as_deref()
+            .is_some_and(|dir| profile_in_use(dir) && !endpoint_live(dir))
+}
+
+/// Wait up to three minutes for the user to close a browser that
+/// [`must_close_first`].
+pub fn wait_until_closed(browser: &Browser) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(180);
+    while must_close_first(browser) {
+        if Instant::now() > deadline {
+            return Err(tf!(
+                "{browser} is still open. Close every {browser} window, including one left running in the notification area, then sign in again.",
+                browser = browser.name()
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    Ok(())
 }
 
 /// Set `devtools.remote_debugging.user-enabled` in a Chromium browser's
@@ -727,17 +752,14 @@ fn import_chromium_debugging(fb: &Fb, browser: &Browser) -> Result<String, Strin
         )
     })?;
 
-    let endpoint = if let Some(endpoint) = devtools_endpoint(&data_dir) {
-        Some(endpoint)
-    } else if browser_running(kind) {
-        // Running without an endpoint: open the inspect page so the user
-        // can tick "Allow remote debugging for this browser instance",
-        // then wait for the endpoint file to appear (fb waits 240s too).
-        launch_url(browser, kind.inspect_url())?;
-        wait_endpoint(&data_dir, 240)
+    let endpoint = if endpoint_live(&data_dir) {
+        devtools_endpoint(&data_dir)
     } else {
-        // Not running: switch the setting on in Local State, launch the
-        // browser, and wait for the endpoint (fb waits 40s here).
+        // An open browser cannot be switched over (see must_close_first):
+        // wait until it is closed, switch the setting on in Local State,
+        // start it, and wait for a fresh endpoint (fb waits 40s here).
+        wait_until_closed(browser)?;
+        let _ = std::fs::remove_file(data_dir.join("DevToolsActivePort"));
         enable_remote_debugging(&data_dir)?;
         launch_url(browser, "about:blank")?;
         wait_endpoint(&data_dir, 40)
@@ -1517,6 +1539,38 @@ mod tests {
         assert!(!browser(BrowserKind::Firefox, "").uses_fb_login());
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn open_chromium_profile_must_be_closed_before_import() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = std::env::temp_dir().join(format!("blindfb-lock-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let browser = Browser {
+            kind: BrowserKind::Chrome,
+            label: "",
+            data_dir: Some(dir.clone()),
+            exe: None,
+            is_default: false,
+        };
+        // closed (no lockfile, or a leftover one nobody holds)
+        assert!(!must_close_first(&browser));
+        std::fs::write(dir.join("lockfile"), "").unwrap();
+        assert!(!must_close_first(&browser));
+        // running: Chromium holds lockfile exclusively
+        let held = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .share_mode(0)
+            .open(dir.join("lockfile"))
+            .unwrap();
+        assert!(must_close_first(&browser));
+        drop(held);
+        assert!(!must_close_first(&browser));
+        wait_until_closed(&browser).unwrap();
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
     #[test]
     fn windows_chromium_debugging_import_is_available() {
         // Edge and Brave encrypt their cookies app-bound (v20) on Windows,
@@ -1530,8 +1584,6 @@ mod tests {
             BrowserKind::Brave.inspect_url(),
             "brave://inspect/#remote-debugging"
         );
-        assert!(BrowserKind::Edge.process_names().contains(&"msedge.exe"));
-        assert!(BrowserKind::Brave.process_names().contains(&"brave.exe"));
         let combined = combined_import_error(
             "Microsoft Edge",
             "cookie extraction failed",

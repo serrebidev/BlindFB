@@ -1556,7 +1556,9 @@ fn login_flow(fb: &Fb, sign: SignIn) -> Result<String, String> {
             // The backend's guided login copies the session from Chrome
             // itself over a debugging connection, so it survives Chrome's
             // app-bound cookie encryption, which a cookie-file import
-            // cannot always read.
+            // cannot always read. An open Chrome must be closed first: the
+            // backend could only open a blank tab in it.
+            browsers::wait_until_closed(&browser)?;
             fb.run(&["login"])?;
             browsers::verify_import(fb)
         }
@@ -2570,6 +2572,22 @@ fn offer_sign_in(ui: &Ui, tag: Tag) -> bool {
     let sign = choose_sign_in(ui);
     if sign.is_none() {
         return false;
+    }
+    if let Some(SignIn::Browser(browser)) = &sign {
+        // An open Chromium browser cannot be switched over to share its
+        // session (it shows a blank tab instead of its inspect page).
+        if browsers::must_close_first(browser)
+            && !confirm(
+                &ui.frame,
+                tf!(
+                    "{browser} is open. To copy your Facebook sign-in, BlindFB has to restart {browser} with remote debugging turned on. Close every {browser} window now, then press OK. When {browser} opens again and asks whether to allow remote debugging, choose Allow.",
+                    browser = browser.name()
+                ),
+                &t("Sign in"),
+            )
+        {
+            return false;
+        }
     }
     ui.latest_list.lock().unwrap().invalidate();
     {

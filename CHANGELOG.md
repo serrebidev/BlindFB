@@ -4,6 +4,24 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.112 - 2026-11-28
+
+Signing in from Chrome works when Chrome is already open. To copy your
+Facebook session, BlindFB needs Chrome's remote debugging. When Chrome
+was already running, BlindFB tried to open Chrome's inspect page so you
+could tick "Allow remote debugging". Current Chrome refuses chrome://
+addresses passed in from another program, so you only got a blank New
+Tab. BlindFB then waited four minutes for a checkbox you never saw. Some
+people worked around it by starting Chrome by hand with a debugging
+port. That is no longer needed. Now BlindFB tells you Chrome is open and
+asks you to close it. Once every Chrome window is closed, BlindFB starts
+Chrome again with remote debugging on and copies your session. Choose
+Allow when Chrome asks. The same applies to Brave and Edge. BlindFB now
+also notices a leftover debugging file from an earlier Chrome session
+and no longer tries to connect through it. The notification alert
+settings added in v0.7.109 are now translated into French, Russian and
+Estonian.
+
 ## v0.7.111 - 2026-11-26
 
 Chats load past the first page again (issue #32, reported by Michal).
