@@ -4,6 +4,19 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.114 - 2026-11-28
+
+Chats now show each contact's current status. Facebook already writes
+an activity line on the chat rows — "Active now", "Active 5m ago" — and
+BlindFB used to throw it away. The chat list now says it right after the
+name, as in "Bea (Active now)", and the details pane carries a Status
+line with the same text.
+
+There is also a new Active contacts view in the View menu: only the
+chats Facebook shows a status for, newest first — the people who are
+online now or were active recently, each with their status in the list.
+Chats open, archive and delete from there just like the inbox.
+
 ## v0.7.113 - 2026-11-28
 
 The backend's own Chrome sign-in now follows the same steps as v0.7.112.
