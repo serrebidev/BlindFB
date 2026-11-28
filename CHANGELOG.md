@@ -4,6 +4,11 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.115 - 2026-11-28
+
+### Fixed
+- Facebook's own menu (Interested / Not interested, Save, Report, and the rest) now works on a reel's own page. A reel has no "Actions for this post" button — its menu is the "More options" button in the reel's action rail — and the backend only knew how to find a post in a dialog, a feed card or a photo panel, so every menu action on an opened reel failed with "Facebook showed no menu for this post." The backend (0.1.5-blindfb.98) now finds the current reel — the one snapped to the middle of the screen, never the next reel in the list — and walks its menu like any other post.
+
 ## v0.7.114 - 2026-11-28
 
 Chats now show each contact's current status. Facebook already writes
