@@ -48,7 +48,7 @@ use std::time::{Duration, Instant};
 use blindfb_core::alerts;
 use blindfb_core::browsers::{self, Browser, BrowserKind};
 use blindfb_core::fb::{
-    archive_args, archived_chats_args, chats_args, comment_args, delete_args, deletechat_args,
+    active_chats_args, archive_args, archived_chats_args, chats_args, comment_args, delete_args, deletechat_args,
     events_args, facebook_share_url, feed_args,
     follow_args, friend_add_args, friends_args, group_apply_args, group_invite_args, group_join_args,
     group_leave_args,
@@ -92,6 +92,7 @@ const ID_UNREAD_CHATS: i32 = 10007;
 const ID_ARCHIVED_CHATS: i32 = 10019;
 const ID_ARCHIVE_CHAT: i32 = 10022;
 const ID_DELETE_CHAT: i32 = 10023;
+const ID_ACTIVE_CHATS: i32 = 10024;
 const ID_GROUPS_VIEW: i32 = 10008;
 const ID_RECENT_FEED: i32 = 10009;
 const ID_MORE: i32 = 10016;
@@ -291,6 +292,10 @@ enum View {
     /// The archived chats view: same rows as Chats, but its own view so
     /// Refresh and Load more stay in the archived list instead of the inbox.
     ArchivedChats,
+    /// The active contacts view: inbox chats Facebook shows an activity
+    /// status for, in the same rows as Chats. Its own view for the same
+    /// reason as ArchivedChats — Refresh must not fall back to the inbox.
+    ActiveChats,
     Groups,
     Marketplace,
     Events,
@@ -322,6 +327,7 @@ impl View {
             View::MyPosts => t("My posts"),
             View::Chats => t("Chats"),
             View::ArchivedChats => t("Archived chats"),
+            View::ActiveChats => t("Active contacts"),
             View::Groups => t("My groups"),
             View::Marketplace => t("Marketplace"),
             View::Events => t("Events"),
@@ -1833,6 +1839,11 @@ fn build_menus(frame: &Frame) {
             &shortcuts_dialog::menu_label(ID_ARCHIVED_CHATS, t("Archived c&hats")),
             &t("Chats you archived in Messenger"),
         )
+        .append_item(
+            ID_ACTIVE_CHATS,
+            &shortcuts_dialog::menu_label(ID_ACTIVE_CHATS, t("&Active contacts")),
+            &t("Contacts Facebook shows as active now or recently"),
+        )
         .append_separator()
         .append_item(ID_REFRESH, &shortcuts_dialog::menu_label(ID_REFRESH, t("&Refresh")), &t("Reload the current view"))
         .append_item(
@@ -2347,7 +2358,7 @@ fn load_view(ui: &Ui, view: View) {
         if matches!(view, View::Feed | View::Reels(_)) || at.elapsed() < FRESH {
             // Chats shown straight from the cache will not load at all, so
             // landing on the view is the loaded moment to announce (#43).
-            if matches!(view, View::Chats | View::ArchivedChats) {
+            if matches!(view, View::Chats | View::ArchivedChats | View::ActiveChats) {
                 alert_chats_loaded(ui, &view, records.len(), records.len(), false);
             }
             // Notifications shown straight from the cache will not load
@@ -2457,6 +2468,7 @@ fn cacheable(view: &View, args: &[String]) -> bool {
             | View::MyPosts
             | View::Chats
             | View::ArchivedChats
+            | View::ActiveChats
             | View::Groups
             | View::Events
             | View::Pages
@@ -2478,6 +2490,7 @@ fn default_args(view: &View) -> Option<Vec<String>> {
         View::MyPosts => posts_args("me", MY_POSTS_FIRST, true),
         View::Chats => chats_args(PAGE, false),
         View::ArchivedChats => archived_chats_args(PAGE),
+        View::ActiveChats => active_chats_args(PAGE),
         View::Groups => groups_args(PAGE),
         View::Marketplace => marketplace_args(PAGE),
         View::Events => events_args(PAGE),
@@ -2728,6 +2741,7 @@ fn more_args(
         | View::Friends
         | View::Chats
         | View::ArchivedChats
+        | View::ActiveChats
         | View::ChatWith(..)
         | View::SearchResults
         | View::Marketplace
@@ -2867,7 +2881,7 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
         View::Friends | View::Groups | View::Events | View::Pages | View::Places => {
             id_or_raw(record.field(1), record)
         }
-        View::Chats | View::ArchivedChats => id_or_raw(record.field(0), record),
+        View::Chats | View::ArchivedChats | View::ActiveChats => id_or_raw(record.field(0), record),
         View::Notifications => format!("{}\t{}", record.field(2), record.field(3)),
         _ => post_target(view, record)
             .map(str::to_owned)
@@ -2896,6 +2910,20 @@ fn merge_records(view: &View, mut existing: Vec<Record>, incoming: Vec<Record>) 
 
 /// A row's list label, marked when the row has no link to open. Without the
 /// marker the only way to find out is pressing Enter and getting a dialog.
+/// A chat record's preview and activity status. Backend .97 appends the
+/// status (Facebook's own text: "Active now", "Active 5m ago") as a sixth
+/// field; older backends end at the preview and the status reads empty.
+fn chat_preview_status(record: &Record) -> (String, &str) {
+    if record.fields.len() >= 6 {
+        (
+            record.fields[4..record.fields.len() - 1].join(" "),
+            record.field(record.fields.len() - 1),
+        )
+    } else {
+        (record.fields[4..].join(" "), "")
+    }
+}
+
 fn list_label(view: &View, record: &Record) -> String {
     let label = display_for(view, record);
     let has_posts = matches!(
@@ -3027,7 +3055,7 @@ fn display_for(view: &View, record: &Record) -> String {
                 record.raw.clone()
             }
         }
-        View::Chats | View::ArchivedChats => {
+        View::Chats | View::ArchivedChats | View::ActiveChats => {
             if record.fields.len() >= 5 {
                 let flags = record.field(1);
                 let name = record.field(3);
@@ -3040,12 +3068,20 @@ fn display_for(view: &View, record: &Record) -> String {
                     (false, true) => tf!("{name} (group)", name = name),
                     (false, false) => name.to_owned(),
                 };
-                format!(
-                    "{} · {} — {}",
-                    name,
-                    record.field(2),
-                    record.fields[4..].join(" ")
-                )
+                let (preview, status) = chat_preview_status(record);
+                if status.is_empty() {
+                    format!("{} · {} — {}", name, record.field(2), preview)
+                } else {
+                    // TRANSLATORS: {name} is a chat's name, {status} Facebook's
+                    // activity text for it, in the Chats list.
+                    format!(
+                        "{} ({}) · {} — {}",
+                        name,
+                        status,
+                        record.field(2),
+                        preview
+                    )
+                }
             } else {
                 record.raw.clone()
             }
@@ -3101,15 +3137,27 @@ fn details_for(view: &View, record: &Record) -> String {
             reference = record.field(1),
             info = record.field(2)
         ),
-        View::Chats | View::ArchivedChats => {
+        View::Chats | View::ArchivedChats | View::ActiveChats => {
             if record.fields.len() >= 5 {
-                tf!(
-                    "Chat: {name}\nTime: {time}\nFlags: {flags} (! unread, g group, e encrypted)\n\n{text}",
-                    name = record.field(3),
-                    time = record.field(2),
-                    flags = record.field(1),
-                    text = record.fields[4..].join("\t")
-                )
+                let (preview, status) = chat_preview_status(record);
+                if status.is_empty() {
+                    tf!(
+                        "Chat: {name}\nTime: {time}\nFlags: {flags} (! unread, g group, e encrypted)\n\n{text}",
+                        name = record.field(3),
+                        time = record.field(2),
+                        flags = record.field(1),
+                        text = preview
+                    )
+                } else {
+                    tf!(
+                        "Chat: {name}\nTime: {time}\nFlags: {flags} (! unread, g group, e encrypted)\nStatus: {status}\n\n{text}",
+                        name = record.field(3),
+                        time = record.field(2),
+                        flags = record.field(1),
+                        status = status,
+                        text = preview
+                    )
+                }
             } else {
                 record.raw.clone()
             }
@@ -3546,7 +3594,7 @@ fn more_row_label(view: &View, count: usize) -> Option<String> {
         View::Friends => Some(t("Load more friends")),
         View::Groups => Some(t("Load more groups")),
         View::Marketplace => Some(t("Load more listings")),
-        View::Chats | View::ArchivedChats => Some(t("Load more conversations")),
+        View::Chats | View::ArchivedChats | View::ActiveChats => Some(t("Load more conversations")),
         _ => None,
     }
 }
@@ -3727,7 +3775,7 @@ fn refresh_controls(ui: &Ui) {
     let openable = post_list
         || matches!(
             view,
-            View::Notifications | View::Friends | View::Chats | View::ArchivedChats | View::Groups
+            View::Notifications | View::Friends | View::Chats | View::ArchivedChats | View::ActiveChats | View::Groups
         );
     ui.open_btn.enable(has && openable);
     ui.react_btn.enable(has && post_list);
@@ -3891,7 +3939,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     // Chats announces even for a background read the user
                     // landed on mid-load (#43); every other view keeps the
                     // foreground-only rule from #17.
-                    let chat_announced = matches!(view, View::Chats | View::ArchivedChats)
+                    let chat_announced = matches!(view, View::Chats | View::ArchivedChats | View::ActiveChats)
                         && alert_chats_loaded(ui, &view, total, added, append);
                     // Notifications announces the same way (#46).
                     let notif_announced = !chat_announced
@@ -3917,7 +3965,7 @@ fn apply_done(ui: &Ui, done: Done) {
                     if !current {
                         return;
                     }
-                    if matches!(view, View::Chats | View::ArchivedChats | View::ChatWith(..))
+                    if matches!(view, View::Chats | View::ArchivedChats | View::ActiveChats | View::ChatWith(..))
                         && needs_messenger_unlock(&e)
                     {
                         let mut state = ui.state.borrow_mut();
@@ -4749,7 +4797,7 @@ fn open_selected(ui: &Ui) {
                 }
             }
         }
-        View::Chats | View::ArchivedChats => chat_dialog::open(ui, &record),
+        View::Chats | View::ArchivedChats | View::ActiveChats => chat_dialog::open(ui, &record),
         View::Friends => profile_selected(ui),
         View::Groups => group_dialog::open(ui, &record),
         View::Pages => {
@@ -4905,7 +4953,7 @@ fn person_of(ui: &Ui, record: &Record) -> Option<String> {
     match view {
         View::ProfileOf(who) => Some(who.clone()),
         View::Friends => Some(record.field(1).to_owned()),
-        View::Chats | View::ArchivedChats => Some(record.field(3).to_owned()),
+        View::Chats | View::ArchivedChats | View::ActiveChats => Some(record.field(3).to_owned()),
         View::CommentsOf(_) => {
             let ref_ = record.field(1);
             if ref_.is_empty() {
@@ -5019,7 +5067,7 @@ fn message_target(view: &View, record: &Record) -> (String, String) {
         View::ProfileOf(who) => (who.clone(), who.clone()),
         View::Friends => (record.field(1).to_owned(), record.field(0).to_owned()),
         View::SearchResults => (record.field(1).to_owned(), record.field(0).to_owned()),
-        View::Chats | View::ArchivedChats => (record.field(0).to_owned(), record.field(3).to_owned()),
+        View::Chats | View::ArchivedChats | View::ActiveChats => (record.field(0).to_owned(), record.field(3).to_owned()),
         View::CommentsOf(_) => {
             let id = record.field(1);
             let id = if id.is_empty() { record.field(2) } else { id };
@@ -5191,7 +5239,7 @@ fn open_person_web(ui: &Ui) {
     }
     let name = match view {
         View::Friends => record.field(0).to_owned(),
-        View::Chats | View::ArchivedChats => record.field(3).to_owned(),
+        View::Chats | View::ArchivedChats | View::ActiveChats => record.field(3).to_owned(),
         _ => record.field(1).to_owned(),
     };
     if name.is_empty() {
@@ -5216,7 +5264,7 @@ fn open_chat_web(ui: &Ui) {
     let view = ui.state.borrow().view.clone();
     let name = match &view {
         View::ChatWith(_, name) => name.clone(),
-        View::Chats | View::ArchivedChats => match selected(ui) {
+        View::Chats | View::ArchivedChats | View::ActiveChats => match selected(ui) {
             Some((_, record)) => record.field(3).to_owned(),
             None => return,
         },
@@ -5244,7 +5292,7 @@ fn open_chat_web(ui: &Ui) {
 /// Archive the selected inbox chat. No confirmation: archiving is
 /// reversible — the chat waits in the Archived chats view.
 fn archive_selected(ui: &Ui) {
-    if ui.state.borrow().view != View::Chats {
+    if !matches!(ui.state.borrow().view, View::Chats | View::ActiveChats) {
         return;
     }
     let Some((_, record)) = selected(ui) else {
@@ -5262,7 +5310,7 @@ fn archive_selected(ui: &Ui) {
 /// Delete the selected inbox chat permanently. The app confirms first:
 /// unlike archiving, this cannot be undone.
 fn delete_chat_selected(ui: &Ui) {
-    if ui.state.borrow().view != View::Chats {
+    if !matches!(ui.state.borrow().view, View::Chats | View::ActiveChats) {
         return;
     }
     let Some((_, record)) = selected(ui) else {
@@ -5557,6 +5605,7 @@ fn handle_menu(ui: &Ui, id: i32) {
         ID_WEB_CHAT => open_chat_web(ui),
         ID_UNREAD_CHATS => load_args(ui, View::Chats, chats_args(PAGE, true)),
         ID_ARCHIVED_CHATS => load_view(ui, View::ArchivedChats),
+        ID_ACTIVE_CHATS => load_view(ui, View::ActiveChats),
         ID_ARCHIVE_CHAT => archive_selected(ui),
         ID_DELETE_CHAT => delete_chat_selected(ui),
         ID_REFRESH => refresh(ui),
@@ -5964,7 +6013,7 @@ fn show_item_menu(ui: &Ui) {
                 (ID_WEB_PERSON, t("Open on &Facebook (web)")),
             ],
         ),
-        View::Chats => add(
+        View::Chats | View::ActiveChats => add(
             &menu,
             &[
                 (ID_OPEN, t("&Open chat")),
@@ -6911,6 +6960,35 @@ mod tests {
         let details = details_for(&View::Chats, &full);
         assert!(details.contains("Alice"));
         assert!(details.contains("hi"));
+    }
+
+    #[test]
+    fn chat_label_and_details_carry_the_activity_status() {
+        // backend .97 rows: ref, flags, time, name, preview, status
+        let mk = |status: &str| Record {
+            author_ref: None,
+            reaction: None,
+            links: Vec::new(),
+            fields: vec![
+                "c1".into(),
+                "-".into(),
+                "5m".into(),
+                "Bea".into(),
+                "hi".into(),
+                status.into(),
+            ],
+            raw: String::new(),
+        };
+        let active = mk("Active now");
+        let label = list_label(&View::Chats, &active);
+        assert!(label.contains("Bea (Active now)"), "{label}");
+        assert!(label.contains("hi"));
+        let details = details_for(&View::Chats, &active);
+        assert!(details.contains("Status: Active now"), "{details}");
+        // an empty status field (Facebook shows none) changes nothing
+        let quiet = mk("");
+        assert!(!list_label(&View::ActiveChats, &quiet).contains("()"));
+        assert!(!details_for(&View::ActiveChats, &quiet).contains("Status:"));
     }
 
     #[test]
