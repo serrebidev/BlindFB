@@ -4,6 +4,14 @@ Readable release history for BlindFB. When adjacent releases were part of the
 same fix stream, they are combined with a version range such as
 `v0.3.1-v0.3.2`.
 
+## v0.7.113 - 2026-11-28
+
+The backend's own Chrome sign-in now follows the same steps as v0.7.112.
+If Chrome is open, it asks you to close it, waits up to three minutes,
+then restarts Chrome with remote debugging on. It no longer tries to
+open Chrome's inspect page, which only gave a blank tab. Backend
+0.1.5-blindfb.96.
+
 ## v0.7.112 - 2026-11-28
 
 Signing in from Chrome works when Chrome is already open. To copy your
